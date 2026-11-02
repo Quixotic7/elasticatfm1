@@ -12,9 +12,8 @@ png 1450:e3_01_src_setup_razor.png
 press HOME@1600+150
 press SEL@1650+60
 
-# ---- FILE, then FN + FILE = the RAZOR page: 16 even slices
+# ---- FILE, then SAVE again = the RAZOR page (the cursor is on T1's file): 16 even slices
 press SAVE@1900
-press HOME@2000+150
 press SAVE@2050+60
 png 2300:e3_02_razor_even.png
 # FN + OCT+ = Auto-Chop (one slice per transient)

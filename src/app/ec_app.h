@@ -6,13 +6,15 @@
 #include <stdint.h>
 
 #include "ec_dsp.h"
+#include "ec_e5app.h"
 #include "ec_pages.h"
 #include "ec_plat.h"
 #include "ec_project.h"
 #include "ec_samplestore.h"
 #include "ec_seq.h"
 
-enum { EC_KM_STEPS, EC_KM_LOOP, EC_KM_KEYS, EC_NKM };     /* what the lower keys are (OCT-/OCT+) */
+enum { EC_KM_STEPS, EC_KM_LOOP, EC_KM_KEYS, EC_KM_SCENE, EC_NKM };   /* what the lower keys are (OCT-/OCT+);
+                                                                        * E5: SCENE */
 enum { EC_SL_EMPTY, EC_SL_QUEUED, EC_SL_LOADING, EC_SL_READY, EC_SL_MISSING, EC_SL_ERROR };
 
 typedef struct {
@@ -71,6 +73,7 @@ typedef struct {
     float meter[9], meter_hold[9];
     uint32_t frames_out;
     uint32_t ms;
+    ec_e5app_t e5;               /* E5 */
 } ec_app_t;
 
 extern ec_app_t ec_app;

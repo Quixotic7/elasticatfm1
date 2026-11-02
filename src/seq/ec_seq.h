@@ -92,6 +92,7 @@ double ec_seq_beats(const ec_seq_t *s);    /* the clock now (frozen while paused
 
 /* patterns: switch to idx under the project's quantization (stopped: at once) */
 void ec_seq_request_pattern(ec_seq_t *s, int idx);
+void ec_seq_reload(ec_seq_t *s);           /* E5: the project was replaced (recall): reload, from step 1 */
 void ec_seq_set_fill(ec_seq_t *s, int held, int latched);
 int ec_seq_fill_active(const ec_seq_t *s);
 

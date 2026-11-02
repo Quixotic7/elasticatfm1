@@ -32,7 +32,9 @@ src/ui/     ec_gfx (RGB565, palette, rects / lines / dots, the mockup's 3x5 pixe
 src/dsp/    the sound engine (written separately; ec_dsp.h)
 host/       ec_run (headless native harness: scripted input, WAV + PNG out), test_io (the file layer's test), test_seq
             (the sequencer's), make_testloop.py (the 4 s test loop), make_demo_folder.py + demo_e1.txt + render_e1.sh
-            (the E1 demo built through panel input only), web_e2e.mjs (the .rfm1 in the real RemoteFM1 web player)
+            (the E1 demo built through panel input only), web_e2e.mjs (the .rfm1 in the real RemoteFM1 web player);
+            E5: test_e5 (scenes, glide, clipboards, page loop, BPM, memorize, undo, slices, the record + an E2 save in
+            fixtures/e2_flash.bin), demo_e5.txt + render_e5.sh
 results/    proof files: e0/, e1/ (the screens; WAVs stay untracked), web/ (the web player test's screenshots + SUMMARY.txt)
 ```
 

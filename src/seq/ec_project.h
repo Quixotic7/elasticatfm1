@@ -50,6 +50,40 @@ typedef struct {
 /* pattern change quantization (PatternStore.QUANT) */
 enum { EC_Q_SEQUENTIAL = 1, EC_Q_DIRECT_JUMP, EC_Q_DIRECT_START, EC_Q_TEMP_JUMP };
 
+/* E5: the A/B scenes (lib/scene_store.lua), per-pattern extras, the slice programs (track_sequencer.lua's
+ * slice_locks / slice_choke / slice_mute) -- types only; the code is in ec_scene.c and ec_e5seq.c (ec_e5.h) */
+#define EC_NAME 17                /* pattern / project names: 16 characters + NUL */
+#define EC_SLICE_LOCKS 8          /* p-locks one slice pad holds */
+typedef struct {
+    uint32_t mute;                /* bit s-1: slice s muted (FN + pad) */
+    uint8_t choke[32];            /* choke group 0 none, 1..8 */
+    uint8_t nlock[32];
+    uint8_t lock_id[32][EC_SLICE_LOCKS];
+    float lock_val[32][EC_SLICE_LOCKS];
+} ec_slicemap_t;
+
+typedef struct {
+    char name[EC_NAME];           /* "" = unnamed */
+    float bpm;                    /* the pattern's BPM (used unless the project's global BPM is on) */
+    uint16_t page_loop[EC_NTRACK];/* bit p: page p+1 loops; 0 = every page (PAGE > LOOP) */
+    ec_slicemap_t slices[EC_NTRACK];
+} ec_pat_e5_t;
+
+typedef struct {
+    float pos;                            /* the crossfader 0 = A .. 1 = B */
+    uint8_t has[2][EC_NTRACK][EC_NP];     /* scene s holds a value for (track, param) */
+    float val[2][EC_NTRACK][EC_NP];
+    /* runtime (rebuilt by ec_scene_apply, not saved): the published morph = the resolver's source 2 */
+    uint8_t on[EC_NTRACK][EC_NP];
+    float xf[EC_NTRACK][EC_NP];
+} ec_scenes_t;
+
+typedef struct {
+    char name[EC_NAME];           /* the project's name */
+    int gbpm;                     /* 1: one BPM for every pattern (the original's "global bpm" pref) */
+    ec_scenes_t sc;
+} ec_proj_e5_t;
+
 typedef struct ec_project {
     float bpm;                    /* 20..300 */
     float swing;                  /* 50..75 (%) */
@@ -64,6 +98,9 @@ typedef struct ec_project {
      * params): their FX machine + params, in the same SPEC units and ids as a track's (only the EC_PF_FX ids and
      * fx_insert1_machine / fx_mix / fx_drive are used). Saved as the record's "EC4B" chunk. */
     float bus[3][EC_NP];
+    /* E5 */
+    ec_pat_e5_t pe5[EC_NPAT];
+    ec_proj_e5_t e5;
 } ec_project_t;
 
 void ec_project_init(ec_project_t *p);                       /* a new project */

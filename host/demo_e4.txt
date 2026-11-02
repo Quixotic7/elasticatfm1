@@ -7,11 +7,9 @@ press SAVE@1500
 upper 1@1600+80
 turn SELECT@1700:1
 press SAVE@1800
-press SAVE@2200
 upper 2@2300+80
 turn SELECT@2400:1
 press SAVE@2500
-press SAVE@2900
 upper 3@3000+80
 turn SELECT@3100:1
 press SAVE@3200

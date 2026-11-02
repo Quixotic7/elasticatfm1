@@ -199,7 +199,8 @@ int ec_razor_slice_event(const ec_project_t *p, int t, ec_event_t *e, int64_t no
         return 0;
     if (ec_razor_is_razor(iv(v, EC_P_MACHINE)))
         ec_razor_range(p, t, k + 1, &e->start, &e->end);
-    e->choke = clampi(rz->choke[k], 0, 8);
+    if (!e->choke)   /* the pattern's slice program (E5, the original's slice_choke) wins; else the razor table's */
+        e->choke = clampi(rz->choke[k], 0, 8);
     e->pitch += clampf(rz->pitch[k], -24, 24);
     e->mode = pm >= 1 && pm <= 6 ? pm : 0;
     e->length = ec_razor_play_mode(p, t, k + 1) == EC_SLICE_ONESHOT ? 0

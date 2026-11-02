@@ -29,7 +29,8 @@ static void changed(ec_app_t *a)
 
 int ec_rzui_active(const ec_app_t *a)
 {
-    return a->cat == EC_CAT_FILE && a->page[EC_CAT_FILE] == 1 && !a->settings && !a->patn_open && !a->bus;
+    return a->cat == EC_CAT_FILE && a->page[EC_CAT_FILE] == 1 && !a->settings && !a->patn_open && !a->bus &&
+           !a->e5.naming;   /* (E5's naming screen covers it) */
 }
 
 int ec_rzui_count(const ec_app_t *a) { return clampi((int)floorf(tv(a)[EC_P_SLICE_COUNT] + 0.5f), 1, 32); }

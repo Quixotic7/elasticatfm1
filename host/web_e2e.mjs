@@ -132,7 +132,12 @@ async function untilText(str, ms, what) {
   while (Date.now() - t0 < ms) { const at = findText(await screen(), str); if (at) return at; await sleep(200); }
   return null;
 }
-const esc = () => cdp("Input.dispatchKeyEvent", { type: "keyDown", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
+// a whole Escape press (down + up), as a real key: a lone keyDown that reached the panel would leave OCT- held
+// (Escape = OCT- in the page's key map), which 0.2.0 shows as the PAGE overlay
+const esc = async () => {
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
+};
 // the FILE page's top line (y 26 at scale 2; the list starts at y 42): the name of the track's sample
 const fileHeader = async (name) => { const at = await untilText(name, 15000); return at && at.y < 36 ? at : null; };
 const diff = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) n += a[i] !== b[i]; return n; };
@@ -180,7 +185,9 @@ try {
   await sleep(600);
   ok(await js(`!!document.querySelector(".cards.mine .card[data-sha] .fantasy-badge")`), "Your firmware: the card has the Fantasy CFW badge");
   await shot("01_your_firmware_badge");
-  for (let i = 0; i < 3 && await js(`!!document.querySelector(".sheet-body") && document.querySelector(".sheet-body").offsetParent !== null`); i++) { await esc(); await sleep(400); }
+  // Escape only while the sheet is open (aside.sheet.open: the page's own sheet.isOpen); a closing sheet is still
+  // visible but no longer takes the key, which then reaches the panel as OCT- (0.2.0: a tap = the SCENE key mode)
+  for (let i = 0; i < 3 && await js(`!!document.querySelector("aside.sheet.open")`); i++) { await esc(); await sleep(400); }
 
   // 2. the prompt, the folder, the first file on T1
   await until(`!document.querySelector(".folder-ask").hidden`, 8000, "the folder prompt");

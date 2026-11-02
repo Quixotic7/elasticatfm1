@@ -5,12 +5,14 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (the remotefm1.com web player first), with the FM-1 as its panel and samples from the shared RemoteFM1 folder
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
-**Status: E1 + E2, the playable instrument (0.1.0).** Six tracks, each with a sample from `/audio`, a machine (loop,
-loop_trig, grid_slice, slice_poly; E3: razor_slice, razor_poly, neighbor), a warp mode (all thirteen since E3),
-a filter machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan; 16 patterns of up to 256
-steps per track with trigs, ghost trigs, p-locks of any param, trig conditions, chance, ratchets and FILL; the live
-loop-key scrub and slice pads; sample-accurate clock; the MIX page; the project saved in the flash image. The panel:
-[docs/FM1-CONTROLS.md](docs/FM1-CONTROLS.md). With no folder (or no audio files) a built-in loop plays on T1.
+**Status: E1-E5 (0.2.0).** Six tracks, each with a sample from `/audio`, a machine (loop, loop_trig, grid_slice,
+slice_poly, razor_slice, razor_poly with the RAZOR slice editor, neighbor), one of thirteen warp modes, a filter
+machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan, an insert FX (18 machines), sends
+to S1 / S2 and MOD (2 LFOs, mod env, velocity, macros); the master insert; 16 patterns of up to 256 steps per track
+with trigs, ghost trigs, p-locks of any param, trig conditions, chance, ratchets and FILL; scenes A / B with a
+crossfader and glides; copy / clear / paste, the PAGE overlay, memorize / recall, undo, names; the live loop-key
+scrub and slice pads; sample-accurate clock; the project saved in the flash image. Not yet: audio input (E6). The
+panel: [docs/FM1-CONTROLS.md](docs/FM1-CONTROLS.md). With no folder (or no audio files) a built-in loop plays on T1.
 
 ## Layout
 
@@ -20,22 +22,30 @@ src/plat/   fm1core ABI glue (ec_core.c: fm1core_get, the panel, LEDs, LCD, the 
             for the native build)
 src/seq/    the model and the sequencer, platform free: ec_params (params_spec.lua: ids, ranges, labels, the xforms to
             ec_track_params_t), ec_project (16 patterns x 6 tracks of params + steps + p-locks, the slot pool, the
-            versioned project record), ec_seq (transport, sample clock, trig conditions, holds = the base-value
-            resolver, region locks, ratchets, pattern switching, live loop keys / pads / keyboard)
+            versioned project record: the patterns, then tagged chunks RZR1 / EC4B / E5), ec_seq (transport, sample
+            clock, trig conditions, holds = the base-value resolver, region locks, ratchets, pattern switching, live
+            loop keys / pads / keyboard), ec_razor (E3: razor tables, Auto-Chop), ec_params_e4 (E4: FX + MOD params,
+            the bus records), ec_scene + ec_e5seq (E5: scenes, clipboards, page loops, undo, slice programs)
 src/app/    ec_app (the panel mapping, sample loading, save / autosave, LEDs, ui_info), ec_pages (categories,
-            pages, cells, setup lists)
+            pages, cells, setup lists), ec_razor_ui (E3: the RAZOR page), ec_e5 (E5: scenes, PAGE, memorize,
+            undo, naming)
 src/io/     ec_fs (async file API over rfm1_host_1), ec_fs_native (a native stand-in serving a real folder, one tick
             late), ec_browse (recursive /audio scan), ec_audiofile (WAV / AIFF / AIFC parse + decode), ec_loader
             (chunked loading), ec_samplestore (int16 stereo arena + handles, bpm from file names)
 src/ui/     ec_gfx (RGB565, palette, rects / lines / dots, the mockup's 3x5 pixel font), ec_leds, ec_screens (SRC,
-            generic pages with the step strip / filter curve / envelope, FILE, MIX, PAT, setup lists)
-src/dsp/    the sound engine (written separately; ec_dsp.h)
+            generic pages with the step strip / filter curve / envelope, FILE, MIX, PAT, setup lists), ec_scr_e3 /
+            e4 / e5 (RAZOR + WARP + NEIGH, FX + MOD, SCENE + PAGE + naming + toasts)
+src/dsp/    the sound engine (ec_dsp.h; E3 warp modes ec_warp3 + ec_fft, E4 ec_fx + ec_mod; src/dsp/README.md).
+            ec_dsp_mem_size() = 16.7 MiB, EC_DSP_MEM_MAX 18 MiB (a compile-time check)
 host/       ec_run (headless native harness: scripted input, WAV + PNG out), test_io (the file layer's test), test_seq
             (the sequencer's), make_testloop.py (the 4 s test loop), make_demo_folder.py + demo_e1.txt + render_e1.sh
             (the E1 demo built through panel input only), web_e2e.mjs (the .rfm1 in the real RemoteFM1 web player);
-            E5: test_e5 (scenes, glide, clipboards, page loop, BPM, memorize, undo, slices, the record + an E2 save in
-            fixtures/e2_flash.bin), demo_e5.txt + render_e5.sh
-results/    proof files: e0/, e1/ (the screens; WAVs stay untracked), web/ (the web player test's screenshots + SUMMARY.txt)
+            E3: test_e3, demo_e3.txt + render_e3.sh; E4: test_seq_e4, demo_e4.txt + render_e4.sh; E5: test_e5
+            (scenes, glide, clipboards, page loop, BPM, memorize, undo, slices, the record + an E2 save in
+            fixtures/e2_flash.bin), demo_e5.txt + render_e5.sh; 0.2.0: test_v020 (the E3 / E4 / E5 seams through
+            the real chain), demo_v020.txt + render_v020.sh (+ a reboot), make_heavy.c (the CPU worst case)
+results/    proof files: e0/ .. e5/, v020/ (the screens; WAVs stay untracked), web/ (the web player test's
+            screenshots + SUMMARY.txt)
 ```
 
 ## The APIs, briefly
@@ -63,6 +73,8 @@ results/    proof files: e0/, e1/ (the screens; WAVs stay untracked), web/ (the 
 cmake -S . -B build && cmake --build build -j8 && ctest --test-dir build --output-on-failure
 build/ec_run --folder <RemoteFM1 root> --press PLAY@1000 --wav out.wav --png screen.png --png-scale 2
 host/render_e1.sh build results/e1     # the E1 demo: screens + WAVs, reboot from the saved flash, a missing sample
+host/render_v020.sh build results/v020 # the 0.2.0 seams demo + a reboot (render_e3 / e4 / e5.sh likewise)
+make -C tests/dsp && make -C tests/dsp bench   # the engine's own tests (test_dsp, test_e3, test_fx, test_e4) + CPU
 ```
 
 `ec_run` options are listed at the top of `host/ec_run.c`: `--press PLAY@MS[+D]`, `--turn SELECT@MS:+1`,
@@ -82,6 +94,11 @@ cmake --build build-rfm1 -j8 --target rfm1_elasticat rfm1_run
 ctest --test-dir build-rfm1 -R rfm1_elasticat -V        # rfm1_check + rfm1_run --folder core-glue/elasticat/test_folder
 ```
 
+CPU in wasm3 (must stay >= 2x real time): `build/ec_make_heavy heavy.flash` writes the worst-case project for
+`build/demo_folder` (six busy tracks across the E3 modes, every insert, both sends, master COMP, LFOs), then
+`rfm1_run --folder build/demo_folder --flash-in heavy.flash --settle 3000 --seconds 10 --press PLAY@1500 <the .rfm1>`:
+2.1x real time while playing in 0.2.0 (M-series); the v020 demo's project 5.9x.
+
 ## Trying it in the RemoteFM1 web player
 
 The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `web/site/js/folder.js`).
@@ -90,7 +107,7 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    `testloop_bpm120.wav` from FM1VST's `core-glue/elasticat/test_folder/audio/`).
 2. Open https://remotefm1.com in Chrome or Edge (they can keep a picked folder; Safari and Firefox copy the files
    into the site's own storage instead).
-3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.1.0.rfm1` (or drop the file
+3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.2.0.rfm1` (or drop the file
    on the page). It goes into "Your firmware" with the Fantasy CFW badge.
 4. When the page asks **Pick your RemoteFM1 folder**, pick the `RemoteFM1/` folder. On a later visit, click
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
@@ -103,7 +120,7 @@ folder prompt with the demo loops, plays, programs steps, loads a file on T2, re
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open
-`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.1.0.rfm1&rfm1id=elasticat`. That is what its
+`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.2.0.rfm1&rfm1id=elasticat`. That is what its
 **Test in RemoteFM1** link does, but the link only lists firmwares in its catalog.
 
 ## Licence

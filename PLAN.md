@@ -45,7 +45,7 @@ host/         native harness: run headless with scripted input, write WAV + PNG 
 design/       mockup copies, notes
 ```
 
-Samples are stored as **int16 stereo** in a fixed arena (128 MiB memory ≈ 12 min of stereo audio at 44.1 kHz), read
+Samples are stored as **int16 stereo** in a fixed arena (96 MiB of the 128 MiB ≈ 9.5 min of stereo at 44.1 kHz), read
 whole at load (loops are short; streaming per VIRTUAL-CARTS §5 only if needed later). Other sample rates are played
 at the right speed by the reader (ratio), not resampled at load.
 
@@ -80,6 +80,34 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **E4**: FX machines, sends S1/S2, master insert, MOD (LFOs).
 - **E5**: scenes A/B + crossfader, copy/clear/paste, page modes, memorize/recall.
 - **E6** (separate project): audio input in the core ABI and hosts; REC page and the input machine.
+
+## Status (0.2.0, 2026-11-02)
+
+- **E0-E2** done (0.1.0): the pipe, the core loop, the playable instrument; web player e2e.
+- **E3** done: RAZOR / R.POLY + the FILE / RAZOR page (Auto-Chop, snaps, split / delete, per-slice settings), every
+  warp mode (domino, random_ola, pitch_corrected, harmonizer, wavetable, spectral_freeze, formant, gstretch,
+  gstretch2; real FFT), the NEIGH machine.
+- **E4** done: 18 FX machines on the inserts, S1 / S2 and the master insert; sends PRE / POST; MOD (2 LFOs, mod env,
+  velocity, 4 macros + matrix); the idle CPU saver.
+- **E5** done: scenes A / B + crossfader and glide (tracks and buses), copy / clear / paste per scope, PAGE overlay
+  (select / loop / rate), memorize / recall, undo, pattern / project names, slice programs, per-pattern BPM, pads 17-32.
+- **Integration** (0.2.0): e3 + e4 + e5 merged into main; resolutions in the merge commits and docs/FM1-CONTROLS.md
+  (FN + SAVE = undo; SAVE on SAMPLE opens RAZOR for the track's own file; OCT keys are the razor's only on RAZOR).
+  Tests: ctest 14 (incl. test_v020: the seams through the real chain, and the v020 demo + reboot), make -C tests/dsp
+  (66 + 43 + 262 + 28), clang and emcc -Wall -Wextra clean.
+- **Memory** (wasm, MEMORY_MIB 128): engine 17 523 904 bytes (EC_DSP_MEM_MAX 18 MiB, checked at compile time),
+  sample arena 96 MiB (~9.5 min of stereo 44.1 kHz), the app state 2.5 MiB + the memorize copy 2.3 MiB, the flash
+  buffers and host shim ~3.4 MiB, the stack 1 MiB: the stack top is at 123.1 MiB, 4.9 MiB free. The arena stays 96 MiB.
+- **CPU** (rfm1_run, wasm3, M-series): the heaviest project (`ec_make_heavy`: six busy tracks in harmonizer /
+  random_ola / spectral freeze / R.POLY x8 / wavetable / gstretch2, six inserts incl. BLACKHOLE, RINGS, REVERB, both
+  sends, master COMP, LFOs on every track) 2.1x real time while playing; the v020 demo project 5.9x.
+
+Remaining / open:
+- **E6** (separate project): audio input in the core ABI and the hosts; the REC page and the INPUT machine.
+- The bus lanes (p-locks of the S1 / S2 / MST params) are not ported; bus params are global (they do morph).
+- Two slice stores coexist (the razor table per track, the pattern's slice program); merging them into one would
+  change the save format. Hold-anchor + turn on a bus page does not write the bus param into a scene (capture does).
+- CPU headroom for the worst case is thin (2.1x); the next CPU work would be the spectral / harmonizer stages.
 
 ## How the work is done
 

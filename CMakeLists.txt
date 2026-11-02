@@ -44,6 +44,9 @@ target_compile_options(ec_test_e3 PRIVATE -Wall -Wextra)
 add_executable(ec_test_seq_e4 host/test_seq_e4.c)                  # E4
 target_link_libraries(ec_test_seq_e4 PRIVATE elasticat)
 target_compile_options(ec_test_seq_e4 PRIVATE -Wall -Wextra)
+add_executable(ec_make_heavy host/make_heavy.c)   # the heaviest project, for CPU runs (README: CPU)
+target_link_libraries(ec_make_heavy PRIVATE elasticat)
+target_compile_options(ec_make_heavy PRIVATE -Wall -Wextra)
 add_executable(ec_test_v020 host/test_v020.c)   # 0.2.0: the E3 / E4 / E5 seams through the real chain
 target_link_libraries(ec_test_v020 PRIVATE elasticat)
 target_compile_options(ec_test_v020 PRIVATE -Wall -Wextra)

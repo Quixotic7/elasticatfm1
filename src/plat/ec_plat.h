@@ -23,8 +23,8 @@ enum {
     EC_B_ENV,     /* AMP */
     EC_B_LFO,     /* MOD */
     EC_B_EDIT,    /* FILT */
-    EC_B_GLO,     /* MASTER */
-    EC_B_HOME,    /* FN (shift) */
+    EC_B_GLO,     /* FN (shift): EC_B_FN */
+    EC_B_HOME,    /* MASTER */
     EC_B_SAVE,    /* FILE */
     EC_B_ARP,     /* PAT */
     EC_B_SEQ,     /* TRIG */
@@ -34,6 +34,7 @@ enum {
     EC_B_OCTUP,   /* key mode + */
     EC_NB
 };
+#define EC_B_FN EC_B_GLO   /* the shift key (owner, 2026-11-02: GLO, not HOME) */
 /* ---- knobs by role (FM1P_E_* order); MASTER is the absolute pot (ec_input_t.master) ---- */
 enum { EC_E_SELECT, EC_E_ALGO, EC_E_PRESETS, EC_E_K1, EC_E_K2, EC_E_K3, EC_E_K4, EC_NE };
 

@@ -362,8 +362,8 @@ static fm1core_t CORE = {
     .license = FM1CORE_LICENSE,
     .gated = EC_GATED,
     .flash_size = EC_FLASH_SIZE,
-    /* the printed labels: Elasticat's own names are in ec_plat.h (FX, SRC, AMP, MOD, FILT, MST, FN, FILE, PAT, TRIG) */
-    .button_names = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC", "OCT-",
+    /* Elasticat's own names (hosts draw them on the panel, the printed name beside a renamed button) */
+    .button_names = {"FX", "SRC", "AMP", "MOD", "FILT", "FN", "MST", "FILE", "PAT", "TRIG", "PLAY", "REC", "OCT-",
                      "OCT+"},
     .params = NULL,
     .nparams = 0,

@@ -12,13 +12,13 @@ python3 "$H/make_demo_folder.py" "$B/demo_folder" >/dev/null
 mkdir -p "$OUT"
 rm -f "$B/e5_flash.bin"
 "$B/ec_run" --folder "$B/demo_folder" --ms 22000 --out "$OUT" --script "$H/demo_e5.txt" --wav "$OUT/e5_demo.wav" \
-    --flash "$B/e5_flash.bin" --press HOME@21600+300 --press REC@21700 \
+    --flash "$B/e5_flash.bin" --press GLO@21600+300 --press REC@21700 \
     --rms-from 1300 --min-rms 0.02 --expect-ui sa:3 --expect-ui sb:2 --expect-ui memo:1 \
     --expect-ui pname:SMOOTH_OMIO --expect-ui keys:loop --expect-ui play:1 --expect-ui saves:1
 
 # power on again: the E5 chunk comes back
 "$B/ec_run" --folder "$B/demo_folder" --flash "$B/e5_flash.bin" --ms 3000 --png-scale 2 --press PLAY@1500 \
-    --press GLO@1600 --press GLO@1700 --press GLO@1800 --png-at 2500:"$OUT/27_reload_scene.png" \
+    --press HOME@1600 --press HOME@1700 --press HOME@1800 --png-at 2500:"$OUT/27_reload_scene.png" \
     --rms-from 1600 --min-rms 0.02 --expect-ui sa:3 --expect-ui sb:2 --expect-ui xf:0.681 --expect-ui ready:2 \
     --expect-ui pname:SMOOTH_OMIO
 

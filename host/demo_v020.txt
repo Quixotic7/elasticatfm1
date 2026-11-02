@@ -8,10 +8,10 @@ png-scale 2
 master 640@0
 
 # ---- T1 (drums, loaded at boot): insert DESTROY (FN + FX setup, KN1 +5), FOLD + SAT up; FX twice = SENDS: S1
-press HOME@1200+150
+press GLO@1200+150
 press FX@1250+60
 turn K1@1500:5
-press HOME@1600+150
+press GLO@1600+150
 press FX@1650+60
 turn K2@1800:40
 turn K3@1850:50
@@ -22,10 +22,10 @@ png 2300:02_t1_send_s1.png
 
 # ---- T2: the NEIGH machine (FN + SEL setup, KN1 +6): T1 is heard through T2 (its filter shapes it)
 upper 1@2500+80
-press HOME@2600+150
+press GLO@2600+150
 press SEL@2650+60
 turn K1@2800:6
-press HOME@2900+150
+press GLO@2900+150
 press SEL@2950+60
 press EDIT@3100
 turn K1@3200:-25
@@ -37,10 +37,10 @@ upper 2@3700+80
 press SAVE@3800
 turn SELECT@3900:1
 press SAVE@4000
-press HOME@4400+150
+press GLO@4400+150
 press SEL@4450+60
 turn K2@4600:6
-press HOME@4700+150
+press GLO@4700+150
 press SEL@4750+60
 turn SELECT@4850:2
 turn K1@4900:60
@@ -59,14 +59,14 @@ upper 3@5900+80
 press SAVE@6000
 turn SELECT@6100:2
 press SAVE@6200
-press HOME@6700+150
+press GLO@6700+150
 press SEL@6750+60
 turn K1@6900:5
-press HOME@7000+150
+press GLO@7000+150
 press SEL@7050+60
 press SAVE@7200
 press SAVE@7300
-press HOME@7500+150
+press GLO@7500+150
 press OCT+@7550+60
 png 7700:06_t4_razor_autochop.png
 # trigs on T4 (steps 1 5 9 13, from SRC)
@@ -78,23 +78,23 @@ lower 12@8300+60
 
 # ---- S1: REVERB (setup KN1 +2), size up
 upper 6@8500+80
-press HOME@8600+150
+press GLO@8600+150
 press FX@8650+60
 turn K1@8900:2
-press HOME@9000+150
+press GLO@9000+150
 press FX@9050+60
 turn K1@9200:40
 png 9300:07_s1_reverb.png
 
 # ---- PLAY; the MIX page
 press PLAY@9500
-press GLO@9600
+press HOME@9600
 png 10300:08_mix_playing.png
 
-# ---- scene A: GLO x2 more = MST > SCENE; FN + key 1 = capture A (every track + the buses)
-press GLO@10500
-press GLO@10600
-press HOME@10800+400
+# ---- scene A: HOME x2 more = MST > SCENE; FN + key 1 = capture A (every track + the buses)
+press HOME@10500
+press HOME@10600
+press GLO@10800+400
 lower 0@10900+80
 # scene B: T3's IN1 to +5, T1's DESTROY FOLD up, S1 smaller; FN + key 8 = capture B
 upper 2@11300+80
@@ -107,8 +107,8 @@ turn K2@12050:60
 upper 6@12200+80
 press FX@12300
 turn K1@12400:-60
-press GLO@12600
-press HOME@12700+400
+press HOME@12600
+press GLO@12700+400
 lower 7@12800+80
 png 13000:09_scene_b_captured.png
 # glide toward B (hold key 7 = 1.0), released part way (the release freezes the fader)
@@ -121,12 +121,12 @@ press REC@14200
 upper 10@14600+80
 lower 1@14650+60
 upper 10@15400+500
-press HOME@15500+300
+press GLO@15500+300
 press PLAY@15600
 png 15950:11_pattern2_pasted.png
 
 # ---- save (FN + REC)
-press HOME@16300+300
+press GLO@16300+300
 press REC@16400+60
 png 16600:12_saved.png
 ms 17500

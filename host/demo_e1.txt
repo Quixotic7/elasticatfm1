@@ -23,11 +23,11 @@ press SAVE@3200
 png 3212:03_file_loading.png
 
 # ---- T4: the SLICE machine (FN + SRC = the SRC setup list)
-press HOME@3700+150
+press GLO@3700+150
 press SEL@3750+60
 turn K1@3950:2
 png 4000:04_src_setup.png
-press HOME@4200+300
+press GLO@4200+300
 press SEL@4300+60
 # slice pads while stopped: hold SEL, play pads 3 and 7
 press SEL@4700+600
@@ -37,10 +37,10 @@ png 4850:05_src_slices.png
 
 # ---- T3: the granular warp (changes only while stopped), its WARP page
 upper 2@5400+80
-press HOME@5500+150
+press GLO@5500+150
 press SEL@5550+60
 turn K2@5700:3
-press HOME@5900+150
+press GLO@5900+150
 press SEL@6000+60
 turn SELECT@6100:2
 turn K1@6200:8
@@ -58,7 +58,7 @@ lower 12@7300+900
 press SEL@7400+500
 lower 4@7500+100
 png 7550:07_step_region_lock.png
-press HOME@8400+300
+press GLO@8400+300
 lower 14@8500+80
 press SEQ@8800
 lower 15@8900+500
@@ -155,13 +155,13 @@ turn PRESETS@25500:-1
 upper 9@26100+2000
 
 # ---- MASTER / MIX: T3's level down, T2 muted for a bar
-press GLO@28200
+press HOME@28200
 upper 2@28300+80
 turn K1@28400:-30
-press HOME@28600+200
+press GLO@28600+200
 upper 1@28650+80
 png 29000:19_mix.png
-press HOME@30000+200
+press GLO@30000+200
 upper 1@30050+80
 
 # ---- the other pages
@@ -169,16 +169,16 @@ press ARP@30300
 png 30400:20_pat.png
 press LFO@30600
 png 30700:21_mod_e4.png
-press HOME@30900+300
+press GLO@30900+300
 press EDIT@31000+60
 png 31100:22_filt_setup.png
-press HOME@31300+300
+press GLO@31300+300
 press EDIT@31400+60
 
 # ---- save (FN + REC), then stop (FN + PLAY)
-press HOME@31800+300
+press GLO@31800+300
 press REC@31900+60
 png 32000:23_saved.png
-press HOME@33000+300
+press GLO@33000+300
 press PLAY@33100+60
 ms 34000

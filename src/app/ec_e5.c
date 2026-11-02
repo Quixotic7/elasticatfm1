@@ -492,10 +492,10 @@ static int scope_op(int b)
 /* ------------------------------------------------------------------------------------------- buttons --- */
 int ec_e5_button_down(int b)
 {
-    if (b != EC_B_HOME)
+    if (b != EC_B_FN)
         E->home_clean = 0;
     if (E->naming) {
-        if (b == EC_B_HOME) {
+        if (b == EC_B_FN) {
             E->home_clean = 1;
             return 0;
         }
@@ -541,7 +541,7 @@ int ec_e5_button_down(int b)
 
 int ec_e5_button_up(int b)
 {
-    if (b == EC_B_HOME && E->naming && E->home_clean) {
+    if (b == EC_B_FN && E->naming && E->home_clean) {
         E->home_clean = 0;
         name_close(0);
         return 0;

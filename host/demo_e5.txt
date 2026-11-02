@@ -7,14 +7,14 @@ png-scale 2
 master 640@0
 press PLAY@1200
 
-# ---- a sound for scene A: FILT cutoff 100, res 30; GLO x3 = MST > SCENE; FN + key 1 = capture A
+# ---- a sound for scene A: FILT cutoff 100, res 30; HOME x3 = MST > SCENE; FN + key 1 = capture A
 press EDIT@1500
 turn K1@1600:-27
 turn K2@1650:30
-press GLO@1900
-press GLO@2000
-press GLO@2100
-press HOME@2300+400
+press HOME@1900
+press HOME@2000
+press HOME@2100
+press GLO@2300+400
 lower 0@2400+80
 png 2450:01_scene_capture_a.png
 
@@ -22,8 +22,8 @@ png 2450:01_scene_capture_a.png
 press EDIT@2800
 turn K1@2900:-60
 turn K2@2950:60
-press GLO@3200
-press HOME@3300+300
+press HOME@3200
+press GLO@3300+300
 lower 7@3400+80
 png 3700:02_scene_page.png
 
@@ -56,7 +56,7 @@ lower 4@7650+450
 press REC@7800
 png 7850:08_copy_steps.png
 lower 10@8300+500
-press HOME@8350+300
+press GLO@8350+300
 press PLAY@8450
 png 8500:09_paste_steps.png
 
@@ -84,16 +84,16 @@ press SAVE@11800
 png 12000:16_pattern_named.png
 
 # ---- memorize (FN + OCT+), change the cutoff, recall (FN + OCT-) while playing, then undo (FN + SAVE)
-press HOME@12300+300
+press GLO@12300+300
 press OCT+@12400+60
 png 12450:17_memorize.png
 press EDIT@12800
 turn K1@12900:50
-press HOME@13200+300
+press GLO@13200+300
 press OCT-@13300+60
 png 13350:18_recall.png
 turn K2@13500:20
-press HOME@13700+300
+press GLO@13700+300
 press SAVE@13800
 png 13850:19_undo.png
 
@@ -109,35 +109,35 @@ upper 1@15400+80
 press SAVE@15500
 turn SELECT@15600:1
 press SAVE@15700
-press HOME@16300+300
+press GLO@16300+300
 press SEL@16400+60
 turn K1@16650:2
-press HOME@16750+250
+press GLO@16750+250
 press SEL@16800+60
 press OCT+@17100+60
 # hold pad 3 + KN1 (pitch) = that slice's lock; + FN, KN2 = CHOK (its choke group)
 lower 2@17300+900
 turn K1@17500:5
 png 17600:22_slice_lock.png
-press HOME@17700+400
+press GLO@17700+400
 turn K2@17900:2
 png 18000:23_slice_choke.png
 # hold pad 5 + FN + KN3 (SMUT) = mute the slice (its pad goes faint, the steps skip it)
 lower 4@18350+400
-press HOME@18400+300
+press GLO@18400+300
 turn K3@18500:1
 png 18600:24_slice_mute.png
 # hold pad 3 + REC = copy its program; hold pad 7 + FN + PLAY = paste
 lower 2@19000+400
 press REC@19200
 lower 6@19600+500
-press HOME@19700+300
+press GLO@19700+300
 press PLAY@19800
 png 19850:25_slice_paste.png
 
 # ---- 32 slices (FN + KN1 = CNT): FN + pad 1 = slice 17
-press HOME@20500+300
+press GLO@20500+300
 turn K1@20600:16
-press HOME@20950+400
+press GLO@20950+400
 lower 0@21000+300
 png 21100:26_pad_17.png

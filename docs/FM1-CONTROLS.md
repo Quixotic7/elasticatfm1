@@ -1,7 +1,7 @@
 # Elasticat on the FM-1: controls (0.2.0)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder.
-**FN** is the HOME button (hold it). Six tracks **T1-T6**, each with its own sample, machine, warp mode, filter, amp,
+**FN** is the GLO button (hold it). Six tracks **T1-T6**, each with its own sample, machine, warp mode, filter, amp,
 insert FX, sends, MOD and 16-step pages; two send buses **S1**, **S2** and the master insert **MST**; 16 patterns; two
 scenes **A / B** with a crossfader. A new project loads the first file in `/audio` onto T1.
 
@@ -28,7 +28,7 @@ slice's own lock (see Slices). Hold scene A or B + turn = that param into the sc
 | ENV | AMP: envelope, VOL, PAN | - | setup: env mode, env range, portamento, slice hold |
 | FX | FX: the insert machine's params (a picture per machine) / SENDS: S1, S2 levels, TAP. On S1 / S2 / MST: that bus's machine | next page | setup: **the FX machine** (insert, or the selected bus's), send tap |
 | LFO | MOD: LFO 1 / LFO 2 / MOD ENV / VELOCITY / MACROS / MACRO 1-4 (value + depth to PTCH CUT RES AMP PAN) | next page | - |
-| GLO | MASTER: MIX (meters + faders) / MASTER (BPM, swing, global length, playhead return) / SCENE | next page | setup: RTN, BPM, GBPM, NAME |
+| HOME | MASTER: MIX (meters + faders) / MASTER (BPM, swing, global length, playhead return) / SCENE | next page | setup: RTN, BPM, GBPM, NAME |
 | SAVE | FILE: page 1 SAMPLE (the browser) | **SAMPLE: loads the file under the cursor** into the track's slot; when the cursor is already on the track's file: page 2 **RAZOR**. RAZOR: back to SAMPLE | **UNDO** |
 | ARP | PAT: length, rate, global length, change mode | - | setup |
 | PLAY | Play / pause (resume keeps the position). With a scope held = **CLEAR** | | **stop + back to step 1** (twice: all voices off). With a scope held = **PASTE** |
@@ -144,7 +144,7 @@ p-lock; DEST, WAVE and MODE do not (as the original).
 ## Scenes and the crossfader
 
 Two scenes, A and B, each a sparse set of param values for every track and the three buses; the fader morphs between
-them. **MST > SCENE** (GLO, page 3) is the overview: the fader with its six glide positions and where a glide is
+them. **MST > SCENE** (HOME, page 3) is the overview: the fader with its six glide positions and where a glide is
 heading, and the params that morph (track or bus, label, both ends, where the morph is now); **KN1 = XFD**, the fader
 as a direct 0..128 knob. The scene row is on the lower keys in the SCENE key mode (a strip with the fader sits over
 the page) and always on MST > SCENE: lower keys 9-16 = A, six glide keys, B (the grid's row 5), mirrored on 1-8.
@@ -194,7 +194,7 @@ While an OCT key is held the screen and the lower keys show the pattern's pages.
 | FN + OCT- | **Recall** it, also while playing (the pattern restarts at step 1; only changed samples reload). OCT- lights with FN once something is memorized |
 | FN + SAVE | **Undo** the last change, 16 deep, per gesture (a knob turn, a fader glide, a step tap, a lock, a paste or a page clear); a pause of a second starts a new gesture |
 | PATN overlay open + SAVE | **Name the pattern** |
-| GLO setup NAME (turn) | **Name the project** |
+| MST setup NAME (turn) | **Name the project** |
 | Naming screen | KN1 / SELECT the place, KN2 the character, KN3 a random name, KN4 left = delete, right = insert a space; **SAVE** keeps it, a tap of FN cancels |
 
 ## Slices and patterns
@@ -205,7 +205,7 @@ While an OCT key is held the screen and the lower keys show the pattern's pages.
 - A slice has two homes: the **razor table** (per track, every pattern: range, PLAY, CHOK, P/T, mute) and the
   **pattern's slice program** (locks, CHOK, SMUT). A slice is silent when either mutes it; the pattern's choke group
   wins, else the razor table's.
-- BPM is **per pattern**: a pattern switch brings its BPM. GLO setup **GBPM ON** = one BPM for all patterns.
+- BPM is **per pattern**: a pattern switch brings its BPM. MST setup **GBPM ON** = one BPM for all patterns.
 
 ## LEDs
 

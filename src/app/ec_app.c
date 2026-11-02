@@ -938,7 +938,7 @@ static void upper_up(int i)
 }
 
 /* ------------------------------------------------------------------------------------------- buttons --- */
-static const int CAT_OF[EC_NB] = {EC_CAT_FX, EC_CAT_SRC, EC_CAT_AMP, EC_CAT_MOD, EC_CAT_FILT, EC_CAT_MASTER, -1,
+static const int CAT_OF[EC_NB] = {EC_CAT_FX, EC_CAT_SRC, EC_CAT_AMP, EC_CAT_MOD, EC_CAT_FILT, -1, EC_CAT_MASTER,
                                   EC_CAT_FILE, EC_CAT_PAT, EC_CAT_TRIG, -1, -1, -1, -1};
 
 static void button_down(int b)
@@ -955,7 +955,7 @@ static void button_down(int b)
         return;
     }
     switch (b) {
-    case EC_B_HOME: A->fn = 1; break;
+    case EC_B_FN: A->fn = 1; break;
     case EC_B_SEL:
         A->sel_held = 1;
         A->sel_used = 0;
@@ -1006,7 +1006,7 @@ static void button_up(int b)
         A->redraw = 1;
         return;
     }
-    if (b == EC_B_HOME)
+    if (b == EC_B_FN)
         A->fn = 0;
     else if (b == EC_B_SEL) {
         A->sel_held = 0;
@@ -1275,7 +1275,7 @@ static void leds(void)
         if (CAT_OF[b] >= 0)
             ec_plat_led_button(b, CAT_OF[b] == A->cat ? (A->settings && blink(250) ? EC_LED_MID : EC_LED_LIT)
                                                       : EC_LED_FAINT);
-    ec_plat_led_button(EC_B_HOME, A->fn ? EC_LED_LIT : EC_LED_FAINT);
+    ec_plat_led_button(EC_B_FN, A->fn ? EC_LED_LIT : EC_LED_FAINT);
     ec_plat_led_button(EC_B_PLAY, A->seq.playing ? EC_LED_LIT : A->seq.paused ? (blink(400) ? EC_LED_MID : EC_LED_DIM)
                                                                               : EC_LED_DIM);
     ec_plat_led_play_green(A->seq.playing ? EC_LED_LIT : EC_LED_OFF);

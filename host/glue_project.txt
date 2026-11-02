@@ -17,18 +17,18 @@ turn K1@3100:-50
 upper 1@3600+60
 press SEL@3700+60
 turn K4@3800:-1
-press HOME@3900+150
+press GLO@3900+150
 press SEL@3950+60
 turn K2@4100:3
-press HOME@4300+150
+press GLO@4300+150
 press SEL@4350+60
 # T3: slot 1, slice poly, slices on every other step
 upper 2@4800+60
 turn K4@4900:-2
-press HOME@5000+150
+press GLO@5000+150
 press SEL@5050+60
 turn K1@5200:3
-press HOME@5400+150
+press GLO@5400+150
 press SEL@5450+60
 lower 0@5600+60
 lower 2@5700+60
@@ -50,10 +50,10 @@ turn K4@7600:-40
 upper 3@8000+60
 press SEL@8100+60
 turn K4@8200:-3
-press HOME@8300+150
+press GLO@8300+150
 press SEL@8350+60
 turn K2@8500:12
-press HOME@8700+150
+press GLO@8700+150
 press SEL@8750+60
 press SEQ@8900
 lower 0@9000+60
@@ -62,6 +62,6 @@ press SEQ@9200
 lower 8@9300+500
 turn K3@9500:2
 # save
-press HOME@10000+300
+press GLO@10000+300
 press REC@10100+60
 ms 11000

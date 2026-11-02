@@ -98,7 +98,7 @@ const fmtL = (l) => `peak ${l.peak.toFixed(3)}, RMS ${l.rms.toFixed(4)}`;
 
 // the panel (FM1Site.panel: remote-hook.js). Buttons by label (panel.js PANEL_LABELS = the cart's EC_B_x order) ->
 // matrix; encoders by matrix (0 SELECT 1 ALGO 2..5 KNOB1..4 6 PRESETS); keys 0..26 = F3..G5, the lower row the naturals
-const B = { FX: 0, SEL: 1, ENV: 2, LFO: 3, EDIT: 4, GLO: 5, HOME: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, "OCT-": 12, "OCT+": 13 };
+const B = { FX: 0, SEL: 1, ENV: 2, LFO: 3, EDIT: 4, HOME: 5, GLO: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, "OCT-": 12, "OCT+": 13 };
 const toMatrix = (b) => (b < 12 ? b + 2 : b - 12);
 const LOWER = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26], UPPER = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25];
 const E = { SELECT: 0, ALGO: 1, K1: 2, K2: 3, K3: 4, K4: 5, PRESETS: 6 };
@@ -254,7 +254,7 @@ try {
   ok(!(await js(`window.__w.errors.length`)), `no worklet errors${(await js(`window.__w.errors.join(" | ")`)) ? ": " + (await js(`window.__w.errors.join(" | ")`)) : ""}`);
 
   // 6. stop (FN + PLAY), the autosave (the cart: stopped + 2 s quiet; the page: the flash read 1.5 s later), a reload
-  await btnDown("HOME", true); await sleep(80); await tap("PLAY"); await btnDown("HOME", false);
+  await btnDown("GLO", true); await sleep(80); await tap("PLAY"); await btnDown("GLO", false);
   await sleep(7000);
   await shot("10_stopped_saved");
   await js("(window.__before = true)"); await cdp("Page.reload", {});

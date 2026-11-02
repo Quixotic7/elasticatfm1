@@ -55,8 +55,8 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 ## Panel mapping (from the mockup)
 
 - **MASTER pot**: master volume. **SELECT**: page. **PRESETS knob**: pattern. **ALGORITHM knob**: track.
-  **KN1-KN4**: the page's cells 1-4 (cells 5-8 with HOME/FN held).
-- **Buttons**: FX→FX · SEL→SRC · ENV→AMP · LFO→MOD · EDIT→FILT · GLO→MASTER · HOME→FN (shift) · SAVE→FILE ·
+  **KN1-KN4**: the page's cells 1-4 (cells 5-8 with GLO/FN held).
+- **Buttons**: FX→FX · SEL→SRC · ENV→AMP · LFO→MOD · EDIT→FILT · GLO→FN (shift) · HOME→MASTER · SAVE→FILE ·
   ARP→PAT · SEQ→TRIG · PLAY→PLAY · REC→REC (reserved: copy/clear/paste scope key as in Elasticat). OCT-/OCT+: key
   mode.
 - **Upper keys (11)**: T1..T6, S1, S2, MST, FILL, PATN. LED: selected track bright, others dim by activity.

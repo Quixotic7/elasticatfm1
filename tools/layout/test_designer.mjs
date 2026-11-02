@@ -15,6 +15,8 @@
 //   7. descriptions: a slot's and a page header's tooltip, the inspector, the tray's search over descriptions
 //   8. the drawn FM-1 by the mouse: SEQ -> TRIG, the key LEDs light for trigs, Shift-click latches SHIFT (the live
 //      labels change), a lower key latched + the wheel on KN1 = a p-lock (the lock frame, K1's filled chip)
+//   9. the columns: the tree ~30% wide at 1280 and 2000 px with the screen and the FM-1 whole, lanes capped; the tree
+//      splitter dragged, kept across a reload, a double-click = the default (09_columns_2000.png at 2000x1050)
 // Screenshots + SUMMARY.txt into results/layout/.
 //   node tools/layout/test_designer.mjs [--web=build/layout-web] [--out=results/layout]
 import { spawn, spawnSync } from "node:child_process";
@@ -257,6 +259,38 @@ try {
   await click(k0.x, k0.y);
   await sleep(150);
   ok(!(await js("designer.panel.held()")).key[0], "   a click on the key lets it go");
+
+  // 9. the columns: the tree ~30% of the width by default, the preview whole; the splitter drags it, a reload keeps
+  //    it, a double-click gives the default back
+  const viewport = async (width, height) => { await cdp("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false }); await sleep(300); };
+  const fullyIn = (sel) => js(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(), c = document.querySelector("#centre").getBoundingClientRect(); return r.left >= c.left - 1 && r.right <= c.right + 1; })()`);
+  for (const w of [1280, 2000]) {
+    await viewport(w, 1050);
+    const c = await js("designer.columns()");
+    ok(Math.abs(c.tree / c.main - 0.30) < 0.02 && c.centre >= 470 && (await fullyIn("#panel")) && (await fullyIn("#screenwrap")),
+      `9. at ${w} px: the tree ${c.tree} px (${(100 * c.tree / c.main).toFixed(1)}%), side ${c.side}, preview ${c.centre} (screen + FM-1 whole)`);
+  }
+  const laneW = await js(`Math.max(...[...document.querySelectorAll("#tree .lane")].map((e) => e.offsetWidth))`);
+  ok(laneW <= 560, `   at 2000 px a lane is at most 560 px wide (${laneW})`);
+  await shot("09_columns_2000");
+  const sp = await js(`(() => { const r = document.querySelector("#split0").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 200 }; })()`);
+  const tw0 = (await js("designer.columns()")).tree;
+  await mouse("mousePressed", sp.x, sp.y);
+  for (let i = 1; i <= 5; i++) { await mouse("mouseMoved", sp.x - 30 * i, sp.y, { button: "left", buttons: 1 }); await sleep(30); }
+  await mouse("mouseReleased", sp.x - 150, sp.y);
+  await sleep(150);
+  const tw1 = (await js("designer.columns()")).tree;
+  ok(Math.abs(tw1 - (tw0 - 150)) <= 3, `   dragging the splitter 150 px left: the tree ${tw0} -> ${tw1} px`);
+  await cdp("Page.reload");
+  ready = false;
+  for (let i = 0; i < 300 && !ready; i++) { await sleep(100); ready = await js("!!(window.designer && window.designer.ready)"); }
+  const tw2 = (await js("designer.columns()")).tree;
+  ok(ready && Math.abs(tw2 - tw1) <= 2, `   after a reload the tree is still ${tw2} px`);
+  await mouse("mousePressed", sp.x - 150, sp.y, { clickCount: 1 }); await mouse("mouseReleased", sp.x - 150, sp.y, { clickCount: 1 });
+  await mouse("mousePressed", sp.x - 150, sp.y, { clickCount: 2 }); await mouse("mouseReleased", sp.x - 150, sp.y, { clickCount: 2 });
+  await sleep(150);
+  const tw3 = (await js("designer.columns()")).tree;
+  ok(Math.abs(tw3 - tw0) <= 2, `   a double-click on it: back to the default ${tw3} px`);
   ok(exceptions.length === 0, `   no page exceptions (${exceptions.length})`);
 } catch (e) {
   ok(false, `the run: ${e.stack || e}`);

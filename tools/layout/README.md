@@ -41,6 +41,9 @@ storage); **Export** is what counts.
   each bus's FX. Pages that depend on these show the variant for the context.
 - **Descriptions**: hover a slot, a tray chip, a page's header, a category or a context picker for a tooltip with
   what it does (`design/layout/descriptions.json`, below).
+- **The columns**: drag the bars between them to resize (the tree starts at 30% of the width, the preview keeps at
+  least 470 px so the screen and the FM-1 stay whole; a lane is at most 560 px wide). The widths are kept in this
+  browser; a double-click on a bar gives its column back its default.
 
 ## The FM-1 panel
 

@@ -891,6 +891,54 @@ function drawPanel() {
   P.view.draw();
 }
 
+// ------------------------------------------------------------------------------------------------ the column widths
+// tree | side | preview, two splitters: the tree a share of the width (30% by default), the side in px, the preview
+// the rest (never under its minimum, so the screen and the FM-1 stay whole). Kept in this browser; a double-click on
+// a splitter gives its column back its default.
+const COLS_STORE = "elasticat-layout-cols-v1";
+const COLS = { tree: 0.30, side: 300, treeMin: 300, sideMin: 220, centreMin: 470, split: 6 };
+const cols = { tree: COLS.tree, side: COLS.side };
+try { Object.assign(cols, JSON.parse(localStorage.getItem(COLS_STORE)) || {}); } catch (e) { /* defaults */ }
+if (!(cols.tree > 0 && cols.tree < 1)) cols.tree = COLS.tree;
+if (!(cols.side > 0 && cols.side < 4000)) cols.side = COLS.side;
+function sizeColumns(save) {
+  const main = $("main"), W = main.clientWidth, room = W - 2 * COLS.split - COLS.centreMin;
+  const side = Math.round(Math.max(COLS.sideMin, Math.min(cols.side, room - COLS.treeMin)));
+  const tree = Math.round(Math.max(COLS.treeMin, Math.min(cols.tree * W, room - side)));
+  main.style.setProperty("--tree-w", tree + "px");
+  main.style.setProperty("--side-w", side + "px");
+  if (save) try { localStorage.setItem(COLS_STORE, JSON.stringify(cols)); } catch (e) { /* not kept */ }
+}
+function setupSplitters() {
+  const main = $("main");
+  [["#split0", "tree"], ["#split1", "side"]].forEach(([sel, which]) => {
+    const sp = $(sel);
+    sp.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault();
+      sp.setPointerCapture(ev.pointerId);
+      sp.classList.add("drag"); document.body.classList.add("coldrag");
+      const x0 = ev.clientX, t0 = $("#tree").offsetWidth, s0 = $("#side").offsetWidth, W = main.clientWidth;
+      const move = (e) => {
+        const dx = e.clientX - x0;
+        if (which === "tree") cols.tree = (t0 + dx) / W; else cols.side = s0 + dx;
+        sizeColumns(false);
+      };
+      const up = () => {
+        sp.removeEventListener("pointermove", move); sp.removeEventListener("pointerup", up); sp.removeEventListener("pointercancel", up);
+        sp.classList.remove("drag"); document.body.classList.remove("coldrag");
+        // keep what the clamps gave, not what the pointer asked
+        cols.tree = $("#tree").offsetWidth / W; cols.side = $("#side").offsetWidth;
+        sizeColumns(true);
+      };
+      sp.addEventListener("pointermove", move); sp.addEventListener("pointerup", up); sp.addEventListener("pointercancel", up);
+    });
+    sp.addEventListener("dblclick", () => { cols[which] = COLS[which]; sizeColumns(true); });
+  });
+  window.addEventListener("resize", () => sizeColumns(false));
+  sizeColumns(false);
+}
+setupSplitters();
+
 // ------------------------------------------------------------------------------------------------ the test API
 function ref(scope, a = {}) { return { scope, cat: a.cat, pi: a.pi, bus: a.bus, vi: a.vi ?? -1, lane: a.lane ?? 0, k: a.k ?? 0 }; }
 window.designer = {
@@ -925,5 +973,7 @@ window.designer = {
     releaseLatches: () => S.panel.controls.releaseLatches(),
   },
   desc: () => S.desc,
+  // the three columns' widths (px) and the page's
+  columns: () => ({ main: $("main").clientWidth, tree: $("#tree").offsetWidth, side: $("#side").offsetWidth, centre: $("#centre").offsetWidth }),
 };
 boot().catch((e) => { document.body.prepend(h("pre", { style: "color:#ff4a3d" }, "the preview did not start: " + (e && e.stack || e))); window.designer.error = String(e); });

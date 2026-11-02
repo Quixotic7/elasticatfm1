@@ -91,6 +91,9 @@ add_executable(ec_test_e6 host/test_e6.c)   # E6: audio input, the INPUT machine
 target_link_libraries(ec_test_e6 PRIVATE elasticat)
 target_compile_options(ec_test_e6 PRIVATE -Wall -Wextra)
 
+add_executable(ec_test_pack tools/layout/test_pack.c tools/layout/ec_layout_pack.c)   # the designer's load path
+target_include_directories(ec_test_pack PRIVATE tools/layout)
+target_compile_options(ec_test_pack PRIVATE -Wall -Wextra)
 add_executable(ec_dump_pages host/dump_pages.c)   # every page in every context: the 0.4.0 proof below
 target_compile_options(ec_dump_pages PRIVATE -Wall -Wextra)
 
@@ -100,6 +103,7 @@ enable_testing()
 add_test(NAME layout_040 COMMAND sh -c "$<TARGET_FILE:ec_dump_pages> --layout test | tail -1 | diff - ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/pages-0.4.0.hash")
 if(Python3_FOUND)
     add_test(NAME layout_check COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json --check)
+    add_test(NAME layout_pack COMMAND sh -c "${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json --quiet --pack ${CMAKE_BINARY_DIR}/shipped.pack && $<TARGET_FILE:ec_test_pack> ${CMAKE_BINARY_DIR}/shipped.pack")
 endif()
 add_test(NAME e5 COMMAND ec_test_e5 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/e2_flash.bin)   # E5
 add_test(NAME v020 COMMAND ec_test_v020)

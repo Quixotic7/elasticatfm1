@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elasticat Layout</title>
+<link rel="stylesheet" href="designer.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><span class="dot"></span>ELASTICAT <b>LAYOUT</b></div>
+  <label class="name">DESIGN <input id="dname" spellcheck="false" maxlength="40"></label>
+  <div class="tools">
+    <button id="undo" title="Undo (Ctrl+Z)">UNDO</button>
+    <button id="redo" title="Redo (Ctrl+Shift+Z)">REDO</button>
+    <button id="import" title="Open a design file">IMPORT</button>
+    <button id="export" class="acc" title="Download elasticat.json">EXPORT</button>
+    <select id="open" title="Start from the shipped layout or a saved design"></select>
+    <input id="file" type="file" accept=".json,application/json" hidden>
+  </div>
+  <div id="status"></div>
+</header>
+<main>
+  <section id="tree" aria-label="Categories, pages, lanes"></section>
+  <section id="centre">
+    <div id="ctxbar"></div>
+    <div id="unit">
+      <div id="screenwrap"><canvas id="screen" width="240" height="240"></canvas></div>
+      <div id="knobs"></div>
+    </div>
+    <div id="buttons"></div>
+    <div id="lint"></div>
+  </section>
+  <section id="side">
+    <div id="inspector"></div>
+    <div id="tray"><div class="h">UNPLACED <input id="search" placeholder="search all" spellcheck="false"></div><div id="traylist"></div></div>
+    <div id="diff"><div class="h">CHANGES FROM THE SHIPPED LAYOUT</div><div id="difflist"></div></div>
+  </section>
+</main>
+<script src="ec_layout.js"></script>
+<script type="module" src="designer.js"></script>
+</body>
+</html>

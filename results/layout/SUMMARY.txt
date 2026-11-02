@@ -1,0 +1,25 @@
+tools/layout/test_designer.mjs (2026-11-02T22:54:33.548Z): 20 checks, 0 failed
+
+ok   1. the page and its preview start
+ok      the demo project plays (SOURCE, 3200 device ms)
+  shot results/layout/01_designer.png
+ok   2. the designer's pack of the shipped design = gen_layout.py --pack (10877 bytes)
+ok      the firmware's pack of the layout it loaded = the same
+ok      the shipped design: 0 errors, 0 warnings
+ok   3. on FILT/FILTER (classic): KNOB 1 CUT, KNOB 2 RES
+ok      dropped CUT onto KNOB 2: KNOB 1 RES, KNOB 2 CUT
+ok      the preview's pixels changed where the labels are (432 values)
+ok      the live panel labels: KNOB 1 RES, KNOB 2 CUT
+ok      KNOB 1 turns RES now (0 -> 5), CUT stays 20K
+  shot results/layout/02_after_swap.png
+ok      Export = the shipped JSON with that swap (as data)
+ok      Export's text = gen_layout.py --format's canonical text
+ok   4. undo: KNOB 1 CUT, the label row as before (0 values differ)
+ok      Export = the shipped file again, byte for byte
+ok   5. F.MIX moved to MOD (page 10), FILT has 2 pages
+ok      the preview: MOD/F.MIX, 2 lanes, lane 2 KNOB 1 DRIV (labels DRIV   )
+  shot results/layout/03_page_moved.png
+ok      gen_layout.py --check of the export: gen_layout: /var/folders/s9/jr6440vj5hq_rk4tm6djbj5r0000gn/T/ec-layout-e2e-iVwTIc/moved.json: ok (43 pages, 139 variants, 637 items, 0 warning(s))
+ok      a lower-case title: 1 error (TRIG/trig: the title 'trig' has lower case (the font has capitals only)), the preview keeps the last good layout
+ok      three undos: the shipped file again
+ok      no page exceptions (0)

@@ -27,14 +27,14 @@ typedef struct {
     char name[EC_SS_NAME];
     char path[EC_SS_PATH];
     uint8_t overview[EC_SS_OVERVIEW];   /* peak |sample| per column, 0..255 (filled while decoding) */
-} ec_sample_t;
+} ec_ss_sample_t;
 
 void ec_ss_reset(void);                         /* forget every sample */
 /* a new handle with room for frames (stereo int16); -1 if no handle or no room. Not ready until the loader says */
 int ec_ss_alloc(uint32_t frames);
 void ec_ss_free(int h);                          /* forget it; its space comes back only if it was the newest */
-ec_sample_t *ec_ss_get(int h);                   /* NULL for a bad / free handle */
-const ec_sample_t *ec_ss_ready(int h);           /* NULL unless ready: what the audio path uses */
+ec_ss_sample_t *ec_ss_get(int h);                   /* NULL for a bad / free handle */
+const ec_ss_sample_t *ec_ss_ready(int h);           /* NULL unless ready: what the audio path uses */
 uint32_t ec_ss_used_bytes(void);
 uint32_t ec_ss_capacity_bytes(void);
 uint32_t ec_ss_free_frames(void);                /* the largest sample that still fits */

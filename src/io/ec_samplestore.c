@@ -10,7 +10,7 @@
 
 static int16_t g_arena[ARENA_SAMPLES];
 static uint32_t g_top;                 /* int16 values in use */
-static ec_sample_t g_s[EC_SS_MAX];
+static ec_ss_sample_t g_s[EC_SS_MAX];
 static uint8_t g_used[EC_SS_MAX];
 
 void ec_ss_reset(void)
@@ -48,8 +48,8 @@ void ec_ss_free(int h)
     memset(&g_s[h], 0, sizeof g_s[h]);
 }
 
-ec_sample_t *ec_ss_get(int h) { return h >= 0 && h < EC_SS_MAX && g_used[h] ? &g_s[h] : NULL; }
-const ec_sample_t *ec_ss_ready(int h)
+ec_ss_sample_t *ec_ss_get(int h) { return h >= 0 && h < EC_SS_MAX && g_used[h] ? &g_s[h] : NULL; }
+const ec_ss_sample_t *ec_ss_ready(int h)
 {
     return h >= 0 && h < EC_SS_MAX && g_used[h] && g_s[h].ready ? &g_s[h] : NULL;
 }

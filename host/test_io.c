@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 
     /* each file loaded and checked */
     for (i = 0; i < N; i++) {
-        const ec_sample_t *s;
+        const ec_ss_sample_t *s;
         uint32_t f, bad = 0;
         snprintf(p, sizeof p, "/audio/%s", S[i].name);
         ec_ss_reset();

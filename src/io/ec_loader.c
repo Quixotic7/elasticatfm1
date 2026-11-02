@@ -68,7 +68,7 @@ static void start_header_read(uint64_t off)
 /* the next data read: whole frames, at most one request */
 static void start_data_read(void)
 {
-    ec_sample_t *s = ec_ss_get(g_h);
+    ec_ss_sample_t *s = ec_ss_get(g_h);
     const uint32_t ba = g_info.block_align;
     const uint64_t left_frames = (uint64_t)(s->frames - s->frames_ready);
     uint64_t frames = (STAGE_BYTES / ba);
@@ -86,7 +86,7 @@ static const char *base_name(const char *p)
 
 static void begin_data(void)
 {
-    ec_sample_t *s;
+    ec_ss_sample_t *s;
     if (!g_info.frames) {
         fail("empty");
         return;
@@ -112,7 +112,7 @@ static void begin_data(void)
 /* decode up to EC_LOAD_FRAMES_PER_TICK frames of the staged read; the overview follows */
 static void decode_some(void)
 {
-    ec_sample_t *s = ec_ss_get(g_h);
+    ec_ss_sample_t *s = ec_ss_get(g_h);
     uint32_t n = g_stage_frames - g_stage_done, i;
     int16_t *dst;
     if (n > EC_LOAD_FRAMES_PER_TICK)
@@ -184,7 +184,7 @@ int ec_load_step(void)
         break;
     }
     case EC_LD_DATA: {
-        ec_sample_t *s = ec_ss_get(g_h);
+        ec_ss_sample_t *s = ec_ss_get(g_h);
         if (g_stage_done < g_stage_frames)     /* decoding the staged read */
             decode_some();
         else {                                 /* waiting for the next read */
@@ -230,7 +230,7 @@ int ec_load_state(void) { return g_state; }
 int ec_load_handle(void) { return g_h; }
 uint32_t ec_load_permille(void)
 {
-    const ec_sample_t *s = ec_ss_get(g_h);
+    const ec_ss_sample_t *s = ec_ss_get(g_h);
     if (g_state == EC_LD_DONE)
         return 1000;
     if (!s || !s->frames)

@@ -48,7 +48,7 @@ static int make_builtin(void)
 {
     const uint32_t n = 88200, beat = n / 4, eighth = n / 8;
     const int h = ec_ss_alloc(n);
-    ec_sample_t *s = ec_ss_get(h);
+    ec_ss_sample_t *s = ec_ss_get(h);
     uint32_t i, rnd = 0x1234567u;
     if (!s)
         return -1;
@@ -222,7 +222,7 @@ void ec_app_tick(const ec_input_t *in)
 
 void ec_app_audio(int16_t *out, uint32_t frames)
 {
-    const ec_sample_t *s = ec_ss_ready(E.play_h);
+    const ec_ss_sample_t *s = ec_ss_ready(E.play_h);
     const float m = (float)E.master / 1023.0f, target = m * m;   /* (a squared taper) */
     uint32_t i;
     if (E.gain < 0)
@@ -263,15 +263,15 @@ void ec_app_audio(int16_t *out, uint32_t frames)
     E.frames_out += frames;
 }
 
-static const ec_sample_t *shown(void)
+static const ec_ss_sample_t *shown(void)
 {
-    const ec_sample_t *s = ec_ss_ready(E.play_h);
+    const ec_ss_sample_t *s = ec_ss_ready(E.play_h);
     return s ? s : NULL;
 }
 
 void ec_app_frame(void)
 {
-    const ec_sample_t *s = shown();
+    const ec_ss_sample_t *s = shown();
     const uint32_t now = ec_plat_ms();
     const int ld = ec_load_state();
     const int step = s && E.playing ? (int)(E.pos * 16.0 / s->frames) & 15 : -1;
@@ -331,7 +331,7 @@ void ec_app_frame(void)
 
 void ec_app_ui_info(char *buf, uint32_t n)
 {
-    const ec_sample_t *s = shown();
+    const ec_ss_sample_t *s = shown();
     static const char *const LD[] = {"idle", "stat", "header", "data", "done", "error"};
     snprintf(buf, n, "e0 files:%d scan:%s file:%s load:%s%s%s play:%d vol:%d pos:%.3f frames:%u rate:%u bpm:%.1f "
              "last:%s",

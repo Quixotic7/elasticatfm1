@@ -13,7 +13,7 @@ HDR    := $(wildcard $(ROOT)/src/dsp/*.h) $(wildcard $(ROOT)/tests/dsp/*.h)
 OUT    := $(ROOT)/build-dsp
 EMCC   ?= $(HOME)/emsdk/upstream/emscripten/emcc
 
-.PHONY: all test render bench wasm clean
+.PHONY: all test testfx render bench wasm clean
 
 all: test
 
@@ -29,8 +29,9 @@ $(OUT)/render_demo: $(ROOT)/tests/dsp/render_demo.c $(SRC) $(HDR) | $(OUT)
 $(OUT)/bench: $(ROOT)/tests/dsp/bench.c $(SRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/bench.c $(SRC) -lm
 
-test: $(OUT)/test_dsp
+test: $(OUT)/test_dsp $(OUT)/test_fx
 	cd $(ROOT) && $(OUT)/test_dsp
+	cd $(ROOT) && $(OUT)/test_fx nobench
 
 render: $(OUT)/render_demo
 	cd $(ROOT) && $(OUT)/render_demo
@@ -41,5 +42,12 @@ bench: $(OUT)/bench
 wasm: | $(OUT)
 	$(EMCC) -std=c99 -O2 -Wall -Wextra -mcpu=mvp -c $(SRC) && rm -f ec_*.o && echo "emcc: src/dsp compiles for wasm32"
 
+# E4 FX machines: bounds, tails, swaps, dynamics, unity + per-machine benchmark
+$(OUT)/test_fx: $(ROOT)/tests/dsp/test_fx.c $(SRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/test_fx.c $(SRC) -lm
+
+testfx: $(OUT)/test_fx
+	cd $(ROOT) && $(OUT)/test_fx
+
 clean:
-	rm -f $(OUT)/test_dsp $(OUT)/render_demo $(OUT)/bench
+	rm -f $(OUT)/test_dsp $(OUT)/render_demo $(OUT)/bench $(OUT)/test_fx

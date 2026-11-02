@@ -179,7 +179,7 @@
     },
     "chop_loop_mode": {
       "name": "Slice loop mode",
-      "desc": "DOMINO: what each slice does inside its slot - CHOP (stop), LOOP, PONG or RUN (run on past the slice), each also reversed (R). Shown on CHOP too, where it has no effect."
+      "desc": "DOMINO: what each slice does inside its slot - CHOP (stop), LOOP, PONG or RUN (run on past the slice), each also reversed (R). Not on CHOP, which has no slice loop (nor has the original's CHOPPED)."
     },
     "chop_attack": {
       "name": "Slice attack",
@@ -223,7 +223,7 @@
     },
     "slice_count": {
       "name": "Slice count",
-      "desc": "SLICE / S.POLY: how many equal slices the region is cut into, 1 to 32. (Labelled SLIC on the MACHINE page.)"
+      "desc": "SLICE / S.POLY: how many equal slices the region is cut into, 1 to 32."
     },
     "slice_index": {
       "name": "Slice",

@@ -1,7 +1,7 @@
 {
   "format": "elasticat-layout",
   "version": 1,
-  "name": "elasticat-0.4.0",
+  "name": "elasticat-0.4.1",
   "note": "Elasticat FM-1 0.4.0's pages, exported from src/app/ec_pages.c",
   "categories": [
     {
@@ -81,7 +81,7 @@
             {
               "when": {"machine": ["slice", "razor"]},
               "lanes": [
-                [{"item": "slice_count", "label": "SLIC"}, "slice_play_mode", "slice_reverse", "slice_ratchet"],
+                ["slice_count", "slice_play_mode", "slice_reverse", "slice_ratchet"],
                 ["slice_sync", "slice_rate"]
               ]
             }
@@ -177,7 +177,7 @@
             {
               "when": {"warp": ["CHOP"]},
               "lanes": [
-                ["chop_slice_len", "chop_hold", "chop_loop_mode", "warp_rate"],
+                ["chop_slice_len", "chop_hold", "warp_rate"],
                 ["chop_attack", "chop_release"]
               ]
             }

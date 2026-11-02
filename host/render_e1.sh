@@ -9,13 +9,13 @@ OUT=${2:-results/e1}
 python3 "$(dirname "$0")/make_demo_folder.py" "$B/demo_folder" >/dev/null
 mkdir -p "$OUT"
 rm -f "$B/e1_flash.bin"
-"$B/ec_run" --folder "$B/demo_folder" --out "$OUT" --script "$(dirname "$0")/demo_e1.txt" --wav "$OUT/e1_demo.wav" --flash "$B/e1_flash.bin" \
+"$B/ec_run" --layout test --folder "$B/demo_folder" --out "$OUT" --script "$(dirname "$0")/demo_e1.txt" --wav "$OUT/e1_demo.wav" --flash "$B/e1_flash.bin" \
     --rms-from 18300 --min-rms 0.03 --expect-ui ready:4 --expect-ui missing:0 --expect-ui patterns:2 \
     --expect-ui saves:1
 cp "$B/e1_flash.bin" "$B/e1_flash_saved.bin"
 
 # power on again: the project comes back from the flash, its samples from /audio
-"$B/ec_run" --folder "$B/demo_folder" --flash "$B/e1_flash.bin" --ms 9000 --png-scale 2 --press PLAY@1500 \
+"$B/ec_run" --layout test --folder "$B/demo_folder" --flash "$B/e1_flash.bin" --ms 9000 --png-scale 2 --press PLAY@1500 \
     --png-at 1400:"$OUT/24_reload.png" --press SEQ@4000 --png-at 4500:"$OUT/24b_reload_trig.png" \
     --wav "$OUT/e1_reload.wav" --rms-from 1600 --min-rms 0.03 --expect-ui ready:4 --expect-ui patterns:2 \
     --expect-ui play:1
@@ -24,6 +24,6 @@ cp "$B/e1_flash.bin" "$B/e1_flash_saved.bin"
 mkdir -p "$B/demo_missing/audio"
 for f in a_drums_bpm120.wav b_bass_bpm120.wav d_perc16_bpm120.wav; do cp "$B/demo_folder/audio/$f" "$B/demo_missing/audio/"; done
 cp "$B/e1_flash_saved.bin" "$B/e1_flash_missing.bin"
-"$B/ec_run" --folder "$B/demo_missing" --flash "$B/e1_flash_missing.bin" --ms 4000 --png-scale 2 --upper 2@800 \
+"$B/ec_run" --layout test --folder "$B/demo_missing" --flash "$B/e1_flash_missing.bin" --ms 4000 --png-scale 2 --upper 2@800 \
     --press PLAY@1000 --png-at 2500:"$OUT/25_missing.png" --rms-from 1100 --min-rms 0.02 --expect-ui missing:1 \
     --expect-ui ready:3

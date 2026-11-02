@@ -100,7 +100,7 @@ static void knob_labels(void)
         lane = ec_app_lane(A, &pg);
         if (ec_rzui_active(A))
             L(EC_LBL_KNOB0 + EC_E_SELECT, "SLICE");
-        else if (A->cat == EC_CAT_FILE && A->page[EC_CAT_FILE] == 0 && !A->settings)
+        else if (ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_FILE && !A->settings)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "FILE");
         else if (ec_ux_lanes(pg.n) > 1) {
             snprintf(b, sizeof b, "LANE %d", lane + 1);
@@ -149,7 +149,8 @@ static void button_labels(void)
         } else {
             if (c >= 0 && A->settings && A->cat == c)
                 s = "PAGES";
-            else if (b == EC_B_SAVE && A->cat == EC_CAT_FILE && A->page[EC_CAT_FILE] == 0 && ec_browse_count() > 0 &&
+            else if (b == EC_B_SAVE && A->cat == EC_CAT_FILE && ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_FILE &&
+                     ec_browse_count() > 0 &&
                      strcmp(A->proj.slot[ec_app_track_slot(A, A->track)].path, ec_browse_path(A->cursor)) != 0)
                 s = "LOAD";
             else if (b == EC_B_PLAY)

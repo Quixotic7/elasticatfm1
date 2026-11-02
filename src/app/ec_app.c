@@ -746,7 +746,7 @@ int ec_app_cells_visible(const ec_app_t *a)
     if (a->patn_open || a->e5.naming || ec_app_shift_map(a))
         return 0;
     ec_app_page(a, &pg);
-    return a->settings || strcmp(pg.title, "MIX") != 0;
+    return a->settings || pg.pic != EC_PIC_MIX;
 }
 
 /* a cell turned (the page's, or F3's): its lane, the knob's speed, OCT+ held clears a lock, the takeover */
@@ -851,7 +851,7 @@ static void lane_step(int d)
  * is the page's picker there: the file cursor, RAZOR's slice) */
 static void file_tap(void)
 {
-    if (A->page[EC_CAT_FILE] == 0 && ec_browse_count() > 0 &&
+    if (ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE && ec_browse_count() > 0 &&
         strcmp(A->proj.slot[ec_app_track_slot(A, A->track)].path, ec_browse_path(A->cursor)) != 0) {
         load_cursor_file();
         return;
@@ -1552,7 +1552,7 @@ static void knob(int r, int d)
             ec_page_t pg;
             ec_app_page(A, &pg);
             UX->set_lane = clampi(ec_app_lane(A, &pg) + d, 0, ec_ux_lanes(pg.n) - 1);
-        } else if (A->cat == EC_CAT_FILE && A->page[EC_CAT_FILE] == 0) {
+        } else if (ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_FILE) {
             const int n = ec_browse_count();       /* SAMPLE: the file cursor */
             if (n > 0)
                 A->cursor = ((A->cursor + d) % n + n) % n;

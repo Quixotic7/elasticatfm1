@@ -21,6 +21,7 @@
 #include "ec_razor.h"
 #include "ec_scene.h"
 #include "ec_seq.h"
+#include "ec_layout_test.h"
 
 #define FS 44100.0
 
@@ -377,6 +378,7 @@ static void test_save_reboot(void)
 
 int main(void)
 {
+    ec_layout_use(&EC_LAYOUT_TEST);   /* the tests' fixed layout: 0.4.0's pages (host/ec_layout_test.h) */
     make_material();
     test_routing();
     test_pitch_lfo();

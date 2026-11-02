@@ -19,11 +19,41 @@ file(GLOB EC_SOURCES CONFIGURE_DEPENDS
      ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/dsp/*.c
      ${CMAKE_CURRENT_SOURCE_DIR}/src/seq/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/app/*.c)
 add_library(elasticat STATIC ${EC_SOURCES})
+
+# The layout: the pages are data. design/layout/elasticat.json -> src/app/ec_layout_gen.c (committed: a build without
+# Python uses it as it is), the tests' fixed layout host/fixtures/layout-0.4.0.json -> host/ec_layout_test_gen.c, the
+# per-page knob tables in docs/FM1-CONTROLS.md; re-run when a design, the generator or the param table changes
+set(_lay_gen ${CMAKE_CURRENT_SOURCE_DIR}/tools/layout/gen_layout.py)
+set(_lay_deps ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/src/seq/ec_params.c ${CMAKE_CURRENT_SOURCE_DIR}/src/seq/ec_params.h)
+if(Python3_FOUND)
+    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/ec_layout.stamp
+        COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json
+                --c ${CMAKE_CURRENT_SOURCE_DIR}/src/app/ec_layout_gen.c
+                --docs ${CMAKE_CURRENT_SOURCE_DIR}/docs/FM1-CONTROLS.md
+        COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/layout-0.4.0.json --quiet
+                --c ${CMAKE_CURRENT_SOURCE_DIR}/host/ec_layout_test_gen.c --symbol EC_LAYOUT_TEST
+        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/ec_layout.stamp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json
+                ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/layout-0.4.0.json ${_lay_deps}
+        BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/src/app/ec_layout_gen.c ${CMAKE_CURRENT_SOURCE_DIR}/host/ec_layout_test_gen.c
+        COMMENT "gen_layout: design/layout/elasticat.json -> src/app/ec_layout_gen.c" VERBATIM)
+    add_custom_target(ec_layout_gen DEPENDS ${CMAKE_BINARY_DIR}/ec_layout.stamp)
+    add_dependencies(elasticat ec_layout_gen)
+endif()
 # src/plat/abi: copies of FM1VST's core-api/fm1core.h and core-glue/common/rfm1_host.h (FM1VST's own are used there)
 target_include_directories(elasticat PUBLIC src/plat src/plat/abi src/io src/ui src/dsp src/seq src/app)
 target_compile_definitions(elasticat PUBLIC EC_FS_NATIVE)
 target_compile_options(elasticat PRIVATE -Wall -Wextra -ffp-contract=off)
 target_link_libraries(elasticat PUBLIC m)
+
+# the tests' fixed layout (0.4.0's pages): every host program links it, the tests and demo scripts select it
+add_library(ec_testlayout STATIC host/ec_layout_test_gen.c)
+target_link_libraries(ec_testlayout PUBLIC elasticat)
+target_include_directories(ec_testlayout PUBLIC host)
+if(TARGET ec_layout_gen)
+    add_dependencies(ec_testlayout ec_layout_gen)
+endif()
+link_libraries(ec_testlayout)
 
 add_executable(ec_run host/ec_run.c host/ec_png.c)
 target_link_libraries(ec_run PRIVATE elasticat)
@@ -61,7 +91,16 @@ add_executable(ec_test_e6 host/test_e6.c)   # E6: audio input, the INPUT machine
 target_link_libraries(ec_test_e6 PRIVATE elasticat)
 target_compile_options(ec_test_e6 PRIVATE -Wall -Wextra)
 
+add_executable(ec_dump_pages host/dump_pages.c)   # every page in every context: the 0.4.0 proof below
+target_compile_options(ec_dump_pages PRIVATE -Wall -Wextra)
+
 enable_testing()
+# The layout: the tests' fixed layout gives exactly 0.4.0's pages (the hash of every page in every context, recorded from
+# 0.4.0's hand-written ec_pages.c), and the designs pass the generator's checks
+add_test(NAME layout_040 COMMAND sh -c "$<TARGET_FILE:ec_dump_pages> --layout test | tail -1 | diff - ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/pages-0.4.0.hash")
+if(Python3_FOUND)
+    add_test(NAME layout_check COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json --check)
+endif()
 add_test(NAME e5 COMMAND ec_test_e5 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/e2_flash.bin)   # E5
 add_test(NAME v020 COMMAND ec_test_v020)
 # 0.3.0: the new screens through panel input (host/render_ux.sh -> results/ux)

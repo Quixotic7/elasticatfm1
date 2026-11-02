@@ -141,8 +141,6 @@ void ec_param_format_unit(int id, float x, char *out, int cap);
 void ec_params_fx(const float *v, ec_fx_params_t *fx);
 /* the MOD params of v -> ec_mod_params_t (env_range for the mod env times) */
 void ec_params_mod(const float *v, ec_mod_params_t *mod);
-/* machine m's page cells (registry display order, <= 8): ids + label overrides (NULL = the param's) */
-int ec_fx_page_items(int machine, int *ids, const char **labels);
 
 /* SPEC values -> engine params (the Lua xforms). playhead_return: the global option 1..3 */
 void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_return, ec_track_params_t *out);

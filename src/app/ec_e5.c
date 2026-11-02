@@ -91,7 +91,8 @@ int ec_e5_scene_layer(void)
 {
     if (E->naming || A->patn_open || A->sel_held || A->ux.f3)
         return 0;
-    return A->keymode == EC_KM_SCENE || (A->cat == EC_CAT_MASTER && !A->settings && A->page[EC_CAT_MASTER] == 2);
+    return A->keymode == EC_KM_SCENE ||
+           (!A->settings && ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_SCENE);   /* the SCENE page */
 }
 
 int ec_e5_page_visible(void) { return A->ux.f3; }   /* 0.3.0: the pages are F3's */

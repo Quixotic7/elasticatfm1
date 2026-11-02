@@ -21,7 +21,7 @@ static const char *const TN[EC_NTRACK] = {"T1", "T2", "T3", "T4", "T5", "T6"};
 
 static int scene_page(const ec_app_t *a)
 {
-    return a->cat == EC_CAT_MASTER && !a->settings && a->page[EC_CAT_MASTER] == 2 && !a->patn_open;
+    return !a->settings && ec_page_pic(a->cat, a->page[a->cat], a->bus) == EC_PIC_SCENE && !a->patn_open;
 }
 
 /* ------------------------------------------------------------------------------------------- the fader --- */

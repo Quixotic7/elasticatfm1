@@ -7,5 +7,5 @@ B=${1:-build}
 OUT=${2:-results/e4}
 python3 "$(dirname "$0")/make_demo_folder.py" "$B/demo_folder" >/dev/null
 mkdir -p "$OUT"
-"$B/ec_run" --folder "$B/demo_folder" --out "$OUT" --script "$(dirname "$0")/demo_e4.txt" --wav "$OUT/e4_demo.wav" \
+"$B/ec_run" --layout test --folder "$B/demo_folder" --out "$OUT" --script "$(dirname "$0")/demo_e4.txt" --wav "$OUT/e4_demo.wav" \
     --rms-from 4500 --min-rms 0.02 --expect-ui ready:4 --expect-ui missing:0

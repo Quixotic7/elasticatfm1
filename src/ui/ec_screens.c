@@ -315,24 +315,24 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
     header(a, t, a->page[a->cat] + 1, r);
-    switch (a->page[EC_CAT_SRC]) {
-    case 0: fit(left, sizeof left, smp ? smp->name : sl->path[0] ? strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1
+    switch (pg->pic) {
+    case EC_PIC_WAVE: fit(left, sizeof left, smp ? smp->name : sl->path[0] ? strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1
                                                                                               : sl->path
                                                                        : "-",
                 20);
         break;
-    case 1: snprintf(left, sizeof left, "%s", is_slice(v) ? "SLICE MACHINE" : "LOOP MACHINE"); break;
-    case 2: snprintf(left, sizeof left, "%s", ec_warp_name(iv(v, EC_P_MODE))); break;
+    case EC_PIC_WAVE_MACHINE: snprintf(left, sizeof left, "%s", is_slice(v) ? "SLICE MACHINE" : "LOOP MACHINE"); break;
+    case EC_PIC_WAVE_WARP: snprintf(left, sizeof left, "%s", ec_warp_name(iv(v, EC_P_MODE))); break;
     default: snprintf(left, sizeof left, "RANGE"); break;
     }
-    if (a->page[EC_CAT_SRC] == 1)
+    if (pg->pic == EC_PIC_WAVE_MACHINE)
         snprintf(left, sizeof left, "%s", ec_machine_name(iv(v, EC_P_MACHINE)));
     if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR)   /* E3 */
         snprintf(left, sizeof left, "FROM T%d", a->track);
     if (iv(v, EC_P_MACHINE) == EC_MACH_INPUT)      /* E6 */
         snprintf(left, sizeof left, "INPUT");
     T(EC_C_L15, left, 2, 13, EC_AL_LEFT);
-    if (a->page[EC_CAT_SRC] == 2) {   /* E3: only the spectral budget falls back (to tape) */
+    if (pg->pic == EC_PIC_WAVE_WARP) {   /* E3: only the spectral budget falls back (to tape) */
         ec_track_status_t st;
         ec_dsp_track_status(a->dsp, a->track, &st);
         if (!st.mode_implemented)
@@ -508,7 +508,7 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
     header(a, t, a->settings ? 1 : a->page[a->cat] + 1, r);
-    if (pg->kind != EC_PV_NONE) {               /* E4: FX / SENDS / MOD visuals */
+    if (pg->pic >= EC_PIC_FX && pg->pic <= EC_PIC_MACRO) {   /* E4: FX / SENDS / MOD visuals */
         ec_scr_e4(a, pg);
         cells(a, pg);
         return;
@@ -533,12 +533,12 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     T(EC_C_L15, left, 2, 13, EC_AL_LEFT);
     snprintf(r, sizeof r, "%d", (int)floorf(a->proj.bpm + 0.5f));
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
-    if (a->cat == EC_CAT_FILT && a->page[EC_CAT_FILT] == 0)
+    if (pg->pic == EC_PIC_FILTER)
         filter_curve(a, 22, 68);
-    else if (a->cat == EC_CAT_FILT && a->page[EC_CAT_FILT] == 1)
+    else if (pg->pic == EC_PIC_FENV)
         env_shape(a, iv(v, EC_P_FENV_MODE), EC_P_FENV_ATTACK, EC_P_FENV_DECAY, EC_P_FENV_SUSTAIN, EC_P_FENV_RELEASE,
                   EC_P_FENV_HOLD, 24, 66);
-    else if (a->cat == EC_CAT_AMP)
+    else if (pg->pic == EC_PIC_AENV)
         env_shape(a, iv(v, EC_P_ENV_MODE), EC_P_ENV_ATTACK, EC_P_ENV_DECAY, EC_P_ENV_SUSTAIN, EC_P_ENV_RELEASE,
                   EC_P_ENV_HOLD, 24, 66);
     else
@@ -743,24 +743,20 @@ static void draw_main(const ec_app_t *a)
         settings_screen(a, &pg);
         return;
     }
-    if (!strcmp(pg.title, "MIX")) {
-        mix_screen(a, &pg);
-        return;
-    }
-    switch (a->cat) {
-    case EC_CAT_SRC:
+    switch (pg.pic) {                              /* the page's picture (the layout) */
+    case EC_PIC_MIX: mix_screen(a, &pg); break;
+    case EC_PIC_WAVE:
+    case EC_PIC_WAVE_MACHINE:
+    case EC_PIC_WAVE_WARP:
+    case EC_PIC_WAVE_RANGE:
         if (a->bus)
             generic_screen(a, &pg);
         else
             src_screen(a, &pg);
         break;
-    case EC_CAT_FILE:
-        if (a->page[EC_CAT_FILE] == 1)   /* E3 */
-            ec_scr_razor(a, &pg);
-        else
-            file_screen(a, &pg);
-        break;
-    case EC_CAT_PAT: pat_screen(a, &pg); break;
+    case EC_PIC_RAZOR: ec_scr_razor(a, &pg); break;   /* E3 */
+    case EC_PIC_FILE: file_screen(a, &pg); break;
+    case EC_PIC_PATTERN: pat_screen(a, &pg); break;
     default: generic_screen(a, &pg); break;
     }
 }

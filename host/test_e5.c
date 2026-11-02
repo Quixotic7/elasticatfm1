@@ -14,6 +14,7 @@
 #include "ec_project.h"
 #include "ec_scene.h"
 #include "ec_seq.h"
+#include "ec_layout_test.h"
 
 #define FS 44100.0
 #define MAXREC 8192
@@ -533,6 +534,7 @@ static void test_e2_save(const char *path)
 
 int main(int argc, char **argv)
 {
+    ec_layout_use(&EC_LAYOUT_TEST);   /* the tests' fixed layout: 0.4.0's pages (host/ec_layout_test.h) */
     test_scene_morph();
     test_glide();
     test_clipboards();

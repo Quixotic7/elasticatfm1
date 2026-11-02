@@ -31,7 +31,8 @@ src/seq/    the model and the sequencer, platform free: ec_params (params_spec.l
             loop keys / pads / keyboard), ec_razor (E3: razor tables, Auto-Chop), ec_params_e4 (E4: FX + MOD params,
             the bus records), ec_scene + ec_e5seq (E5: scenes, clipboards, page loops, undo, slice programs)
 src/app/    ec_app (the panel mapping, sample loading, save / autosave, LEDs, ui_info), ec_pages (categories,
-            pages, cells, setup lists), ec_razor_ui (E3: the RAZOR page), ec_e5 (E5: scenes, PAGE, memorize,
+            pages, cells, setup lists, read from the layout: ec_layout.h; ec_layout_gen.c is GENERATED from
+            design/layout/elasticat.json by tools/layout/gen_layout.py), ec_razor_ui (E3: the RAZOR page), ec_e5 (E5: scenes, PAGE, memorize,
             undo, naming), ec_ux (0.3.0: lanes, holds, labels), ec_rec (E6: the REC pop-up, the take, the WAV writer)
 src/io/     ec_fs (async file API over rfm1_host_1), ec_fs_native (a native stand-in serving a real folder, one tick
             late), ec_browse (recursive /audio scan), ec_audiofile (WAV / AIFF / AIFC parse + decode), ec_loader
@@ -49,7 +50,12 @@ host/       ec_run (headless native harness: scripted input, WAV + PNG out), tes
             fixtures/e2_flash.bin), demo_e5.txt + render_e5.sh; 0.2.0: test_v020 (the E3 / E4 / E5 seams through
             the real chain), demo_v020.txt + render_v020.sh (+ a reboot), make_heavy.c (the CPU worst case);
             0.3.0: test_ux (the panel's gestures and live labels through the core), demo_ux.txt + render_ux.sh;
-            E6: test_e6 (input alignment, sampling, the WAV + reboot), demo_e6.txt + render_e6.sh
+            E6: test_e6 (input alignment, sampling, the WAV + reboot), demo_e6.txt + render_e6.sh; the layout:
+            ec_layout_test_gen.c (the tests' fixed layout, 0.4.0's pages, from fixtures/layout-0.4.0.json: the
+            tests and demo scripts run on it, ec_run --layout test), dump_pages.c (every page in every context,
+            hashed: the fixed layout = 0.4.0's hand-written pages)
+design/layout/  elasticat.json: the layout (pages, lanes, knobs, setups, buses, F3), compiled into the build
+tools/layout/   gen_layout.py: the layout's checks and generator (C tables, docs/FM1-CONTROLS.md's page tables)
 results/    proof files: e0/ .. e6/, v020/, ux/ (the screens; WAVs stay untracked), web/ (the web player test's
             screenshots + SUMMARY.txt)
 ```

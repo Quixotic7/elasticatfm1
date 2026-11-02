@@ -15,6 +15,7 @@
 #include "ec_project.h"
 #include "ec_razor.h"
 #include "ec_version.h"
+#include "ec_layout_test.h"
 
 static ec_project_t P;
 static uint8_t img[1u << 20];
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
     int32_t n;
     FILE *f;
     int s;
+    ec_layout_use(&EC_LAYOUT_TEST);   /* the tests' fixed layout: 0.4.0's pages (host/ec_layout_test.h) */
     if (argc < 2) {
         fprintf(stderr, "make_heavy <out.flash>\n");
         return 2;

@@ -532,15 +532,15 @@ static void macros_page(const ec_app_t *a, int single)
 
 void ec_scr_e4(const ec_app_t *a, const ec_page_t *pg)
 {
-    switch (pg->kind) {
-    case EC_PV_FX: fx_page(a, pg); break;
-    case EC_PV_SENDS: sends_page(a); break;
-    case EC_PV_LFO1: lfo_page(a, 0); break;
-    case EC_PV_LFO2: lfo_page(a, 1); break;
-    case EC_PV_MENV: menv_page(a); break;
-    case EC_PV_VEL: vel_page(a); break;
-    case EC_PV_MACROS: macros_page(a, -1); break;
-    case EC_PV_MACRO: macros_page(a, a->page[EC_CAT_MOD] - 5); break;
+    switch (pg->pic) {
+    case EC_PIC_FX: fx_page(a, pg); break;
+    case EC_PIC_SENDS: sends_page(a); break;
+    case EC_PIC_LFO1: lfo_page(a, 0); break;
+    case EC_PIC_LFO2: lfo_page(a, 1); break;
+    case EC_PIC_MENV: menv_page(a); break;
+    case EC_PIC_VEL: vel_page(a); break;
+    case EC_PIC_MACROS: macros_page(a, -1); break;
+    case EC_PIC_MACRO: macros_page(a, pg->arg); break;
     default: break;
     }
 }

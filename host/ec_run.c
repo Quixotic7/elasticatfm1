@@ -16,6 +16,8 @@
  *     --script FILE       more options, one per line, without the dashes ("press PLAY@1000", "lower 4@2000+80",
  *                         "png 3000:out.png", "info 3000"); # starts a comment
  *     --flash FILE        the flash image: read at power-on (when it exists), written at the end
+ *     --layout L          the pages: shipped (design/layout/elasticat.json, the default) or test (0.4.0's, fixed:
+ *                         the demo scripts walk the pages by panel input, host/ec_layout_test.h)
  *     --out DIR           relative --png-at files go into DIR (give it before them)
  *     --wav FILE          the whole run's audio (44.1 kHz 16-bit stereo)
  *     --png FILE          the screen at the end (240x240; --png-scale 2 for 480x480)
@@ -39,6 +41,7 @@
 #include <time.h>
 
 #include "ec_fs_native.h"
+#include "ec_layout_test.h"
 #include "ec_plat.h"
 #include "ec_png.h"
 #include "fm1core.h"
@@ -123,6 +126,8 @@ static int option(const char *a, const char *v)
     else if (!strcmp(a, "wav")) wav_path = strdup(v);
     else if (!strcmp(a, "png") && !(v[0] >= '0' && v[0] <= '9' && strchr(v, ':'))) png_path = strdup(v);
     else if (!strcmp(a, "flash")) flash_path = strdup(v);
+    else if (!strcmp(a, "layout") && (!strcmp(v, "test") || !strcmp(v, "shipped")))
+        ec_layout_use(!strcmp(v, "test") ? &EC_LAYOUT_TEST : NULL);
     else if (!strcmp(a, "out")) out_dir = strdup(v);
     else if (!strcmp(a, "png-scale")) png_scale = atoi(v);
     else if (!strcmp(a, "rms-from")) rms_from = (uint32_t)strtoul(v, NULL, 10);

@@ -14,6 +14,7 @@
 #include "ec_browse.h"
 #include "ec_fs_native.h"
 #include "fm1core.h"
+#include "ec_layout_test.h"
 
 uint32_t fm1core_labels_epoch(void);
 const char *fm1core_label(int32_t which);
@@ -565,6 +566,7 @@ static void test_shift(void)
 
 int main(int argc, char **argv)
 {
+    ec_layout_use(&EC_LAYOUT_TEST);   /* the tests' fixed layout: 0.4.0's pages (host/ec_layout_test.h) */
     if (argc < 2) {
         printf("usage: ec_test_ux <folder>\n");
         return 2;

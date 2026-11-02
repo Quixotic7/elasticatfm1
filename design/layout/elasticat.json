@@ -1,0 +1,638 @@
+{
+  "format": "elasticat-layout",
+  "version": 1,
+  "name": "elasticat-0.4.0",
+  "note": "Elasticat FM-1 0.4.0's pages, exported from src/app/ec_pages.c",
+  "categories": [
+    {
+      "cat": "TRIG",
+      "pages": [
+        {
+          "title": "TRIG",
+          "picture": "steps",
+          "lanes": [
+            [{"item": "pitch", "label": "NOTE"}, "default_length", "default_velocity", null],
+            ["env_reset", "lfo_reset", "filter_reset"]
+          ]
+        },
+        {
+          "title": "COND",
+          "picture": "steps",
+          "lanes": [
+            ["trig_chance", "trig_condition", "trig_ratchet"]
+          ]
+        },
+        {
+          "title": "MTRIG",
+          "picture": "steps",
+          "lanes": [
+            ["trig_jump", "trig_release"]
+          ],
+          "variants": [
+            {
+              "when": {"machine": ["slice", "razor"]},
+              "title": "SLICE",
+              "lanes": [
+                ["slice_index", "slice_play_mode", "slice_ratchet", "slice_reverse"]
+              ]
+            }
+          ]
+        }
+      ],
+      "setup": [
+        [{"item": "global.swing", "label": "SWING"}]
+      ]
+    },
+    {
+      "cat": "SRC",
+      "pages": [
+        {
+          "title": "SOURCE",
+          "picture": "wave",
+          "lanes": [
+            ["pitch", "loop_start", "loop_end", "sample_slot"],
+            ["xfade", "loop_reverse"]
+          ],
+          "variants": [
+            {
+              "when": {"machine": ["neighbor", "input"]},
+              "lanes": []
+            },
+            {
+              "when": {"machine": ["slice", "razor"]},
+              "lanes": [
+                ["pitch", "slice_play_mode", "slice_index", "sample_slot"],
+                ["slice_count", {"item": "e5.choke", "label": "CHOK"}, {"item": "e5.mute", "label": "SMUT"}, "slice_reverse"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "MACHINE",
+          "picture": "wave-machine",
+          "lanes": [
+            [{"item": "loop_reverse", "label": "LREV"}, "xfade", "trig_release"]
+          ],
+          "variants": [
+            {
+              "when": {"machine": ["neighbor", "input"]},
+              "lanes": []
+            },
+            {
+              "when": {"machine": ["slice", "razor"]},
+              "lanes": [
+                [{"item": "slice_count", "label": "SLIC"}, "slice_play_mode", "slice_reverse", "slice_ratchet"],
+                ["slice_sync", "slice_rate"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "WARP",
+          "picture": "wave-warp",
+          "lanes": [
+            ["mode_macro", "warp_rate"]
+          ],
+          "variants": [
+            {
+              "when": {"machine": ["neighbor", "input"]},
+              "lanes": []
+            },
+            {
+              "when": {"warp": ["TAPE"]},
+              "lanes": [
+                ["warp_rate", "mode_switch_fade"]
+              ]
+            },
+            {
+              "when": {"warp": ["VARI"]},
+              "lanes": [
+                ["warp_rate", "mode_switch_fade"]
+              ]
+            },
+            {
+              "when": {"warp": ["DOMINO"]},
+              "lanes": [
+                [{"item": "chop_steps", "label": "SLCS"}, "chop_slice_len", "chop_loop_mode", "warp_rate"],
+                ["chop_attack", "chop_release", "chop_hold"]
+              ]
+            },
+            {
+              "when": {"warp": ["GRAIN"]},
+              "lanes": [
+                ["grain_density", "grain_size", "grain_jitter", "warp_rate"],
+                ["grain_speed", "grain_speed_rand", "grain_direction"]
+              ]
+            },
+            {
+              "when": {"warp": ["OLA"]},
+              "lanes": [
+                [{"item": "mode_macro", "label": "CHAOS"}, "wsola_window", "wsola_search", "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["PITCH"]},
+              "lanes": [
+                [{"item": "mode_macro", "label": "SMEAR"}, "pv_window", "pv_dispersion", "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["HARM"]},
+              "lanes": [
+                [{"item": "mode_macro", "label": "MIX"}, "harm_interval", "harm_interval2", "harm_interval3"],
+                ["warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["WTBL"]},
+              "lanes": [
+                [{"item": "mode_macro", "label": "MORF"}, "wt_window", "wt_cycle", "wt_lfo_rate"],
+                ["wt_lfo_depth", "wt_lfo_shape", "xfade", "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["FREEZE"]},
+              "lanes": [
+                ["freeze_amount", "spectral_blur", "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["FORMNT"]},
+              "lanes": [
+                ["formant_shift", "freeze_amount", "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["GSTR"]},
+              "lanes": [
+                [{"item": "grain_speed", "label": "STRCH"}, {"item": "grain_size", "label": "PWIN"}, {"item": "grain_density", "label": "SMTH"}, "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["GSTR2"]},
+              "lanes": [
+                [{"item": "grain_speed", "label": "STRCH"}, {"item": "grain_size", "label": "PWIN"}, {"item": "grain_density", "label": "SMTH"}, "warp_rate"]
+              ]
+            },
+            {
+              "when": {"warp": ["CHOP"]},
+              "lanes": [
+                ["chop_slice_len", "chop_hold", "chop_loop_mode", "warp_rate"],
+                ["chop_attack", "chop_release"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "RANGE",
+          "picture": "wave-range",
+          "lanes": [
+            ["range_start", "range_end"]
+          ],
+          "variants": [
+            {
+              "when": {"machine": ["neighbor", "input"]},
+              "lanes": []
+            }
+          ]
+        }
+      ],
+      "setup": [
+        ["machine", "mode", "loop_division", "trig_polyphony"]
+      ]
+    },
+    {
+      "cat": "FILT",
+      "pages": [
+        {
+          "title": "FILTER",
+          "picture": "filter",
+          "lanes": [
+            ["filter_cutoff", "filter_res", "filter_type", "filter_env_depth"],
+            ["filter_drive"]
+          ],
+          "variants": [
+            {
+              "when": {"filter": ["CLASSC"]},
+              "lanes": [
+                ["filter_cutoff", "filter_res", "filter_type", "filter_env_depth"],
+                ["filter_drive"]
+              ]
+            },
+            {
+              "when": {"filter": ["MORPH"]},
+              "lanes": [
+                ["filter_cutoff", "filter_res", "filter_morph", "filter_env_depth"],
+                ["filter_drive"]
+              ]
+            },
+            {
+              "when": {"filter": ["LADDER"]},
+              "lanes": [
+                ["filter_cutoff", "filter_res", "filter_drive", "filter_env_depth"]
+              ]
+            },
+            {
+              "when": {"filter": ["COMB"]},
+              "lanes": [
+                [{"item": "filter_cutoff", "label": "TUNE"}, {"item": "filter_res", "label": "FB"}, {"item": "filter_drive", "label": "DAMP"}, "filter_env_depth"],
+                ["filter_mix"]
+              ]
+            },
+            {
+              "when": {"filter": ["FORMNT"]},
+              "lanes": [
+                ["filter_cutoff", "filter_res", {"item": "filter_morph", "label": "VOWL"}, "filter_env_depth"],
+                ["filter_mix"]
+              ]
+            },
+            {
+              "when": {"filter": ["SVF"]},
+              "lanes": [
+                ["filter_cutoff", "filter_res", "filter_type", "filter_env_depth"],
+                ["filter_drive"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "F.ENV",
+          "picture": "fenv",
+          "lanes": [
+            ["filter_env_attack", "filter_env_hold", "filter_env_release", "filter_env_depth"]
+          ],
+          "variants": [
+            {
+              "when": {"fenv": ["ADSR"]},
+              "lanes": [
+                ["filter_env_attack", "filter_env_decay", "filter_env_sustain", "filter_env_release"],
+                ["filter_env_depth"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "F.MIX",
+          "picture": "steps",
+          "lanes": [
+            ["filter_balance", "filter_mix"]
+          ]
+        }
+      ],
+      "setup": [
+        ["filter_machine", "filter_env_mode", "filter_mix_mode"]
+      ]
+    },
+    {
+      "cat": "AMP",
+      "pages": [
+        {
+          "title": "AMP",
+          "picture": "aenv",
+          "lanes": [
+            ["env_attack", "env_hold", "env_release", "amp"],
+            ["pan", "send1_level", "send2_level"]
+          ],
+          "variants": [
+            {
+              "when": {"env": ["ADSR"]},
+              "lanes": [
+                ["env_attack", "env_decay", "env_sustain", "env_release"],
+                ["amp", "pan", "send1_level", "send2_level"]
+              ]
+            }
+          ]
+        }
+      ],
+      "setup": [
+        ["env_mode", "env_range", "portamento", "slice_hold_to_step"],
+        ["slice_hold"]
+      ]
+    },
+    {
+      "cat": "FX",
+      "pages": [
+        {
+          "title": "FX",
+          "picture": "fx",
+          "lanes": [],
+          "variants": [
+            {
+              "when": {"fx": ["DELAY"]},
+              "lanes": [
+                ["delay_time", "delay_feedback", "delay_tone", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["REVERB"]},
+              "lanes": [
+                ["reverb_size", "reverb_damp", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["LOFI"]},
+              "lanes": [
+                ["lofi_bits", "lofi_rate", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["COMP"]},
+              "lanes": [
+                ["comp_thresh", "comp_ratio", "comp_attack", "comp_release"],
+                ["comp_makeup", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["DESTRY"]},
+              "lanes": [
+                ["destroy_crush", "destroy_srr", "destroy_warble", "fx_drive"],
+                ["destroy_fold", "destroy_sat", "destroy_tone", "destroy_level"]
+              ]
+            },
+            {
+              "when": {"fx": ["ECHO"]},
+              "lanes": [
+                ["echo_time", "echo_offset", "delay_feedback", "echo_mode"],
+                ["echo_tone", "echo_wobble", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["B.HOLE"]},
+              "lanes": [
+                ["reverb_size", "bh_gravity", "bh_mod", "bh_low"],
+                [{"item": "reverb_damp", "label": "HI"}, "bh_predelay", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["CHORUS"]},
+              "lanes": [
+                ["modfx_rate", "modfx_depth", "chorus_width", "modfx_tone"],
+                ["fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["FLANGR"]},
+              "lanes": [
+                ["modfx_rate", "modfx_depth", "flanger_feedback", "modfx_tone"],
+                ["fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["PHASER"]},
+              "lanes": [
+                ["modfx_rate", "modfx_depth", "phaser_center", "phaser_stages"],
+                ["phaser_feedback", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["DJ EQ"]},
+              "lanes": [
+                ["eq_low", "eq_mid", "eq_high", "eq_xlow"],
+                ["eq_xhi"]
+              ]
+            },
+            {
+              "when": {"fx": ["DUCK"]},
+              "lanes": [
+                ["duck_amount", "duck_sens", "duck_attack", "duck_release"]
+              ]
+            },
+            {
+              "when": {"fx": ["T.ECHO"]},
+              "lanes": [
+                ["echo_time", "delay_feedback", "tape_wow", "tape_flutter"],
+                ["tape_sat", "echo_tone", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["CASSET"]},
+              "lanes": [
+                ["tape_wow", "tape_flutter", "cass_noise", "cass_crackle"],
+                ["cass_drop", "cass_tone", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["MOTION"]},
+              "lanes": [
+                ["motion_width", "motion_rate", "motion_trem", "motion_pan"],
+                ["motion_shape"]
+              ]
+            },
+            {
+              "when": {"fx": ["RINGS"]},
+              "lanes": [
+                ["rings_mode", "rings_freq", "rings_fine", "rings_feedback"],
+                ["modfx_tone", "fx_mix"]
+              ]
+            },
+            {
+              "when": {"fx": ["LIMIT"]},
+              "lanes": [
+                ["limit_gain", "limit_ceil", "limit_release"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "SENDS",
+          "picture": "sends",
+          "lanes": [
+            ["send1_level", "send2_level", "send_tap"]
+          ]
+        }
+      ],
+      "setup": [
+        [{"item": "fx_insert1_machine", "label": "INSERT FX"}, {"item": "send_tap", "label": "SEND TAP"}]
+      ]
+    },
+    {
+      "cat": "MOD",
+      "pages": [
+        {
+          "title": "LFO 1",
+          "picture": "lfo1",
+          "lanes": [
+            ["lfo1_dest", "lfo1_wave", "lfo1_speed", "lfo1_depth"],
+            ["lfo1_mode"]
+          ]
+        },
+        {
+          "title": "LFO 2",
+          "picture": "lfo2",
+          "lanes": [
+            ["lfo2_dest", "lfo2_wave", "lfo2_speed", "lfo2_depth"],
+            ["lfo2_mode"]
+          ]
+        },
+        {
+          "title": "MOD ENV",
+          "picture": "menv",
+          "lanes": [
+            ["menv_attack", "menv_decay", "menv_sustain", "menv_release"],
+            ["menv_dest", "menv_depth"]
+          ]
+        },
+        {
+          "title": "VELOCITY",
+          "picture": "vel",
+          "lanes": [
+            ["mvel_dest", "mvel_depth"]
+          ]
+        },
+        {
+          "title": "MACROS",
+          "picture": "macros",
+          "lanes": [
+            ["macro1_value", "macro2_value", "macro3_value", "macro4_value"]
+          ]
+        },
+        {
+          "title": "MACRO 1",
+          "picture": "macro",
+          "lanes": [
+            [{"item": "macro1_value", "label": "VAL"}, "macro1_pitch_depth", "macro1_cutoff_depth", "macro1_res_depth"],
+            ["macro1_amp_depth", "macro1_pan_depth"]
+          ],
+          "macro": 1
+        },
+        {
+          "title": "MACRO 2",
+          "picture": "macro",
+          "lanes": [
+            [{"item": "macro2_value", "label": "VAL"}, "macro2_pitch_depth", "macro2_cutoff_depth", "macro2_res_depth"],
+            ["macro2_amp_depth", "macro2_pan_depth"]
+          ],
+          "macro": 2
+        },
+        {
+          "title": "MACRO 3",
+          "picture": "macro",
+          "lanes": [
+            [{"item": "macro3_value", "label": "VAL"}, "macro3_pitch_depth", "macro3_cutoff_depth", "macro3_res_depth"],
+            ["macro3_amp_depth", "macro3_pan_depth"]
+          ],
+          "macro": 3
+        },
+        {
+          "title": "MACRO 4",
+          "picture": "macro",
+          "lanes": [
+            [{"item": "macro4_value", "label": "VAL"}, "macro4_pitch_depth", "macro4_cutoff_depth", "macro4_res_depth"],
+            ["macro4_amp_depth", "macro4_pan_depth"]
+          ],
+          "macro": 4
+        }
+      ]
+    },
+    {
+      "cat": "MST",
+      "pages": [
+        {
+          "title": "MIX",
+          "picture": "mix",
+          "lanes": [
+            ["amp", "pan", "mute", {"item": "global.bpm", "label": "BPM"}]
+          ]
+        },
+        {
+          "title": "MASTER",
+          "picture": "steps",
+          "lanes": [
+            [{"item": "global.bpm", "label": "BPM"}, {"item": "global.swing", "label": "SWNG"}, {"item": "global.glen", "label": "GLEN"}, {"item": "global.rtn", "label": "RTN"}]
+          ]
+        },
+        {
+          "title": "SCENE",
+          "picture": "scene",
+          "lanes": [
+            [{"item": "e5.xfd", "label": "XFD"}]
+          ]
+        }
+      ],
+      "setup": [
+        [{"item": "global.rtn", "label": "RTN"}, {"item": "global.bpm", "label": "BPM"}, {"item": "e5.gbpm", "label": "GBPM"}, {"item": "e5.name", "label": "NAME"}]
+      ]
+    },
+    {
+      "cat": "FILE",
+      "pages": [
+        {
+          "title": "SAMPLE",
+          "picture": "file",
+          "lanes": [
+            [{"item": "slot.bpm", "label": "BPM"}, {"item": "slot.steps", "label": "STEP"}, {"item": "slot.gain", "label": "GAIN"}, "sample_slot"],
+            [{"item": "slot.trim_start", "label": "T-ST"}, {"item": "slot.trim_end", "label": "T-EN"}]
+          ]
+        },
+        {
+          "title": "RAZOR",
+          "picture": "razor",
+          "lanes": [
+            ["razor.start", "razor.end", "razor.play", "razor.zoom"],
+            ["razor.snap", "razor.choke", "razor.pitch", "razor.sens"]
+          ]
+        }
+      ]
+    },
+    {
+      "cat": "PAT",
+      "pages": [
+        {
+          "title": "PATTERN",
+          "picture": "pattern",
+          "lanes": [
+            ["pattern_steps", "pattern_rate", {"item": "global.glen", "label": "GLEN"}, {"item": "global.quant", "label": "QUANT"}]
+          ]
+        }
+      ],
+      "setup": [
+        [{"item": "global.quant", "label": "QUANT"}, {"item": "global.glen", "label": "GLEN"}]
+      ]
+    }
+  ],
+  "bus": [
+    {
+      "bus": "S1",
+      "page": {
+        "title": "SEND 1",
+        "picture": "fx",
+        "same_as": "FX/FX"
+      },
+      "setup": [
+        [{"item": "fx_insert1_machine", "label": "SEND 1 FX"}]
+      ]
+    },
+    {
+      "bus": "S2",
+      "page": {
+        "title": "SEND 2",
+        "picture": "fx",
+        "same_as": "FX/FX"
+      },
+      "setup": [
+        [{"item": "fx_insert1_machine", "label": "SEND 2 FX"}]
+      ]
+    },
+    {
+      "bus": "MST",
+      "page": {
+        "title": "MASTER",
+        "picture": "fx",
+        "same_as": "FX/FX"
+      },
+      "setup": [
+        [{"item": "fx_insert1_machine", "label": "MASTER FX"}]
+      ],
+      "src": {
+        "title": "MIX",
+        "picture": "mix",
+        "lanes": [
+          ["amp", "pan", "mute", {"item": "global.bpm", "label": "BPM"}]
+        ]
+      }
+    }
+  ],
+  "f3": [
+    ["pattern_steps", "pattern_rate", {"item": "global.glen", "label": "GLEN"}, {"item": "global.quant", "label": "QUANT"}]
+  ]
+}

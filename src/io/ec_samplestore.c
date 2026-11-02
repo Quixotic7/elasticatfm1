@@ -48,6 +48,20 @@ void ec_ss_free(int h)
     memset(&g_s[h], 0, sizeof g_s[h]);
 }
 
+int ec_ss_shrink(int h, uint32_t frames)
+{
+    ec_ss_sample_t *s;
+    if (h < 0 || h >= EC_SS_MAX || !g_used[h] || !frames || frames > g_s[h].frames)
+        return -1;
+    s = &g_s[h];
+    if (s->data + (size_t)s->frames * 2u == g_arena + g_top)
+        g_top = (uint32_t)(s->data - g_arena) + frames * 2u;
+    s->frames = frames;
+    if (s->frames_ready > frames)
+        s->frames_ready = frames;
+    return 0;
+}
+
 ec_ss_sample_t *ec_ss_get(int h) { return h >= 0 && h < EC_SS_MAX && g_used[h] ? &g_s[h] : NULL; }
 const ec_ss_sample_t *ec_ss_ready(int h)
 {

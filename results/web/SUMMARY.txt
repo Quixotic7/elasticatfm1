@@ -1,25 +1,28 @@
-Elasticat FM-1 in the RemoteFM1 web player (headless Chromium), 2026-11-02T20:15:08.250Z
-cart: elasticat-0.3.0.rfm1; site: /private/tmp/claude-501/-Volumes-Q7Media-2025-Projects-Github-ChoralRootFM1/757f29ea-714f-4227-811d-7775c2a08913/scratchpad/web-e2e/site
+Elasticat FM-1 in the RemoteFM1 web player (headless Chromium), 2026-11-02T21:06:28.261Z
+cart: elasticat-0.4.0.rfm1; site: /private/tmp/claude-501/-Volumes-Q7Media-2025-Projects-Github-ChoralRootFM1/757f29ea-714f-4227-811d-7775c2a08913/scratchpad/site-fw
 
-ok   the cart boots on the rfm1 engine as a Fantasy CFW in 105 ms (elasticat-0.3.0.rfm1, needs fs1, folders {"audio":"r","data":"rw"}, memory 134217728 bytes)
+ok   the cart boots on the rfm1 engine as a Fantasy CFW in 101 ms (elasticat-0.4.0.rfm1, needs fs1, folders {"audio":"r","data":"rw"}, memory 134217728 bytes)
 ok   Your firmware: the card has the Fantasy CFW badge
 ok   no folder yet: the prompt "Pick your RemoteFM1 folder Pick... Not now"
 ok   the folder picked (2.5 MB in audio/): the prompt gone, T1 shows A_DRUMS_BPM120.WAV (at 4,26)
-ok   PLAY: sound (peak 0.497, RMS 0.0917; before PLAY peak 0.000, RMS 0.0000)
-ok   steps 3, 7, 11, 15 on T1 (TRIG page; 9 LED levels changed)
+ok   PLAY: sound (peak 0.497, RMS 0.0913; before PLAY peak 0.000, RMS 0.0000)
+ok   steps 3, 7, 11, 15 on T1 (TRIG page; 10 LED levels changed)
 ok   T2: FILE (SAVE), SELECT +1, SAVE: B_BASS_BPM120.WAV loaded
 ok   steps 1, 5, 9, 13 on T2; KNOB1 +6 on SRC: the screen changed (796 pixels)
-ok   T1 + T2 playing: sound (peak 0.717, RMS 0.1719)
-ok   the worklet's load while playing (16 reports, 8 s): render share max 0.0 %, busiest 21 ms 0.0 %, late 0 ms, quantum p99 0.00 ms / max 0.00 ms
+ok   T1 + T2 playing: sound (peak 0.883, RMS 0.1708)
+ok   the worklet's load while playing (16 reports, 8 s): render share max 2.8 %, busiest 21 ms 9.4 %, late 0 ms, quantum p99 1.00 ms / max 1.00 ms
 ok   no worklet errors
 ok   live labels: OCT- "LOOP KEYS", GLO "SHIFT", T1 "T1"; SHIFT held: OCT- "UNDO", OCT+ "REDO", T1 "MEMORIZE"; released: OCT- "LOOP KEYS" (24 labels messages)
 ok   after a reload (folder picked, ready): the project is back, T2 B_BASS_BPM120.WAV ok, T1 A_DRUMS_BPM120.WAV ok
-ok   after the reload PLAY plays (peak 0.746, RMS 0.1679)
+ok   after the reload PLAY plays (peak 0.745, RMS 0.1673)
+ok   T3 on INPUT, input off: NO INPUT, silent (peak 0.000, RMS 0.0000)
+ok   input on (the hint's button; latency 1420 frames): the INPUT track sounds (peak 0.215, RMS 0.0555)
+ok   REC (IN, FREE, 1 BAR): the take ran, landed in T3's slot and was saved (SAVED REC-0001..)
 ok   no exceptions in the page
   page warnings: engine: The emulator could not be downloaded (HTTP 404). | engine: The native core of Felucca could not be downloaded (HTTP 404).
-elasticat web e2e passed (15)
+elasticat web e2e passed (18)
 
-numbers: {"bootMs":105,"play":{"peak":0.49652963876724243,"rms":0.09167993885160557},"play2":{"peak":0.7169415950775146,"rms":0.1719064685031991},"load":{"n":16,"load":0,"peak":0,"late":0,"p99":0,"max":0},"play3":{"peak":0.7456018924713135,"rms":0.16791322034080527}}
+numbers: {"bootMs":101,"play":{"peak":0.49662333726882935,"rms":0.09133690596797933},"play2":{"peak":0.8828444480895996,"rms":0.17084123385595773},"load":{"n":16,"load":0.02792553191489362,"peak":0.09375,"late":0,"p99":1,"max":1},"play3":{"peak":0.745455801486969,"rms":0.16732963162630393},"input":{"peak":0.21502573788166046,"rms":0.055456491290249266,"latency":1420,"hint":true}}
 
 screenshots:
   01_your_firmware_badge.png
@@ -36,3 +39,9 @@ screenshots:
   12_reloaded_t2_file.png
   13_reloaded_t1_file.png
   14_reloaded_playing.png
+  15_input_off.png
+  16_input_live.png
+  17_rec_popup.png
+  18_rec_taking.png
+  19_rec_saved.png
+  20_src_take.png

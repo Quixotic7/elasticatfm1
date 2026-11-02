@@ -151,7 +151,7 @@ enum {
     EC_MACH_SLICE_POLY = 5,
     EC_MACH_RAZOR_POLY = 6,    /* slice_poly voicing, explicit per-slice ranges */
     EC_MACH_NEIGHBOR = 7,      /* the left track's output as the source (tracks 2-6) */
-    EC_MACH_INPUT = 8          /* E6: silent */
+    EC_MACH_INPUT = 8          /* E6: the live input (ec_dsp_input) as the source */
 };
 
 /* warp mode (params_spec "mode" option index; modeNames order in the SC engine) */
@@ -414,6 +414,11 @@ void ec_dsp_set_tempo(ec_dsp_t *dsp, float bpm);            /* immediate */
 
 /* Queue one event for the next block. Returns 0, or -1 when the queue is full. */
 int  ec_dsp_event(ec_dsp_t *dsp, const ec_event_t *ev);
+
+/* E6: the live input (interleaved L,R floats, nominal +-1) for the INPUT machine: the next ec_dsp_process calls read
+ * it frame by frame from its start (frame i of it at the i-th frame they render), silence past `frames`; NULL = none.
+ * The memory must stay valid until those calls are done. */
+void ec_dsp_input(ec_dsp_t *dsp, const float *in_lr, int frames);
 
 /* Render `frames` stereo frames (interleaved L,R floats, nominal +-1). */
 void ec_dsp_process(ec_dsp_t *dsp, float *out_lr, int frames);

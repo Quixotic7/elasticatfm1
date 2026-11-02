@@ -33,6 +33,9 @@ void ec_ss_reset(void);                         /* forget every sample */
 /* a new handle with room for frames (stereo int16); -1 if no handle or no room. Not ready until the loader says */
 int ec_ss_alloc(uint32_t frames);
 void ec_ss_free(int h);                          /* forget it; its space comes back only if it was the newest */
+/* E6: keep only its first frames (a recording that reserved more than it took): the rest comes back if it is the
+ * newest. Returns 0, -1 for a bad handle or more frames than it has */
+int ec_ss_shrink(int h, uint32_t frames);
 ec_ss_sample_t *ec_ss_get(int h);                   /* NULL for a bad / free handle */
 const ec_ss_sample_t *ec_ss_ready(int h);           /* NULL unless ready: what the audio path uses */
 uint32_t ec_ss_used_bytes(void);

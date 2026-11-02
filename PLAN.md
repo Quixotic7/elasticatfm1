@@ -15,7 +15,7 @@ Design source: the owner's canvas "Elasticat for iOS, macOS & FM-1"
    iOS app.
 2. **Core loop first** (E1-E2 below), then the rest in milestones.
 3. **No audio input yet**: no REC page, no `input` machine. The core ABI (`fm1core.h`) has no audio-in; adding it to
-   the hosts is a separate project.
+   the hosts is a separate project. (2026-11-02: E6 below, on the `.rfm1` capability `ain1`.)
 
 ## Platform facts
 
@@ -79,9 +79,10 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **E3**: razor_slice / razor_poly + the razor screen; the other warp modes; neighbor machine.
 - **E4**: FX machines, sends S1/S2, master insert, MOD (LFOs).
 - **E5**: scenes A/B + crossfader, copy/clear/paste, page modes, memorize/recall.
-- **E6** (separate project): audio input in the core ABI and hosts; REC page and the input machine.
+- **E6**: audio input (the `.rfm1` capability `ain1`, FM1VST docs/VIRTUAL-CARTS.md 8; the native ABI later), the
+  INPUT machine, REC (sampling).
 
-## Status (0.3.0, 2026-11-02)
+## Status (0.4.0, 2026-11-02)
 
 - **E0-E2** done (0.1.0): the pipe, the core loop, the playable instrument; web player e2e.
 - **E3** done: RAZOR / R.POLY + the FILE / RAZOR page (Auto-Chop, snaps, split / delete, per-slice settings), every
@@ -102,6 +103,24 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
   the held-step frame + lock chips, OCT+ held + a knob clears a lock, track keys hold = mute / double-tap = solo,
   the knob takeover, the live panel labels (ec_app_labels). Tests: ctest 16 (test_ux, the ux demo; every demo's
   gestures updated), the web e2e with a live-label check. CPU: the heavy project 2.4x in wasm3.
+- **E6** (0.4.0) done, **hosts pending** (no RemoteFM1 host feeds input yet; it runs without): the API decided by
+  the RemoteFM1 session, capability **ain1** (FM1VST docs/VIRTUAL-CARTS.md 8): manifest `"wants": ["ain1"]`, the
+  optional exports `rfm1_audio_in(stereo, frames)` (immediately before `rfm1_audio`, the same frames) and
+  `rfm1_audio_in_info(state, latency_frames)`; FM1VST builds it (`fm1_add_rfm1(... WANTS ain1)`), checks it
+  (rfm1_check) and runs it (`rfm1_run --audio-in`). Here: src/plat keeps the block and hands it to the same audio call
+  (ec_plat_ain, the state and latency), the engine's INPUT machine (ec_dsp_input: frame i in = frame i out, the
+  track's filter / FX / amp / sends), the REC pop-up (src/app/ec_rec.c, src/ui/ec_scr_rec.c: IN or MST, a pool slot,
+  LEN free / 1-16 bars, THR, SYNC PLAY / BAR / FREE, the latency shift (the host's latency_frames = the round
+  trip, decided for every host), the take into the slot at once and the WAV to
+  /data/rec over FS_WRITE in 1 MiB pieces from the tick), host/ec_run --audio-in. Tests: test_e6 (48 checks: the
+  INPUT alignment to the frame, state 0 silent, the pop-up's gestures and labels, a take synced on PLAY of a click track
+  looped back through a 300-frame latency on the output's own frame, a resample, the threshold arm to the frame, the WAV
+  bytes and the reboot reloading it), the e6 demo (results/e6), the glue's `rfm1_elasticat` (input fed, the pop-up
+  armed) and `rfm1_elasticat_ain_off`; the web e2e passes on RemoteFM1 main (no input: skipped)
+  and, with a fake microphone, on fw-catalog c5866b9 (the web player's ain1: latency reported 1419-1420 frames; the
+  INPUT track sounds, a FREE take lands and saves). Not checkable headless: a synced take's alignment through a real
+  speaker-to-mic loop (the fake mic is a file, not a loopback); the native test covers it. Max take: the free arena (~9.5 min of
+  stereo with an empty pool). CPU: the heavy project 2.3x in wasm3, with or without the input fed.
 - **Memory** (wasm, MEMORY_MIB 128): engine 17 523 904 bytes (EC_DSP_MEM_MAX 18 MiB, checked at compile time),
   sample arena 96 MiB (~9.5 min of stereo 44.1 kHz), the app state 2.5 MiB + the memorize copy 2.3 MiB, the flash
   buffers and host shim ~3.4 MiB, the stack 1 MiB: the stack top is at 123.1 MiB, 4.9 MiB free. The arena stays 96 MiB.
@@ -110,7 +129,9 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
   sends, master COMP, LFOs on every track) 2.1x real time while playing; the v020 demo project 5.9x.
 
 Remaining / open:
-- **E6** (separate project): audio input in the core ABI and the hosts; the REC page and the INPUT machine.
+- **E6 in the hosts**: the web player first (then iOS incl. the AUv3 input bus, Android, FM1VST); the native ABI's
+  descriptor fields at the next bump. Untried with a real microphone. The REC settings are runtime only; a take with
+  no folder is not saved (it plays until the project reloads).
 - The bus lanes (p-locks of the S1 / S2 / MST params) are not ported; bus params are global (they do morph).
 - Two slice stores coexist (the razor table per track, the pattern's slice program); merging them into one would
   change the save format. Hold-anchor + turn on a bus page does not write the bus param into a scene (capture does).

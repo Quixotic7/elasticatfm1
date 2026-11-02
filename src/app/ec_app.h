@@ -10,6 +10,7 @@
 #include "ec_pages.h"
 #include "ec_plat.h"
 #include "ec_project.h"
+#include "ec_rec.h"
 #include "ec_samplestore.h"
 #include "ec_seq.h"
 #include "ec_ux.h"
@@ -76,6 +77,7 @@ typedef struct {
     uint32_t ms;
     ec_e5app_t e5;               /* E5 */
     ec_ux_t ux;                  /* 0.3.0 */
+    ec_rec_t rec;                /* E6: sampling (the REC pop-up), the input meters */
 } ec_app_t;
 
 extern ec_app_t ec_app;
@@ -97,7 +99,7 @@ float *ec_app_bus_params(ec_app_t *a, int id);              /* E4: the bus recor
 int ec_app_lane(const ec_app_t *a, const ec_page_t *pg);     /* the active lane of the page shown (clamped) */
 float ec_app_move_param(int id, float x, int det, int mult); /* a knob turn: snap with SHIFT, else det x mult steps */
 int ec_app_cells_visible(const ec_app_t *a);                 /* the active lane's cells are on screen */
-int ec_app_popup(const ec_app_t *a);                         /* a pop-up is open (OCT- back / OCT+ OK) */
+int ec_app_popup(const ec_app_t *a);                         /* a pop-up is open (OCT- back / OCT+ OK; E6: REC) */
 int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held alone: its map shows */
 int ec_app_track_audible(const ec_app_t *a, int t);          /* not muted, not silenced by a solo */
 

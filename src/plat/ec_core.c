@@ -215,6 +215,48 @@ FM1CORE_EXPORT const char *fm1core_label(int32_t which)
     return g_lbl[which];
 }
 
+/* ------------------------------------------------------------------------------------------- audio input --- */
+/* fm1core_audio_in / fm1core_audio_in_info: optional module symbols the .rfm1 shim (FM1VST core-glue/common/
+ * rfm1_shim.c, built with ain1 in fm1_add_rfm1's WANTS) exports as rfm1_audio_in / rfm1_audio_in_info (FM1VST
+ * docs/VIRTUAL-CARTS.md 8; descriptor fields at the next ABI bump). The host calls them on the thread that calls
+ * audio, rfm1_audio_in immediately before rfm1_audio: the block is copied here and taken by the next c_audio (one
+ * producer, one consumer: the count is published last, taken atomically). */
+static int16_t g_ain[EC_AIN_MAX * 2];
+static volatile uint32_t g_ain_n;          /* frames waiting for the next audio call (0 none) */
+static volatile uint32_t g_ain_state, g_ain_latency, g_ain_epoch;
+static const int16_t *g_ain_cur;           /* during c_audio: the block taken, and its frames */
+static uint32_t g_ain_cur_n;
+
+FM1CORE_EXPORT void fm1core_audio_in(const int16_t *stereo, uint32_t frames)
+{
+    if (!stereo || !frames)
+        return;
+    if (frames > EC_AIN_MAX)
+        frames = EC_AIN_MAX;
+    memcpy(g_ain, stereo, (size_t)frames * 4u);
+    __atomic_store_n(&g_ain_n, frames, __ATOMIC_RELEASE);
+}
+FM1CORE_EXPORT void fm1core_audio_in_info(uint32_t state, uint32_t latency_frames)
+{
+    state = state == EC_AIN_LIVE ? EC_AIN_LIVE : EC_AIN_OFF;
+    if (state != g_ain_state || latency_frames != g_ain_latency) {
+        __atomic_store_n(&g_ain_state, state, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_ain_latency, latency_frames, __ATOMIC_RELEASE);
+        __atomic_add_fetch(&g_ain_epoch, 1u, __ATOMIC_RELEASE);
+    }
+    if (state == EC_AIN_OFF)
+        __atomic_store_n(&g_ain_n, 0u, __ATOMIC_RELEASE);
+}
+int ec_plat_ain_state(void) { return (int)__atomic_load_n(&g_ain_state, __ATOMIC_ACQUIRE); }
+uint32_t ec_plat_ain_latency(void) { return __atomic_load_n(&g_ain_latency, __ATOMIC_ACQUIRE); }
+uint32_t ec_plat_ain_epoch(void) { return __atomic_load_n(&g_ain_epoch, __ATOMIC_ACQUIRE); }
+const int16_t *ec_plat_ain(uint32_t *n)
+{
+    if (n)
+        *n = g_ain_cur ? g_ain_cur_n : 0;
+    return g_ain_cur;
+}
+
 /* ------------------------------------------------------------------------------------------- the flash --- */
 static void flash_format(void)
 {
@@ -372,11 +414,16 @@ static void c_frame(void)
 static void c_idle(void) {}
 static void c_audio(int16_t *stereo, uint32_t frames)
 {
+    const uint32_t ain = __atomic_exchange_n(&g_ain_n, 0u, __ATOMIC_ACQ_REL);   /* this block's input, once */
     if (!g_running) {
         memset(stereo, 0, (size_t)frames * 4u);
         return;
     }
+    g_ain_cur = ain && ec_plat_ain_state() == EC_AIN_LIVE ? g_ain : NULL;
+    g_ain_cur_n = ain < frames ? ain : frames;
     ec_app_audio(stereo, frames);
+    g_ain_cur = NULL;
+    g_ain_cur_n = 0;
 }
 static int c_midi_in(uint32_t pkt)
 {

@@ -26,6 +26,7 @@ ec_app_t ec_app;
 
 static uint8_t g_dsp_mem[EC_DSP_MEM_MAX] __attribute__((aligned(16)));   /* the engine (ec_dsp.c asserts it fits) */
 static float g_buf[1024 * 2];
+static float g_inbuf[1024 * 2];   /* E6: the live input, as floats, for the INPUT machine */
 
 /* ------------------------------------------------------------------------------------------- small helpers --- */
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
@@ -54,6 +55,8 @@ static void mark_dirty(void)
     A->dirty_ms = A->ms;
     A->redraw = 1;
 }
+void ec_app_message(const char *s) { message(s); }   /* E6: for ec_rec.c */
+void ec_app_mark_dirty(void) { mark_dirty(); }
 
 float *ec_app_params(ec_app_t *a) { return ec_project_track(&a->proj, a->track)->v; }
 int ec_app_track_slot(const ec_app_t *a, int t)
@@ -403,10 +406,26 @@ static void slot_loaded(int s, int h)
         mark_dirty();
     }
     assign_samples();
-    if (old >= 0 && old != h && !handle_in_use(old, -1))
+    if (old >= 0 && old != h && !handle_in_use(old, -1) && !ec_rec_holds(old))   /* (E6: a take being saved) */
         ec_ss_free(old);
     ec_seq_touch_all(&A->seq);
     A->redraw = 1;
+}
+
+/* E6: a recorded take (ready in the store) into slot s, as a finished load: the track plays it at once */
+int ec_app_handle_used(int h) { return handle_in_use(h, -1); }
+void ec_app_slot_take(int s, int h)
+{
+    ec_slotrt_t *r = &A->slot[s];
+    if (A->load_slot == s) {                       /* (a load into that slot gives way) */
+        ec_load_cancel();
+        A->load_slot = -1;
+    }
+    r->old_handle = r->state == EC_SL_READY || r->state == EC_SL_QUEUED || r->state == EC_SL_LOADING ? r->handle : -1;
+    r->builtin = 0;
+    r->newmeta = 0;
+    r->err[0] = 0;
+    slot_loaded(s, h);
 }
 
 static void loader_tick(void)
@@ -423,7 +442,7 @@ static void loader_tick(void)
             const char *why = ec_load_error();
             const int s = A->load_slot;
             A->load_slot = -1;
-            if (!strcmp(why, "too big") && !A->repack) {
+            if (!strcmp(why, "too big") && !A->repack && !ec_rec_busy()) {   /* (E6: not under a take) */
                 repack();
                 return;
             }
@@ -522,9 +541,11 @@ static void save_project(int quiet)
 
 static float nudge_machine(float m, int det)
 {
-    /* E3: every machine but INPUT (E6); NEIGHBOR from track 2 on (track 1 has no left neighbour) */
-    const int top = A->track > 0 ? EC_MACH_NEIGHBOR : EC_MACH_RAZOR_POLY;
-    return (float)clampi((int)(m + 0.5f) + det, EC_MACH_LOOP, top);
+    /* every machine (E6: INPUT, the live input, last); NEIGHBOR from track 2 on (track 1 has no left neighbour) */
+    int x = clampi((int)(m + 0.5f) + det, EC_MACH_LOOP, EC_MACH_INPUT);
+    if (x == EC_MACH_NEIGHBOR && A->track == 0)
+        x = det > 0 ? EC_MACH_INPUT : EC_MACH_RAZOR_POLY;
+    return (float)x;
 }
 
 /* 0.3.0: a knob turn on a param: SHIFT snaps, else det clicks of mult finest steps (lists: one item a click) */
@@ -844,6 +865,7 @@ static void file_tap(void)
 /* a category button tapped: its page; again: its next page; in a setup: back to the pages */
 static void cat_tap(int c)
 {
+    ec_rec_close();                                /* E6: a category closes the REC pop-up (a take goes on) */
     if (A->settings) {
         A->settings = 0;
         A->cat = c;
@@ -859,6 +881,7 @@ static void cat_tap(int c)
 /* SHIFT + the button, or a hold: the category's setup (SHIFT + the same in its setup: back to the pages) */
 static void cat_setup(int c, int toggle)
 {
+    ec_rec_close();                                /* E6 */
     if (toggle && A->settings && A->cat == c)
         A->settings = 0;
     else if (has_settings(c)) {
@@ -891,6 +914,7 @@ static void go_home(void)
         ec_e5_answer(0);
     UX->f3 = 0;
     UX->to_ms = 0;
+    ec_rec_close();                                /* E6 (a take goes on) */
     A->patn_open = A->patn_latched = 0;
     A->patn_ms = 0;
     A->settings = 0;
@@ -1262,7 +1286,7 @@ static const int CAT_OF[EC_NB] = {EC_CAT_FX, EC_CAT_SRC, EC_CAT_AMP, EC_CAT_MOD,
 
 int ec_app_popup(const ec_app_t *a)
 {
-    return a->e5.naming || a->e5.confirm || a->ux.f3 || a->patn_open || a->settings;
+    return a->e5.naming || a->e5.confirm || a->ux.f3 || a->patn_open || a->settings || a->rec.open;
 }
 
 /* a pop-up takes OCT- (back / cancel), OCT+ (OK / confirm) and HOME first; 1 = the press is used */
@@ -1283,6 +1307,8 @@ static int popup_button(int b)
             ec_e5_answer(0);                       /* any other button: no */
         return 0;
     }
+    if (A->rec.open && b != EC_B_HOME && !A->fn)   /* E6: REC / OCT+ arm, take, stop; OCT- close, disarm, discard */
+        return ec_rec_button(b);
     if (UX->f3 && (oct || b == EC_B_HOME)) {
         UX->f3 = 0;
         return 1;
@@ -1391,6 +1417,12 @@ static void button_down(int b)
         A->sel_used = 0;
         A->sel_ms = A->ms;
         break;
+    case EC_B_REC:                                 /* E6: no scope held: the REC pop-up (sampling) */
+        UX->f3 = 0;
+        A->settings = 0;
+        A->patn_open = A->patn_latched = 0;
+        ec_rec_open();
+        break;
     default:
         if (CAT_OF[b] >= 0) {                      /* tap on release, hold = the setup */
             UX->cat_btn = b;
@@ -1498,6 +1530,8 @@ static void knob(int r, int d)
     if (A->fn && r != EC_E_SELECT && r != EC_E_ALGO)
         UX->shift_used = 1;
     if (ec_e5_knob(r, d))                          /* E5: naming */
+        return;
+    if (!A->fn && ec_rec_knob(r, d))               /* E6: the REC pop-up's SELECT and K1..K4 */
         return;
     if (UX->f3) {                                  /* F3: SELECT tempo, ALGORITHM swing, KN1-KN4 its cells */
         if (r == EC_E_SELECT || r == EC_E_ALGO) {
@@ -1627,6 +1661,7 @@ void ec_app_init(void)
     ec_seq_init(&A->seq, &A->proj, &sink, EC_FS);
     ec_dsp_set_tempo(A->dsp, A->proj.bpm);
     ec_e5_init();                                  /* E5 */
+    ec_rec_init();                                 /* E6 */
     A->cat = EC_CAT_SRC;
     A->page[EC_CAT_SRC] = 0;
     scan();
@@ -1678,6 +1713,7 @@ void ec_app_tick(const ec_input_t *in)
 
     holds_tick();                                  /* 0.3.0: holds, the takeover's end */
     sample_tick();                                 /* 0.3.0: PRESETS' debounced load */
+    ec_rec_tick();                                 /* E6: a take ended -> its slot, the WAV writer */
     ec_e5_tick();                                  /* E5: the glide, prompts */
     /* autosave: stopped, dirty, quiet for a moment */
     if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
@@ -1687,7 +1723,8 @@ void ec_app_tick(const ec_input_t *in)
 void ec_app_audio(int16_t *out, uint32_t frames)
 {
     const float m = (float)A->master / 1023.0f;
-    uint32_t done = 0;
+    uint32_t done = 0, ain_n = 0;
+    const int16_t *ain = ec_plat_ain(&ain_n);      /* E6: the host's input for this very block (NULL: silence) */
     ec_dsp_set_master_volume(A->dsp, m * m);
     {   /* E4: the bus FX records -> the engine (cheap: three struct fills per call) */
         int b;
@@ -1704,16 +1741,26 @@ void ec_app_audio(int16_t *out, uint32_t frames)
             ec_dsp_bus_params(A->dsp, b, &fp);
         }
     }
+    A->rec.host_block = frames;                    /* E6 (informational: the shift is the host's latency alone) */
     while (done < frames) {
         const uint32_t n = frames - done > 1024 ? 1024 : frames - done;
+        /* E6: this chunk's input (frame i of it lines up with output frame i), silence past what the host gave */
+        const uint32_t in_n = ain && ain_n > done ? (ain_n - done < n ? ain_n - done : n) : 0;
+        const int16_t *in = in_n ? ain + 2 * done : NULL;
         uint32_t i;
+        for (i = 0; in && i < 2 * n; i++)
+            g_inbuf[i] = i < 2 * in_n ? (float)in[i] / 32768.0f : 0.0f;
+        ec_dsp_input(A->dsp, in ? g_inbuf : NULL, (int)n);
+        ec_rec_pre(n);
         ec_seq_render(&A->seq, g_buf, (int)n);
         for (i = 0; i < 2 * n; i++) {
             const float x = g_buf[i] * 32767.0f;
             out[2 * done + i] = (int16_t)(x > 32767.0f ? 32767 : x < -32768.0f ? -32768 : (int)x);
         }
+        ec_rec_post(in, in_n, out + 2 * done, n);
         done += n;
     }
+    ec_dsp_input(A->dsp, NULL, 0);
     A->frames_out += frames;
 }
 
@@ -1883,6 +1930,12 @@ static void leds(void)
     ec_e5_leds();                                  /* E5 */
     if (ec_rzui_active(A) && !ec_app_popup(A))     /* E3: the RAZOR page's keys and OCT buttons (page-local) */
         ec_rzui_leds(A);
+    if (A->rec.state == EC_RS_ARMED)               /* E6: REC blinks armed, lit while a take runs */
+        ec_plat_led_button(EC_B_REC, blink(250) ? EC_LED_LIT : EC_LED_DIM);
+    else if (A->rec.state == EC_RS_RUN || A->rec.state == EC_RS_STOPPED)
+        ec_plat_led_button(EC_B_REC, EC_LED_LIT);
+    else if (A->rec.open)
+        ec_plat_led_button(EC_B_REC, EC_LED_MID);
 }
 
 static void meters(void)
@@ -1911,8 +1964,11 @@ static void meters(void)
 void ec_app_frame(void)
 {
     const uint32_t now = A->ms;
-    const int loading = A->load_slot >= 0 || A->scanning;
+    const int loading = A->load_slot >= 0 || A->scanning || A->rec.open || A->rec.state != EC_RS_IDLE ||
+                        (A->cat == EC_CAT_SRC && !A->bus &&      /* E6: the live meters */
+                         iv(ec_app_params(A), EC_P_MACHINE) == EC_MACH_INPUT);
     meters();
+    ec_rec_frame();                                /* E6: the input meters */
     leds();
     if (!A->redraw && !((A->seq.playing || loading || A->msg_ms) && now - A->last_draw >= 30))
         return;
@@ -1973,6 +2029,9 @@ void ec_app_ui_info(char *buf, uint32_t n)
         l = (uint32_t)strlen(buf);   /* E5 */
         if (l < n)
             ec_e5_ui_info(buf + l, n - l);
+        l = (uint32_t)strlen(buf);   /* E6 */
+        if (l < n)
+            ec_rec_ui_info(buf + l, n - l);
     }
 }
 

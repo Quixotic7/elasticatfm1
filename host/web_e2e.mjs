@@ -9,6 +9,10 @@
 //   3. PLAY (the page's panel API, FM1Site.panel): sound (peak + RMS on an AnalyserNode after the worklet)
 //   4. steps on the lower keys, T2 + FILE (SAVE) + SELECT + SAVE loads the second file on T2, a knob turned
 //   5. the worklet's load reports while it plays (render share, busiest 21 ms, late ms)
+//   7. (E6, a site with ain1: RemoteFM1 fw-catalog c5866b9 on) live input from a fake microphone (Chromium's
+//      --use-file-for-fake-audio-capture: the demo's chord loop): T3 on INPUT says NO INPUT while off and is silent
+//      (stopped); input on (the page's hint): the INPUT track sounds; REC (FREE, 1 BAR) takes the input into T3's
+//      slot, lands and saves (SAVED REC-0001). A site without ain1: these are skipped, said so.
 //   6. the live panel labels (0.3.0: the player's "labels" message): OCT- says LOOP KEYS, SHIFT held: UNDO, MEMORIZE
 //   7. stop (SHIFT + PLAY), the autosave, a reload: the project comes back (T1's file, T2's file) and plays
 // Screenshots + SUMMARY.txt to results/web/.
@@ -52,7 +56,9 @@ const WAVS = ["a_drums_bpm120.wav", "b_bass_bpm120.wav", "c_chords_bpm120.wav", 
 const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1", "--directory", root], { stdio: "ignore" });
 const chrome = spawn(CHROMIUM, ["--headless=new", "--use-mock-keychain", "--password-store=basic", "--disable-gpu",
   "--no-sandbox", "--no-first-run", `--user-data-dir=${profile}`, "--hide-scrollbars", "--window-size=1280,900",
-  "--mute-audio", "--autoplay-policy=no-user-gesture-required", `--remote-debugging-port=${DEBUG}`, "about:blank"], { stdio: "ignore" });
+  "--mute-audio", "--autoplay-policy=no-user-gesture-required", "--use-fake-ui-for-media-stream",
+  "--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${join(demo, "audio", "c_chords_bpm120.wav")}`,
+  `--remote-debugging-port=${DEBUG}`, "about:blank"], { stdio: "ignore" });
 const stop = () => { try { process.kill(chrome.pid); } catch {} try { process.kill(server.pid); } catch {} };
 process.on("exit", stop);
 process.on("SIGINT", () => process.exit(130));
@@ -292,6 +298,44 @@ try {
   nums.play3 = l3;
   ok(l3.rms > 0.005 && l3.peak > 0.02, `after the reload PLAY plays (${fmtL(l3)})`);
   await shot("14_reloaded_playing");
+
+  // 7. E6: live input (only on a site with ain1)
+  if (await js(`!!(window.FM1Ain && FM1Ain.supported) && FM1Site.current().info.ain === "wants"`)) {
+    await btnDown("GLO", true); await sleep(150); await tap("PLAY"); await btnDown("GLO", false); await sleep(400);   // stop
+    await keyTap(UPPER[2]);                     // T3
+    await tap("HOME");
+    await btnDown("GLO", true); await sleep(150); await tap("SEL"); await btnDown("GLO", false); await sleep(300);   // SRC setup
+    await turn(E.K1, 7);                        // MACHINE: LOOP + 7 = INPUT
+    await tap("HOME");
+    await sleep(800);
+    const off = await level(600), noIn = !!findText(await screen(), "NO INPUT", 4);
+    ok(noIn && off.peak < 0.002, `T3 on INPUT, input off: NO INPUT, silent (${fmtL(off)})`);
+    await shot("15_input_off");
+    const hint = await js(`(() => { const b = document.querySelector(".ain-ask:not([hidden]) .pill.primary"); if (b) b.click(); return !!b; })()`);
+    if (!hint) await js(`FM1Ain.start().then(() => true)`);
+    await until(`!!FM1Ain.live`, 10000, "the input live");
+    await sleep(2000);
+    const on = await level(1500), told = await js(`FM1Ain.live && FM1Ain.live.told`);
+    nums.input = { ...on, latency: told, hint };
+    ok(on.peak > 0.02 && !findText(await screen(), "NO INPUT", 4), `input on (${hint ? "the hint's button" : "FM1Ain.start"}; latency ${told} frames): the INPUT track sounds (${fmtL(on)})`);
+    await shot("16_input_live");
+    await tap("REC");
+    await turn(E.K2, -2);                       // LEN 1 BAR
+    await turn(E.K4, 2);                        // SYNC FREE: at once
+    await shot("17_rec_popup");
+    await tap("OCT+");                          // arm = start
+    await sleep(1000);
+    const taking = !!findText(await screen(), "REC 0:0");
+    await shot("18_rec_taking");
+    const saved = await untilText("SAVED", 10000);
+    await sleep(300);
+    ok(taking && !!saved, `REC (IN, FREE, 1 BAR): the take ran${taking ? "" : " (no REC 0:0x on the screen)"}, landed in T3's slot and was saved${saved ? " (SAVED REC-0001..)" : " (no SAVED)"}`);
+    await shot("19_rec_saved");
+    await tap("HOME");
+    await sleep(500);
+    await shot("20_src_take");
+  } else
+    log("  (this site has no ain1: the live input checks skipped)");
 
   ok(!exceptions.length, `no exceptions in the page${exceptions.length ? ": " + exceptions.join(" | ") : ""}`);
   if (warnings.length) log(`  page warnings: ${[...new Set(warnings)].slice(0, 8).join(" | ")}`);

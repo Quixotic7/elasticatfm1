@@ -155,7 +155,7 @@ static void button_labels(void)
             else if (b == EC_B_PLAY)
                 s = scope ? "CLEAR" : A->seq.playing ? "PAUSE" : "PLAY";
             else if (b == EC_B_REC)
-                s = scope ? "COPY" : "";
+                s = scope ? "COPY" : "SAMPLING";                   /* E6: the REC pop-up */
             else if (b == EC_B_OCTDN || b == EC_B_OCTUP) {
                 if (A->e5.confirm)
                     s = b == EC_B_OCTUP ? "YES" : "NO";
@@ -228,4 +228,6 @@ void ec_app_labels(void)
     button_labels();
     upper_labels();
     lower_labels();
+    if (A->rec.open && !A->fn && !A->e5.naming && !A->e5.confirm)   /* E6: the REC pop-up's knobs and buttons */
+        ec_rec_labels();
 }

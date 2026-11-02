@@ -1,0 +1,214 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* E6's screens: the REC pop-up (design/mockup/Display.dc.html mode "rec": the source and the target slot, the take's
+ * waveform with the record head in the accent, the bar ruler, the IN meters with the threshold's tick, LEN / THR /
+ * SYNC) and the INPUT machine's view on SRC (the input's meters, NO INPUT). The mockup's 120x120 grid at EC_U. */
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "ec_gfx.h"
+#include "ec_screens.h"
+
+#define W EC_GW
+#define H EC_GH
+#define R(c, x, y, w, h) ec_gfx_rect(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
+#define T(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), EC_U, (c), (al))
+#define T2(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), 2 * EC_U, (c), (al))
+#define TW(s) (ec_gfx_text_w((s), 1))
+
+static float db_frac(float p)
+{
+    const float db = 20.0f * log10f(p > 1e-4f ? p : 1e-4f);
+    const float f = (db + 60.0f) / 60.0f;
+    return f < 0 ? 0 : f > 1 ? 1 : f;
+}
+
+/* a horizontal level meter in dB (-60..0), its peak bright; full scale lights the accent */
+static void meter(int x, int y, int w, int h, float p)
+{
+    const int n = (int)(db_frac(p) * (float)w + 0.5f);
+    R(EC_C_L3, x, y, w, h);
+    R(p >= 0.98f ? EC_C_ACC : EC_C_L12, x, y, n, h);
+}
+
+static void lat_text(char *b, size_t cap)
+{
+    const uint32_t l = ec_plat_ain_latency();
+    if (l)
+        snprintf(b, cap, "LAT %.1fMS", (double)l * 1000.0 / EC_FS);
+    else
+        snprintf(b, cap, "LAT ?");
+}
+
+/* ------------------------------------------------------------------------------------------- INPUT on SRC --- */
+void ec_scr_input(const ec_app_t *a, int top, int bot)
+{
+    const ec_rec_t *r = &a->rec;
+    char b[24];
+    if (ec_plat_ain_state() != EC_AIN_LIVE) {
+        ec_gfx_dots_h(EC_U * 2, EC_U * (W - 2), EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
+        T2(EC_C_ACC, "NO INPUT", W / 2, (top + bot) / 2 - 5, EC_AL_CENTER);
+        return;
+    }
+    T(EC_C_L8, "L", 2, top + 6, EC_AL_LEFT);
+    meter(8, top + 5, W - 10, 7, r->in_meter[0]);
+    T(EC_C_L8, "R", 2, top + 17, EC_AL_LEFT);
+    meter(8, top + 16, W - 10, 7, r->in_meter[1]);
+    {   /* this track's output (after its filter, insert and amp) */
+        const float o = a->meter[a->track] > 1 ? 1 : a->meter[a->track];
+        T(EC_C_L5, "OUT", 2, top + 28, EC_AL_LEFT);
+        meter(16, top + 29, W - 18, 2, o);
+    }
+    lat_text(b, sizeof b);
+    T(EC_C_L5, b, W - 2, bot - 5, EC_AL_RIGHT);
+}
+
+/* ------------------------------------------------------------------------------------------- the REC pop-up --- */
+static void cell(int i, const char *label, const char *val, float frac, int dim)
+{
+    const int x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101;
+    char tag[4];
+    const uint16_t vc = dim ? EC_C_L5 : EC_C_L15;
+    snprintf(tag, sizeof tag, "K%d", i + 1);
+    T(EC_C_L8, label, x, y, EC_AL_LEFT);
+    T(EC_C_L5, tag, x + 54, y, EC_AL_RIGHT);
+    if (TW(val) * 2 <= 54)
+        T2(vc, val, x, y + 7, EC_AL_LEFT);
+    else
+        T(vc, val, x, y + 9, EC_AL_LEFT);
+    R(EC_C_L3, x, y + 18, 54, 1);
+    R(dim ? EC_C_L5 : EC_C_L8, x, y + 18, (int)(frac * 54.0f + 0.5f), 1);
+}
+
+/* the take's waveform from the store (each column's peak, a few hundred frames read) up to the head */
+static void take_wave(const int16_t *d, uint32_t n, uint32_t total, int x0, int cols, int top, int bot)
+{
+    const int mid = (top + bot) / 2, half = (bot - top) / 2;
+    const int used = total ? (int)((uint64_t)cols * n / total) : 0;
+    int c;
+    for (c = 0; c < used && c < cols; c++) {
+        const uint32_t a = (uint32_t)((uint64_t)c * total / (uint32_t)cols);
+        uint32_t e = (uint32_t)((uint64_t)(c + 1) * total / (uint32_t)cols), i, step;
+        int pk = 0, h;
+        if (e > n)
+            e = n;
+        step = (e > a ? e - a : 1) / 256u + 1u;
+        for (i = a; i < e; i += step) {
+            const int l = d[2 * i] < 0 ? -d[2 * i] : d[2 * i], rr = d[2 * i + 1] < 0 ? -d[2 * i + 1] : d[2 * i + 1];
+            pk = l > pk ? l : pk;
+            pk = rr > pk ? rr : pk;
+        }
+        h = (int)((float)pk / 32768.0f * (float)half + 0.5f);
+        R(EC_C_L15, x0 + c, mid - h, 1, 2 * h + 1);
+    }
+}
+
+void ec_scr_rec(const ec_app_t *a)
+{
+    static const char *const SRC[] = {"IN", "MST"}, *const SYNC[] = {"PLAY", "BAR", "FREE"};
+    static const char *const LEN[] = {"FREE", "1 BAR", "2 BAR", "4 BAR", "8 BAR", "16 BAR"};
+    const ec_rec_t *r = &a->rec;
+    const int x0 = 2, x1 = W - 2, cols = x1 - x0, top = 24, bot = 56;
+    const int live = ec_plat_ain_state() == EC_AIN_LIVE;
+    const int taking = r->state == EC_RS_RUN || r->state == EC_RS_STOPPED;
+    const int slot = r->state == EC_RS_IDLE && !r->slot_set ? ec_app_track_slot(a, a->track) : r->slot;
+    const float bpm = (float)(a->seq.bpm > 1 ? a->seq.bpm : a->proj.bpm);
+    uint32_t total = r->target ? r->target : ec_rec_len_frames(r->len, bpm);
+    char b[40], t[24];
+    int i, nt;
+
+    snprintf(t, sizeof t, "REC/%s", SRC[r->src]);
+    ec_scr_header(a, t, 1, r->state == EC_RS_ARMED ? "ARMED" : taking ? "REC" : r->w ? "SAVING" : "");
+    snprintf(b, sizeof b, "%s > POOL %02d", r->src == EC_RSRC_IN ? "IN L+R" : "MASTER", slot + 1);
+    T(EC_C_L15, b, 2, 13, EC_AL_LEFT);
+    if (taking) {                                  /* the clock, in the accent box */
+        const uint32_t s = r->n / EC_FS;
+        snprintf(b, sizeof b, "REC %u:%02u", s / 60u, s % 60u);
+        R(EC_C_ACC, W - 46, 12, 44, 7);
+        T(EC_C_BG, b, W - 24, 13, EC_AL_CENTER);
+    } else if (r->state == EC_RS_ARMED) {           /* what it waits for */
+        if (r->sync == EC_RSYNC_FREE)
+            snprintf(b, sizeof b, "WAIT %dDB", ec_rec_thr_db(r->thr));
+        else
+            snprintf(b, sizeof b, "WAIT %s", SYNC[r->sync]);
+        T((a->ms / 250u) & 1u ? EC_C_ACC : EC_C_L8, b, W - 2, 13, EC_AL_RIGHT);
+    } else {                                        /* the longest take that fits now */
+        const uint32_t s = ec_ss_free_frames() / EC_FS;
+        snprintf(b, sizeof b, "MAX %u:%02u", s / 60u, s % 60u);
+        T(EC_C_L8, b, W - 2, 13, EC_AL_RIGHT);
+    }
+
+    /* the ruler: the length's beats (bars taller); FREE: seconds */
+    if (!total)
+        total = taking && r->n > 8u * EC_FS ? r->n + r->n / 4u : 8u * EC_FS;
+    {
+        static const int BARS[EC_REC_NLEN] = {0, 1, 2, 4, 8, 16};
+        nt = r->len ? 4 * BARS[r->len] : (int)(total / EC_FS);
+    }
+    if (nt > 64)
+        nt = 64;
+    for (i = 0; i <= nt; i++) {
+        const int big = r->len ? i % 4 == 0 : 1;
+        R(big ? EC_C_L8 : EC_C_L3, x0 + cols * i / (nt ? nt : 1), top - 3, 1, big ? 3 : 2);
+    }
+    ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * (top + 3), 3 * EC_U, EC_U, EC_C_L3);
+    ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * (bot - 3), 3 * EC_U, EC_U, EC_C_L3);
+    if (taking) {
+        const ec_ss_sample_t *x = ec_ss_get(r->handle);
+        const int xr = x0 + (int)((uint64_t)cols * (r->n < total ? r->n : total) / total);
+        if (x)
+            take_wave(x->data, r->n < total ? r->n : total, total, x0, cols, top, bot);
+        ec_gfx_dots_h(EC_U * xr, EC_U * x1, EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
+        R(EC_C_ACC, xr, top - 2, 1, bot - top + 4);
+    } else {
+        const ec_ss_sample_t *s = a->slot[slot].handle >= 0 ? ec_ss_ready(a->slot[slot].handle) : 0;
+        if (s && r->state == EC_RS_IDLE) {          /* what the slot holds now (a take replaces it) */
+            const int mid = (top + bot) / 2, half = (bot - top) / 2;
+            int c;
+            for (c = 0; c < cols; c++) {
+                const int k = c * EC_SS_OVERVIEW / cols, h = (s->overview[k] * half + 127) / 255;
+                R(EC_C_L5, x0 + c, mid - h, 1, 2 * h + 1);
+            }
+            snprintf(b, sizeof b, "%.24s", s->name);
+            T(EC_C_L8, b, W / 2, bot + 1, EC_AL_CENTER);
+        } else
+            ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
+        if (r->state == EC_RS_ARMED)
+            R(EC_C_ACC, x0, top - 2, 1, bot - top + 4);
+    }
+    if (r->src == EC_RSRC_IN && !live)              /* no input from the host: a take is silence */
+        T2(EC_C_ACC, "NO INPUT", W / 2, (top + bot) / 2 - 5, EC_AL_CENTER);
+
+    /* the meters: the input (or the master out) with the threshold's tick, the latency */
+    ec_gfx_dots_h(0, EC_U * W, EC_U * 63, 2 * EC_U, EC_U, EC_C_L3);
+    if (r->src == EC_RSRC_IN) {
+        T(EC_C_L8, "IN", 2, 66, EC_AL_LEFT);
+        meter(12, 66, 60, 2, r->in_meter[0]);
+        meter(12, 69, 60, 2, r->in_meter[1]);
+    } else {
+        const float m = a->meter[8] > 1 ? 1 : a->meter[8];
+        T(EC_C_L8, "MST", 2, 66, EC_AL_LEFT);
+        meter(16, 66, 56, 5, m);
+    }
+    if (r->thr && r->sync == EC_RSYNC_FREE) {
+        const int tx = 12 + (int)(db_frac(powf(10.0f, (float)ec_rec_thr_db(r->thr) / 20.0f)) * 60.0f);
+        R(EC_C_L15, tx, 65, 1, 7);
+    }
+    if (r->src == EC_RSRC_IN) {
+        lat_text(b, sizeof b);
+        T(EC_C_L5, b, W - 2, 66, EC_AL_RIGHT);
+    }
+
+    /* the cells */
+    R(EC_C_L3, 0, 76, W, 1);
+    R(EC_C_L3, 60, 76, 1, 44);
+    R(EC_C_L3, 0, 98, W, 1);
+    cell(0, "SRC", SRC[r->src], (float)r->src, 0);
+    cell(1, "LEN", LEN[r->len], (float)r->len / (EC_REC_NLEN - 1), 0);
+    if (r->thr)
+        snprintf(b, sizeof b, "%dDB", ec_rec_thr_db(r->thr));
+    else
+        snprintf(b, sizeof b, "OFF");
+    cell(2, "THR", b, (float)r->thr / (EC_REC_NTHR - 1), r->sync != EC_RSYNC_FREE);
+    cell(3, "SYNC", SYNC[r->sync], (float)r->sync / (EC_NRSYNC - 1), 0);
+}

@@ -16,4 +16,8 @@ void ec_scr_neighbor(const ec_app_t *a, int top, int bot);
 void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
 
+/* E6: ec_scr_rec.c (the REC pop-up; the INPUT machine's view on SRC) */
+void ec_scr_rec(const ec_app_t *a);
+void ec_scr_input(const ec_app_t *a, int top, int bot);
+
 #endif

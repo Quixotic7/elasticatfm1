@@ -57,6 +57,10 @@ add_executable(ec_test_ux host/test_ux.c)   # 0.3.0: the panel along ChoralRoot 
 target_link_libraries(ec_test_ux PRIVATE elasticat)
 target_compile_options(ec_test_ux PRIVATE -Wall -Wextra)
 
+add_executable(ec_test_e6 host/test_e6.c)   # E6: audio input, the INPUT machine, sampling (REC)
+target_link_libraries(ec_test_e6 PRIVATE elasticat)
+target_compile_options(ec_test_e6 PRIVATE -Wall -Wextra)
+
 enable_testing()
 add_test(NAME e5 COMMAND ec_test_e5 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/e2_flash.bin)   # E5
 add_test(NAME v020 COMMAND ec_test_v020)
@@ -66,6 +70,11 @@ add_test(NAME ux_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_ux.sh $
 add_test(NAME ux COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/ux_folder >/dev/null && $<TARGET_FILE:ec_test_ux> ${CMAKE_BINARY_DIR}/ux_folder")
 # 0.2.0: the seams demo through panel input + a reboot from its flash (host/render_v020.sh)
 add_test(NAME v020_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_v020.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/v020)
+# E6: the INPUT machine's alignment, no input, the REC pop-up, a synced take through a latency, resample, threshold,
+# the WAV in /data/rec and the reboot
+add_test(NAME e6 COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/e6_folder >/dev/null && $<TARGET_FILE:ec_test_e6> ${CMAKE_BINARY_DIR}/e6_folder")
+# E6: the REC / INPUT screens through panel input with a stand-in input (host/render_e6.sh -> results/e6)
+add_test(NAME e6_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e6.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e6)
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)
 add_test(NAME seq COMMAND ec_test_seq)
 add_test(NAME e3 COMMAND ec_test_e3)

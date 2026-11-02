@@ -85,6 +85,23 @@ void ec_plat_label(int which, const char *s);
 void ec_plat_labels_clear(void);       /* every slot NULL */
 void ec_app_labels(void);              /* weak default in ec_core.c */
 
+/* ---- audio input (E6; FM1VST docs/VIRTUAL-CARTS.md 8, capability "ain1") ----
+ * The host calls the .rfm1's rfm1_audio_in (the core's fm1core_audio_in) immediately before rfm1_audio for the same
+ * block: input frame i lines up with output frame i. ec_core.c keeps that block and hands it to the app inside the
+ * same ec_app_audio call; a block with no input before it is silence. Hosts do not monitor the input themselves: what
+ * is heard of it is what the app plays (the INPUT machine). */
+enum { EC_AIN_OFF = 0, EC_AIN_LIVE = 1 };
+#define EC_AIN_MAX 4096                     /* the longest input block kept (frames); more is cut */
+int ec_plat_ain_state(void);                /* EC_AIN_*: 0 no input (off, denied, unplugged), 1 live */
+uint32_t ec_plat_ain_latency(void);         /* the host's input latency estimate, frames at 44.1 kHz (0 unknown) */
+uint32_t ec_plat_ain_epoch(void);           /* moves when the state or the latency changes */
+/* inside ec_app_audio only: this call's input (interleaved stereo int16) and its frames (*n <= the call's frames; the
+ * rest is silence); NULL when there is none (state 0, or no rfm1_audio_in before this block) */
+const int16_t *ec_plat_ain(uint32_t *n);
+/* the native stand-ins (host/ec_run, the tests): what fm1core_audio_in / fm1core_audio_in_info do in an .rfm1 */
+void fm1core_audio_in(const int16_t *stereo, uint32_t frames);
+void fm1core_audio_in_info(uint32_t state, uint32_t latency_frames);
+
 /* ---- the flash record: the part of the flash image after the plat's versioned header (project data, later) ---- */
 uint8_t *ec_plat_record(uint32_t *size);   /* the record's bytes and their size */
 void ec_plat_record_changed(void);         /* the record was written: the host persists the image */

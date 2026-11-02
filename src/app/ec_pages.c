@@ -240,7 +240,8 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
         }
         break;
     case EC_CAT_SRC:
-        if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR) {   /* E3: no source params (lib/machines/neighbor.lua) */
+        if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR || iv(v, EC_P_MACHINE) == EC_MACH_INPUT) {
+            /* E3 / E6: no source params (lib/machines/neighbor.lua, input.lua) */
             static const char *const NT[4] = {"SOURCE", "MACHINE", "WARP", "RANGE"};
             o->title = NT[page & 3];
             break;

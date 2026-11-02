@@ -239,7 +239,13 @@ static int32_t serve(nreq_t *q)
         if (S_ISDIR(st.st_mode) ? rmdir(q->path) : unlink(q->path))
             return err_of(errno);
         return 0;
-    case FS_MKDIR:
+    case FS_MKDIR: {
+        char base[PATH_MAX];                  /* (the cart's own data folder exists: made at its first write) */
+        snprintf(base, sizeof base, "%s/data", g_root);
+        mkdir(base, 0755);
+        snprintf(base, sizeof base, "%s/data/%s", g_root, g_id);
+        mkdir(base, 0755);
+    }
         if (mkdir(q->path, 0755) && !(errno == EEXIST && !stat(q->path, &st) && S_ISDIR(st.st_mode)))
             return err_of(errno);
         return 0;

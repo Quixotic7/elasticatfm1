@@ -189,6 +189,10 @@ static void sample_area(const ec_app_t *a, int top, int bot)
         ec_scr_neighbor(a, top, bot);
         return;
     }
+    if (iv(v, EC_P_MACHINE) == EC_MACH_INPUT) {      /* E6: the live input */
+        ec_scr_input(a, top, bot);
+        return;
+    }
     if (rt->state == EC_SL_LOADING || rt->state == EC_SL_QUEUED) {
         const int pm = rt->state == EC_SL_LOADING ? (int)ec_load_permille() : 0;
         snprintf(buf, sizeof buf, "LOADING %d%%", pm / 10);
@@ -325,6 +329,8 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
         snprintf(left, sizeof left, "%s", ec_machine_name(iv(v, EC_P_MACHINE)));
     if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR)   /* E3 */
         snprintf(left, sizeof left, "FROM T%d", a->track);
+    if (iv(v, EC_P_MACHINE) == EC_MACH_INPUT)      /* E6 */
+        snprintf(left, sizeof left, "INPUT");
     T(EC_C_L15, left, 2, 13, EC_AL_LEFT);
     if (a->page[EC_CAT_SRC] == 2) {   /* E3: only the spectral budget falls back (to tape) */
         ec_track_status_t st;
@@ -335,7 +341,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     snprintf(r, sizeof r, "%d", (int)floorf(sl->bpm + 0.5f));
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     sample_area(a, 22, 66);
-    if (iv(v, EC_P_MACHINE) != EC_MACH_NEIGHBOR)   /* E3 */
+    if (iv(v, EC_P_MACHINE) != EC_MACH_NEIGHBOR && iv(v, EC_P_MACHINE) != EC_MACH_INPUT)   /* E3, E6 */
         key_ruler(a, 71);
     cells(a, pg);
 }
@@ -722,6 +728,10 @@ void ec_screens_cells(const ec_app_t *a, const ec_page_t *pg) { cells(a, pg); }
 static void draw_main(const ec_app_t *a)
 {
     ec_page_t pg;
+    if (a->rec.open) {                             /* E6: the REC pop-up */
+        ec_scr_rec(a);
+        return;
+    }
     ec_app_page(a, &pg);
     if (a->patn_open) {
         ec_page_t pp;

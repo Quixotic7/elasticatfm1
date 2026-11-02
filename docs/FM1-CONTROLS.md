@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.3.0)
+# Elasticat on the FM-1: controls (0.4.0)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample, machine, warp mode, filter, amp, insert FX, sends, MOD and 16-step pages;
@@ -16,7 +16,7 @@ new project loads the first file in `/audio` onto T1.
   lanes (the active one bright).
 - **HOME** goes back to the main view (SRC with the waveform) from anywhere in one press, closing whatever is open.
   Each category keeps its page and lane.
-- **Pop-ups stay open on release**: F3, the PATN overlay, a setup, naming, a question. In a pop-up **OCT- = back /
+- **Pop-ups stay open on release**: F3, the PATN overlay, a setup, naming, a question, REC (sampling). In a pop-up **OCT- = back /
   cancel, OCT+ = OK / yes**, HOME closes it. Two small arrows top right mark a pop-up.
 - **Knobs accelerate**: turned slowly a click is the finest step; spun, the steps grow up to about a sixteenth of
   the range a click. Lists (machines, modes, waves, options) are always one item a click.
@@ -60,7 +60,7 @@ values with decimals to whole numbers (0..1 to quarters), a small range one step
 | ARP | PAT: length, rate, global length, change mode | - | setup: quantize, global length |
 | HOME | Back to the main view (SRC), every pop-up closed | | |
 | PLAY | Play / pause (on its release; resume keeps the position). With a scope held: **CLEAR** | | **Held 0.4 s: F3.** SHIFT + PLAY: **stop + back to step 1** (twice: all voices off); with a scope held: **PASTE** |
-| REC | With a scope held: **COPY** | | SHIFT + REC: **save the project now** |
+| REC | **The REC pop-up (sampling, below).** With a scope held: **COPY** | In the pop-up: arm / record now / stop | SHIFT + REC: **save the project now** |
 | OCT- | The lower keys: STEPS ↔ **LOOP KEYS** (lit) | | **OCT- + OCT+ together: F3.** Held: the PAGE scope (REC / PLAY). SHIFT + OCT-: **undo** |
 | OCT+ | The lower keys: STEPS ↔ **KEYS** (lit); both lit = **SCENE** | | Held + a knob: clear that lock. SHIFT + OCT+: **redo** |
 
@@ -146,7 +146,8 @@ the key mode; on RAZOR they are the razor pads; in F3 the pages; with the PATN o
 ## Sources: machines and warp modes
 
 Machines (SRC setup, KN1): **LOOP**, **TRIG**, **SLICE** / **S.POLY** (even slices), **RAZOR** / **R.POLY** (the
-razor table's slices, mono / up to 8 voices), **NEIGH** (T2-T6). Warp modes (SRC setup, KN2, while stopped): TAPE,
+razor table's slices, mono / up to 8 voices), **NEIGH** (T2-T6), **INPUT** (the live input; on T1 the list skips
+NEIGH). Warp modes (SRC setup, KN2, while stopped): TAPE,
 TEMPO VARISPEED, DOMINO, GRANULAR, RANDOM OLA, PITCH CORRECT, HARMONIZER, WAVETABLE, SPECTRAL FREEZE, FORMANT,
 GSTRETCH, GSTRETCH 2, CHOPPED.
 
@@ -160,6 +161,52 @@ move in semitone ratios. The spectral modes are limited to a few tracks at a tim
 original re-points the left track's mix output). The left track is then heard only through this one: this track's
 filter, insert, amp and pan shape it, its mute silences both; the left track's own sends still feed S1 / S2. SRC shows
 the routing and both levels. Chains work (T2 into T3 into T4). A NEIGH track never goes idle.
+
+**INPUT** (0.4.0): the track's source is the host's live audio input (the phone's microphone, an audio interface, on
+iOS another plugin's audio), stereo, as the original's INPUT machine: it plays whether the transport runs or not, with
+no envelope, warp or pitch; the track's filter, insert FX, amp, pan and sends shape it. Frame for frame: what comes in
+goes out in the same audio block. The host does not monitor the input itself: an INPUT track **is** the monitor (as
+the original turned norns' own monitoring off while a track used INPUT). SRC shows the input's L / R meters, the
+track's output and the host's latency; **NO INPUT** in orange when the host has none (off, not allowed, unplugged):
+the track is then silent. More than one track may use INPUT (each its own filter / FX). A host without input (or a
+cart opened before the host had it): the machine is there and silent.
+
+## REC (sampling)
+
+REC with no scope held opens the **REC pop-up** (it stays open; HOME, OCT- or a category button closes it; a take
+goes on when it closes, the REC button lit). It records the live input, or the master out (resample), straight into a
+pool slot:
+
+| Control | In the REC pop-up |
+|---|---|
+| REC / OCT+ | **ARM**; armed: **REC NOW** (start at once, whatever SYNC says); recording: **STOP** (keep the take) |
+| OCT- | idle: **CLOSE**; armed: **DISARM**; recording: **DISCARD** the take |
+| SELECT | the target slot, POOL 01-16 (default: the track's own slot; it follows the track until SELECT moves it) |
+| KN1 SRC | **IN** (the live input) / **MST** (the master out, after the master insert and volume: resample) |
+| KN2 LEN | **FREE** (until stopped) / **1, 2, 4, 8, 16 BAR** (a bar = 4 beats at the tempo when the take starts) |
+| KN3 THR | OFF / **-60 .. -6 dB** (6 dB steps): with SYNC FREE an armed take starts on the first frame over it |
+| KN4 SYNC | **PLAY** (the take starts with PLAY, on step 1) / **BAR** (the next bar line while playing) / **FREE** (at once, or at the threshold) |
+
+SHIFT works as everywhere (SHIFT + REC still saves the project). PLAY and the keys stay live in the pop-up, so you can
+play along, arm, then press PLAY.
+
+- **The screen** (the mockup's REC screen): IN L+R (or MASTER) > POOL nn, the take's clock in orange (REC 0:07), the
+  waveform drawn as it comes in with the orange record head, the bar ruler, the input meters with the threshold's
+  tick, the latency; armed: what it waits for (WAIT PLAY / BAR / -24DB); idle: what the slot holds now (dim) and MAX,
+  the longest take that fits.
+- **Latency:** a synced take of the input is shifted by the latency the host reports (the round trip: what the
+  cart played comes back that many frames later), so what was
+  played on step 1 lands on the take's frame 0 (a resample needs no shift).
+- **When it ends** (the length reached, STOP, or the memory full) the take goes into the slot at once: the slot's
+  tracks play it (its BPM is the tempo, its steps the length), the waveform shows. Then it is saved as a WAV in your
+  RemoteFM1 folder, `data/elasticat/rec/rec-NNNN.wav` (`/data/rec/` to the cart, 16-bit stereo 44.1 kHz, the next
+  free number), written in pieces in the background, never holding up the sound; the project keeps its path, so it
+  reloads like any sample (**SAVED REC-0001.WAV**; **NOT SAVED: ...** when the host has no folder: the take still
+  plays until the project is reloaded).
+- **Memory:** takes go into the sample store (96 MiB, about 9.5 minutes of stereo with an empty pool). An armed FREE
+  take reserves all that is free; a take with a length reserves its bars + a quarter. While a take is armed or being
+  saved, loading a sample that does not fit fails instead of repacking the store.
+- The settings (SRC, LEN, THR, SYNC) are not saved with the project.
 
 ## FILE / RAZOR: the samples and the razor slice editor
 
@@ -269,7 +316,7 @@ slices dim, the selected one bright, the sounding ones mid, muted ones faint. Up
 the others by their level, muted (or silenced by a solo) off, soloed blinking; MST lit on its category. Category
 buttons: the current one lit (blinking in its setup). OCT- / OCT+: the key mode (OCT- loop keys, OCT+ keys, both
 scene); in a pop-up OCT- lit and OCT+ blinking. PLAY green while playing. REC dim when the project has unsaved
-changes, mid when a scope is held. **SHIFT held**: only its keys light (T1, T2 once memorized, S1, S2 once copied,
+changes, mid when a scope is held or the REC pop-up is open, **blinking while a take is armed, lit while recording**. **SHIFT held**: only its keys light (T1, T2 once memorized, S1, S2 once copied,
 MST blinking, FILL, PATN; OCT- / OCT+ when there is something to undo / redo; PLAY, REC; the categories with a setup).
 
 ## Differences from the norns version
@@ -293,7 +340,9 @@ MST blinking, FILL, PATN; OCT- / OCT+ when there is something to undo / redo; PL
   + PLAY clears the whole scene (the original clears one param of both scenes with K2/K3).
 - **Slices.** Slice mute is the SMUT cell or SHIFT + key on RAZOR. Slice locks apply to live pads for pitch /
   velocity only.
-- **Not ported.** Live step trig (an editor pref), the step preview pref, the visualizer, audio input (E6). Names use
+- **Sampling** (0.4.0) is new: the original's REC only toggled an indicator ("recording itself is a future
+  feature"); the REC pop-up follows the design's REC screen (design/mockup/Display.dc.html "rec", Sample.dc.html).
+- **Not ported.** Live step trig (an editor pref), the step preview pref, the visualizer. Names use
   A-Z 0-9 and a few signs (the 3x5 font has no lower case). Undo covers params, globals, the fader, step edits,
   pastes and page clears; not scene edits, pattern-scope operations, sample loads or recalls (as the original).
 - The engine's own deviations (control rate, feedback loops, click-free swaps, ...) are listed in src/dsp/README.md.

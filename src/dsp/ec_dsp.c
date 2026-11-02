@@ -863,6 +863,13 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
      * (and E4 insert) shape it. */
     if (p->machine == EC_MACH_NEIGHBOR && ti > 0)
         for (int i = 0; i < n; ++i) { L[i] += d->nbl[i]; R[i] += d->nbr[i]; }
+    /* E6: INPUT -- the live input (\elasticatInputReader, SoundIn [0, 1]): the same pass-through, frame i of the
+     * caller's input block at output frame i (ec_dsp_input); past its end, or with none, silence */
+    if (p->machine == EC_MACH_INPUT && d->in) {
+        const int m = d->in_frames - d->in_at < n ? d->in_frames - d->in_at : n;
+        const float *x = d->in + 2 * d->in_at;
+        for (int i = 0; i < m; ++i) { L[i] += x[2 * i]; R[i] += x[2 * i + 1]; }
+    }
 
     if (t->dk_left > 0) {
         for (int i = 0; i < n && t->dk_left > 0; ++i) {
@@ -902,9 +909,9 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     /* E4: the idle detector (\elasticatTrackMix's Amplitude(out, 0.01, 0.3) + Engine.idleScan): a stopped
      * track, no voices, no reader, silent (<= 0.001) for idle_grace seconds pauses until something wakes it */
     t->mix_l = pm > t->mix_l ? pm : t->mix_l * powf(0.1f, (float)n / (0.3f * fs));
-    /* (idleEligible: a routing track -- NEIGH -- passes audio regardless of its transport, never paused) */
+    /* (idleEligible: a routing track -- NEIGH, INPUT -- passes audio regardless of its transport, never paused) */
     if (!track_playing(d, t) && !t->reader_on && !t->audition && t->dk_left <= 0 && t->mix_l <= 0.001f &&
-        p->machine != EC_MACH_NEIGHBOR && !track_has_voices(d, ti)) {
+        p->machine != EC_MACH_NEIGHBOR && p->machine != EC_MACH_INPUT && !track_has_voices(d, ti)) {
         t->quiet += n;
         if ((float)t->quiet > d->idle_grace * fs) t->idle = 1;
     } else
@@ -926,6 +933,14 @@ static inline float soft_limit(float x)
     if (a <= 0.8f) return x;
     float y = 0.8f + 0.2f * ec_tanh((a - 0.8f) * 5.f);
     return x < 0.f ? -y : y;
+}
+
+/* E6: the live input for the next ec_dsp_process calls (consumed frame by frame as they render) */
+void ec_dsp_input(ec_dsp_t *d, const float *in_lr, int frames)
+{
+    d->in = in_lr && frames > 0 ? in_lr : 0;
+    d->in_frames = d->in ? frames : 0;
+    d->in_at = 0;
 }
 
 void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
@@ -1004,6 +1019,7 @@ void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
             if (b > d->peak_r) d->peak_r = b;
         }
         d->clock += n;
+        d->in_at += n;                                 /* E6 */
         pos = end;
     }
     while (ei < q->n) handle_event(d, &q->ev[ei++]);

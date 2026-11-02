@@ -1,0 +1,41 @@
+# E6 (host/render_e6.sh -> results/e6): sampling and the INPUT machine through panel input, with a stand-in live
+# input (render_e6.sh: --audio-in the demo folder's chord loop, latency 256 frames). A fresh project with
+# build/demo_folder (host/make_demo_folder.py): T1 plays the drums. Times are device ms; upper I = T1..T6 S1 S2 MST
+# FILL PATN.
+png-scale 2
+master 640@0
+press PLAY@1200
+
+# ---- REC (no scope held): the pop-up. IN L+R into T1's slot (POOL 01, the drums shown dim), the IN meters, MAX
+press REC@1500
+png 1700:01_rec_idle.png
+# K2: LEN 1 BAR; K4: SYNC BAR
+turn K2@1800:-2
+turn K4@1900:1
+# OCT+: armed, waiting for the next bar line (the bars: 1.2 s + 2 s n)
+press OCT+@2000
+png 2100:02_rec_armed.png
+# the take runs from the bar at 3.2 s (+ the latency shift), the record head in the accent
+png 4000:03_rec_taking.png
+# a bar later it lands in POOL 01: T1 plays it at once; the writer saves /data/rec/rec-0001.wav
+png 5500:04_rec_landed.png
+press HOME@5700
+png 5900:05_src_take.png
+
+# ---- the INPUT machine on T2: SHIFT + SRC = the SRC setup, K1 = MACHINE (LOOP + 7 = INPUT), HOME
+upper 1@6100+60
+press GLO@6300+300
+press SEL@6400+60
+turn K1@6700:7
+press HOME@6800
+png 7100:06_input_src.png
+# the input off (the host's state 0, render_e6.sh: --audio-in-off-at 7400): NO INPUT, silence
+png 7700:07_input_none.png
+
+# ---- the pop-up without input; then the master out as the source (resample)
+press REC@8000
+png 8200:08_rec_no_input.png
+turn K1@8300:1
+png 8400:09_rec_resample.png
+press OCT-@8600
+info 8800

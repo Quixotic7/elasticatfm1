@@ -24,6 +24,13 @@
  *     --rms-from MS       the RMS is measured from MS on (default 0)
  *     --min-rms X         fail when the RMS is below X (full scale 1.0)
  *     --expect-ui S       fail unless the final ui_info contains S; repeat
+ *     --audio-in WAV      E6: a host's live input (FM1VST docs/VIRTUAL-CARTS.md 8): the WAV (PCM 16 / 24 / 32-bit or
+ *                         float; mono as L = R; played at 44.1 kHz) fed through fm1core_audio_in immediately before
+ *                         each audio block, the same frames, looped; fm1core_audio_in_info(1, latency) first
+ *     --audio-in-once     (no value) the WAV once, then no more input blocks (silence; the state stays live)
+ *     --audio-in-latency N   the latency_frames given (default 0, unknown)
+ *     --audio-in-off-at MS   fm1core_audio_in_info(0, 0) at MS (the input off), no more blocks
+ *     --audio-in-on-at MS    (no WAV needed) the input live from MS on (state 1), silence until a WAV plays
  * Prints: ui_info, RMS / peak, LCD writes, x real time. Exit 0 ok, 1 a check failed, 2 usage. */
 #include <math.h>
 #include <stdio.h>
@@ -32,6 +39,7 @@
 #include <time.h>
 
 #include "ec_fs_native.h"
+#include "ec_plat.h"
 #include "ec_png.h"
 #include "fm1core.h"
 
@@ -92,6 +100,9 @@ static int usage(const char *why)
 }
 
 static const char *folder, *wav_path, *png_path, *flash_path, *out_dir, *expect[32];
+static const char *ain_path;                  /* E6: --audio-in */
+static int ain_once;
+static uint32_t ain_latency, ain_off_at = UINT32_MAX, ain_on_at = 0;
 static struct { uint32_t at; char path[512]; } png_at[MAXPNG];
 static uint32_t info_at[64], run_ms = 6000, rms_from;
 static int npng, ninfo, nexpect, nev, png_scale = 1;
@@ -119,6 +130,11 @@ static int option(const char *a, const char *v)
     else if (!strcmp(a, "expect-ui") && nexpect < 32) expect[nexpect++] = strdup(v);
     else if ((!strcmp(a, "info-at") || !strcmp(a, "info")) && ninfo < 64) info_at[ninfo++] = (uint32_t)strtoul(v, NULL, 10);
     else if (!strcmp(a, "script")) return parse_script(v);
+    else if (!strcmp(a, "audio-in")) ain_path = strdup(v);
+    else if (!strcmp(a, "audio-in-once")) ain_once = atoi(v) != 0;
+    else if (!strcmp(a, "audio-in-latency")) ain_latency = (uint32_t)strtoul(v, NULL, 10);
+    else if (!strcmp(a, "audio-in-off-at")) ain_off_at = (uint32_t)strtoul(v, NULL, 10);
+    else if (!strcmp(a, "audio-in-on-at")) ain_on_at = (uint32_t)strtoul(v, NULL, 10);
     else if ((!strcmp(a, "png-at") || !strcmp(a, "png")) && npng < MAXPNG) {
         const char *colon = strchr(v, ':');
         if (!colon)
@@ -202,6 +218,77 @@ static int parse_script(const char *path)
     return r;
 }
 
+/* E6: --audio-in's WAV as int16 stereo frames (malloc'd), NULL after saying why */
+static uint32_t rd16(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8; }
+static uint32_t rd32(const uint8_t *p) { return rd16(p) | rd16(p + 2) << 16; }
+static int16_t *wav_read(const char *path, uint32_t *frames)
+{
+    FILE *f = fopen(path, "rb");
+    uint8_t *b;
+    long n;
+    uint32_t fmt = 0, ch = 0, bits = 0, at = 12, dlen = 0, bps, nf, i, k;
+    const uint8_t *data = NULL;
+    int16_t *out;
+    if (!f) {
+        fprintf(stderr, "ec_run: --audio-in %s: cannot read\n", path);
+        return NULL;
+    }
+    fseek(f, 0, SEEK_END);
+    n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    b = malloc((size_t)(n > 0 ? n : 1));
+    if (!b || fread(b, 1, (size_t)n, f) != (size_t)n || n < 12 || memcmp(b, "RIFF", 4) || memcmp(b + 8, "WAVE", 4)) {
+        fclose(f);
+        free(b);
+        fprintf(stderr, "ec_run: --audio-in %s: not a WAV\n", path);
+        return NULL;
+    }
+    fclose(f);
+    while (at + 8 <= (uint32_t)n) {
+        const uint32_t len = rd32(b + at + 4);
+        if (!memcmp(b + at, "fmt ", 4) && len >= 16) {
+            fmt = rd16(b + at + 8);
+            ch = rd16(b + at + 10);
+            bits = rd16(b + at + 22);
+            if (fmt == 0xFFFE && len >= 26)
+                fmt = rd16(b + at + 32);
+        } else if (!memcmp(b + at, "data", 4)) {
+            data = b + at + 8;
+            dlen = len <= (uint32_t)n - at - 8 ? len : (uint32_t)n - at - 8;
+            break;
+        }
+        at += 8 + len + (len & 1u);
+    }
+    bps = bits / 8;
+    if (!data || !ch || !bps || !((fmt == 1 && (bits == 16 || bits == 24 || bits == 32)) || (fmt == 3 && bits == 32))) {
+        free(b);
+        fprintf(stderr, "ec_run: --audio-in %s: no PCM 16 / 24 / 32-bit or float data\n", path);
+        return NULL;
+    }
+    nf = dlen / (bps * ch);
+    out = malloc((size_t)(nf ? nf : 1) * 4u);
+    for (i = 0; out && i < nf; i++)
+        for (k = 0; k < 2; k++) {
+            const uint8_t *p = data + ((size_t)i * ch + (k < ch ? k : 0)) * bps;
+            int32_t v;
+            if (fmt == 3) {
+                float x;
+                memcpy(&x, p, 4);
+                x = x > 1 ? 1 : x < -1 ? -1 : x;
+                v = (int32_t)lrintf(x * 32767.0f);
+            } else if (bits == 16)
+                v = (int16_t)rd16(p);
+            else if (bits == 24)
+                v = (int32_t)((uint32_t)p[0] << 8 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 24) >> 16;
+            else
+                v = (int32_t)rd32(p) >> 16;
+            out[2 * i + k] = (int16_t)v;
+        }
+    free(b);
+    *frames = nf;
+    return out;
+}
+
 /* lower / upper key index -> the note key (the FM-1's rows: naturals below, sharps above, from F) */
 static int key_of(int kind, int i)
 {
@@ -226,10 +313,19 @@ int main(int argc, char **argv)
     uint64_t frames_done = 0, rms_frames = 0;
     double sumsq = 0, peak = 0, t0, wall;
     uint32_t ms, last_frame = 0, lcd0;
+    int16_t *ain = NULL;                          /* E6: --audio-in */
+    uint32_t ain_frames = 0, ain_pos = 0, ain_blocks = 0;
+    int ain_live = 0;
     char info[2048];
 
     for (i = 1; i < argc; i += 2) {
-        const int r = option(argv[i], i + 1 < argc ? argv[i + 1] : NULL);
+        int r;
+        if (!strcmp(argv[i], "--audio-in-once")) {     /* (the one flag without a value) */
+            ain_once = 1;
+            i--;
+            continue;
+        }
+        r = option(argv[i], i + 1 < argc ? argv[i + 1] : NULL);
         if (r)
             return r;
     }
@@ -255,6 +351,8 @@ int main(int argc, char **argv)
             return usage("cannot write the WAV");
         wav_header(wav, 0);
     }
+    if (ain_path && !(ain = wav_read(ain_path, &ain_frames)))
+        return 2;
     t0 = now_s();
     for (ms = 0; ms < run_ms; ms++) {
         int k;
@@ -303,8 +401,32 @@ int main(int argc, char **argv)
         for (k = 0; k < npng; k++)
             if (ms == png_at[k].at && ec_png_write_lcd(png_at[k].path, p->lcd, FM1P_LCD_W, FM1P_LCD_H, png_scale))
                 fprintf(stderr, "ec_run: %s not written\n", png_at[k].path);
+        if ((ain || ain_on_at) && !ain_live && ms >= ain_on_at && ms < ain_off_at) {   /* E6: the input on */
+            fm1core_audio_in_info(1, ain_latency);
+            ain_live = 1;
+        }
+        if (ain_live && ms >= ain_off_at) {
+            fm1core_audio_in_info(0, 0);
+            ain_live = 0;
+            ain_on_at = UINT32_MAX;
+        }
         while (frames_done + FM1P_BLOCK <= (uint64_t)ms * FM1P_FS / 1000u) {
             int16_t blk[FM1P_BLOCK * 2];
+            if (ain_live && ain && ain_frames && (!ain_once || ain_pos < ain_frames)) {   /* the input block first */
+                int16_t in[FM1P_BLOCK * 2];
+                int j;
+                for (j = 0; j < FM1P_BLOCK; j++) {
+                    in[2 * j] = in[2 * j + 1] = 0;
+                    if (ain_pos < ain_frames) {
+                        in[2 * j] = ain[2 * ain_pos];
+                        in[2 * j + 1] = ain[2 * ain_pos + 1];
+                        if (++ain_pos >= ain_frames && !ain_once)
+                            ain_pos = 0;
+                    }
+                }
+                fm1core_audio_in(in, FM1P_BLOCK);
+                ain_blocks++;
+            }
             c->audio(blk, FM1P_BLOCK);
             if (ms >= rms_from) {
                 int j;
@@ -322,6 +444,9 @@ int main(int argc, char **argv)
         }
     }
     wall = now_s() - t0;
+    if (ain_path)
+        fprintf(stderr, "ec_run: audio in %s: %u frames, %u blocks fed\n", ain_path, ain_frames, ain_blocks);
+    free(ain);
     if (wav) {
         wav_header(wav, (uint32_t)frames_done);
         fclose(wav);

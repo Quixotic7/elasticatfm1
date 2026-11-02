@@ -438,6 +438,10 @@ struct ec_dsp {
     float  ml[EC_KR], mr[EC_KR];
     /* E3: the neighbor tap (the left track's output for this chunk), spectral scratch */
     float  nbl[EC_KR], nbr[EC_KR];
+    /* E6: the live input (ec_dsp_input): the caller's block, consumed as ec_dsp_process renders; in_at = the chunk's
+     * first frame in it (track_chunk reads in + 2 * in_at) */
+    const float *in;
+    int    in_frames, in_at;
     ec_w3_shared_t w3s;
     /* E4: send buses S1 / S2 and the master insert (slots 0, 1, 2) */
     ec_fx_t bus[3];

@@ -28,13 +28,21 @@ typedef struct {
     const char *title;            /* "WARP" */
     int n;                        /* cells in use (<= 8) */
     ec_item_t it[EC_PAGE_ITEMS];
-    int e4;                       /* 1: a placeholder (its engine half lands in E4) */
+    int e4;                       /* (unused since E4) */
+    int busv;                     /* E4: 1..3 the cells are bus S1 / S2 / master's record (project.bus), 0 the track */
+    int kind;                     /* E4: what the screen draws above the cells (EC_PV_*) */
 } ec_page_t;
+
+/* E4: page visuals */
+enum { EC_PV_NONE, EC_PV_FX, EC_PV_SENDS, EC_PV_LFO1, EC_PV_LFO2, EC_PV_MENV, EC_PV_VEL, EC_PV_MACROS, EC_PV_MACRO };
 
 const char *ec_cat_name(int cat);             /* "SRC" */
 int ec_cat_pages(int cat, const float *v);    /* pages of the category for a track's params */
-/* the page's cells for a track (v = its params); bus: 0 a track, 1 S1, 2 S2, 3 the master bus */
+/* the page's cells for a track (v = its params); bus: 0 a track, 1 S1, 2 S2, 3 the master bus; bv = that bus's
+ * record (project.bus[bus - 1]) or NULL */
 void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *out);
+void ec_page_items_bus(int cat, int page, const float *v, int bus, const float *bv, ec_page_t *out);   /* E4 */
+int ec_settings_items_bus(int cat, int bus, ec_page_t *out);                                          /* E4 */
 /* the settings layer (FN + category); returns 0 when the category has none */
 int ec_settings_items(int cat, const float *v, ec_page_t *out);
 

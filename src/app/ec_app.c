@@ -22,7 +22,7 @@ ec_app_t ec_app;
 #define SEL_TAP_MS 400
 #define AUTOSAVE_MS 2000
 
-static uint8_t g_dsp_mem[1u << 20] __attribute__((aligned(16)));
+static uint8_t g_dsp_mem[EC_DSP_MEM_MAX] __attribute__((aligned(16)));   /* E4: + the FX delay memory */
 static float g_buf[1024 * 2];
 
 /* ------------------------------------------------------------------------------------------- small helpers --- */
@@ -81,9 +81,18 @@ static ec_step_t *step_at(int index) { return &ec_project_track(&A->proj, A->tra
 void ec_app_page(const ec_app_t *a, ec_page_t *out)
 {
     const float *v = ec_project_track((ec_project_t *)&a->proj, a->track)->v;
-    if (a->settings && ec_settings_items(a->cat, v, out))
+    if (a->settings && a->bus)                                     /* E4: the bus's setup (its machine) */
+        if (ec_settings_items_bus(a->cat, a->bus, out))
+            return;
+    if (a->settings && !a->bus && ec_settings_items(a->cat, v, out))
         return;
-    ec_page_items(a->cat, a->page[a->cat], v, a->bus, out);
+    ec_page_items_bus(a->cat, a->page[a->cat], v, a->bus, a->bus ? a->proj.bus[a->bus - 1] : 0, out);
+}
+
+/* E4: a bus pseudo-track's FX params live in its record (project.bus), not in the selected track */
+float *ec_app_bus_params(ec_app_t *a, int id)
+{
+    return a->bus && (EC_PARAMS[id].flags & EC_PF_FX) ? a->proj.bus[a->bus - 1] : 0;
 }
 
 const char *ec_app_item_label(const ec_item_t *it)
@@ -112,6 +121,8 @@ float ec_app_item_value(const ec_app_t *a, const ec_item_t *it, int *locked)
         const ec_ptrack_t *tr = &p->pat[p->current].tr[a->track];
         const int hs = ec_app_held_step(a);
         float x;
+        if (ec_app_bus_params((ec_app_t *)a, it->id))
+            return ec_app_bus_params((ec_app_t *)a, it->id)[it->id];
         if (hs >= 0 && !a->settings && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE) &&
             ec_step_lock_get(&tr->steps[hs], it->id, &x)) {
             if (locked)
@@ -506,10 +517,14 @@ static void edit_param(int id, int det, int mult, int flags)
     const ec_param_def_t *d = &EC_PARAMS[id];
     const int hs = ec_app_held_step(A);
     const int n = d->kind == EC_PK_NUM ? det * mult : det;
-    if (A->bus) {
-        message("BUS: E4");
+    float *bv = ec_app_bus_params(A, id);
+    if (bv) {                                       /* E4: a bus FX param (global; no p-locks: no bus lanes) */
+        bv[id] = ec_param_nudge(id, bv[id], n);
+        mark_dirty();
         return;
     }
+    if (A->bus)
+        return;
     if (hs >= 0 && !A->settings && (d->flags & EC_PF_LOCKABLE)) {   /* hold a step + turn = p-lock it */
         int i;
         for (i = 0; i < EC_NLOWER; i++)
@@ -604,11 +619,6 @@ static void knob_cell(int k, int det)
     const int cell = (A->fn ? 4 : 0) + k;
     const int mult = accel(EC_E_K1 + k);
     ec_app_page(A, &pg);
-    if (pg.e4 && !A->settings) {
-        if (cell < pg.n && pg.it[cell].kind == EC_IT_PARAM && !A->bus)
-            edit_param(pg.it[cell].id, det, mult, pg.it[cell].flags);
-        return;
-    }
     if (cell >= pg.n)
         return;
     switch (pg.it[cell].kind) {
@@ -624,6 +634,8 @@ static void knob_cell(int k, int det)
 static int has_settings(int cat)
 {
     ec_page_t pg;
+    if (A->bus && ec_settings_items_bus(cat, A->bus, &pg))     /* E4 */
+        return 1;
     return ec_settings_items(cat, ec_app_params(A), &pg);
 }
 
@@ -961,6 +973,8 @@ void ec_app_init(void)
     ec_seq_sink_t sink;
     int i;
     memset(A, 0, sizeof *A);
+    if (ec_dsp_mem_size() > sizeof g_dsp_mem)
+        return;                                      /* (a build error really: EC_DSP_MEM_MAX too small) */
     A->dsp = ec_dsp_init(g_dsp_mem, (float)EC_FS);
     A->load_slot = -1;
     A->tap_key = -1;
@@ -1061,6 +1075,14 @@ void ec_app_audio(int16_t *out, uint32_t frames)
     const float m = (float)A->master / 1023.0f;
     uint32_t done = 0;
     ec_dsp_set_master_volume(A->dsp, m * m);
+    {   /* E4: the bus FX records -> the engine (cheap: three struct fills per call) */
+        int b;
+        for (b = 0; b < 3; b++) {
+            ec_fx_params_t fp;
+            ec_params_fx(A->proj.bus[b], &fp);
+            ec_dsp_bus_params(A->dsp, b, &fp);
+        }
+    }
     while (done < frames) {
         const uint32_t n = frames - done > 1024 ? 1024 : frames - done;
         uint32_t i;
@@ -1203,6 +1225,10 @@ static void meters(void)
         } else if (t == 8) {
             ec_dsp_master_peak(A->dsp, &l, &r);
             pk = l > r ? l : r;
+        } else {                                    /* E4: the S1 / S2 returns */
+            ec_bus_status_t bs;
+            ec_dsp_bus_status(A->dsp, t - EC_NTRACK, &bs);
+            pk = bs.peak_l > bs.peak_r ? bs.peak_l : bs.peak_r;
         }
         pk = pk > 1 ? 1 : pk;
         A->meter[t] = pk > A->meter[t] ? pk : A->meter[t] * 0.85f;

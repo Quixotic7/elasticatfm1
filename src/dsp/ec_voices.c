@@ -181,6 +181,7 @@ void ec_voice_slice_on(ec_dsp_t *d, int track, const ec_event_t *ev)
     v->kind = (warp == EC_WARP_GRANULAR) ? 1 : 0;
     int tempo_mode = (warp == EC_WARP_TEMPO_VARISPEED);
     double free_pitch = v->kind == 0 ? (tempo_mode ? 1.0 : pitch_ratio) : 1.0;
+    v->pitched = v->kind == 1 || !tempo_mode;   /* E4: the PITCH mod bus reaches it */
     double tempo_ratio = (double)d->bpm / (t->src_bpm > 1.0 ? t->src_bpm : 1.0);
     double synced = (v->kind == 0 && !tempo_mode) ? 1.0 : tempo_ratio;
     double rr = p->slice_sync ? synced : (p->slice_rate > 0.03125f ? p->slice_rate : 0.03125);
@@ -246,7 +247,7 @@ static void grain_cloud(ec_dsp_t *d, ec_voice_t *v, const ec_sample_t *s, double
         if (v->ng < EC_VGRAINS) {
             ec_grain_t *g = &v->g[v->ng++];
             g->pos = pointer;
-            g->rate = v->grate;
+            g->rate = v->grate * v->pmod;
             g->phase = 0.f;
             g->inc = (float)(1.0 / win);
         }
@@ -277,7 +278,12 @@ void ec_voices_process(ec_dsp_t *d, int track, float *L, float *R, int n)
         ec_voice_t *v = &d->v[vi];
         if (!v->used || v->track != track) continue;
         if (!t->has_smp) { voice_free(d, vi); continue; }
-        double arate = fabs(v->rate);
+        /* E4: the track's PITCH mod (+-12 st), read every chunk like In.kr(pitchModBus) */
+        double pm = (v->pitched && t->mods[EC_MOD_PITCH] != 0.f)
+                        ? ec_midiratio(ec_clampf(t->mods[EC_MOD_PITCH], -1.f, 1.f) * 12.f) : 1.0;
+        v->pmod = pm;
+        double vrate = v->kind == 0 ? v->rate * pm : v->rate;
+        double arate = fabs(vrate);
         double span = v->read_hi - v->read_lo;
         if (span < 1.0) span = 1.0;
         for (int i = 0; i < n; ++i) {
@@ -295,7 +301,7 @@ void ec_voices_process(ec_dsp_t *d, int track, float *L, float *R, int n)
             L[i] += l * g;
             R[i] += r * g;
             v->sweep += arate;
-            v->loop_pos += v->rate;
+            v->loop_pos += vrate;
             if (v->loop_pos >= v->read_hi) v->loop_pos -= span;
             else if (v->loop_pos < v->read_lo) v->loop_pos += span;
             if (v->play_mode == 0 && v->env.gate && v->sweep >= v->range)

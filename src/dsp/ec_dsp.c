@@ -85,6 +85,9 @@ void ec_track_params_default(ec_track_params_t *p)
     p->mode_switch_fade = 0.05f;
     p->loop_division = 16;
     p->playhead_return = EC_RETURN_BOOMERANG;
+    p->send_tap = 1;                      /* E4 */
+    ec_fx_params_default(&p->fx);
+    ec_mod_params_default(&p->mod);
 }
 
 /* ------------------------------------------------------------ lag tables */
@@ -154,7 +157,9 @@ static double track_cps(const ec_dsp_t *d, const ec_track_t *t, double s, double
 
 static double pitch_ratio(const ec_track_t *t)
 {
-    return ec_clampd(ec_midiratio(t->pitch_lag), 1.0 / 32.0, 32.0);
+    /* + the PITCH mod bus, +-12 st (E4) */
+    return ec_clampd(ec_midiratio(t->pitch_lag + ec_clampf(t->mods[EC_MOD_PITCH], -1.f, 1.f) * 12.f),
+                     1.0 / 32.0, 32.0);
 }
 
 /* loop cycles per sample (natural_phase_from's loop_rate), for [s,e] */
@@ -344,6 +349,7 @@ static void note_off(ec_dsp_t *d, ec_track_t *t)
 {
     ec_env_note_off(&t->amp_env, &t->amp_spec, d->fs);
     ec_env_note_off(&t->fenv, &t->fenv_spec, d->fs);
+    ec_mod_note_off(&t->mod, &t->p.mod, d->fs);   /* E4: menvReleaseTrig */
 }
 
 /* ------------------------------------------------------------ events */
@@ -441,6 +447,7 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
     case EC_EV_TRANSPORT:
         if (ev->value > 0.5f) {
             d->playing = 1;
+            for (int i = 0; i < EC_TRACKS; ++i) d->tr[i].idle = d->tr[i].quiet = 0;   /* E4 */
             if (ev->flags & EC_TF_RESET) {
                 for (int i = 0; i < EC_TRACKS; ++i) {
                     ec_track_t *x = &d->tr[i];
@@ -463,10 +470,22 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
         }
         break;
     case EC_EV_TEMPO: d->bpm = ec_clampf(ev->value, 1.f, 999.f); break;
-    case EC_EV_PANIC: ec_voice_steal_all(d, -1); break;
+    case EC_EV_PANIC:
+        ec_voice_steal_all(d, -1);
+        /* E4 (panicClearFx): ringing insert / send / master tails stop too */
+        for (int i = 0; i < EC_TRACKS; ++i) ec_fx_clear(&d->tr[i].fx);
+        for (int b = 0; b < 3; ++b) ec_fx_clear(&d->bus[b]);
+        break;
     default:
         if (!t) break;
+        t->idle = 0; t->quiet = 0;            /* E4: idleWake */
+        if ((ev->type == EC_EV_SLICE_ON || (ev->type == EC_EV_TRIG && !is_loop_machine(t->p.machine))))
+            t->mod.vel = ec_clampf(ev->velocity, 0.f, 1.f);   /* E4: modVelocity latch */
         switch (ev->type) {
+        case EC_EV_MOD_TRIG:
+            ec_mod_trig(&t->mod, &t->p.mod, (ev->flags & EC_TF_LFO) != 0, (ev->flags & EC_TF_MENV) != 0,
+                        ev->length > 0 ? ev->length : -1, d->fs);
+            break;
         case EC_EV_TRIG: ev_trig(d, ti, ev); break;
         case EC_EV_NOTE_ON: note_on(d, t, ev->length); break;
         case EC_EV_NOTE_OFF: note_off(d, t); break;
@@ -493,7 +512,13 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
 }
 
 /* ------------------------------------------------------------ init / api */
-size_t ec_dsp_mem_size(void) { return sizeof(ec_dsp_t); }
+/* E4: the state, then the 9 FX slots' delay memory (inserts 0..5, S1, S2, master) */
+#define EC_DSP_STATE_BYTES ((sizeof(ec_dsp_t) + 15u) & ~(size_t)15u)
+#define EC_FX_SLOTS (EC_TRACKS + 3)
+size_t ec_dsp_mem_size(void)
+{
+    return EC_DSP_STATE_BYTES + (size_t)EC_FX_SLOTS * EC_FX_MEM_FLOATS * sizeof(float);
+}
 
 static void track_init(ec_track_t *t, int i)
 {
@@ -541,6 +566,17 @@ ec_dsp_t *ec_dsp_init(void *mem, float fs)
     ec_lag_table(d->lag03, 0.03f, d->fs);
     ec_lag_table(d->lag05, 0.05f, d->fs);
     for (int i = 0; i < EC_TRACKS; ++i) track_init(&d->tr[i], i);
+    /* E4: FX slots, mod */
+    float *fxmem = (float *)((uint8_t *)mem + EC_DSP_STATE_BYTES);
+    for (int i = 0; i < EC_TRACKS; ++i) {
+        ec_fx_init(&d->tr[i].fx, fxmem + (size_t)i * EC_FX_MEM_FLOATS, d->fs, 0, 0xA5A5u + (uint32_t)i * 977u);
+        ec_mod_init(&d->tr[i].mod, 0x51ED27u + (uint32_t)i * 7919u);
+    }
+    for (int b = 0; b < 3; ++b) {
+        ec_fx_init(&d->bus[b], fxmem + (size_t)(EC_TRACKS + b) * EC_FX_MEM_FLOATS, d->fs, b < 2, 0xBEEFu + (uint32_t)b);
+        ec_fx_params_default(&d->busp[b]);
+    }
+    d->idle_grace = 4.0f;
     return d;
 }
 
@@ -550,6 +586,7 @@ void ec_dsp_track_params(ec_dsp_t *d, int track, const ec_track_params_t *p)
     ec_track_t *t = &d->tr[track];
     int old_machine = t->p.machine;
     t->p = *p;
+    t->idle = 0; t->quiet = 0;   /* E4: a param change wakes an idle track */
     build_specs(t);
     if (old_machine != p->machine) {
         t->keys = 0;
@@ -572,6 +609,7 @@ void ec_dsp_set_sample(ec_dsp_t *d, int track, const ec_sample_t *s)
     if (track < 0 || track >= EC_TRACKS) return;
     ec_track_t *t = &d->tr[track];
     double frac = track_pos(t);
+    t->idle = 0; t->quiet = 0;   /* E4 */
     ec_voice_kill_track(d, track);
     /* declick: the old audio cannot be read any more; ramp its last value out */
     t->dk_l = t->last_l; t->dk_r = t->last_r;
@@ -705,6 +743,25 @@ static void fam_render(ec_dsp_t *d, ec_track_t *t, int fam, double run, float *L
     }
 }
 
+/* E4: one track's send taps into the S1 / S2 buses (\elasticatSendTap, levels ramped over the chunk) */
+static void send_taps(ec_dsp_t *d, const ec_track_t *t, float s10, float s20, const float *L, const float *R,
+                      int n)
+{
+    float i1 = (t->snd1 - s10) / (float)n, i2 = (t->snd2 - s20) / (float)n, a = s10, b = s20;
+    for (int i = 0; i < n; ++i) {
+        a += i1; b += i2;
+        d->s1l[i] += L[i] * a; d->s1r[i] += R[i] * a;
+        d->s2l[i] += L[i] * b; d->s2r[i] += R[i] * b;
+    }
+}
+
+static int track_has_voices(const ec_dsp_t *d, int ti)
+{
+    for (int i = 0; i < EC_VOICE_POOL; ++i)
+        if (d->v[i].used && d->v[i].track == ti) return 1;
+    return 0;
+}
+
 static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
 {
     ec_track_t *t = &d->tr[ti];
@@ -735,8 +792,11 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     t->gsize_lag = ec_lag(t->gsize_lag, ec_clampf(p->grain_size, 0.002f, 0.5f), d->lag05, n);
     t->gspread_lag = ec_lag(t->gspread_lag, ec_clampf(2.f * p->grain_jitter, 0.f, 1.f), d->lag05, n);
     t->gspeed_lag = ec_lag(t->gspeed_lag, ec_clampf(p->grain_speed, 0.f, 4.f), d->lag05, n);
+    float mute0 = t->mute_gain;
     t->mute_gain = ec_lag(t->mute_gain, p->mute ? 0.f : 1.f, d->lag03, n);
     float pg1 = t->play_gate;
+    /* E4: the mod sources for this chunk (pitch reaches the readers below) */
+    ec_mod_tick(&t->mod, &p->mod, d->bpm, fs, d->lag01, n, t->mods);
 
     t->reader_on = t->has_smp && loopm && (run || pg0 > 0.f || pg1 > 0.f);
     if (t->reader_on) {
@@ -791,16 +851,47 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
 
     ec_filter_process(d, t, L, R, n);
 
-    /* E4 hooks: per-track insert FX, then send taps S1 / S2 (pre/post insert). */
+    /* E4: send taps (pre / post insert), the insert, the track mix (mute, centre Balance2) */
+    float s10 = t->snd1, s20 = t->snd2;
+    t->snd1 = ec_lag(t->snd1, ec_clampf(p->send1_level, 0.f, 1.f), d->lag02, n);
+    t->snd2 = ec_lag(t->snd2, ec_clampf(p->send2_level, 0.f, 1.f), d->lag02, n);
+    int post = p->send_tap == 2, sends = s10 > 0.f || s20 > 0.f || t->snd1 > 0.f || t->snd2 > 0.f;
+    if (sends && !post) send_taps(d, t, s10, s20, L, R, n);
+    ec_fx_process(&t->fx, &p->fx, d->bpm, d->ml, d->mr, L, R, n);   /* duck key: the tracks mixed so far */
+    if (sends && post) send_taps(d, t, s10, s20, L, R, n);
+    {
+        float g0 = mute0 * 0.70710678f, g1 = t->mute_gain * 0.70710678f, gi = (g1 - g0) / (float)n, g = g0;
+        for (int i = 0; i < n; ++i) { g += gi; L[i] *= g; R[i] *= g; }
+    }
 
-    float pl = 0.f, pr = 0.f;
+    float pl = 0.f, pr = 0.f, pm = 0.f;
     for (int i = 0; i < n; ++i) {
-        float a = fabsf(L[i]), b = fabsf(R[i]);
+        float a = fabsf(L[i]), b = fabsf(R[i]), m = fabsf(L[i] + R[i]);
         if (a > pl) pl = a;
         if (b > pr) pr = b;
+        if (m > pm) pm = m;
     }
     if (pl > t->peak_l) t->peak_l = pl;
     if (pr > t->peak_r) t->peak_r = pr;
+
+    /* E4: the idle detector (\elasticatTrackMix's Amplitude(out, 0.01, 0.3) + Engine.idleScan): a stopped
+     * track, no voices, no reader, silent (<= 0.001) for idle_grace seconds pauses until something wakes it */
+    t->mix_l = pm > t->mix_l ? pm : t->mix_l * powf(0.1f, (float)n / (0.3f * fs));
+    if (!track_playing(d, t) && !t->reader_on && !t->audition && t->dk_left <= 0 && t->mix_l <= 0.001f &&
+        !track_has_voices(d, ti)) {
+        t->quiet += n;
+        if ((float)t->quiet > d->idle_grace * fs) t->idle = 1;
+    } else
+        t->quiet = 0;
+}
+
+static void bus_peak(float *pk, const float *L, const float *R, int n)
+{
+    for (int i = 0; i < n; ++i) {
+        float a = fabsf(L[i]), b = fabsf(R[i]);
+        if (a > pk[0]) pk[0] = a;
+        if (b > pk[1]) pk[1] = b;
+    }
 }
 
 static inline float soft_limit(float x)
@@ -831,6 +922,7 @@ void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
     }
     d->peak_l *= 0.95f;
     d->peak_r *= 0.95f;
+    for (int b = 0; b < 3; ++b) { d->bus_peak[b][0] *= 0.95f; d->bus_peak[b][1] *= 0.95f; }
 
     int pos = 0, ei = 0;
     while (pos < frames) {
@@ -840,12 +932,25 @@ void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
         if (ei < q->n && q->ev[ei].offset < end) end = q->ev[ei].offset;
         int n = end - pos;
 
-        for (int i = 0; i < n; ++i) d->ml[i] = d->mr[i] = 0.f;
+        for (int i = 0; i < n; ++i) d->ml[i] = d->mr[i] = d->s1l[i] = d->s1r[i] = d->s2l[i] = d->s2r[i] = 0.f;
         for (int ti = 0; ti < EC_TRACKS; ++ti) {
+            if (d->tr[ti].idle) continue;              /* E4: the idle CPU saver */
             track_chunk(d, ti, d->bl, d->br, n);
             for (int i = 0; i < n; ++i) { d->ml[i] += d->bl[i]; d->mr[i] += d->br[i]; }
         }
-        /* E4 hooks: send buses S1/S2 return here, then the master insert. */
+        /* E4: the S1 / S2 returns (DUCK keyed by the tracks' sum), then the master insert (key = its input) */
+        ec_fx_process(&d->bus[0], &d->busp[0], d->bpm, d->ml, d->mr, d->s1l, d->s1r, n);
+        ec_fx_process(&d->bus[1], &d->busp[1], d->bpm, d->ml, d->mr, d->s2l, d->s2r, n);
+        bus_peak(d->bus_peak[0], d->s1l, d->s1r, n);
+        bus_peak(d->bus_peak[1], d->s2l, d->s2r, n);
+        for (int i = 0; i < n; ++i) {
+            d->ml[i] += d->s1l[i] + d->s2l[i];
+            d->mr[i] += d->s1r[i] + d->s2r[i];
+            d->kl[i] = d->ml[i];
+            d->kr[i] = d->mr[i];
+        }
+        ec_fx_process(&d->bus[2], &d->busp[2], d->bpm, d->kl, d->kr, d->ml, d->mr, n);
+        bus_peak(d->bus_peak[2], d->ml, d->mr, n);
         float v0 = d->master_lag;
         d->master_lag = ec_lag(d->master_lag, d->master_vol, d->lag02, n);
         float vi = (d->master_lag - v0) / (float)n, v = v0;
@@ -885,6 +990,11 @@ void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
     st->peak_r = t->peak_r;
     st->filter_env = t->f.env_semis;
     st->mode_implemented = warp_implemented(t->mode);
+    st->fx_running = ec_fx_running(&t->fx);               /* E4 */
+    ec_fx_meter(&t->fx, &st->fx_meter);
+    for (int k = 0; k < EC_MOD_NDEST; ++k) st->mod[k] = t->mods[k];
+    for (int k = 0; k < 4; ++k) st->macro[k] = t->mod.alive ? t->mod.macro_val[k] : 0.f;
+    st->idle = t->idle;
     double F = t->frames > 1.0 ? t->frames : 1.0;
     for (int i = 0; i < EC_VOICE_POOL; ++i) {
         const ec_voice_t *v = &d->v[i];
@@ -895,6 +1005,22 @@ void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
         }
         st->voices++;
     }
+}
+
+void ec_dsp_bus_params(ec_dsp_t *d, int bus, const ec_fx_params_t *p)
+{
+    if (bus < 0 || bus > 2 || !p) return;
+    d->busp[bus] = *p;
+}
+
+void ec_dsp_bus_status(const ec_dsp_t *d, int bus, ec_bus_status_t *st)
+{
+    memset(st, 0, sizeof *st);
+    if (bus < 0 || bus > 2) return;
+    st->peak_l = d->bus_peak[bus][0];
+    st->peak_r = d->bus_peak[bus][1];
+    st->fx_running = ec_fx_running(&d->bus[bus]);
+    ec_fx_meter(&d->bus[bus], &st->fx_meter);
 }
 
 void ec_dsp_master_peak(const ec_dsp_t *d, float *l, float *r)

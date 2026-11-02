@@ -57,7 +57,7 @@ int ec_cat_pages(int cat, const float *v)
     case EC_CAT_SRC: return 4;
     case EC_CAT_FILT: return 3;
     case EC_CAT_FX: return 2;
-    case EC_CAT_MOD: return 2;
+    case EC_CAT_MOD: return 9;            /* E4: LFO 1, LFO 2, MOD ENV, VELO, MACROS, 4 x the macro's matrix */
     case EC_CAT_MASTER: return 2;
     default: return 1;
     }
@@ -121,6 +121,35 @@ static void filter_items(const float *v, ec_page_t *o)
     }
 }
 
+/* E4: the FX machine's cells (lib/fx_modes/<machine>.lua) */
+static void fx_items(int machine, ec_page_t *o)
+{
+    int ids[8], n, i;
+    const char *lb[8];
+    n = ec_fx_page_items(machine, ids, lb);
+    for (i = 0; i < n; i++)
+        P(o, ids[i], lb[i]);
+}
+
+void ec_page_items_bus(int cat, int page, const float *v, int bus, const float *bv, ec_page_t *o)
+{
+    ec_page_items(cat, page, v, bus, o);
+    if (o->busv && bv)
+        fx_items((int)(bv[EC_P_FX_MACHINE] + 0.5f), o);
+}
+
+int ec_settings_items_bus(int cat, int bus, ec_page_t *o)
+{
+    memset(o, 0, sizeof *o);
+    o->title = "SETUP";
+    if (!bus || bus > 3 || cat == EC_CAT_MASTER || cat == EC_CAT_FILE || cat == EC_CAT_PAT ||
+        (bus == 3 && cat == EC_CAT_SRC))
+        return 0;
+    o->busv = bus;
+    P(o, EC_P_FX_MACHINE, bus == 1 ? "SEND 1 FX" : bus == 2 ? "SEND 2 FX" : "MASTER FX");
+    return 1;
+}
+
 void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
 {
     memset(o, 0, sizeof *o);
@@ -132,7 +161,8 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
             return;
         }
         o->title = bus == 1 ? "SEND 1" : bus == 2 ? "SEND 2" : "MASTER";
-        o->e4 = 1;
+        o->busv = bus;                       /* E4: filled by ec_page_items_bus */
+        o->kind = EC_PV_FX;
         return;
     }
     switch (cat) {
@@ -207,26 +237,50 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
             P(o, EC_P_PAN, 0), P(o, EC_P_SEND1, 0), P(o, EC_P_SEND2, 0);
         }
         break;
-    case EC_CAT_FX:
-        o->e4 = 1;
+    case EC_CAT_FX:                          /* E4 */
         if (page == 0) {
             o->title = "FX";
-            P(o, EC_P_FX_MACHINE, 0), P(o, EC_P_FX_DRIVE, 0), P(o, EC_P_FX_MIX, 0);
+            o->kind = EC_PV_FX;
+            fx_items(iv(v, EC_P_FX_MACHINE), o);
         } else {
             o->title = "SENDS";
+            o->kind = EC_PV_SENDS;
             P(o, EC_P_SEND1, 0), P(o, EC_P_SEND2, 0), P(o, EC_P_SEND_TAP, 0);
         }
         break;
-    case EC_CAT_MOD:
-        o->e4 = 1;
+    case EC_CAT_MOD:                         /* E4: lib/pages/model.lua's MOD pages + the macro matrix */
         if (page == 0) {
             o->title = "LFO 1";
+            o->kind = EC_PV_LFO1;
             P(o, EC_P_LFO1_DEST, 0), P(o, EC_P_LFO1_WAVE, 0), P(o, EC_P_LFO1_SPEED, 0), P(o, EC_P_LFO1_DEPTH, 0);
             P(o, EC_P_LFO1_MODE, 0);
-        } else {
+        } else if (page == 1) {
             o->title = "LFO 2";
+            o->kind = EC_PV_LFO2;
             P(o, EC_P_LFO2_DEST, 0), P(o, EC_P_LFO2_WAVE, 0), P(o, EC_P_LFO2_SPEED, 0), P(o, EC_P_LFO2_DEPTH, 0);
             P(o, EC_P_LFO2_MODE, 0);
+        } else if (page == 2) {
+            o->title = "MOD ENV";
+            o->kind = EC_PV_MENV;
+            P(o, EC_P_MENV_ATTACK, 0), P(o, EC_P_MENV_DECAY, 0), P(o, EC_P_MENV_SUSTAIN, 0);
+            P(o, EC_P_MENV_RELEASE, 0), P(o, EC_P_MENV_DEST, 0), P(o, EC_P_MENV_DEPTH, 0);
+        } else if (page == 3) {
+            o->title = "VELOCITY";
+            o->kind = EC_PV_VEL;
+            P(o, EC_P_MVEL_DEST, 0), P(o, EC_P_MVEL_DEPTH, 0);
+        } else if (page == 4) {
+            o->title = "MACROS";
+            o->kind = EC_PV_MACROS;
+            P(o, EC_P_MACRO1, 0), P(o, EC_P_MACRO2, 0), P(o, EC_P_MACRO3, 0), P(o, EC_P_MACRO4, 0);
+        } else {
+            static const char *const T[4] = {"MACRO 1", "MACRO 2", "MACRO 3", "MACRO 4"};
+            const int m = page - 5 < 0 ? 0 : page - 5 > 3 ? 3 : page - 5;
+            int d;
+            o->title = T[m];
+            o->kind = EC_PV_MACRO;
+            P(o, EC_P_MACRO1 + m, "VAL");
+            for (d = 0; d < 5; d++)
+                P(o, EC_P_MACRO_DEPTH + m * 5 + d, 0);
         }
         break;
     case EC_CAT_MASTER:
@@ -270,6 +324,9 @@ int ec_settings_items(int cat, const float *v, ec_page_t *o)
     case EC_CAT_AMP:
         P(o, EC_P_ENV_MODE, 0), P(o, EC_P_ENV_RANGE, 0), P(o, EC_P_PORTAMENTO, 0), P(o, EC_P_SLICE_HOLD_TO_STEP, 0);
         P(o, EC_P_SLICE_HOLD, 0);
+        break;
+    case EC_CAT_FX:                          /* E4: the insert machine lives behind FN (a swap respawns the FX) */
+        P(o, EC_P_FX_MACHINE, "INSERT FX"), P(o, EC_P_SEND_TAP, "SEND TAP");
         break;
     case EC_CAT_TRIG: G(o, EC_G_SWING, "SWING"); break;
     case EC_CAT_PAT: G(o, EC_G_QUANT, "QUANT"), G(o, EC_G_GLEN, "GLEN"); break;

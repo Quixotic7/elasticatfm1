@@ -217,6 +217,22 @@ static void trig_loop_region(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t 
     emit(s, &e);
 }
 
+/* E4: retrigger the mod sources where the step's lfo_reset / env_reset resolve ON (\trModTrig) */
+static void mod_trig(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note, int lfo, int env)
+{
+    const float *v = ptr(s, t)->v;
+    ec_event_t e = ev0(EC_EV_MOD_TRIG, t);
+    if (rec) {
+        lfo = ec_step_reset_active(rec, v, EC_P_LFO_RESET);
+        env = ec_step_reset_active(rec, v, EC_P_ENV_RESET);
+    }
+    if (!lfo && !env)
+        return;
+    e.flags = (lfo ? EC_TF_LFO : 0) | (env ? EC_TF_MENV : 0);
+    e.length = (int)(note > 0x7FFFFFFF ? 0x7FFFFFFF : note);
+    emit(s, &e);
+}
+
 /* THE step routine (TrackSequencer:enter_step) */
 static void enter_step(ec_seq_t *s, int t, int reset)
 {
@@ -287,6 +303,8 @@ static void enter_step(ec_seq_t *s, int t, int reset)
             st->fired_slices = 0;
     }
 
+    if (fires)
+        mod_trig(s, t, rec, note, 0, 0);    /* E4 */
     if (fires) {
         int hits = clampi((int)floorf(field(rec, v, EC_P_TRIG_RATCHET) + 0.5f), 1, 8);
         if (is_slice(m))
@@ -310,6 +328,7 @@ static void retrigger_ratchet(ec_seq_t *s, int t)
     const ec_step_t *rec = &tr->steps[st->rat_index];
     const int m = iv(tr->v, EC_P_MACHINE);
     const uint64_t note = note_samples(s, t, rec);
+    mod_trig(s, t, rec, note, 0, 0);          /* E4 (retrigger_ratchet's mod_trig) */
     if (m == EC_MACH_LOOP) {
         ec_event_t e;
         if (!ec_step_is_ghost(rec, tr->v)) {
@@ -660,6 +679,7 @@ void ec_seq_start(ec_seq_t *s)
             e = ev0(EC_EV_NOTE_ON, t);
             e.length = 0;
             emit(s, &e);
+            mod_trig(s, t, 0, 0, 1, 1);           /* E4: the droning start counts as one note */
         }
     }
 }

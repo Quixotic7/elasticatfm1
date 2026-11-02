@@ -13,6 +13,7 @@
 #include "ec_leds.h"
 #include "ec_loader.h"
 #include "ec_razor_ui.h"   /* E3 */
+#include "ec_scene.h"        /* E5 (bus rows: the knob takes over) */
 #include "ec_screens.h"
 #include "ec_version.h"
 
@@ -534,6 +535,7 @@ static void edit_param(int id, int det, int mult, int flags)
     float *bv = ec_app_bus_params(A, id);
     if (bv) {                                       /* E4: a bus FX param (global; no p-locks: no bus lanes) */
         bv[id] = ec_param_nudge(id, bv[id], n);
+        ec_scene_knob(&A->proj, EC_NTRACK + A->bus - 1, id);   /* the knob takes the bus param back from the fader */
         mark_dirty();
         return;
     }
@@ -1140,7 +1142,14 @@ void ec_app_audio(int16_t *out, uint32_t frames)
         int b;
         for (b = 0; b < 3; b++) {
             ec_fx_params_t fp;
-            ec_params_fx(A->proj.bus[b], &fp);
+            float v[EC_NP];
+            const ec_scenes_t *sc = &A->proj.e5.sc;
+            int id;
+            memcpy(v, A->proj.bus[b], sizeof v);
+            for (id = 0; id < EC_NP; id++)       /* the crossfader's morph of the bus FX (scene rows 6..8) */
+                if (sc->on[EC_NTRACK + b][id])
+                    v[id] = sc->xf[EC_NTRACK + b][id];
+            ec_params_fx(v, &fp);
             ec_dsp_bus_params(A->dsp, b, &fp);
         }
     }

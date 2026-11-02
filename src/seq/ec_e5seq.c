@@ -117,7 +117,7 @@ int32_t ec_e5_chunk_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
     wf(&o, p->e5.sc.pos);
     for (s = 0; s < 2; s++) {
         w16(&o, (uint32_t)ec_scene_count(&p->e5.sc, s));
-        for (t = 0; t < EC_NTRACK; t++)
+        for (t = 0; t < EC_SCN_ROWS; t++)   /* rows 6..8: the buses (0.2.0) */
             for (i = 0; i < EC_NP; i++)
                 if (p->e5.sc.has[s][t][i]) {
                     w8(&o, (uint32_t)t);
@@ -183,7 +183,7 @@ int ec_e5_chunk_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
         for (k = 0; k < cnt && !o.bad; k++) {
             const uint32_t tr = r8(&o), id = r8(&o);
             const float v = rf(&o);
-            if (tr < EC_NTRACK && id < EC_NP && ec_scene_morphable((int)id)) {
+            if (id < EC_NP && ec_scene_row_morphable((int)tr, (int)id)) {
                 p->e5.sc.has[s][tr][id] = 1;
                 p->e5.sc.val[s][tr][id] = ec_param_clamp((int)id, v);
             }

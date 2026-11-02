@@ -31,26 +31,51 @@ void ec_scene_reset(ec_scenes_t *sc) { memset(sc, 0, sizeof *sc); }
 int ec_scene_count(const ec_scenes_t *sc, int scene)
 {
     int t, i, n = 0;
-    for (t = 0; t < EC_NTRACK; t++)
+    for (t = 0; t < EC_SCN_ROWS; t++)
         for (i = 0; i < EC_NP; i++)
             n += sc->has[scene & 1][t][i] != 0;
     return n;
 }
 
-static const float *tv(const ec_project_t *p, int t) { return p->pat[p->current].tr[t].v; }
+/* a row's live values: a track's (the current pattern) or a bus record's (rows EC_NTRACK.. = S1, S2, MST) */
+static const float *tv(const ec_project_t *p, int t)
+{
+    return t < EC_NTRACK ? p->pat[p->current].tr[t].v : p->bus[t - EC_NTRACK];
+}
+
+/* a row's default (a track's: params_spec; a bus record's: ec_bus_default) -- the sparse capture leaves it out */
+static float row_def(int t, int id)
+{
+    static float bus[EC_NP];
+    static int ready;
+    if (t < EC_NTRACK)
+        return EC_PARAMS[id].def;
+    if (!ready) {
+        ec_bus_default(bus);
+        ready = 1;
+    }
+    return bus[id];
+}
+
+int ec_scene_row_morphable(int row, int id)
+{
+    if (row < 0 || row >= EC_SCN_ROWS || !ec_scene_morphable(id))
+        return 0;
+    return row < EC_NTRACK || (EC_PARAMS[id].flags & EC_PF_FX);   /* a bus holds only its FX params */
+}
 
 void ec_scene_capture(ec_project_t *p, int scene)
 {
     ec_scenes_t *sc = &p->e5.sc;
     const int s = scene & 1, o = s ^ 1;
     int t, i;
-    for (t = 0; t < EC_NTRACK; t++)
+    for (t = 0; t < EC_SCN_ROWS; t++)
         for (i = 0; i < EC_NP; i++) {
             float x;
-            if (!ec_scene_morphable(i))
+            if (!ec_scene_row_morphable(t, i))
                 continue;
             x = sc->on[t][i] ? sc->xf[t][i] : tv(p, t)[i];
-            if (x != EC_PARAMS[i].def || sc->has[o][t][i]) {
+            if (x != row_def(t, i) || sc->has[o][t][i]) {
                 sc->has[s][t][i] = 1;
                 sc->val[s][t][i] = x;
             } else
@@ -60,7 +85,7 @@ void ec_scene_capture(ec_project_t *p, int scene)
 
 void ec_scene_set(ec_project_t *p, int scene, int t, int id, float value)
 {
-    if (t < 0 || t >= EC_NTRACK || !ec_scene_morphable(id))
+    if (!ec_scene_row_morphable(t, id))
         return;
     p->e5.sc.has[scene & 1][t][id] = 1;
     p->e5.sc.val[scene & 1][t][id] = ec_param_clamp(id, value);
@@ -68,7 +93,7 @@ void ec_scene_set(ec_project_t *p, int scene, int t, int id, float value)
 
 int ec_scene_get(const ec_project_t *p, int scene, int t, int id, float *value)
 {
-    if (t < 0 || t >= EC_NTRACK || id < 0 || id >= EC_NP || !p->e5.sc.has[scene & 1][t][id])
+    if (t < 0 || t >= EC_SCN_ROWS || id < 0 || id >= EC_NP || !p->e5.sc.has[scene & 1][t][id])
         return 0;
     if (value)
         *value = p->e5.sc.val[scene & 1][t][id];
@@ -82,7 +107,7 @@ void ec_scene_clear(ec_project_t *p, int scene)
 
 void ec_scene_clear_key(ec_project_t *p, int t, int id)
 {
-    if (t < 0 || t >= EC_NTRACK || id < 0 || id >= EC_NP)
+    if (t < 0 || t >= EC_SCN_ROWS || id < 0 || id >= EC_NP)
         return;
     p->e5.sc.has[0][t][id] = p->e5.sc.has[1][t][id] = 0;
 }
@@ -94,7 +119,7 @@ uint32_t ec_scene_apply(ec_project_t *p, float pos)
     int t, i;
     pos = pos < 0 ? 0 : pos > 1 ? 1 : pos;
     sc->pos = pos;
-    for (t = 0; t < EC_NTRACK; t++) {
+    for (t = 0; t < EC_SCN_ROWS; t++) {
         const float *v = tv(p, t);
         for (i = 0; i < EC_NP; i++) {
             const int ha = sc->has[0][t][i], hb = sc->has[1][t][i];
@@ -128,7 +153,7 @@ uint32_t ec_scene_apply(ec_project_t *p, float pos)
 
 void ec_scene_knob(ec_project_t *p, int t, int id)
 {
-    if (t >= 0 && t < EC_NTRACK && id >= 0 && id < EC_NP)
+    if (t >= 0 && t < EC_SCN_ROWS && id >= 0 && id < EC_NP)
         p->e5.sc.on[t][id] = 0;
 }
 
@@ -136,7 +161,7 @@ int ec_scene_targets(const ec_project_t *p)
 {
     const ec_scenes_t *sc = &p->e5.sc;
     int t, i, n = 0;
-    for (t = 0; t < EC_NTRACK; t++) {
+    for (t = 0; t < EC_SCN_ROWS; t++) {
         const float *v = tv(p, t);
         for (i = 0; i < EC_NP; i++) {
             const int ha = sc->has[0][t][i], hb = sc->has[1][t][i];

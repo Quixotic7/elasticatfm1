@@ -69,13 +69,16 @@ typedef struct {
     ec_slicemap_t slices[EC_NTRACK];
 } ec_pat_e5_t;
 
+/* scene rows: the 6 tracks, then the E4 buses S1, S2, MST (the original morphs the send / master FX params too: "a
+ * genuinely global continuous param (the master/send FX busses) contributes a single id") */
+#define EC_SCN_ROWS (EC_NTRACK + 3)
 typedef struct {
     float pos;                            /* the crossfader 0 = A .. 1 = B */
-    uint8_t has[2][EC_NTRACK][EC_NP];     /* scene s holds a value for (track, param) */
-    float val[2][EC_NTRACK][EC_NP];
+    uint8_t has[2][EC_SCN_ROWS][EC_NP];   /* scene s holds a value for (row, param) */
+    float val[2][EC_SCN_ROWS][EC_NP];
     /* runtime (rebuilt by ec_scene_apply, not saved): the published morph = the resolver's source 2 */
-    uint8_t on[EC_NTRACK][EC_NP];
-    float xf[EC_NTRACK][EC_NP];
+    uint8_t on[EC_SCN_ROWS][EC_NP];
+    float xf[EC_SCN_ROWS][EC_NP];
 } ec_scenes_t;
 
 typedef struct {

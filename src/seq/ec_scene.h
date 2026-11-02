@@ -19,6 +19,7 @@
 #include "ec_project.h"
 
 int ec_scene_morphable(int id);
+int ec_scene_row_morphable(int row, int id);   /* rows 0..5 tracks (morphable ids), 6..8 S1 S2 MST (their FX ids) */
 void ec_scene_reset(ec_scenes_t *sc);
 int ec_scene_count(const ec_scenes_t *sc, int scene);           /* values the scene holds (0 = empty) */
 

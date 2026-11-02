@@ -71,9 +71,10 @@ static void morph_list(const ec_app_t *a, int y0, int rows)
     const ec_scenes_t *sc = &p->e5.sc;
     int shown = 0, total = 0, k, i;
     char b[16];
-    for (k = 0; k < EC_NTRACK; k++) {
-        const int t = (a->track + k) % EC_NTRACK;
-        const float *v = p->pat[p->current].tr[t].v;
+    for (k = 0; k < EC_SCN_ROWS; k++) {   /* the tracks from the selected one, then S1 S2 MST */
+        static const char *const BN[3] = {"S1", "S2", "MS"};
+        const int t = k < EC_NTRACK ? (a->track + k) % EC_NTRACK : k;
+        const float *v = t < EC_NTRACK ? p->pat[p->current].tr[t].v : p->bus[t - EC_NTRACK];
         for (i = 0; i < EC_NP; i++) {
             const int ha = sc->has[0][t][i], hb = sc->has[1][t][i];
             float va, vb, cur;
@@ -89,8 +90,8 @@ static void morph_list(const ec_app_t *a, int y0, int rows)
                 continue;
             y = y0 + shown * 8;
             cur = sc->on[t][i] ? sc->xf[t][i] : v[i];
-            snprintf(b, sizeof b, "%s %s", TN[t], EC_PARAMS[i].label);
-            T(t == a->track ? EC_C_L15 : EC_C_L8, b, 2, y, EC_AL_LEFT);
+            snprintf(b, sizeof b, "%s %s", t < EC_NTRACK ? TN[t] : BN[t - EC_NTRACK], EC_PARAMS[i].label);
+            T(t == a->track || t == EC_NTRACK - 1 + a->bus ? EC_C_L15 : EC_C_L8, b, 2, y, EC_AL_LEFT);
             xa = 36 + (int)(ec_param_frac(i, va) * 56.0f + 0.5f);
             xb = 36 + (int)(ec_param_frac(i, vb) * 56.0f + 0.5f);
             xc = 36 + (int)(ec_param_frac(i, cur) * 56.0f + 0.5f);

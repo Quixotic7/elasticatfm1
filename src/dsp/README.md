@@ -107,7 +107,7 @@ E3:
     forward only); domino's slicer phase follows the region verbs (phase 0 = the window edge, as the original).
 19. **Mode switches inside the reader family** (e.g. tape -> harmonizer) crossfade the post stages; the SC engine
     respawned the synth with a modeAmp fade.
-20. Slice voices in random_ola / pitch_corrected play the raw voice (the original had \\ola / \\pc voice defs:
+20. Slice voices in random_ola / pitch_corrected play the raw voice (the original had `elasticatSliceVoice_ola` / `_pc` defs:
     per-voice TGrains / PitchShift would need 24 delay lines).
 21. Domino's playhead window follows the resolved region (loop keys / step locks included); the original sent the
     raw loop_start / loop_end.

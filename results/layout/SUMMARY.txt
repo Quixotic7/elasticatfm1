@@ -1,7 +1,7 @@
-tools/layout/test_designer.mjs (2026-11-02T22:54:33.548Z): 20 checks, 0 failed
+tools/layout/test_designer.mjs (2026-11-02T22:57:33.488Z): 20 checks, 0 failed
 
 ok   1. the page and its preview start
-ok      the demo project plays (SOURCE, 3200 device ms)
+ok      the demo project plays (SOURCE, 3183 device ms)
   shot results/layout/01_designer.png
 ok   2. the designer's pack of the shipped design = gen_layout.py --pack (10877 bytes)
 ok      the firmware's pack of the layout it loaded = the same
@@ -19,7 +19,7 @@ ok      Export = the shipped file again, byte for byte
 ok   5. F.MIX moved to MOD (page 10), FILT has 2 pages
 ok      the preview: MOD/F.MIX, 2 lanes, lane 2 KNOB 1 DRIV (labels DRIV   )
   shot results/layout/03_page_moved.png
-ok      gen_layout.py --check of the export: gen_layout: /var/folders/s9/jr6440vj5hq_rk4tm6djbj5r0000gn/T/ec-layout-e2e-iVwTIc/moved.json: ok (43 pages, 139 variants, 637 items, 0 warning(s))
+ok      gen_layout.py --check of the export: gen_layout: /var/folders/s9/jr6440vj5hq_rk4tm6djbj5r0000gn/T/ec-layout-e2e-vrSKm4/moved.json: ok (43 pages, 139 variants, 637 items, 0 warning(s))
 ok      a lower-case title: 1 error (TRIG/trig: the title 'trig' has lower case (the font has capitals only)), the preview keeps the last good layout
 ok      three undos: the shipped file again
 ok      no page exceptions (0)

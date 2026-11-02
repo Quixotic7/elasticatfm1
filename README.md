@@ -102,6 +102,17 @@ make -C tests/dsp && make -C tests/dsp bench   # the engine's own tests (test_ds
 the WAV fed through `fm1core_audio_in` before each audio block, looped; `--audio-in-once`), `--audio-in-latency N`,
 `--audio-in-off-at MS` (state 0), `--audio-in-on-at MS`.
 
+## The layout (pages, lanes, knobs)
+
+Which parameter is on which knob, lane, page and category is data: `design/layout/elasticat.json`, compiled into
+`src/app/ec_layout_gen.c` by `tools/layout/gen_layout.py` (CMake re-runs it; the generated file is committed). The
+designer, a web page whose preview is the firmware compiled to WebAssembly, rearranges it and exports the file:
+`sh tools/layout/build_layout.sh`, then serve `build/layout-web` (`.claude/launch.json`: `elasticat-layout`,
+http://127.0.0.1:8765/). How to hand a design back, what is fixed, the checks: [tools/layout/README.md](tools/layout/README.md).
+The tests and demo scripts walk the pages by panel input, so they run on a fixed copy of 0.4.0's layout
+(`host/fixtures/layout-0.4.0.json`, `ec_run --layout test`); `host/test_layout.c` (ctest `layout_walk`) checks the
+shipped layout whatever its arrangement, finding every param by id through SELECT and the category buttons.
+
 ## The .rfm1
 
 It is built by FM1VST from this repo (submodule `cores/elasticatfm1`, glue `core-glue/elasticat`, branch

@@ -41,7 +41,7 @@ python3 "$R/tools/layout/gen_layout.py" "$R/design/layout/elasticat.json" --quie
 cp "$R/design/layout/elasticat.json" "$OUT/shipped.json"
 mkdir -p "$OUT/designs"
 ( cd "$R/design/layout" && for f in designs/*.json; do [ -f "$f" ] && cp "$f" "$OUT/designs/"; done; true )
-( cd "$OUT/designs" && printf '[' && first=1 && for f in *.json; do [ -f "$f" ] || continue;
+( cd "$OUT/designs" && printf '[' && first=1 && for f in *.json; do [ -f "$f" ] && [ "$f" != index.json ] || continue;
   [ $first = 1 ] || printf ','; printf '"%s"' "$f"; first=0; done; printf ']\n' ) > "$OUT/designs/index.json"
 
 SRCS=$(ls "$R"/src/plat/*.c "$R"/src/io/*.c "$R"/src/ui/*.c "$R"/src/dsp/*.c "$R"/src/seq/*.c "$R"/src/app/*.c)

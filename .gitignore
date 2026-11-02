@@ -2,3 +2,6 @@ build/
 build-*/
 .DS_Store
 __pycache__/
+
+# listening renders (make -C tests/dsp render); kept out of git
+results/**/*.wav

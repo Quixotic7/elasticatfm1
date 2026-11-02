@@ -1,0 +1,1025 @@
+{
+  "format": "elasticat-descriptions",
+  "version": 1,
+  "cats": {
+    "TRIG": "The SEQ button: the step's own settings (note, length, velocity, resets), trig conditions and ratchets, and the trig-jump / slice page. Setup: swing.",
+    "SRC": "The SEL button: the track's sound source - pitch, loop region, sample slot, machine and warp-mode controls over the waveform. Setup: machine, warp mode, loop division, polyphony.",
+    "FILT": "The EDIT button: the track's filter, its envelope and its stereo / mid-side spread. Setup: filter machine, filter envelope mode, mix mode.",
+    "AMP": "The ENV button: the amp envelope, volume, pan and the two send levels. Setup: envelope mode and range, portamento, slice hold.",
+    "FX": "The FX button: the track's insert effect (or, with S1 / S2 / MST selected, that bus's effect) and the send levels. Setup: the FX machine and the send tap.",
+    "MOD": "The LFO button: two LFOs, the mod envelope, velocity modulation and the four macros with their depth matrices. No setup.",
+    "MST": "The MST upper key: the mixer, the master settings (tempo, swing, global length, playhead return) and the A / B scene crossfader. Setup: return mode, tempo, global BPM, project name.",
+    "FILE": "The SAVE button: the sample browser and the slot's file settings, and RAZOR, the slice editor for the track's sample.",
+    "PAT": "The ARP button: the track's pattern length and step rate, the global length and how pattern changes engage. Setup: change mode, global length."
+  },
+  "pages": {
+    "TRIG/TRIG": "The basic step settings: note pitch, note length and velocity, and the three reset flags (envelope, LFO, filter). Hold a step to lock any of them on that step.",
+    "TRIG/COND": "Whether and how often a step fires: chance, trig condition (A:B cycles, FILL, PRE, 1ST ...) and ratchet repeats.",
+    "TRIG/MTRIG": "How a trig engages the loop region: trig jump and trig release. On slice machines this page is SLICE instead: slice number, play mode, ratchet, reverse.",
+    "TRIG/SETUP": "The global swing amount, shared by every track.",
+    "SRC/SOURCE": "The main view: the track's waveform with pitch, loop start / end and sample slot (slice machines: play mode, slice, slice count, choke, slice mute). Empty for NEIGH and INPUT, which show their routing / input meters.",
+    "SRC/MACHINE": "The machine's own controls: loop reverse, crossfade and trig release for loop machines; slice, play mode, reverse, ratchet, clock sync and rate for slice machines.",
+    "SRC/WARP": "The warp mode's controls (each mode shows its own: grains, stretch, harmonies, wavetable ...) plus RATE, over the waveform. Empty for NEIGH and INPUT.",
+    "SRC/RANGE": "The Range: a narrower window inside the sample's trim that the loop points, loop keys and slices work within.",
+    "SRC/SETUP": "The track's machine, warp mode (changes only while stopped), loop-key division and trig polyphony.",
+    "FILT/FILTER": "The filter machine's controls (cutoff, resonance and its own third / fourth knob) and the filter envelope depth, over the filter curve.",
+    "FILT/F.ENV": "The filter envelope's times (ADSR or AHR, per the setup) and its depth onto the cutoff.",
+    "FILT/F.MIX": "How the filter treats the two channels: the stereo / mid-side cutoff spread (BAL) and the dry / wet mix (COMB and FORMNT only).",
+    "FILT/SETUP": "The filter machine, the filter envelope mode and the stereo / mid-side mix mode. Machine and mix mode change only while stopped.",
+    "AMP/AMP": "The amp envelope (ADSR or AHR), track volume, pan and the S1 / S2 send levels, over the envelope's shape.",
+    "AMP/SETUP": "Amp envelope mode, the time range of every envelope, portamento (legato), and how long slice notes last.",
+    "FX/FX": "The track's insert effect: the chosen FX machine's knobs over a picture of it (delay taps, reverb tail, compressor curve with meters ...). Empty for NONE.",
+    "FX/SENDS": "How much of the track goes to the S1 and S2 send buses, and where it is tapped (before or after the insert).",
+    "FX/SETUP": "Choose the insert FX machine (any time, with a short fade) and the send tap point.",
+    "MOD/LFO 1": "LFO 1: destination, waveform, synced speed, bipolar depth and trigger mode. The bar shows the live value at the destination.",
+    "MOD/LFO 2": "LFO 2: destination, waveform, synced speed, bipolar depth and trigger mode. The bar shows the live value at the destination.",
+    "MOD/MOD ENV": "The mod envelope (ADSR), its destination and depth. It retriggers on steps whose ERST is on, for the note's length.",
+    "MOD/VELOCITY": "Velocity as a mod source: where it goes and how much. Velocity comes from slice trigs only.",
+    "MOD/MACROS": "The four macro values M1-M4 at a glance. Each macro moves pitch, cutoff, resonance, amp and pan by its own depths.",
+    "MOD/MACRO 1": "Macro 1: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
+    "MOD/MACRO 2": "Macro 2: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
+    "MOD/MACRO 3": "Macro 3: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
+    "MOD/MACRO 4": "Macro 4: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
+    "MST/MIX": "The mixer: all six tracks' levels and the S1 / S2 returns at a glance; the knobs set the selected track's volume, pan and mute, and the tempo.",
+    "MST/MASTER": "Project timing: tempo, swing, global pattern length and what the playhead does when the loop keys are let go.",
+    "MST/SCENE": "The A / B scene crossfader: the fader, its glide positions and the params that morph. The lower keys are the scene row here.",
+    "MST/SETUP": "Playhead return mode, tempo, global BPM (one tempo for every pattern) and the project's name.",
+    "FILE/SAMPLE": "The sample browser (SELECT moves the cursor, SAVE loads into the track's slot) and the slot's BPM, length in steps, gain, slot number and trim.",
+    "FILE/RAZOR": "The razor slice editor for the track's sample: move each slice's start / end with a snap mode, zoom, set its play mode, choke group, pitch and the transient sensitivity. OCT+ splits, OCT- deletes.",
+    "PAT/PATTERN": "The pattern grid with the track's pattern length and step rate, the global length and the pattern change mode.",
+    "PAT/SETUP": "How a newly picked pattern engages (quantize mode) and the global length it waits for.",
+    "bus:S1": "Send bus 1's effect: the knobs of the FX machine on the S1 return (global, not p-lockable; morphs with the scenes).",
+    "bus:S1/SETUP": "Choose the FX machine on the S1 return. NONE returns nothing.",
+    "bus:S2": "Send bus 2's effect: the knobs of the FX machine on the S2 return (global, not p-lockable; morphs with the scenes).",
+    "bus:S2/SETUP": "Choose the FX machine on the S2 return. NONE returns nothing.",
+    "bus:MST": "The master insert: the knobs of the FX machine on the final mix, send returns included (global, not p-lockable).",
+    "bus:MST/SETUP": "Choose the FX machine on the master insert. NONE passes the mix through clean.",
+    "bus:MST/SRC": "With the master bus selected, SRC shows the mixer: track levels and the returns, with the selected track's volume, pan, mute and the tempo.",
+    "F3": "The timing pop-up (OCT- + OCT+, or PLAY held): tempo on SELECT, swing on ALGORITHM, the track's pattern length and rate, global length and change mode; the lower keys pick and loop the step pages."
+  },
+  "options": {
+    "machine": {
+      "LOOP": "Plays the loop region continuously; each trig restarts it. Loop keys scrub and lock the region live.",
+      "TRIG": "The loop engine, but silent except while a triggered step's note lasts; each step can lock its own region.",
+      "SLICE": "Cuts the region into equal slices (CNT, up to 32) played by trigs and pads. One voice at a time.",
+      "RAZOR": "Plays the slices of the razor table, each with its own start / end (FILE > RAZOR). One voice at a time.",
+      "S.POLY": "SLICE with polyphony: up to 8 voices per track, 24 in all (the oldest is stolen).",
+      "R.POLY": "RAZOR with polyphony: up to 8 voices per track, 24 in all.",
+      "NEIGH": "No sample: the source is the whole output of the track to the left (T2-T6), heard only through this track's filter, insert, amp and pan.",
+      "INPUT": "The host's live audio input is the source, through the track's filter, insert, amp and sends; plays whether the transport runs or not."
+    },
+    "warp": {
+      "TAPE": "Plays at the sample's own speed, like a tape deck: speeding up raises the pitch.",
+      "VARI": "Tempo varispeed: fits the region to its step length at the current tempo, so it always lands on the loop boundary. P/T has no effect here.",
+      "DOMINO": "A step-synced slicer: the region is cut into SLCS slices, one played every SLEN steps, each with its own envelope and loop mode.",
+      "GRAIN": "Granular: overlapping grains read around a moving emitter; size, density, spread and grain speed shape the texture, pitch stays independent.",
+      "OLA": "Random overlap-add: shuffled grains wander around the playhead; CHAOS blends in the wet grains and widens the wander.",
+      "PITCH": "Pitch correct: a tempo-fitted read through a pitch shifter, so timing and pitch are set separately (a robotic, formant-y character).",
+      "HARM": "Harmonizer: the dry loop plus up to three pitch-shifted copies at IN1-IN3 semitones (0 = that voice off).",
+      "WTBL": "Wavetable: the loop region becomes a bank of single cycles played by an oscillator (pitch from P/T and the keys, base C3), scanned by MORF and its LFO.",
+      "FREEZE": "Spectral freeze: FRZE captures and holds the spectrum at the playhead as a drone; BLUR smears it.",
+      "FORMNT": "Formant: shifts the spectral envelope (FORM, in semitones) and can freeze it too.",
+      "GSTR": "GStretch: pitch-held time stretch; STRCH sets the read speed (1 = real time), a pitch shifter restores the pitch.",
+      "GSTR2": "GStretch 2: as GSTR, but tempo-synced: the region passes once per loop, STRCH and RATE deviate from that.",
+      "CHOP": "Chopped (Digitakt-style): a clock ramp sweeps the region and a grain fires every SLEN steps at natural pitch, so the loop stretches to any tempo without changing pitch."
+    },
+    "filter": {
+      "CLASSC": "Classic multimode filter: low-pass, high-pass, band-pass or notch (TYPE), with cutoff, resonance and drive.",
+      "MORPH": "Morphing filter: MRPH sweeps continuously from low-pass through notch to high-pass.",
+      "LADDER": "Moog-style ladder low-pass; rings hard at high resonance but cannot run away.",
+      "COMB": "Tuned feedback comb: TUNE sets its pitch, FB the resonance, DAMP darkens each echo, MIX blends dry / wet.",
+      "FORMNT": "Vowel filter bank: VOWL morphs A-E-I-O-U, CUT transposes the formants, RES sharpens them, MIX blends dry / wet.",
+      "SVF": "State-variable multimode filter (LP / HP / BP / notch) with smoother type changes than CLASSC."
+    },
+    "fenv": {
+      "ADSR": "Attack, decay, sustain, release: the filter envelope follows the note length, sustaining until the note ends.",
+      "AHR": "Attack, hold, release: the filter envelope ignores the note length; HOLD at its top holds forever."
+    },
+    "env": {
+      "ADSR": "Attack, decay, sustain, release: the sound sustains while the step's note lasts (LEN), then releases.",
+      "AHR": "Attack, hold, release: ignores the note length; HOLD at its top (INF) keeps the sound on until the next trig."
+    },
+    "fx": {
+      "NONE": "No effect: a clean pass-through on an insert or the master; on a send bus nothing is returned.",
+      "DELAY": "Clean digital tempo-synced delay with a low-pass in the feedback.",
+      "REVERB": "Algorithmic (FreeVerb-style) reverb.",
+      "LOFI": "Bit-depth and sample-rate reduction.",
+      "COMP": "Compressor with real dB / ms readouts and in / gain-reduction meters; MIX below full gives parallel compression.",
+      "DESTRY": "Destroy: a distortion chain (warble, overdrive, fold, saturation, bitcrush, sample-rate reduction, tone, level). Always fully wet.",
+      "ECHO": "Coloured stereo echo: tempo-synced time, right-tap offset, stereo or ping-pong, tone in the loop and wobble.",
+      "B.HOLE": "Blackhole: a huge modulated reverb; GRAV at maximum freezes the tail.",
+      "CHORUS": "Dual-voice modulated short-delay chorus.",
+      "FLANGR": "Flanger: a swept short delay with bipolar feedback.",
+      "PHASER": "Phaser: 1 to 8 swept all-pass stages with feedback.",
+      "DJ EQ": "Three-band DJ isolator EQ with kills and adjustable crossovers. Always wet.",
+      "DUCK": "Ducker: dips this slot whenever the dry program plays (best on a send). Always wet.",
+      "T.ECHO": "Tape echo: tempo-synced delay with wow, flutter and saturation in the loop.",
+      "CASSET": "Cassette: wow, flutter, hiss, crackle, dropouts and a band-limited tone.",
+      "MOTION": "Stereo motion: width, plus synced tremolo and autopan. Always wet.",
+      "RINGS": "Ring modulator or frequency shifter (MODE), with feedback.",
+      "LIMIT": "Brickwall limiter: push GAIN into the ceiling. Always wet."
+    }
+  },
+  "items": {
+    "mute": {
+      "name": "Mute",
+      "desc": "Silences the track (its sends still feed S1 / S2). Saved with the pattern; also a held track key."
+    },
+    "machine": {
+      "name": "Machine",
+      "desc": "What the track plays: LOOP, TRIG, SLICE, RAZOR, S.POLY, R.POLY, NEIGH (the left track) or INPUT (the live input). A setting, not p-lockable."
+    },
+    "pitch": {
+      "name": "Pitch",
+      "desc": "Transposes the track, -24 to +24 semitones; on TRIG it is the step's note. P-lockable. In TAPE it is speed too; VARI ignores it."
+    },
+    "sample_slot": {
+      "name": "Sample slot",
+      "desc": "Which of the 16 pool slots the track plays. Tracks sharing a slot share its sample and its file settings."
+    },
+    "loop_start": {
+      "name": "Loop start",
+      "desc": "Where the loop region starts, 0 to 128 across the Range. P-lockable (a step can play its own region)."
+    },
+    "loop_end": {
+      "name": "Loop end",
+      "desc": "Where the loop region ends, 0 to 128 across the Range. P-lockable (a step can play its own region)."
+    },
+    "range_start": {
+      "name": "Range start",
+      "desc": "The start of the Range, the window inside the sample's trim that loop points, loop keys and slices map onto (0 to 128). P-lockable."
+    },
+    "range_end": {
+      "name": "Range end",
+      "desc": "The end of the Range, the window inside the sample's trim that loop points, loop keys and slices map onto (0 to 128). P-lockable."
+    },
+    "loop_reverse": {
+      "name": "Loop reverse",
+      "desc": "Plays the loop region backwards. In DOMINO it reverses the slice order. P-lockable."
+    },
+    "xfade": {
+      "name": "Loop crossfade",
+      "desc": "Crossfade time at the loop seam and on region jumps, 0 to 250 ms; in WTBL, the fade when the region moves. Longer = smoother, softer edges."
+    },
+    "mode": {
+      "name": "Warp mode",
+      "desc": "How a loop machine reads its region: TAPE, VARI, DOMINO, GRAIN, OLA, PITCH, HARM, WTBL, FREEZE, FORMNT, GSTR, GSTR2 or CHOP. Changes only while stopped."
+    },
+    "mode_macro": {
+      "name": "Warp macro",
+      "desc": "The warp mode's own amount, 0 to 100%: CHAOS in OLA, SMEAR in PITCH (wider window), harmony MIX in HARM, MORF (wavetable scan) in WTBL."
+    },
+    "chop_steps": {
+      "name": "Domino slices",
+      "desc": "DOMINO: how many equal slices the region is cut into, 1 to 64."
+    },
+    "chop_slice_len": {
+      "name": "Slice length",
+      "desc": "DOMINO and CHOP: steps per slice / grain, 0.05 to 32 (SHIFT snaps to whole steps). 1 = a new slice every step."
+    },
+    "chop_loop_mode": {
+      "name": "Slice loop mode",
+      "desc": "DOMINO: what each slice does inside its slot - CHOP (stop), LOOP, PONG or RUN (run on past the slice), each also reversed (R). Shown on CHOP too, where it has no effect."
+    },
+    "chop_attack": {
+      "name": "Slice attack",
+      "desc": "DOMINO and CHOP: fade-in of each slice / grain, 0.1 to 200 ms."
+    },
+    "chop_hold": {
+      "name": "Slice gate",
+      "desc": "DOMINO and CHOP: how much of each slot the slice sounds, 0 to 100%. Lower = rhythmic gating, full = smooth."
+    },
+    "chop_release": {
+      "name": "Slice release",
+      "desc": "DOMINO and CHOP: fade-out of each slice / grain, 0.1 to 200 ms."
+    },
+    "grain_size": {
+      "name": "Grain size",
+      "desc": "GRAIN: the length of each grain, 2 to 500 ms. In GSTR / GSTR2 (PWIN): the pitch shifter's window; bigger = smoother pitch, more smear."
+    },
+    "grain_density": {
+      "name": "Grain density",
+      "desc": "GRAIN: how many grains overlap, 1 to 64. In GSTR / GSTR2 (SMTH): smoothing; higher = less metallic, a little softer."
+    },
+    "grain_jitter": {
+      "name": "Grain spread",
+      "desc": "GRAIN: random scatter of where grains start around the emitter, none to wide. 0 = all from the same point."
+    },
+    "grain_speed": {
+      "name": "Grain speed",
+      "desc": "GRAIN: how fast the emitter moves through the region, 0 (frozen) to 4x. In GSTR / GSTR2 (STRCH): the stretch, 1/16x to 4x, 1 = real time."
+    },
+    "grain_speed_rand": {
+      "name": "Grain speed random",
+      "desc": "GRAIN: random variation of each grain's playback speed, 0 to 100%."
+    },
+    "grain_direction": {
+      "name": "Grain direction",
+      "desc": "GRAIN: the share of grains that play forwards, 0 to 100%. 100% = all forward, 0% = all backward."
+    },
+    "warp_rate": {
+      "name": "Warp rate",
+      "desc": "Tempo-synced speed multiplier for the warp mode's read, 1/16x to 8x; 1 = in time. P-lockable."
+    },
+    "slice_count": {
+      "name": "Slice count",
+      "desc": "SLICE / S.POLY: how many equal slices the region is cut into, 1 to 32. (Labelled SLIC on the MACHINE page.)"
+    },
+    "slice_index": {
+      "name": "Slice",
+      "desc": "Which slice the track or step plays, 1 to 32. P-lockable per step."
+    },
+    "slice_play_mode": {
+      "name": "Slice play mode",
+      "desc": "1SHOT (to the end), HOLD (while the note lasts), LOOP, CONT (on past the slice), PONG (back and forth) or CLOOP (continue, looping). P-lockable."
+    },
+    "slice_reverse": {
+      "name": "Slice reverse",
+      "desc": "Plays slices backwards. P-lockable."
+    },
+    "slice_ratchet": {
+      "name": "Slice ratchet",
+      "desc": "Repeats the slice 1 to 4 times within the step (multiplies the trig ratchet). P-lockable."
+    },
+    "slice_sync": {
+      "name": "Slice clock sync",
+      "desc": "ON: slice speed follows the clock (tempo-fitting warp modes stretch slices to the tempo). OFF: slice RATE sets the speed."
+    },
+    "slice_rate": {
+      "name": "Slice rate",
+      "desc": "Slice playback speed when SYNC is off, 1/8x to 8x. P-lockable."
+    },
+    "slice_hold_to_step": {
+      "name": "Slice hold to step",
+      "desc": "ON: a slice note lasts the step's note length (LEN). OFF: it lasts the HOLD time instead."
+    },
+    "slice_hold": {
+      "name": "Slice hold time",
+      "desc": "How long a slice note lasts when SHLD is off, 0 to 4 seconds."
+    },
+    "pattern_steps": {
+      "name": "Pattern length",
+      "desc": "The track's pattern length, 1 to 256 steps. Tracks can differ (polymeter)."
+    },
+    "trig_jump": {
+      "name": "Trig jump",
+      "desc": "ON: a trig snaps the playhead to its region's start. OFF: the playhead keeps its position, jumping only if it falls outside the region. P-lockable."
+    },
+    "trig_release": {
+      "name": "Trig release",
+      "desc": "When a step's region lock ends: RETURN (back in sync, where the loop would be), BOOMR (plays back out in reverse) or RESET (from the start). P-lockable."
+    },
+    "trig_chance": {
+      "name": "Trig chance",
+      "desc": "The probability a step fires, 0 to 100%. P-lockable per step."
+    },
+    "trig_condition": {
+      "name": "Trig condition",
+      "desc": "When a step fires: -- (always), A:B (the A-th of every B passes), FILL / !FILL, PRE / !PRE (previous conditional passed), NEI / !NEI, 1ST (first pass only)."
+    },
+    "trig_ratchet": {
+      "name": "Trig ratchet",
+      "desc": "Repeats the step 1 to 8 times, evenly spread over the step. P-lockable."
+    },
+    "env_reset": {
+      "name": "Envelope reset",
+      "desc": "ON: the step retriggers the mod envelope. With ERST, LRST and FRST all off the step is a ghost trig (no new note). P-lockable."
+    },
+    "lfo_reset": {
+      "name": "LFO reset",
+      "desc": "ON: the step restarts the LFOs that are in TRIG, ONE or HOLD mode. P-lockable."
+    },
+    "filter_reset": {
+      "name": "Filter reset",
+      "desc": "No effect of its own (a placeholder, as in the original), but with ERST and LRST also off the step becomes a ghost trig. P-lockable."
+    },
+    "filter_machine": {
+      "name": "Filter machine",
+      "desc": "The filter type: CLASSC, MORPH, LADDER, COMB, FORMNT or SVF. Changes only while stopped."
+    },
+    "filter_type": {
+      "name": "Filter type",
+      "desc": "CLASSC and SVF: low-pass, high-pass, band-pass or notch. P-lockable."
+    },
+    "filter_cutoff": {
+      "name": "Filter cutoff",
+      "desc": "Cutoff, 20 Hz to 20 kHz. On COMB (TUNE) the comb's pitch; on FORMNT it transposes the vowel formants. P-lockable."
+    },
+    "filter_res": {
+      "name": "Filter resonance",
+      "desc": "Resonance, off to full. On COMB (FB) the comb's feedback. P-lockable."
+    },
+    "filter_drive": {
+      "name": "Filter drive",
+      "desc": "Saturation before the filter, off to full. On COMB (DAMP) a low-pass in the feedback, darker each echo. No drive on FORMNT. P-lockable."
+    },
+    "filter_morph": {
+      "name": "Filter morph",
+      "desc": "MORPH: sweeps low-pass (0) through notch (centre) to high-pass (128). On FORMNT (VOWL): the vowel, A-E-I-O-U. P-lockable."
+    },
+    "filter_balance": {
+      "name": "Filter balance",
+      "desc": "Spreads the two channels' cutoffs (L / R, or mid / side) up to +-24 semitones apart; 0 = both alike. P-lockable."
+    },
+    "filter_mix": {
+      "name": "Filter mix",
+      "desc": "Dry / wet blend, dry to fully filtered. Only COMB and FORMNT use it. P-lockable."
+    },
+    "filter_mix_mode": {
+      "name": "Filter mix mode",
+      "desc": "How every filter machine splits the signal: STEREO (left / right) or M/S (mid / side), spread by BAL. Changes only while stopped."
+    },
+    "filter_env_mode": {
+      "name": "Filter envelope mode",
+      "desc": "ADSR (follows the note length) or AHR (attack, hold, release; ignores the note length)."
+    },
+    "filter_env_attack": {
+      "name": "Filter env attack",
+      "desc": "The filter envelope's attack time, 0 up to the envelope range (AMP setup). P-lockable."
+    },
+    "filter_env_decay": {
+      "name": "Filter env decay",
+      "desc": "ADSR: the time to fall to the sustain level, 0 up to the envelope range. P-lockable."
+    },
+    "filter_env_sustain": {
+      "name": "Filter env sustain",
+      "desc": "ADSR: the level held while the note lasts, 0 to full. P-lockable."
+    },
+    "filter_env_release": {
+      "name": "Filter env release",
+      "desc": "The release time after the note ends (ADSR) or after the hold (AHR); the top of the knob is infinite. P-lockable."
+    },
+    "filter_env_hold": {
+      "name": "Filter env hold",
+      "desc": "AHR: how long the envelope holds at full; the top of the knob is infinite. P-lockable."
+    },
+    "filter_env_depth": {
+      "name": "Filter env depth",
+      "desc": "How far the filter envelope moves the cutoff, up to +-72 semitones; centre 0 = none, below opens downward. P-lockable."
+    },
+    "env_mode": {
+      "name": "Amp envelope mode",
+      "desc": "ADSR (sustains while the note lasts) or AHR (attack, hold, release; ignores the note length). A setting, not p-lockable."
+    },
+    "env_attack": {
+      "name": "Amp attack",
+      "desc": "The amp envelope's fade-in, 0 up to the envelope range. P-lockable."
+    },
+    "env_decay": {
+      "name": "Amp decay",
+      "desc": "ADSR: the time to fall to the sustain level, 0 up to the envelope range. P-lockable."
+    },
+    "env_sustain": {
+      "name": "Amp sustain",
+      "desc": "ADSR: the level held while the note lasts, 0 to full. P-lockable."
+    },
+    "env_release": {
+      "name": "Amp release",
+      "desc": "The fade-out after the note ends (ADSR) or after the hold (AHR); the top is INF (no fade). P-lockable."
+    },
+    "env_hold": {
+      "name": "Amp hold",
+      "desc": "AHR: how long the sound stays at full before releasing; the top is INF (holds until the next trig). P-lockable."
+    },
+    "env_range": {
+      "name": "Envelope range",
+      "desc": "The longest time the envelope knobs reach, 1 s to 1024 s (default 8 s). Applies to the amp, filter and mod envelopes."
+    },
+    "fx_insert1_machine": {
+      "name": "FX machine",
+      "desc": "The effect in this slot: the track's insert, or the S1 / S2 return or master insert. 18 machines; changes any time with a short fade."
+    },
+    "fx_drive": {
+      "name": "Destroy drive",
+      "desc": "DESTRY: the overdrive stage, off to full (0 bypasses it). P-lockable."
+    },
+    "fx_mix": {
+      "name": "FX mix",
+      "desc": "Dry / wet blend of the effect, dry to fully wet. P-lockable."
+    },
+    "send_tap": {
+      "name": "Send tap",
+      "desc": "Where the sends take the track's signal: PRE (after the filter, before the insert) or POST (after the insert)."
+    },
+    "send1_level": {
+      "name": "Send 1 level",
+      "desc": "How much of the track goes to the S1 bus, off to full. P-lockable: throw single steps into the effect."
+    },
+    "send2_level": {
+      "name": "Send 2 level",
+      "desc": "How much of the track goes to the S2 bus, off to full. P-lockable."
+    },
+    "amp": {
+      "name": "Volume",
+      "desc": "The track's level, 0 to 127 (default 100), times the slot's gain. P-lockable."
+    },
+    "pan": {
+      "name": "Pan",
+      "desc": "Stereo position, L64 to R64; C = centre. P-lockable."
+    },
+    "lfo1_dest": {
+      "name": "LFO 1 destination",
+      "desc": "What LFO 1 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
+    },
+    "lfo1_wave": {
+      "name": "LFO 1 wave",
+      "desc": "SINE, TRI, SAW, RSAW (ramp down), SQR or RAND (sample and hold). Not p-lockable."
+    },
+    "lfo1_speed": {
+      "name": "LFO 1 speed",
+      "desc": "One cycle per 8 bars down to 1/64, synced to the tempo. P-lockable."
+    },
+    "lfo1_depth": {
+      "name": "LFO 1 depth",
+      "desc": "How much LFO 1 moves its destination, -64 to +64; 0 = off, negative inverts. P-lockable."
+    },
+    "lfo1_mode": {
+      "name": "LFO 1 mode",
+      "desc": "FREE runs freely; TRIG restarts on steps with LRST on; ONE plays one cycle per trig then stops; HOLD latches its value at each trig."
+    },
+    "lfo2_dest": {
+      "name": "LFO 2 destination",
+      "desc": "What LFO 2 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
+    },
+    "lfo2_wave": {
+      "name": "LFO 2 wave",
+      "desc": "SINE, TRI, SAW, RSAW (ramp down), SQR or RAND (sample and hold). Not p-lockable."
+    },
+    "lfo2_speed": {
+      "name": "LFO 2 speed",
+      "desc": "One cycle per 8 bars down to 1/64, synced to the tempo. P-lockable."
+    },
+    "lfo2_depth": {
+      "name": "LFO 2 depth",
+      "desc": "How much LFO 2 moves its destination, -64 to +64; 0 = off, negative inverts. P-lockable."
+    },
+    "lfo2_mode": {
+      "name": "LFO 2 mode",
+      "desc": "FREE runs freely; TRIG restarts on steps with LRST on; ONE plays one cycle per trig then stops; HOLD latches its value at each trig."
+    },
+    "portamento": {
+      "name": "Portamento (legato)",
+      "desc": "ON: a trig that arrives while the amp envelope is still open extends the note instead of restarting the attack."
+    },
+    "mode_switch_fade": {
+      "name": "Mode switch fade",
+      "desc": "Crossfade time when the warp mode's sound changes over, 1 to 250 ms."
+    },
+    "loop_division": {
+      "name": "Loop key division",
+      "desc": "How many loop keys the region is divided into, 2 to 32 (even); above 16, SHIFT + key reaches 17-32."
+    },
+    "trig_polyphony": {
+      "name": "Trig polyphony",
+      "desc": "MONO: a new trig ends the previous note's p-locks and region lock. POLY: each note keeps its locks until it ends."
+    },
+    "default_length": {
+      "name": "Note length",
+      "desc": "How long a step's note lasts, 1/4 to 16 steps: the envelope gate, and how long its region and p-locks hold. P-lockable."
+    },
+    "default_velocity": {
+      "name": "Velocity",
+      "desc": "Trig velocity, 0 to 100%. Sets a slice's level and feeds the VELOCITY mod source (slice trigs only). P-lockable."
+    },
+    "pattern_rate": {
+      "name": "Pattern rate",
+      "desc": "The track's step speed against the tempo, 1/16 to 2 (1 = sixteenth notes; 2 = twice as fast)."
+    },
+    "harm_interval": {
+      "name": "Harmony 1 interval",
+      "desc": "HARM: the first harmony voice, -24 to +24 semitones; 0 = off. P-lockable."
+    },
+    "harm_interval2": {
+      "name": "Harmony 2 interval",
+      "desc": "HARM: the second harmony voice, -24 to +24 semitones; 0 = off. P-lockable."
+    },
+    "harm_interval3": {
+      "name": "Harmony 3 interval",
+      "desc": "HARM: the third harmony voice, -24 to +24 semitones; 0 = off. P-lockable."
+    },
+    "wsola_window": {
+      "name": "OLA window",
+      "desc": "OLA: the length of each grain, up to 500 ms (settings under 30 ms act as 30 ms). P-lockable."
+    },
+    "wsola_search": {
+      "name": "OLA wander",
+      "desc": "OLA: how far grains wander from the playhead, 0 to 100 ms (more with CHAOS). P-lockable."
+    },
+    "pv_window": {
+      "name": "Pitch window",
+      "desc": "PITCH: the pitch shifter's window, 5 ms to 2 s (widened by SMEAR). Bigger = smoother, more smeared. P-lockable."
+    },
+    "pv_dispersion": {
+      "name": "Pitch dispersion",
+      "desc": "PITCH: random pitch scatter in the shifter, 0 to 100%. P-lockable."
+    },
+    "wt_window": {
+      "name": "Wavetable size",
+      "desc": "WTBL: how many single-cycle waves are spread across the loop region, 2 to 64. P-lockable."
+    },
+    "wt_cycle": {
+      "name": "Cycle width",
+      "desc": "WTBL: the length of each single cycle, 16 to 8192 samples (moves in semitone ratios). P-lockable."
+    },
+    "wt_lfo_rate": {
+      "name": "Scan LFO rate",
+      "desc": "WTBL: the speed of the built-in scan LFO, 0 to 8000 Hz (audio rates give FM / AM textures). P-lockable."
+    },
+    "wt_lfo_depth": {
+      "name": "Scan LFO depth",
+      "desc": "WTBL: how far the scan LFO moves MORF, -64 to +64; 0 = off. P-lockable."
+    },
+    "wt_lfo_shape": {
+      "name": "Scan LFO shape",
+      "desc": "WTBL: the scan LFO's wave - SINE, TRI, SAW, S&H or RAND. P-lockable."
+    },
+    "freeze_amount": {
+      "name": "Freeze",
+      "desc": "FREEZE and FORMNT: captures and holds the spectrum at the playhead, 0 (live) to 100%. P-lockable."
+    },
+    "spectral_blur": {
+      "name": "Spectral blur",
+      "desc": "FREEZE: smears the held spectrum, 0 to 100%. P-lockable."
+    },
+    "formant_shift": {
+      "name": "Formant shift",
+      "desc": "FORMNT: shifts the spectral envelope, -24 to +24 semitones; 0 = unchanged. P-lockable."
+    },
+    "delay_time": {
+      "name": "Delay time",
+      "desc": "DELAY: the echo time, 1/32 to 2 bars incl. dotted and triplet, synced to the tempo. P-lockable."
+    },
+    "delay_feedback": {
+      "name": "Feedback",
+      "desc": "DELAY, ECHO, T.ECHO: how much of each repeat feeds back, off to full. P-lockable."
+    },
+    "delay_tone": {
+      "name": "Delay tone",
+      "desc": "DELAY: low-pass on the repeats, 220 Hz to 18 kHz; full = brightest. P-lockable."
+    },
+    "reverb_size": {
+      "name": "Reverb size",
+      "desc": "REVERB and B.HOLE: the room size, small to huge. P-lockable."
+    },
+    "reverb_damp": {
+      "name": "Reverb damping",
+      "desc": "REVERB: high-frequency damping, bright to dark. On B.HOLE (HI): the tail's high cut. P-lockable."
+    },
+    "lofi_bits": {
+      "name": "Bit depth",
+      "desc": "LOFI: the output bit depth, 1 to 24 bits; lower = more crushed. P-lockable."
+    },
+    "lofi_rate": {
+      "name": "Sample rate",
+      "desc": "LOFI: the output sample rate, 1 kHz to 48 kHz; lower = more aliasing. P-lockable."
+    },
+    "comp_thresh": {
+      "name": "Threshold",
+      "desc": "COMP: the level above which it compresses, about -34 to 0 dB. P-lockable."
+    },
+    "comp_ratio": {
+      "name": "Ratio",
+      "desc": "COMP: how hard it compresses, 1:1 to 20:1. P-lockable."
+    },
+    "comp_attack": {
+      "name": "Comp attack",
+      "desc": "COMP: how fast it clamps down, 0.5 to 100 ms. P-lockable."
+    },
+    "comp_release": {
+      "name": "Comp release",
+      "desc": "COMP: how fast it lets go, 20 to 800 ms. P-lockable."
+    },
+    "comp_makeup": {
+      "name": "Makeup gain",
+      "desc": "COMP: gain after compression, 0 to +12 dB. P-lockable."
+    },
+    "destroy_warble": {
+      "name": "Warble",
+      "desc": "DESTRY: pitch wobble, off to fast and deep. P-lockable."
+    },
+    "destroy_fold": {
+      "name": "Wavefold",
+      "desc": "DESTRY: wavefolding, off to heavy. P-lockable."
+    },
+    "destroy_sat": {
+      "name": "Saturation",
+      "desc": "DESTRY: saturation, off to heavy. P-lockable."
+    },
+    "destroy_crush": {
+      "name": "Bitcrush",
+      "desc": "DESTRY: bit reduction, off to 2 bits. P-lockable."
+    },
+    "destroy_srr": {
+      "name": "Sample-rate reduction",
+      "desc": "DESTRY: sample-rate reduction, off to 500 Hz. P-lockable."
+    },
+    "destroy_tone": {
+      "name": "Destroy tone",
+      "desc": "DESTRY: low-pass after the chain, 400 Hz to 18 kHz; full = brightest. P-lockable."
+    },
+    "destroy_level": {
+      "name": "Destroy level",
+      "desc": "DESTRY: output level, 0.2x to 2x. P-lockable."
+    },
+    "echo_time": {
+      "name": "Echo time",
+      "desc": "ECHO and T.ECHO: the echo time, 1/32 to 2 bars incl. dotted and triplet, synced to the tempo. P-lockable."
+    },
+    "echo_offset": {
+      "name": "Echo offset",
+      "desc": "ECHO: the right tap's time against the left, 0.5x to 2x; centre = equal. P-lockable."
+    },
+    "echo_mode": {
+      "name": "Echo mode",
+      "desc": "ECHO: STEREO or PING (ping-pong between the sides). P-lockable."
+    },
+    "echo_tone": {
+      "name": "Echo tone",
+      "desc": "ECHO and T.ECHO: low-pass on the repeats, dark to bright. P-lockable."
+    },
+    "echo_wobble": {
+      "name": "Echo wobble",
+      "desc": "ECHO: wobble of the echo time, off to strong. P-lockable."
+    },
+    "bh_gravity": {
+      "name": "Gravity",
+      "desc": "B.HOLE: the decay, short to infinite; at maximum the tail freezes. P-lockable."
+    },
+    "bh_mod": {
+      "name": "Blackhole mod",
+      "desc": "B.HOLE: modulation of the reverb, off to deep. P-lockable."
+    },
+    "bh_low": {
+      "name": "Low cut",
+      "desc": "B.HOLE: high-pass on the tail, 20 Hz to 600 Hz. P-lockable."
+    },
+    "bh_predelay": {
+      "name": "Pre-delay",
+      "desc": "B.HOLE: delay before the reverb, 0 to 200 ms. P-lockable."
+    },
+    "modfx_rate": {
+      "name": "Mod rate",
+      "desc": "CHORUS, FLANGR, PHASER: the sweep speed, slow to fast (chorus about 0.05-8 Hz, flanger / phaser 0.02-4 Hz). P-lockable."
+    },
+    "modfx_depth": {
+      "name": "Mod depth",
+      "desc": "CHORUS, FLANGR, PHASER: how deep the sweep goes, off to full. P-lockable."
+    },
+    "modfx_tone": {
+      "name": "Mod tone",
+      "desc": "CHORUS, FLANGR, RINGS: low-pass on the wet signal, 400 Hz to 18 kHz. P-lockable."
+    },
+    "chorus_width": {
+      "name": "Chorus width",
+      "desc": "CHORUS: the phase offset between the left and right voices, mono to wide. P-lockable."
+    },
+    "flanger_feedback": {
+      "name": "Flanger feedback",
+      "desc": "FLANGR: bipolar feedback; centre = none, up = metallic, down = hollow (negative). P-lockable."
+    },
+    "phaser_center": {
+      "name": "Phaser centre",
+      "desc": "PHASER: the sweep's centre frequency, 100 Hz to 4 kHz. P-lockable."
+    },
+    "phaser_stages": {
+      "name": "Phaser stages",
+      "desc": "PHASER: how many all-pass stages, 1 to 8 (more = more notches). P-lockable."
+    },
+    "phaser_feedback": {
+      "name": "Phaser feedback",
+      "desc": "PHASER: resonance, off to strong. P-lockable."
+    },
+    "eq_low": {
+      "name": "EQ low",
+      "desc": "DJ EQ: the low band's gain; 0 = kill, centre = unity, top = boost. P-lockable."
+    },
+    "eq_mid": {
+      "name": "EQ mid",
+      "desc": "DJ EQ: the mid band's gain; 0 = kill, centre = unity, top = boost. P-lockable."
+    },
+    "eq_high": {
+      "name": "EQ high",
+      "desc": "DJ EQ: the high band's gain; 0 = kill, centre = unity, top = boost. P-lockable."
+    },
+    "eq_xlow": {
+      "name": "Low crossover",
+      "desc": "DJ EQ: where low meets mid, 80 to 500 Hz. P-lockable."
+    },
+    "eq_xhi": {
+      "name": "High crossover",
+      "desc": "DJ EQ: where mid meets high, 1 to 8 kHz. P-lockable."
+    },
+    "duck_amount": {
+      "name": "Duck amount",
+      "desc": "DUCK: the most it turns the slot down, 0 to -40 dB. P-lockable."
+    },
+    "duck_sens": {
+      "name": "Duck sensitivity",
+      "desc": "DUCK: how strongly the program level drives the ducking, low to high. P-lockable."
+    },
+    "duck_attack": {
+      "name": "Duck attack",
+      "desc": "DUCK: how fast it ducks, 1 to 50 ms. P-lockable."
+    },
+    "duck_release": {
+      "name": "Duck release",
+      "desc": "DUCK: how fast it comes back, 50 ms to 1.2 s. P-lockable."
+    },
+    "tape_wow": {
+      "name": "Wow",
+      "desc": "T.ECHO and CASSET: slow pitch wobble, off to strong. P-lockable."
+    },
+    "tape_flutter": {
+      "name": "Flutter",
+      "desc": "T.ECHO and CASSET: fast pitch wobble, off to strong. P-lockable."
+    },
+    "tape_sat": {
+      "name": "Tape saturation",
+      "desc": "T.ECHO: saturation in the feedback loop, off to heavy. P-lockable."
+    },
+    "cass_noise": {
+      "name": "Hiss",
+      "desc": "CASSET: tape hiss, off to loud. P-lockable."
+    },
+    "cass_crackle": {
+      "name": "Crackle",
+      "desc": "CASSET: crackle density, off to dense. P-lockable."
+    },
+    "cass_drop": {
+      "name": "Dropouts",
+      "desc": "CASSET: level dropouts, off to frequent and deep. P-lockable."
+    },
+    "cass_tone": {
+      "name": "Cassette tone",
+      "desc": "CASSET: low-pass, 1.2 kHz to 16 kHz; full = brightest. P-lockable."
+    },
+    "motion_width": {
+      "name": "Stereo width",
+      "desc": "MOTION: 0 = mono, centre = unchanged, top = extra wide. P-lockable."
+    },
+    "motion_rate": {
+      "name": "Motion rate",
+      "desc": "MOTION: the tremolo / autopan speed, 1/32 to 4 bars, synced to the tempo. P-lockable."
+    },
+    "motion_trem": {
+      "name": "Tremolo",
+      "desc": "MOTION: tremolo depth (level), off to full. P-lockable."
+    },
+    "motion_pan": {
+      "name": "Autopan",
+      "desc": "MOTION: autopan depth (left / right), off to full. P-lockable."
+    },
+    "motion_shape": {
+      "name": "Motion shape",
+      "desc": "MOTION: the tremolo / autopan wave - SINE, TRI or SQR. P-lockable."
+    },
+    "rings_mode": {
+      "name": "Rings mode",
+      "desc": "RINGS: RING (ring modulation: bells, robots) or SHIFT (frequency shift: barber-pole smear). P-lockable."
+    },
+    "rings_freq": {
+      "name": "Rings frequency",
+      "desc": "RINGS: the modulator frequency, centre 0 out to about 2 kHz; the sign sets the shift direction in SHIFT. P-lockable."
+    },
+    "rings_fine": {
+      "name": "Rings fine",
+      "desc": "RINGS: fine offset of the frequency, +-20 Hz, for slow beating. P-lockable."
+    },
+    "rings_feedback": {
+      "name": "Rings feedback",
+      "desc": "RINGS: feedback around the modulator, off to strong. P-lockable."
+    },
+    "limit_gain": {
+      "name": "Limiter gain",
+      "desc": "LIMIT: gain into the limiter, 0 to +18 dB. P-lockable."
+    },
+    "limit_ceil": {
+      "name": "Ceiling",
+      "desc": "LIMIT: the highest output level, -12 to 0 dB. P-lockable."
+    },
+    "limit_release": {
+      "name": "Limiter release",
+      "desc": "LIMIT: how fast the gain comes back, 2 to 100 ms. P-lockable."
+    },
+    "menv_dest": {
+      "name": "Mod env destination",
+      "desc": "What the mod envelope moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
+    },
+    "menv_attack": {
+      "name": "Mod env attack",
+      "desc": "The mod envelope's attack, 0 up to the envelope range. P-lockable."
+    },
+    "menv_decay": {
+      "name": "Mod env decay",
+      "desc": "The time to fall to the sustain level, 0 up to the envelope range. P-lockable."
+    },
+    "menv_sustain": {
+      "name": "Mod env sustain",
+      "desc": "The level held while the note lasts, 0 to full. P-lockable."
+    },
+    "menv_release": {
+      "name": "Mod env release",
+      "desc": "The time to fall back after the note ends, 0 up to the envelope range. P-lockable."
+    },
+    "menv_depth": {
+      "name": "Mod env depth",
+      "desc": "How much the mod envelope moves its destination, -64 to +64; 0 = off. P-lockable."
+    },
+    "mvel_dest": {
+      "name": "Velocity destination",
+      "desc": "What velocity moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Velocity comes from slice trigs only. Not p-lockable."
+    },
+    "mvel_depth": {
+      "name": "Velocity depth",
+      "desc": "How much velocity moves its destination, -64 to +64; 0 = off. P-lockable."
+    },
+    "macro1_value": {
+      "name": "Macro 1",
+      "desc": "Macro 1's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 1 depths. LFOs and envelopes can also drive it. P-lockable."
+    },
+    "macro2_value": {
+      "name": "Macro 2",
+      "desc": "Macro 2's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 2 depths. LFOs and envelopes can also drive it. P-lockable."
+    },
+    "macro3_value": {
+      "name": "Macro 3",
+      "desc": "Macro 3's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 3 depths. LFOs and envelopes can also drive it. P-lockable."
+    },
+    "macro4_value": {
+      "name": "Macro 4",
+      "desc": "Macro 4's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 4 depths. LFOs and envelopes can also drive it. P-lockable."
+    },
+    "macro1_pitch_depth": {
+      "name": "Macro 1 to pitch",
+      "desc": "How far macro 1 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro1_cutoff_depth": {
+      "name": "Macro 1 to cutoff",
+      "desc": "How far macro 1 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro1_res_depth": {
+      "name": "Macro 1 to resonance",
+      "desc": "How far macro 1 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro1_amp_depth": {
+      "name": "Macro 1 to amp",
+      "desc": "How far macro 1 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro1_pan_depth": {
+      "name": "Macro 1 to pan",
+      "desc": "How far macro 1 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro2_pitch_depth": {
+      "name": "Macro 2 to pitch",
+      "desc": "How far macro 2 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro2_cutoff_depth": {
+      "name": "Macro 2 to cutoff",
+      "desc": "How far macro 2 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro2_res_depth": {
+      "name": "Macro 2 to resonance",
+      "desc": "How far macro 2 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro2_amp_depth": {
+      "name": "Macro 2 to amp",
+      "desc": "How far macro 2 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro2_pan_depth": {
+      "name": "Macro 2 to pan",
+      "desc": "How far macro 2 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro3_pitch_depth": {
+      "name": "Macro 3 to pitch",
+      "desc": "How far macro 3 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro3_cutoff_depth": {
+      "name": "Macro 3 to cutoff",
+      "desc": "How far macro 3 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro3_res_depth": {
+      "name": "Macro 3 to resonance",
+      "desc": "How far macro 3 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro3_amp_depth": {
+      "name": "Macro 3 to amp",
+      "desc": "How far macro 3 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro3_pan_depth": {
+      "name": "Macro 3 to pan",
+      "desc": "How far macro 3 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro4_pitch_depth": {
+      "name": "Macro 4 to pitch",
+      "desc": "How far macro 4 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro4_cutoff_depth": {
+      "name": "Macro 4 to cutoff",
+      "desc": "How far macro 4 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro4_res_depth": {
+      "name": "Macro 4 to resonance",
+      "desc": "How far macro 4 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro4_amp_depth": {
+      "name": "Macro 4 to amp",
+      "desc": "How far macro 4 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "macro4_pan_depth": {
+      "name": "Macro 4 to pan",
+      "desc": "How far macro 4 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+    },
+    "global.bpm": {
+      "name": "Tempo",
+      "desc": "The project tempo, 20 to 300 BPM (SHIFT snaps to common tempos). Saved per pattern unless GBPM is on."
+    },
+    "global.swing": {
+      "name": "Swing",
+      "desc": "Global swing, 50% (straight) to 75% (heavy): odd steps get longer, even ones shorter."
+    },
+    "global.glen": {
+      "name": "Global length",
+      "desc": "The global pattern length, 1 to 256 steps: the boundary that SEQ pattern changes (and TEMP returns) wait for."
+    },
+    "global.quant": {
+      "name": "Pattern change mode",
+      "desc": "How a picked pattern engages: SEQ (at the global length boundary), JUMP (now, same step), START (now, from step 1), TEMP (now, back after one pass)."
+    },
+    "global.rtn": {
+      "name": "Playhead return",
+      "desc": "What the playhead does when loop keys are let go: RETURN (back in sync), BOOMR (plays back out in reverse) or RESET (restart)."
+    },
+    "slot.bpm": {
+      "name": "Sample BPM",
+      "desc": "The tempo the sample was played at, 20 to 300; changing it recalculates its length in steps. Tempo-fitting warp modes use it."
+    },
+    "slot.steps": {
+      "name": "Sample steps",
+      "desc": "How many sixteenth steps the trimmed sample spans, 1 to 512: the length tempo-fitting warp modes stretch it to."
+    },
+    "slot.gain": {
+      "name": "Sample gain",
+      "desc": "The slot's level, 0 to 4x, times each track's volume."
+    },
+    "slot.trim_start": {
+      "name": "Trim start",
+      "desc": "Where the sample starts, shown in seconds; everything (Range, loop, slices) lives inside the trim. SHIFT = finest step."
+    },
+    "slot.trim_end": {
+      "name": "Trim end",
+      "desc": "Where the sample ends, shown in seconds. SHIFT = finest step."
+    },
+    "razor.start": {
+      "name": "Slice start",
+      "desc": "RAZOR: the selected slice's start, 0 to 1 of the track's window, moved under the SNAP mode."
+    },
+    "razor.end": {
+      "name": "Slice end",
+      "desc": "RAZOR: the selected slice's end, 0 to 1 of the track's window, moved under the SNAP mode."
+    },
+    "razor.play": {
+      "name": "Slice play mode",
+      "desc": "RAZOR: the selected slice's own play mode, or TRACK to use the track's."
+    },
+    "razor.zoom": {
+      "name": "Zoom",
+      "desc": "RAZOR: zooms the waveform 1x to 64x, centred on the point last moved. View only."
+    },
+    "razor.snap": {
+      "name": "Snap mode",
+      "desc": "RAZOR: how STRT / END move - GRID (slice-count divisions), ZOOM (fine, by zoom), ZERO-X (zero crossings), TRANS (transients), FRIEND (drags the touching neighbour too)."
+    },
+    "razor.choke": {
+      "name": "Slice choke group",
+      "desc": "RAZOR: the selected slice's choke group, A to H or OFF; a new voice in the group cuts the others."
+    },
+    "razor.pitch": {
+      "name": "Slice pitch",
+      "desc": "RAZOR: the selected slice's pitch offset, -24 to +24 semitones."
+    },
+    "razor.sens": {
+      "name": "Transient sensitivity",
+      "desc": "RAZOR: sensitivity of the transient detection (the ticks) used by Auto-Chop and TRANS snap, 0 to 100."
+    },
+    "e5.xfd": {
+      "name": "Scene crossfader",
+      "desc": "The A / B scene fader, 0 (scene A) to 128 (scene B); morphs every param stored in the scenes."
+    },
+    "e5.choke": {
+      "name": "Slice choke group",
+      "desc": "The choke group of the held pads (else the SLIC slice) in the pattern's slice program, NONE or 1 to 8; overrides the razor table's."
+    },
+    "e5.gbpm": {
+      "name": "Global BPM",
+      "desc": "ON: one tempo for every pattern. OFF: each pattern keeps its own BPM."
+    },
+    "e5.name": {
+      "name": "Project name",
+      "desc": "Turn to name the project (OCT+ keeps it, OCT- cancels)."
+    },
+    "e5.mute": {
+      "name": "Slice mute",
+      "desc": "Mutes the held pads (else the SLIC slice) in the pattern's slice program; muted slices stay on their steps but play nothing."
+    }
+  }
+}

@@ -9,6 +9,12 @@
 //      turns the new param, the live panel labels follow, and Export is exactly the shipped JSON with that swap
 //      (compared as data, and as text with gen_layout.py --format's canonical form)
 //   4. undo: the preview's pixels back to the first frame's
+//   5. a page moved to another category with a new lane; a bad title refused
+//   6. every kind of <select> (context, a page's picture, MOVE TO, VARIANT, + VARIANT FOR, OPEN) opened with the
+//      mouse stays: 2 s of the demo playing, the same element, focused, its value kept
+//   7. descriptions: a slot's and a page header's tooltip, the inspector, the tray's search over descriptions
+//   8. the drawn FM-1 by the mouse: SEQ -> TRIG, the key LEDs light for trigs, Shift-click latches SHIFT (the live
+//      labels change), a lower key latched + the wheel on KN1 = a p-lock (the lock frame, K1's filled chip)
 // Screenshots + SUMMARY.txt into results/layout/.
 //   node tools/layout/test_designer.mjs [--web=build/layout-web] [--out=results/layout]
 import { spawn, spawnSync } from "node:child_process";
@@ -152,6 +158,105 @@ try {
     `   a lower-case title: ${c6.errors.length} error (${c6.errors[0]}), the preview keeps the last good layout`);
   await js("designer.undo(), designer.undo(), designer.undo(), true");
   ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   three undos: the shipped file again");
+
+  // 6. dropdowns stay open while the preview plays: each kind of <select> clicked with the mouse (CDP input), 2 s of
+  // the demo playing, the same element still in the page and focused (nothing rebuilt it), its value kept
+  const mouse = async (type, x, y, extra = {}) => cdp("Input.dispatchMouseEvent", { type, x, y, button: type === "mouseMoved" || type === "mouseWheel" ? "none" : "left", clickCount: 1, ...extra });
+  const click = async (x, y, extra = {}) => { await mouse("mousePressed", x, y, extra); await mouse("mouseReleased", x, y, extra); };
+  const key = async (k, code, vk) => { await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: k, code, windowsVirtualKeyCode: vk }); await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: k, code, windowsVirtualKeyCode: vk }); };
+  const centre = (q) => js(`(() => { const e = ${q}; if (!e) return null; e.scrollIntoView({ block: "center" }); window.__sel = e; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + Math.min(r.height / 2, 8), v: e.value }; })()`);
+  const sels = [["the context's MACHINE", `document.querySelector('[data-key="ctx-MACHINE"]')`],
+    ["a page's picture", `document.querySelector('.page[data-cat="FILT"][data-pi="1"] [data-key^="pic-"]')`],
+    ["a page's MOVE TO", `document.querySelector('.page[data-cat="MOD"][data-pi="0"] [data-key^="move-"]')`],
+    ["a page's VARIANT", `document.querySelector('.page[data-cat="FILT"][data-pi="0"] [data-key^="var-"]')`],
+    ["+ VARIANT FOR", `document.querySelector('.page[data-cat="AMP"][data-pi="0"] [data-key^="addvar-"]')`],
+    ["OPEN", `document.querySelector("#open")`]];
+  for (const [what, q] of sels) {
+    const c = await centre(q);
+    if (!ok(!!c, `6. ${what}: found`)) continue;
+    const ms0 = (await js("designer.state()")).ms;
+    await click(c.x, c.y);
+    await sleep(2000);
+    const r = await js(`[document.contains(window.__sel), document.activeElement === window.__sel, window.__sel.value, designer.state().ms]`);
+    ok(r[0] && r[1] && r[2] === c.v && r[3] > ms0 + 500, `   ${what}: opened, 2 s of the demo playing (${r[3] - ms0} device ms): the same element, focused, value kept (${r[0]}, ${r[1]}, ${JSON.stringify(r[2])})`);
+    await key("Escape", "Escape", 27);
+    await js("document.activeElement && document.activeElement.blur(), true");
+  }
+
+  // 7. descriptions: a slot's and a page header's tooltip, the inspector, the tray's search over descriptions
+  const desc = await js("designer.desc()");
+  ok(Object.keys(desc.items).length >= 225 && Object.keys(desc.pages).length >= 40, `7. descriptions loaded: ${Object.keys(desc.items).length} items, ${Object.keys(desc.pages).length} pages`);
+  await js("designer.context({ filt: 1 }), true");
+  const sc = await centre(`document.querySelector('.page[data-cat="FILT"][data-pi="0"] .lane .slot')`);
+  await mouse("mouseMoved", sc.x - 5, sc.y + 30); await mouse("mouseMoved", sc.x, sc.y);
+  await sleep(600);
+  const tip1 = await js("(() => { const t = document.querySelector('#tip'); return t.hidden ? '' : t.textContent; })()");
+  ok(tip1.includes(desc.items.filter_cutoff.desc) && tip1.includes(desc.items.filter_cutoff.name), `   hover FILT/FILTER KNOB 1: the tooltip is filter_cutoff's ("${tip1.split("\n")[1].slice(0, 60)}...")`);
+  await shot("04_tooltip_slot");
+  const pc = await centre(`document.querySelector('.page[data-cat="FILT"][data-pi="0"] .prow')`);
+  await mouse("mouseMoved", pc.x + 120, pc.y + 1);
+  await sleep(600);
+  const tip2 = await js("(() => { const t = document.querySelector('#tip'); return t.hidden ? '' : t.textContent; })()");
+  ok(tip2.includes(desc.pages["FILT/FILTER"]) && tip2.includes(desc.options.filter.CLASSC), `   hover the FILT/FILTER header: the page's description and its variant's (CLASSC)`);
+  await shot("05_tooltip_page");
+  const sc2 = await centre(`document.querySelector('.page[data-cat="FILT"][data-pi="0"] .lane .slot')`);
+  await click(sc2.x, sc2.y);
+  await sleep(200);
+  const insp = await js("[...document.querySelectorAll('#inspector .desc')].map((e) => e.textContent)");
+  ok(insp[0] === desc.items.filter_cutoff.desc && insp[1] === desc.pages["FILT/FILTER"], `   the inspector: the slot's description and the page's (${insp.length} blocks: ${insp.map((x) => x.slice(0, 40)).join(" / ")})`);
+  await js(`(() => { const s = document.querySelector("#search"); s.value = "semitones"; s.dispatchEvent(new Event("input")); return true; })()`);
+  const found = await js("[...document.querySelectorAll('#traylist .chip')].map((e) => e.querySelector('.c') && e.dataset.tip.split(' · ')[1].split(/[\\s(]/)[0])");
+  ok(found.includes("pitch") && found.includes("harm_interval"), `   the tray's search finds descriptions: "semitones" -> ${found.length} (${found.slice(0, 6).join(" ")})`);
+  await js(`(() => { const s = document.querySelector("#search"); s.value = ""; s.dispatchEvent(new Event("input")); return true; })()`);
+  await mouse("mouseMoved", 5, 5);
+
+  // 8. the FM-1 panel, by the mouse (CDP input on the drawn panel: the same path as a click)
+  const at = async (kind, idx) => { const p = await js(`(() => { const c = document.querySelector("#panel"); c.scrollIntoView({ block: "end" }); return designer.panel.where(${JSON.stringify(kind)}, ${idx}); })()`); return p; };
+  await js("designer.goto('SRC', 0, 0), designer.run(60), true");
+  const seq = await at("btn", 9);
+  await mouse("mousePressed", seq.x, seq.y); await sleep(150); await mouse("mouseReleased", seq.x, seq.y);
+  await sleep(300);
+  const s8 = await js("designer.state()");
+  const lbl8 = await js("designer.panel.labels()");
+  ok(s8.cat === 0 && s8.title === "TRIG", `8. the panel's SEQ button (drawn "${lbl8.buttons[9]}") pressed: the preview is on ${["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"][s8.cat]}/${s8.title}`);
+  let maxLit = 0, litKeys = new Set();
+  for (let i = 0; i < 20; i++) { const lv = await js("designer.panel.keyLevels()"); lv.forEach((v, k) => { if (k <= 26 && v >= 176) litKeys.add(k); maxLit = Math.max(maxLit, v); }); await sleep(60); }
+  ok(litKeys.size > 0, `   the key LEDs light for the trigs (keys lit over 1.2 s: ${[...litKeys].join(" ")})`);
+  await shot("06_panel_trig");
+  // SHIFT (GLO) latched with a Shift-click: the live labels on the buttons change
+  const glo = await at("btn", 5);
+  const before = (await js("designer.panel.labels()")).buttons;
+  await click(glo.x, glo.y, { modifiers: 8 });
+  await sleep(300);
+  const held = await js("designer.panel.held()");
+  const after = (await js("designer.panel.labels()")).buttons;
+  const changed = after.map((b, i) => (b !== before[i] ? `${before[i]}->${b}` : null)).filter(Boolean);
+  ok(held.btn[5] && changed.length >= 3, `   Shift-click latches SHIFT: live labels on the buttons change (${changed.join(" ")})`);
+  await shot("07_panel_shift_labels");
+  await click(glo.x, glo.y);
+  await sleep(200);
+  ok(!(await js("designer.panel.held()")).btn[5], "   a click on it lets SHIFT go");
+  // a lower key (step 1) latched + KNOB 1 turned on the panel: the step's lock (the screen's lock frame, K1's filled chip)
+  await js("designer.context({ filt: 1 }), designer.goto('FILT', 0, 0), designer.run(60), true");
+  const orange = (px, x0, y0, x1, y1) => { let n = 0; for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const o = (y * 240 + x) * 4; if (px[o] > 225 && px[o + 1] > 80 && px[o + 1] < 130 && px[o + 2] < 70) n++; } return n; };
+  const pxA = await js("designer.pixels()");
+  const k0 = await at("key", 0);
+  await click(k0.x, k0.y, { modifiers: 8 });
+  await sleep(250);
+  const pxB = await js("designer.pixels()");
+  const frameA = orange(pxA, 0, 0, 240, 3), frameB = orange(pxB, 0, 0, 240, 3);
+  ok((await js("designer.panel.held()")).key[0] && frameB > 600 && frameA < 100, `   Shift-click on the lower key 1: held, the screen's lock frame (orange top edge ${frameA} -> ${frameB} px)`);
+  const chipA = orange(pxB, 4, 168, 120, 196);
+  const kn1 = await at("knob", 3);
+  for (let i = 0; i < 6; i++) { await mouse("mouseWheel", kn1.x, kn1.y, { deltaX: 0, deltaY: -60 }); await sleep(40); }
+  await sleep(250);
+  const pxC = await js("designer.pixels()");
+  const chipB = orange(pxC, 4, 168, 120, 196);
+  ok(chipB > chipA + 40, `   the wheel on the panel's KN1: KNOB 1 locked on that step (K1's orange chip ${chipA} -> ${chipB} px)`);
+  await shot("08_panel_plock");
+  await click(k0.x, k0.y);
+  await sleep(150);
+  ok(!(await js("designer.panel.held()")).key[0], "   a click on the key lets it go");
   ok(exceptions.length === 0, `   no page exceptions (${exceptions.length})`);
 } catch (e) {
   ok(false, `the run: ${e.stack || e}`);

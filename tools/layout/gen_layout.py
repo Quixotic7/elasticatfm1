@@ -5,11 +5,16 @@ ec_layout.h), checked first. Also writes the packed text form the designer's pre
 tables of docs/FM1-CONTROLS.md (--docs: the section between the layout markers) and the canonical JSON (--format).
 
     gen_layout.py [JSON] [--c OUT.c] [--symbol EC_LAYOUT_SHIPPED] [--pack OUT.txt] [--docs FM1-CONTROLS.md]
-                  [--format] [--check] [--quiet]
+                  [--desc descriptions.json | --no-desc] [--format] [--check] [--quiet]
 
 Default JSON: design/layout/elasticat.json. Errors stop it (exit 1, nothing written); warnings are printed. The
 parameters (spec names -> EC_P_ ids, default labels) are read from src/seq/ec_params.c, so the generated file names
 the ids by their enum symbols. The JSON shape is in tools/layout/README.md.
+
+Descriptions (design/layout/descriptions.json, or --desc): every placeable item's and page's short text for the
+designer's tooltips and the "Parameter reference" in docs/FM1-CONTROLS.md (--docs: between the params markers). They
+are never compiled into the cart. Checked with the design: an error for a description of an unknown item, category or
+option; a warning for a placeable item, page, category or option without one, or a page key no page has.
 """
 import json
 import os
@@ -543,6 +548,15 @@ class Gen:
                 return True
         return False
 
+    def page_items(self, p):
+        """the item names on page p, every variant, in order"""
+        _, _, _, v0, nv, _ = self.pages[p]
+        out = []
+        for v in range(v0, v0 + nv):
+            _, _, i0, n, _ = self.vars[v]
+            out += [it[4] for it in self.items[i0:i0 + n] if it[4]]
+        return out
+
     def page_rows(self, p, fmtw, name=None):
         t, pic, arg, v0, nv, _ = self.pages[p]
         rows = []
@@ -568,6 +582,121 @@ class Gen:
 
 
 # ---------------------------------------------------------------------------------------------- canonical JSON
+# ------------------------------------------------------------------------------------------------ descriptions
+DESC_DEFAULT = os.path.join(ROOT, "design/layout/descriptions.json")
+DESC_OPTS = {"machine": MACHINES, **OPTS}
+
+
+def page_keys(d):
+    """the description keys of a design's pages: CAT/TITLE, CAT/SETUP, bus:S1 (bus:S1/SETUP), bus:MST/SRC, F3"""
+    keys = []
+    for c in d.get("categories", []):
+        for p in c.get("pages", []):
+            keys.append("%s/%s" % (c.get("cat"), p.get("title")))
+        if c.get("setup") is not None:
+            keys.append("%s/SETUP" % c.get("cat"))
+    for b in d.get("bus", []):
+        keys.append("bus:%s" % b.get("bus"))
+        if b.get("setup") is not None:
+            keys.append("bus:%s/SETUP" % b.get("bus"))
+        if b.get("src") is not None:
+            keys.append("bus:%s/SRC" % b.get("bus"))
+    keys.append("F3")
+    return keys
+
+
+def check_desc(g, desc, design):
+    """the descriptions against the parameter table and the design (errors and warnings into g)"""
+    where = "descriptions"
+    if not isinstance(desc, dict) or desc.get("format") != "elasticat-descriptions" or desc.get("version") != 1:
+        g.err(where, "not an elasticat-descriptions version 1 file")
+        return
+    extra = set(desc) - {"format", "version", "cats", "pages", "options", "items"}
+    if extra:
+        g.err(where, "unknown field(s) %s" % ", ".join(sorted(extra)))
+    items = desc.get("items", {})
+    known = list(g.params) + list(SPECIAL)
+    for k, v in items.items():
+        if k not in g.params and k not in SPECIAL:
+            g.err(where, "a description of an unknown item '%s'" % k)
+        elif not isinstance(v, dict) or not str(v.get("name", "")).strip() or not str(v.get("desc", "")).strip():
+            g.err(where, "item '%s': needs a name and a desc" % k)
+    missing = [k for k in known if k not in items]
+    if missing:
+        g.warn(where, "no description for item(s) %s" % ", ".join(missing))
+    cats = desc.get("cats", {})
+    for k in cats:
+        if k not in CATS:
+            g.err(where, "a description of an unknown category '%s'" % k)
+    if [c for c in CATS if c not in cats]:
+        g.warn(where, "no description for category(ies) %s" % ", ".join(c for c in CATS if c not in cats))
+    opts = desc.get("options", {})
+    for dim, vals in opts.items():
+        if dim not in DESC_OPTS:
+            g.err(where, "a description of an unknown option kind '%s'" % dim)
+            continue
+        for v in vals:
+            if v not in DESC_OPTS[dim]:
+                g.err(where, "a description of an unknown %s '%s'" % (dim, v))
+    for dim, vals in DESC_OPTS.items():
+        miss = [v for v in vals if v not in opts.get(dim, {})]
+        if miss:
+            g.warn(where, "no description for %s %s" % (dim, ", ".join(miss)))
+    pages = desc.get("pages", {})
+    keys = page_keys(design)
+    miss = [k for k in keys if k not in pages]
+    if miss:
+        g.warn(where, "no description for page(s) %s" % ", ".join(miss))
+    stale = [k for k in pages if k not in keys]
+    if stale:
+        g.warn(where, "description(s) for page(s) this design does not have: %s" % ", ".join(stale))
+
+
+def desc_docs(g, desc):
+    """the docs' "Parameter reference": per category (where the shipped layout puts an item first) a table"""
+    items = desc.get("items", {})
+    home = {}
+    for ci, n in enumerate(CATS):
+        p0, np_, setup = g.cats[ci]
+        rng = list(range(p0, p0 + np_)) + ([setup] if setup >= 0 else [])
+        for pi in rng:
+            for it in g.page_items(pi):
+                home.setdefault(it, n)
+    rows = {n: [] for n in CATS + ["OTHER"]}
+    for k in list(g.params) + list(SPECIAL):
+        if k in items:
+            rows[home.get(k, "OTHER")].append(k)
+    esc = lambda t: str(t).replace("|", "\\|")
+    out = ["<!-- params:begin (generated by tools/layout/gen_layout.py from design/layout/descriptions.json: edit that, "
+           "not this) -->", "", "## Parameter reference", "",
+           "What every value does, grouped by the category whose pages show it first (the designer shows the same "
+           "text as tooltips). Label: the screen's own short name (a page may give it another).", ""]
+    for n in CATS + ["OTHER"]:
+        if not rows[n]:
+            continue
+        out += ["### %s%s" % (n, "" if n == "OTHER" else ": " + esc(desc.get("cats", {}).get(n, ""))), "",
+                "| Item | Label | Name | What it does |", "|---|---|---|---|"]
+        for k in rows[n]:
+            lb = SPECIAL[k][2] if k in SPECIAL else g.params[k][2]
+            out.append("| `%s` | %s | %s | %s |" % (k, esc(lb), esc(items[k]["name"]), esc(items[k]["desc"])))
+        out.append("")
+    opts = desc.get("options", {})
+    names = {"machine": "Machines", "warp": "Warp modes", "filter": "Filter machines", "fenv": "Filter envelope modes",
+             "env": "Amp envelope modes", "fx": "FX machines"}
+    out += ["### Machines and modes (what a page variant is for)", ""]
+    for dim, vals in DESC_OPTS.items():
+        if not opts.get(dim):
+            continue
+        out += ["**%s**" % names[dim], ""]
+        out += ["- **%s**: %s" % (v, opts[dim][v]) for v in vals if v in opts[dim]]
+        out.append("")
+    pages = desc.get("pages", {})
+    out += ["### Pages", "", "| Page | What it is for |", "|---|---|"]
+    out += ["| %s | %s |" % (esc(k), esc(pages[k])) for k in page_keys(g.d) if k in pages]
+    out += ["", "<!-- params:end -->"]
+    return "\n".join(out)
+
+
 def canonical(d):
     """the design's canonical text: two-space indent, a lane / a when / an item on one line (the designer writes the
     same: tools/layout/designer.js canonical())"""
@@ -611,10 +740,10 @@ def main(argv):
     i = 0
     while i < len(args):
         a = args[i]
-        if a in ("--c", "--symbol", "--pack", "--docs", "--root"):
+        if a in ("--c", "--symbol", "--pack", "--docs", "--root", "--desc"):
             opt[a] = args[i + 1]
             i += 2
-        elif a in ("--format", "--check", "--quiet"):
+        elif a in ("--format", "--check", "--quiet", "--no-desc"):
             opt[a] = True
             i += 1
         elif a.startswith("--"):
@@ -633,6 +762,15 @@ def main(argv):
     try:
         g = Gen(design, read_params(root))
         g.run()
+        desc = None
+        dpath = opt.get("--desc", DESC_DEFAULT)
+        if not opt.get("--no-desc") and ("--desc" in opt or os.path.exists(dpath)):
+            try:
+                desc = json.load(open(dpath))
+            except (OSError, ValueError) as e:
+                raise Fail("%s: %s" % (dpath, e))
+            if not g.errors:
+                check_desc(g, desc, design)
     except Fail as e:
         print("gen_layout: %s: %s" % (path, e), file=sys.stderr)
         return 1
@@ -663,7 +801,14 @@ def main(argv):
         if not m:
             print("gen_layout: %s has no layout markers" % opt["--docs"], file=sys.stderr)
             return 1
-        write_if_changed(opt["--docs"], doc[:m.start()] + g.docs() + doc[m.end():])
+        doc = doc[:m.start()] + g.docs() + doc[m.end():]
+        if desc is not None:
+            m = re.search(r"<!-- params:begin.*?<!-- params:end -->", doc, re.S)
+            if not m:
+                print("gen_layout: %s has no params markers" % opt["--docs"], file=sys.stderr)
+                return 1
+            doc = doc[:m.start()] + desc_docs(g, desc) + doc[m.end():]
+        write_if_changed(opt["--docs"], doc)
     return 0
 
 

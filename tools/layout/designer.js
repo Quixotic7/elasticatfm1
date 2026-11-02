@@ -4,6 +4,8 @@
 // from the design packed as tools/layout/gen_layout.py packs it (layout_compile.js). The design is a JSON file the
 // build compiles in: Export -> design/layout/elasticat.json.
 import * as L from "./layout_compile.js";
+import { Controls, DeviceView, panelLabels, KM, roleToMatrix } from "./fm1/panel.js";
+import { attachPointer, Keyboard } from "./fm1/input.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 function h(tag, attrs, ...kids) {
@@ -41,6 +43,8 @@ const S = {
   view: { cat: "SRC" },
   ctx: { mach: 1, warp: 1, filt: 1, fenv: 2, env: 2, fx: 1 }, busfx: [1, 1, 1], target: 0,
   st: null, compiled: null, lastGood: "", home: new Map(), msg: "",
+  desc: { cats: {}, pages: {}, options: {}, items: {} },   // design/layout/descriptions.json
+  panel: null,           // the drawn FM-1: {view, controls, ...}
 };
 
 // ------------------------------------------------------------------------------------------------ the module
@@ -57,6 +61,9 @@ async function boot() {
     turn: f("lw_turn", null, ["number", "number"]), press: f("lw_press", null, ["number", "number"]),
     state: f("lw_state", "string", []), value: f("lw_value", "string", ["number", "number"]),
     catalog: f("lw_catalog", "string", []),
+    button: f("lw_button", null, ["number", "number"]), key: f("lw_key", null, ["number", "number", "number"]),
+    master: f("lw_master", null, ["number"]), leds: f("lw_leds", "number", []), wiring: f("lw_wiring", "string", []),
+    labels: f("lw_labels", "string", []),
   };
   S.api.boot("/demo", "/demo.flash");
   S.catalog = JSON.parse(S.api.catalog());
@@ -67,6 +74,7 @@ async function boot() {
   S.shippedText = await (await fetch("shipped.json")).text();
   S.shipped = JSON.parse(S.shippedText);
   S.shippedPack = await (await fetch("shipped.pack")).text();
+  try { S.desc = await (await fetch("descriptions.json")).json(); } catch (e) { /* no descriptions: no tooltips */ }
   computeHome();
   let start = S.shipped, restored = false;
   try {
@@ -79,6 +87,7 @@ async function boot() {
   await fillOpen();
   apply(false);
   if (restored) flash("restored the design from this browser");
+  setupPanel();
   requestAnimationFrame(loop);
   bindUI();
   window.designer.ready = true;
@@ -90,7 +99,10 @@ function loop(t) {
   lastT = t;
   S.api.run(dt);
   draw();
-  if (t - lastVals > 250) { lastVals = t; readState(); renderKnobs(); refreshValues(); markActive(); }
+  drawPanel();
+  // the live values and the unit's page in the tree: text and classes updated in place, never a rebuild; and not at
+  // all while a dropdown is open (an open <select> has the focus: nothing near it may move)
+  if (t - lastVals > 250 && document.activeElement?.tagName !== "SELECT") { lastVals = t; readState(); refreshValues(); markActive(); }
   requestAnimationFrame(loop);
 }
 const ctx2d = () => $("#screen").getContext("2d");
@@ -218,11 +230,46 @@ function itemInfo(slot) {
   return { name, kind: 1, id: p.i, label: label || p.label, own: p.label, relabel: !!label };
 }
 
+// ------------------------------------------------------------------------------------------------ descriptions
+// design/layout/descriptions.json (gen_layout.py checks it): item id -> {name, desc}; "CAT/TITLE", "CAT/SETUP",
+// "bus:S1", "bus:MST/SRC", "F3" -> the page's; the option values a variant picks -> what that machine / mode is
+function itemDesc(name) { return (name && S.desc.items[name]) || null; }
+function itemTip(name, extra) {
+  const d = itemDesc(name);
+  return `${d ? d.name : name} · ${name}${extra ? ` (${extra})` : ""}\n${d ? d.desc : "(no description)"}`;
+}
+function pageKey(sp) {
+  if (!sp) return null;
+  if (sp.scope === "page") return `${sp.cat}/${catObj(sp.cat)?.pages[sp.pi]?.title}`;
+  if (sp.scope === "setup") return `${sp.cat}/SETUP`;
+  if (sp.scope === "bus") return `bus:${S.design.bus[sp.bus].bus}`;
+  if (sp.scope === "bsetup") return `bus:${S.design.bus[sp.bus].bus}/SETUP`;
+  if (sp.scope === "msrc") return "bus:MST/SRC";
+  if (sp.scope === "f3") return "F3";
+  return null;
+}
+// what a variant's conditions mean: "COMB: a comb filter ..."
+function whenDesc(w) {
+  const out = [];
+  for (const [k, vals] of Object.entries(w || {})) for (const v of vals) {
+    if (k === "machine") for (const m of L.MCLASS[v] || []) { const n = L.MACHINES[m - 1]; const t = S.desc.options.machine?.[n]; if (t) out.push(`${n}: ${t}`); }
+    else { const t = S.desc.options[k]?.[v]; if (t) out.push(`${v}: ${t}`); }
+  }
+  return out;
+}
+function pageTip(sp, page, vi) {
+  const key = pageKey(sp), d = S.desc.pages[key];
+  let t = `${key}\n${d || "(no description)"}`;
+  const src = page && (L.sourcePage(S.design, page) || page);
+  if (src && vi >= 0 && src.variants?.[vi]) { const w = whenDesc(src.variants[vi].when); if (w.length) t += `\n\nThis variant (${L.whenText(src.variants[vi].when)}):\n` + w.join("\n"); }
+  return t;
+}
+
 function slotEl(ref) {
   const slot = getSlot(ref);
   const info = itemInfo(slot);
   const e = h("div", { class: "slot" + (info ? "" : " empty") + (info && info.relabel ? " relabel" : "") + (info && info.special ? " special" : "") +
-      (sameRef(ref, S.sel) ? " sel" : ""), draggable: info ? "true" : "false", title: info ? `${info.name}${info.relabel ? ` (label ${info.label}, its own ${info.own})` : ""}` : "empty: drop a parameter here" },
+      (sameRef(ref, S.sel) ? " sel" : ""), draggable: info ? "true" : "false", "data-tip": info ? itemTip(info.name, info.relabel ? `label ${info.label}, its own ${info.own}` : "") : "empty: drop a parameter here" },
     h("span", { class: "lb", text: info ? info.label : "—" }),
     h("span", { class: "vl", text: info && !info.bad ? S.api.value(info.kind, info.id) : "" }),
     h("span", { class: "k", text: "K" + (ref.k + 1) }));
@@ -270,12 +317,12 @@ function variantRow(scope, page, refBase, bus) {
   const cur = curVariant(scope, page, bus);
   const row = h("div", { class: "vrow" });
   if (vs.length) {
-    const sel = h("select", { title: "the variant shown (picks the preview's context to match)", onchange: (ev) => pickVariant(scope, src, +ev.target.value, bus) },
+    const sel = h("select", { title: "the variant shown (picks the preview's context to match)", "data-key": `var-${scope}-${refBase.cat}-${refBase.pi}-${bus}`, onchange: (ev) => pickVariant(scope, src, +ev.target.value, bus) },
       vs.map((v, i) => h("option", { value: i, selected: i === cur }, (v.title ? v.title + " · " : "") + L.whenText(v.when))),
       h("option", { value: -1, selected: cur === -1 }, "otherwise (the page's own)"));
     row.append("VARIANT", sel);
   }
-  const dims = h("select", { title: "give the current context its own lanes", onchange: (ev) => { addVariant(refBase, src, ev.target.value, bus); ev.target.value = ""; } },
+  const dims = h("select", { title: "give the current context its own lanes", "data-key": `addvar-${scope}-${refBase.cat}-${refBase.pi}-${bus}`, onchange: (ev) => { addVariant(refBase, src, ev.target.value, bus); ev.target.value = ""; } },
     h("option", { value: "" }, "+ VARIANT FOR…"),
     ["machine", "warp", "filter", "fenv", "env", "fx"].map((d) => h("option", { value: d }, `this ${d}: ${ctxValueName(d, scope === "bus" ? bus : -1)}`)));
   row.append(dims);
@@ -329,7 +376,7 @@ function pageEl(c, pi) {
   const vref = { scope: "page", cat: c.cat, pi, vi: cur };
   const isSel = S.selPage && S.selPage.scope === "page" && S.selPage.cat === c.cat && S.selPage.pi === pi;
   const e = h("div", { class: "page" + (isSel ? " sel" : ""), "data-cat": c.cat, "data-pi": pi });
-  const title = h("input", { class: "title", value: p.title, maxlength: Math.floor((L.TITLE_ROOM + 1) / 4) - c.cat.length - 1, spellcheck: "false", title: "the page's name (the header shows CAT/NAME)",
+  const title = h("input", { class: "title", value: p.title, "data-key": `title-${c.cat}-${pi}`, maxlength: Math.floor((L.TITLE_ROOM + 1) / 4) - c.cat.length - 1, spellcheck: "false", title: "the page's name (the header shows CAT/NAME)",
     onchange: (ev) => { const t = ev.target.value.toUpperCase().trim(); if (t && t !== p.title) edit(() => { renameRefs(c.cat, p.title, t); p.title = t; }); },
     oninput: (ev) => { ev.target.value = ev.target.value.toUpperCase(); } });
   const grip = h("span", { class: "grip", draggable: fixed ? "false" : "true", title: fixed ? "a fixed page stays in its category" : "drag onto another category or page to move it" }, "⠿");
@@ -339,13 +386,13 @@ function pageEl(c, pi) {
   e.addEventListener("dragleave", () => e.classList.remove("drop"));
   e.addEventListener("drop", (ev) => { if (!drag || !drag.page) return; ev.preventDefault(); e.classList.remove("drop"); const d = drag.page; drag = null; movePage(d.cat, d.pi, c.cat, pi); });
   const picSel = fixed ? h("span", { class: "fixed", title: "this page has behaviour of its own: its picture and category are fixed; its knobs are yours" }, "FIXED · " + PIC_NAMES[p.picture])
-    : h("select", { title: "the picture above the cells", onchange: (ev) => edit(() => { p.picture = ev.target.value; if (p.picture === "macro") p.macro = p.macro || 1; else delete p.macro; }) },
+    : h("select", { title: "the picture above the cells", "data-key": `pic-${c.cat}-${pi}`, onchange: (ev) => edit(() => { p.picture = ev.target.value; if (p.picture === "macro") p.macro = p.macro || 1; else delete p.macro; }) },
       FREE_PICS.map((x) => h("option", { value: x, selected: x === p.picture }, PIC_NAMES[x])));
   const macroSel = p.picture === "macro" ? h("select", { title: "which macro", onchange: (ev) => edit(() => { p.macro = +ev.target.value; }) },
     [1, 2, 3, 4].map((m) => h("option", { value: m, selected: m === p.macro }, "M" + m))) : null;
-  const moveSel = fixed ? null : h("select", { title: "move the page to another category", onchange: (ev) => { const to = ev.target.value; if (to) movePage(c.cat, pi, to, catObj(to).pages.length); } },
+  const moveSel = fixed ? null : h("select", { title: "move the page to another category", "data-key": `move-${c.cat}-${pi}`, onchange: (ev) => { const to = ev.target.value; if (to) movePage(c.cat, pi, to, catObj(to).pages.length); } },
     h("option", { value: "" }, "MOVE TO…"), L.CATS.filter((x) => x !== c.cat).map((x) => h("option", { value: x }, x)));
-  e.append(h("div", { class: "prow", onclick: () => selectPage({ scope: "page", cat: c.cat, pi }) },
+  e.append(h("div", { class: "prow", "data-tip": pageTip({ scope: "page", cat: c.cat, pi }, p, cur), onclick: (ev) => { if (!ev.target.closest("select, input, button")) selectPage({ scope: "page", cat: c.cat, pi }); } },
     grip, title, picSel, macroSel, p.note ? h("span", { class: "notemark", title: p.note }, "✎") : null, h("span", { class: "sp" }),
     h("button", { class: "small", title: "earlier", disabled: pi === 0, onclick: (ev) => { ev.stopPropagation(); movePage(c.cat, pi, c.cat, pi - 1); } }, "↑"),
     h("button", { class: "small", title: "later", disabled: pi >= c.pages.length - 1, onclick: (ev) => { ev.stopPropagation(); movePage(c.cat, pi, c.cat, pi + 2); } }, "↓"),
@@ -383,7 +430,7 @@ function renderTree() {
   for (const c of S.design.categories) {
     const on = S.st && L.CATS[S.st.cat] === c.cat;
     const box = h("div", { class: "cat" + (on ? " on" : ""), "data-cat": c.cat });
-    const head = h("div", { class: "cathead", onclick: () => { S.view.cat = c.cat; tapCategory(c.cat); } },
+    const head = h("div", { class: "cathead", "data-tip": `${c.cat}\n${S.desc.cats[c.cat] || ""}`, onclick: (ev) => { if (ev.target.closest("button")) return; S.view.cat = c.cat; tapCategory(c.cat); } },
       h("span", { class: "n" }, c.cat), h("span", { class: "dim" }, `${c.pages.length} page${c.pages.length > 1 ? "s" : ""}`), h("span", { class: "sp" }),
       h("button", { class: "small", title: "a new page at the end", disabled: c.pages.length >= L.MAX_PAGES, onclick: (ev) => { ev.stopPropagation(); addPage(c); } }, "+ PAGE"));
     head.addEventListener("dragover", (ev) => { if (drag && drag.page) { ev.preventDefault(); head.classList.add("drop"); } });
@@ -393,7 +440,7 @@ function renderTree() {
     c.pages.forEach((_, pi) => box.append(pageEl(c, pi)));
     const sref = { scope: "setup", cat: c.cat, vi: -1 };
     const setup = h("div", { class: "page setup", "data-cat": c.cat, "data-setup": 1 },
-      h("div", { class: "prow" }, h("b", {}, "SETUP"), h("span", { class: "dim" }, " (hold or SHIFT + the button)"), h("span", { class: "sp" }),
+      h("div", { class: "prow", "data-tip": pageTip({ scope: "setup", cat: c.cat }), onclick: (ev) => { if (!ev.target.closest("select, input, button")) selectPage({ scope: "setup", cat: c.cat }); } }, h("b", {}, "SETUP"), h("span", { class: "dim" }, " (hold or SHIFT + the button)"), h("span", { class: "sp" }),
         c.setup ? h("button", { class: "small", title: "no setup list for this category", onclick: () => edit(() => { delete c.setup; }) }, "✕") : null));
     if (c.setup) setup.append(lanesEl(sref));
     else setup.append(h("button", { class: "small", onclick: () => edit(() => { c.setup = [[null, null, null, null]]; }) }, "+ SETUP LIST"));
@@ -406,7 +453,7 @@ function renderTree() {
     const p = b.page;
     const vref = { scope: "bus", bus: bi, vi: curVariant("bus", p, bi) };
     const e = h("div", { class: "page", "data-bus": bi });
-    e.append(h("div", { class: "prow", onclick: () => selectPage({ scope: "bus", bus: bi }) }, h("b", {}, b.bus), " ",
+    e.append(h("div", { class: "prow", "data-tip": pageTip({ scope: "bus", bus: bi }, p, vref.vi), onclick: (ev) => { if (!ev.target.closest("select, input, button")) selectPage({ scope: "bus", bus: bi }); } }, h("b", {}, b.bus), " ",
       h("input", { class: "title", value: p.title, spellcheck: "false", onchange: (ev) => { const v = ev.target.value.toUpperCase().trim(); if (v) edit(() => { p.title = v; }); } }),
       h("span", { class: "dim" }, PIC_NAMES[p.picture || "fx"])));
     if (p.same_as) {
@@ -420,12 +467,12 @@ function renderTree() {
     if (b.setup) e.append(h("div", { class: "h" }, b.bus + " SETUP"), lanesEl({ scope: "bsetup", bus: bi, vi: -1 }));
     if (b.src) {
       const sp = b.src;
-      e.append(h("div", { class: "h" }, "MST: ITS SRC PAGE (FIXED · mixer)"), lanesEl({ scope: "msrc", bus: 2, vi: curVariant("msrc", sp) }, sp));
+      e.append(h("div", { class: "h", "data-tip": pageTip({ scope: "msrc" }) }, "MST: ITS SRC PAGE (FIXED · mixer)"), lanesEl({ scope: "msrc", bus: 2, vi: curVariant("msrc", sp) }, sp));
     }
     bx.append(e);
   });
   t.append(bx);
-  const f3 = h("div", { class: "cat" }, h("div", { class: "cathead", onclick: () => { S.api.f3(1); readState(); } }, h("span", { class: "n" }, "F3"), h("span", { class: "dim" }, "OCT- + OCT+, or PLAY held: one lane")));
+  const f3 = h("div", { class: "cat" }, h("div", { class: "cathead", "data-tip": pageTip({ scope: "f3" }), onclick: () => { S.api.f3(1); readState(); selectPage({ scope: "f3" }); } }, h("span", { class: "n" }, "F3"), h("span", { class: "dim" }, "OCT- + OCT+, or PLAY held: one lane")));
   f3.append(h("div", { class: "page" }, lanesEl({ scope: "f3", vi: -1 })));
   t.append(f3);
   t.scrollTop = top;
@@ -445,9 +492,32 @@ function select(ref, nav) {
   else if (ref.scope === "bus") S.selPage = { scope: "bus", bus: ref.bus };
   if (ref.cat) S.view.cat = ref.cat;
   if (nav) gotoRef(ref);
-  render();
+  renderSelection();
 }
-function selectPage(sp) { S.selPage = sp; if (sp.cat) S.view.cat = sp.cat; if (sp.scope === "page") S.api.goto(L.CATS.indexOf(sp.cat), sp.pi, 0, 0); else if (sp.scope === "bus") { S.target = 6 + sp.bus; pushCtx(); S.api.goto(L.CATS.includes(S.view.cat) && !["MST", "FILE", "PAT"].includes(S.view.cat) ? L.CATS.indexOf(S.view.cat) : 4, 0, 0, 0); } readState(); render(); }
+// a page picked: the preview goes there; the tree is not rebuilt (only the marks, the inspector and the tray)
+function selectPage(sp) {
+  S.selPage = sp;
+  if (sp.cat) S.view.cat = sp.cat;
+  if (sp.scope === "page") { if (S.target >= 6) { S.target = 0; S.api.target(0); } S.api.f3(0); S.api.goto(L.CATS.indexOf(sp.cat), sp.pi, 0, 0); }
+  else if (sp.scope === "setup") { if (S.target >= 6) { S.target = 0; S.api.target(0); } S.api.f3(0); S.api.goto(L.CATS.indexOf(sp.cat), 0, 0, 1); }
+  else if (sp.scope === "bus") { S.target = 6 + sp.bus; pushCtx(); S.api.f3(0); S.api.goto(L.CATS.includes(S.view.cat) && !["MST", "FILE", "PAT"].includes(S.view.cat) ? L.CATS.indexOf(S.view.cat) : 4, 0, 0, 0); }
+  readState();
+  renderSelection();
+}
+// the selection's marks in the tree, the inspector, the tray (no rebuild of the tree: its controls stay as they are)
+function renderSelection() {
+  document.querySelectorAll("#tree .slot").forEach((e) => e.classList.toggle("sel", sameRef(e._ref, S.sel)));
+  const sp = S.selPage;
+  document.querySelectorAll("#tree .page").forEach((e) => {
+    const on = !!sp && ((sp.scope === "page" && e.dataset.cat === sp.cat && e.dataset.pi === String(sp.pi)) ||
+      (sp.scope === "setup" && e.dataset.setup && e.dataset.cat === sp.cat) || (sp.scope === "bus" && e.dataset.bus === String(sp.bus)));
+    e.classList.toggle("sel", on);
+  });
+  if (S.st) S.lastCat = L.CATS[S.st.cat];
+  renderInspector();
+  renderTray();
+  markActive();
+}
 function gotoRef(ref) {
   S.api.f3(0);
   switch (ref.scope) {
@@ -473,38 +543,48 @@ function tapCategory(cat) {
 // the page / lane on the unit now, marked in the tree
 function markActive() {
   if (!S.st) return;
-  document.querySelectorAll(".lane.on").forEach((x) => x.classList.remove("on"));
-  document.querySelectorAll(".page.on").forEach((x) => x.classList.remove("on"));
-  document.querySelectorAll(".cat.on").forEach((x) => x.classList.remove("on"));
   const st = S.st, cat = L.CATS[st.cat];
+  const want = new Set();
+  const mark = () => {        // (classes changed only where they differ: no style churn while the demo plays)
+    for (const q of [".lane.on", ".page.on", ".cat.on"]) document.querySelectorAll(q).forEach((x) => { if (!want.has(x)) x.classList.remove("on"); });
+    for (const x of want) if (!x.classList.contains("on")) x.classList.add("on");
+  };
   let pe = null;
-  document.querySelectorAll("#buttons .grp:first-child button").forEach((b) => b.classList.toggle("on", b.textContent === cat && !st.f3));
+  document.querySelectorAll("#buttons .grp:first-child button").forEach((b) => { const on = b.textContent === cat && !st.f3; if (b.classList.contains("on") !== on) b.classList.toggle("on", on); });
   if (S.lastCat !== cat) {                 // the unit went to another category: the tray follows
     S.lastCat = cat;
     if (S.view.cat !== cat) { S.view.cat = cat; renderTray(); }
   }
-  if (st.f3) return;
+  if (st.f3) return mark();
   if (st.bus && !["MST", "FILE", "PAT"].includes(cat)) {
     pe = st.bus === 3 && cat === "SRC" ? null : document.querySelector(`.page[data-bus="${st.bus - 1}"]`);
   } else if (st.settings) pe = document.querySelector(`.page.setup[data-cat="${cat}"]`);
   else pe = document.querySelector(`.page[data-cat="${cat}"][data-pi="${st.page}"]`);
-  document.querySelector(`.cat[data-cat="${cat}"]`)?.classList.add("on");
-  if (!pe) return;
-  pe.classList.add("on");
-  pe.querySelectorAll(".lane")[st.lane]?.classList.add("on");
+  const ce = document.querySelector(`.cat[data-cat="${cat}"]`);
+  if (ce) want.add(ce);
+  if (pe) { want.add(pe); const le = pe.querySelectorAll(".lane")[st.lane]; if (le) want.add(le); }
+  mark();
 }
 function refreshValues() {
   document.querySelectorAll("#tree .slot:not(.empty)").forEach((e) => {
     const info = itemInfo(getSlot(e._ref));
-    if (info && !info.bad) e.querySelector(".vl").textContent = S.api.value(info.kind, info.id);
+    if (!info || info.bad) return;
+    const v = S.api.value(info.kind, info.id), t = e.querySelector(".vl");
+    if (t.textContent !== v) t.textContent = v;
   });
 }
 
 // ------------------------------------------------------------------------------------------------ the unit's controls
+function optTip(label, dim, v) {
+  const t = dim && S.desc.options[dim]?.[v];
+  return `${label}: ${v}${t ? "\n" + t : ""}\n(the preview's context: pages that depend on it show the variant for it)`;
+}
 function renderCtx() {
   const bar = $("#ctxbar");
   bar.innerHTML = "";
-  const sel = (label, opts, val, on) => h("label", {}, label, h("select", { onchange: (ev) => on(+ev.target.value) }, opts.map((o, i) => h("option", { value: i + 1, selected: i + 1 === val }, o))));
+  const dim = { MACHINE: "machine", WARP: "warp", FILTER: "filter", "F.ENV": "fenv", "AMP ENV": "env" };
+  const sel = (label, opts, val, on) => h("label", { "data-tip": optTip(label, dim[label] || (/FX$/.test(label) ? "fx" : null), opts[val - 1]) }, label,
+    h("select", { "data-key": "ctx-" + label, onchange: (ev) => on(+ev.target.value) }, opts.map((o, i) => h("option", { value: i + 1, selected: i + 1 === val }, o))));
   bar.append(
     sel("TARGET", TARGETS, S.target + 1, (v) => { S.target = v - 1; pushCtx(); render(); }),
     sel("MACHINE", L.MACHINES, S.ctx.mach, (v) => { S.ctx.mach = v; pushCtx(); render(); }),
@@ -515,42 +595,12 @@ function renderCtx() {
     sel("INSERT FX", L.OPTS.fx, S.ctx.fx, (v) => { S.ctx.fx = v; pushCtx(); render(); }),
     ...[0, 1, 2].map((b) => sel(["S1", "S2", "MST"][b] + " FX", L.OPTS.fx, S.busfx[b], (v) => { S.busfx[b] = v; pushCtx(); render(); })));
 }
+// the category buttons (as on the unit: again = the next page); the rest of the panel is the drawn FM-1 below
 function renderButtons() {
   const b = $("#buttons");
   b.innerHTML = "";
   const st = S.st || {};
-  b.append(h("div", { class: "grp" }, L.CATS.map((c) => h("button", { class: L.CATS[st.cat] === c && !st.f3 ? "on" : "", title: CAT_BTN[c] ? `the ${CAT_BTN[c]} button: its page; again: the next page` : "the MST key", onclick: () => { S.view.cat = c; tapCategory(c); render(); } }, c))));
-  b.append(h("div", { class: "grp" },
-    h("button", { title: "SELECT back: the previous lane / page", onclick: () => { S.api.turn(0, -1); S.api.run(30); readState(); markActive(); renderKnobs(); } }, "◀ SELECT"),
-    h("button", { title: "SELECT on: the next lane, on into the next page", onclick: () => { S.api.turn(0, 1); S.api.run(30); readState(); markActive(); renderKnobs(); } }, "SELECT ▶"),
-    h("button", { title: "the category's setup (hold / SHIFT + the button)", onclick: () => { const st2 = S.st; S.api.goto(st2.cat, st2.page, 0, st2.settings ? 0 : 1); readState(); markActive(); } }, "SETUP"),
-    h("button", { title: "HOME", onclick: () => { S.api.press(BTN.HOME, 60); S.api.run(80); readState(); markActive(); } }, "HOME"),
-    h("button", { title: "play / pause", onclick: () => { S.api.press(BTN.PLAY, 60); S.api.run(80); } }, "PLAY")));
-}
-function renderKnobs() {
-  const k = $("#knobs");
-  const st = S.st;
-  if (!st) return;
-  const roles = [[0, "SELECT"], [3, "KNOB 1"], [4, "KNOB 2"], [5, "KNOB 3"], [6, "KNOB 4"]];
-  if (!k.children.length) {
-    for (const [role, name] of roles) {
-      const e = h("div", { class: "knob" + (role >= 3 ? " k" : ""), title: "wheel or drag up / down: turn it" }, h("div", { class: "r" }, name), h("div", { class: "lbl" }), h("div", { class: "val" }));
-      e.addEventListener("wheel", (ev) => { ev.preventDefault(); S.api.turn(role, ev.deltaY < 0 ? 1 : -1); }, { passive: false });
-      let y0 = null;
-      e.addEventListener("pointerdown", (ev) => { y0 = ev.clientY; e.setPointerCapture(ev.pointerId); });
-      e.addEventListener("pointermove", (ev) => { if (y0 == null) return; const d = Math.trunc((y0 - ev.clientY) / 6); if (d) { S.api.turn(role, d); y0 -= d * 6; } });
-      e.addEventListener("pointerup", () => { y0 = null; });
-      e._role = role;
-      k.append(e);
-    }
-    k.append(h("div", { class: "r dim", style: "font-size:10px;color:var(--l5)" }, "the labels are the unit's live panel labels (ec_app_labels)"));
-  }
-  [...k.querySelectorAll(".knob")].forEach((e) => {
-    const r = e._role;
-    e.querySelector(".lbl").textContent = st.labels[r] || "";
-    const it = r >= 3 ? st.items[st.lane * 4 + r - 3] : null;
-    e.querySelector(".val").textContent = it && it.label ? it.value : "";
-  });
+  b.append(h("div", { class: "grp" }, L.CATS.map((c) => h("button", { class: L.CATS[st.cat] === c && !st.f3 ? "on" : "", "data-tip": `${c}${CAT_BTN[c] ? ` (the ${CAT_BTN[c]} button: its page; again: the next page)` : " (the MST upper key)"}\n${S.desc.cats[c] || ""}`, onclick: () => { S.view.cat = c; tapCategory(c); renderTray(); } }, c))));
 }
 
 // ------------------------------------------------------------------------------------------------ the side
@@ -565,13 +615,23 @@ function renderInspector() {
       const lab = h("input", { class: "lab", value: L.slotLabel(slot) || "", placeholder: info.own, maxlength: L.LABEL_MAX, spellcheck: "false",
         oninput: (ev) => { ev.target.value = ev.target.value.toUpperCase(); },
         onchange: (ev) => { const v = ev.target.value.toUpperCase().trim(); edit(() => setSlot(S.sel, v && v !== info.own ? { item: info.name, label: v } : info.name)); } });
-      box.append(h("div", { class: "row" }, h("span", { class: "big" }, info.label), h("span", { class: "dim" }, info.name)),
+      const d = itemDesc(info.name);
+      box.append(h("div", { class: "row" }, h("span", { class: "big" }, info.label), h("span", { class: "dim" }, info.name), d ? h("span", { class: "dname" }, d.name) : null),
+        h("div", { class: "desc" }, d ? d.desc : "(no description in design/layout/descriptions.json)"),
         h("div", { class: "row" }, "LABEL", lab, h("span", { class: "dim" }, `its own: ${info.own}`)),
         h("div", { class: "row" }, h("button", { onclick: () => edit(() => setSlot(S.sel, null)) }, "CLEAR SLOT"), h("span", { class: "dim" }, "or drag it to the tray")));
     } else box.append(h("div", { class: "row dim" }, "empty: drag a parameter here, or click one in the tray"));
   }
   const sp = S.selPage;
   const page = sp && (sp.scope === "page" ? catObj(sp.cat)?.pages[sp.pi] : sp.scope === "bus" ? S.design.bus[sp.bus].page : null);
+  if (sp && pageKey(sp)) {
+    const vi = page ? curVariant(sp.scope === "bus" ? "bus" : "page", page, sp.bus) : -1;
+    const src = page && (L.sourcePage(S.design, page) || page);
+    const w = src && vi >= 0 && src.variants?.[vi] ? whenDesc(src.variants[vi].when) : [];
+    box.append(h("div", { class: "h" }, "PAGE ", h("span", { class: "dim" }, pageKey(sp))),
+      h("div", { class: "desc pdesc" }, S.desc.pages[pageKey(sp)] || "(no description in design/layout/descriptions.json)"),
+      w.length ? h("div", { class: "desc vdesc" }, h("b", {}, `VARIANT ${L.whenText(src.variants[vi].when)}: `), w.join(" · ")) : null);
+  }
   if (page) {
     box.append(h("div", { class: "h" }, "PAGE NOTE ", h("span", { class: "dim" }, sp.scope === "page" ? `${sp.cat}/${page.title}` : `bus ${S.design.bus[sp.bus].bus}`)));
     box.append(h("textarea", { placeholder: "feedback that isn't a slot move: saved in the design", onchange: (ev) => edit(() => { const v = ev.target.value; if (v.trim()) page.note = v; else delete page.note; }) }, page.note || ""));
@@ -597,13 +657,14 @@ function renderTray() {
   const { inCat, all } = placedNow(cat);
   const names = [...S.catalog.map((p) => p.name), ...Object.keys(L.SPECIAL)];
   const label = (n) => (L.SPECIAL[n] ? L.SPECIAL[n][2] : S.byName.get(n).label);
-  let shown = names.filter((n) => (q ? n.toLowerCase().includes(q) || label(n).toLowerCase().includes(q) : S.home.get(n) === cat && !inCat.has(n)));
+  const dtext = (n) => { const d = itemDesc(n); return d ? (d.name + " " + d.desc).toLowerCase() : ""; };
+  let shown = names.filter((n) => (q ? n.toLowerCase().includes(q) || label(n).toLowerCase().includes(q) || dtext(n).includes(q) : S.home.get(n) === cat && !inCat.has(n)));
   if (!q && cat === "FILE") shown = shown.filter((n) => !n.startsWith("razor.") || true);
   $("#tray .h").firstChild.textContent = q ? "SEARCH " : `UNPLACED IN ${cat} `;
   if (!shown.length) list.append(h("span", { class: "empty-note" }, q ? "nothing matches" : `every ${cat} parameter is on a page in this context`));
   for (const n of shown.slice(0, 160)) {
     const placed = all.has(n);
-    const chip = h("span", { class: "chip" + (q && placed ? " placed" : ""), draggable: "true", title: `${n}${placed ? " (on a page already)" : ""}` }, label(n), h("span", { class: "c" }, q ? S.home.get(n) : n));
+    const chip = h("span", { class: "chip" + (q && placed ? " placed" : ""), draggable: "true", "data-tip": itemTip(n, placed ? "on a page already" : "") }, label(n), h("span", { class: "c" }, q ? S.home.get(n) : n));
     chip.addEventListener("dragstart", (ev) => { drag = { name: n }; ev.dataTransfer.setData("text/plain", n); });
     chip.addEventListener("dragend", () => { drag = null; });
     chip.addEventListener("click", () => { if (S.sel) drop({ name: n }, { ref: S.sel }); });
@@ -670,11 +731,11 @@ function renderLint() {
 }
 
 function render() {
+  const fk = document.activeElement?.dataset?.key;
   $("#dname").value = S.design.name || "";
   renderCtx();
   renderTree();
   renderButtons();
-  renderKnobs();
   renderInspector();
   renderTray();
   renderDiff();
@@ -682,6 +743,7 @@ function render() {
   markActive();
   $("#undo").disabled = !S.undo.length;
   $("#redo").disabled = !S.redo.length;
+  if (fk) document.querySelector(`[data-key="${CSS.escape(fk)}"]`)?.focus({ preventScroll: true });
 }
 function flash(m) { S.msg = m; renderLint(); setTimeout(() => { S.msg = ""; renderLint(); }, 4000); }
 
@@ -730,6 +792,7 @@ function bindUI() {
   };
   $("#dname").onchange = (ev) => edit((d) => { d.name = ev.target.value.trim() || "untitled"; });
   $("#search").oninput = renderTray;
+  bindTips();
   const tray = $("#traylist");
   tray.addEventListener("dragover", (ev) => { if (drag && drag.ref) { ev.preventDefault(); tray.classList.add("over"); } });
   tray.addEventListener("dragleave", () => tray.classList.remove("over"));
@@ -739,6 +802,93 @@ function bindUI() {
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !typing) { ev.preventDefault(); ev.shiftKey ? redo() : undo(); }
     else if ((ev.key === "Delete" || ev.key === "Backspace") && S.sel && !typing) { ev.preventDefault(); edit(() => setSlot(S.sel, null)); }
   });
+}
+
+// ------------------------------------------------------------------------------------------------ tooltips
+// any element with data-tip: its text in a box by the pointer after a short rest (the descriptions: slots, tray chips,
+// page headers, categories, the context)
+function bindTips() {
+  const tip = $("#tip");
+  let cur = null, timer = 0, x = 0, y = 0;
+  const place = () => {
+    const r = tip.getBoundingClientRect();
+    tip.style.left = Math.max(4, Math.min(innerWidth - r.width - 8, x + 14)) + "px";
+    tip.style.top = (y + 18 + r.height > innerHeight ? Math.max(4, y - r.height - 10) : y + 18) + "px";
+  };
+  const hide = () => { clearTimeout(timer); cur = null; tip.hidden = true; };
+  document.addEventListener("mouseover", (ev) => {
+    const e = ev.target.closest?.("[data-tip]");
+    if (e === cur) return;
+    hide();
+    if (!e || drag) return;
+    cur = e;
+    timer = setTimeout(() => { if (cur !== e || !e.isConnected) return; tip.textContent = e.dataset.tip; tip.hidden = false; place(); }, 280);
+  });
+  document.addEventListener("mousemove", (ev) => { x = ev.clientX; y = ev.clientY; if (!tip.hidden) place(); });
+  document.addEventListener("mousedown", hide, true);
+  document.addEventListener("dragstart", hide, true);
+  document.addEventListener("wheel", () => { if (!tip.hidden) hide(); }, { passive: true });
+}
+
+// ------------------------------------------------------------------------------------------------ the FM-1 panel
+// The FM-1 as RemoteFM1's web player draws it (tools/layout/fm1/, vendored), wired to the preview's core: buttons and
+// keys held while the mouse holds them (Shift-, right- or ctrl-click latches one: SHIFT + a button, a held step + a
+// knob with one mouse; a click lets it go, Escape or Shift-click on an empty spot lets all go), keys with a velocity
+// from where they are struck (top soft, bottom hard), knobs by a vertical drag or the wheel (detents as they come:
+// the firmware accelerates as on the unit), the MASTER pot. The LEDs and the live labels (ec_app_labels) every frame;
+// its display mirrors the preview. The computer keyboard plays it (FM1VST's map) after a click on the panel, until a
+// click elsewhere, never while a text field has the focus.
+function setupPanel() {
+  const canvas = $("#panel");
+  const lcd = { canvas: $("#screen") };
+  const sent = { btn: new Uint8Array(14), key: new Uint8Array(27), master: -1 };
+  const vel = new Uint8Array(27);
+  const controls = new Controls((snap) => {
+    for (let b = 0; b < 14; b++) { const on = controls.btnHeld(b) ? 1 : 0; if (on !== sent.btn[b]) { sent.btn[b] = on; S.api.button(b, on); } }
+    for (let k = 0; k < 27; k++) {
+      const on = controls.keyHeld(k) ? 1 : 0;
+      if (on !== sent.key[k]) { sent.key[k] = on; S.api.key(k, on, on ? vel[k] || controls.keyVel[k] || 100 : 0); if (!on) vel[k] = 0; }
+    }
+    for (let r = 0; r < 7; r++) { const d = snap.enc[roleToMatrix(r)]; if (d) S.api.turn(r, d); }
+    if (snap.master !== sent.master) { sent.master = snap.master; S.api.master(snap.master); }
+  });
+  const view = new DeviceView(canvas, controls, lcd);
+  const w = JSON.parse(S.api.wiring());
+  view.setKeymap(Array.from({ length: 6 }, (_, r) => w.keymap.slice(r * 11, r * 11 + 11)));
+  view.setRunning(true);
+  S.api.master(controls.master);
+  sent.master = controls.master;
+  // the velocity: where the key is struck (registered before the panel's own pointer handler, so it is known first)
+  canvas.addEventListener("pointerdown", (ev) => {
+    const r = canvas.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, hit = view.hit(x, y);
+    S.panel.active = true;
+    if (!hit || hit.kind !== KM.KEY || !view.L) return;
+    const kb = view.L.keybed, k = view.L.kg.keys.find((q) => q.k === hit.idx);
+    const f = k ? Math.max(0, Math.min(1, (y - kb.y - k.y) / k.h)) : 0.7;
+    vel[hit.idx] = Math.round(24 + 103 * f);
+  });
+  document.addEventListener("pointerdown", (ev) => { if (ev.target !== canvas) S.panel.active = false; }, true);
+  attachPointer(canvas, view, controls, {});
+  new Keyboard({ controls, enabled: () => S.panel.active });
+  const fit = () => {
+    const r = canvas.parentElement.getBoundingClientRect();
+    const wd = Math.max(200, Math.floor(r.width)), ht = Math.round(wd * 744 / 1146);
+    canvas.style.width = wd + "px"; canvas.style.height = ht + "px";
+    view.layout(wd, ht, window.devicePixelRatio || 1);
+  };
+  new ResizeObserver(fit).observe(canvas.parentElement);
+  fit();
+  S.panel = { view, controls, canvas, epoch: -1, active: false, leds: new Uint8Array(44) };
+}
+function drawPanel() {
+  const P = S.panel;
+  if (!P) return;
+  const p = S.api.leds(), m = S.m.HEAPU8;
+  P.leds = m.slice(p, p + 44);
+  P.view.setLeds(P.leds, m[p + 44]);
+  const lb = JSON.parse(S.api.labels());
+  if (lb.epoch !== P.epoch) { P.epoch = lb.epoch; P.live = lb.list; P.view.setLabels(panelLabels(null, lb.list)); }
+  P.view.draw();
 }
 
 // ------------------------------------------------------------------------------------------------ the test API
@@ -760,5 +910,20 @@ window.designer = {
   variantOf: (cat, pi) => curVariant("page", catObj(cat).pages[pi]),
   edit: (fn) => edit(fn),                 // (tests: any change to the design, as one undo step)
   movePage: (from, pi, to, at) => movePage(from, pi, to, at),
+  // the drawn FM-1: a control's centre in page coordinates (kind "btn" | "key" | "knob", the label / key / role)
+  panel: {
+    where: (kind, idx) => {
+      const v = S.panel.view, r = S.panel.canvas.getBoundingClientRect();
+      const c = v.where(kind === "btn" ? KM.BTN : kind === "key" ? KM.KEY : KM.SELECT, idx);
+      return c && { x: r.left + c.x, y: r.top + c.y };
+    },
+    leds: () => Array.from(S.panel.leds),
+    keyLevels: () => Array.from({ length: 27 }, (_, k) => S.panel.view.keyLevel(k)),
+    live: () => S.panel.live,
+    labels: () => clone(S.panel.view.lbl),
+    held: () => ({ btn: Array.from({ length: 14 }, (_, b) => S.panel.controls.btnHeld(b)), key: Array.from({ length: 27 }, (_, k) => S.panel.controls.keyHeld(k)) }),
+    releaseLatches: () => S.panel.controls.releaseLatches(),
+  },
+  desc: () => S.desc,
 };
 boot().catch((e) => { document.body.prepend(h("pre", { style: "color:#ff4a3d" }, "the preview did not start: " + (e && e.stack || e))); window.designer.error = String(e); });

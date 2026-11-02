@@ -30,14 +30,50 @@ storage); **Export** is what counts.
   pages, each page with its lanes of four slots (KNOB 1-4). A slot shows the parameter's short name and its value on
   the selected track. The lane the unit shows now is marked orange. Below the categories: the buses (S1, S2, MST) and
   F3.
-- **Centre: the preview** at 2x, with the live knob labels beside it (the unit's own `ec_app_labels`: what the
-  host's panel shows), the category buttons (as on the unit: again = the next page), SELECT back / on (lanes, on into
-  the next page), SETUP, HOME, PLAY. Above it the **context**: the target (T1-T6, S1, S2, MST), the track's machine,
-  warp mode, filter machine, filter / amp env modes, insert FX and each bus's FX. Pages that depend on these show
-  the variant for the context. Under it the checks (errors in red, warnings in yellow).
-- **Right:** the selected slot (its parameter, a **label** of its own), the selected page's **note**, the **tray** of
-  parameters of the category not on any of its pages in the current context (search finds any parameter, placed ones
-  dimmed), and the **changes** from the shipped layout (what moved, page lists, notes).
+- **Middle:** the selected slot (its parameter, its **description**, a **label** of its own), the selected page's
+  description (and its variant's: what that machine / mode / FX is) and **note**, the **tray** of parameters of the
+  category not on any of its pages in the current context (search finds any parameter by name, label or description,
+  placed ones dimmed), the **changes** from the shipped layout (what moved, page lists, notes), the checks (errors
+  in red, warnings in yellow).
+- **Right: the preview** (2x where the window is tall enough, smaller so the panel stays in view), the category
+  buttons (as on the unit: again = the next page), and under it **the FM-1** (below). Above it the **context**: the
+  target (T1-T6, S1, S2, MST), the track's machine, warp mode, filter machine, filter / amp env modes, insert FX and
+  each bus's FX. Pages that depend on these show the variant for the context.
+- **Descriptions**: hover a slot, a tray chip, a page's header, a category or a context picker for a tooltip with
+  what it does (`design/layout/descriptions.json`, below).
+
+## The FM-1 panel
+
+The FM-1 drawn as RemoteFM1's web player draws it (the Tangerine faceplate: MASTER, SELECT, PRESETS, ALGORITHM,
+KN1-KN4, the 14 buttons, the 27 keys with their LEDs; its display mirrors the preview), wired to the preview's core
+as the unit's panel: the LEDs and the **live labels** (`ec_app_labels`: the buttons', the knobs' and the keys') every
+frame.
+
+- Buttons and keys: held while the mouse holds them. **Shift-click** (or right- / ctrl-click) **latches** one:
+  SHIFT + a button, a held step + a knob, with one mouse. A click lets it go; Escape (with the panel active) or a
+  Shift-click on an empty spot lets all go. Keys play with a velocity from where they are struck (top soft, bottom
+  hard).
+- Knobs: a vertical drag or the wheel; the detents arrive as you turn, so the firmware accelerates as on the unit.
+  MASTER is the pot.
+- The computer keyboard (FM1VST's map: A S D F … the keys, F5-F10 / C V B N M , the buttons, Z X the OCT keys) plays
+  it after a click on the panel, until a click elsewhere; never while a text field has the focus.
+- The drawing is vendored: `tools/layout/fm1/` (`panel.js`, `theme.js`, `input.js`, Chakra Petch) from RemoteFM1
+  origin/main `web/site/js/` (the owner's GPL code; each file names the commit). To update it, copy those files
+  again (`git -C ../RemoteFM1 show origin/main:web/site/js/panel.js`); the designer uses `Controls`, `DeviceView`,
+  `panelLabels`, `attachPointer` and `Keyboard`.
+- The preview's API for it (`ec_layout_wasm.c`): `lw_button`, `lw_key` (velocity), `lw_turn`, `lw_master`,
+  `lw_leds`, `lw_labels`, `lw_wiring`.
+
+## Descriptions
+
+`design/layout/descriptions.json`: every placeable item's `{name, desc}` (spec params, `global.*`, `slot.*`,
+`razor.*`, `e5.*`), every page's (`CAT/TITLE`, `CAT/SETUP`, `bus:S1`, `bus:MST/SRC`, `F3`), each category's, and
+each option value a variant picks (`machine`, `warp`, `filter`, `fenv`, `env`, `fx`). Written from the original's
+docs and code and the port's (where the port differs, the port's behaviour). `gen_layout.py` checks them with the
+design: an error for a description of an unknown item, category or option; a warning for anything placeable
+without one, or a page key no page has. They are never compiled into the cart: the designer fetches the file
+(`build_layout.sh` copies it), and `--docs` writes the **Parameter reference** in `docs/FM1-CONTROLS.md` (between
+the `params` markers) from it. A page renamed in a design keeps no description until its key is renamed too.
 
 Editing:
 
@@ -122,8 +158,9 @@ at all; a cell label longer than 5 (the panel's knob label gets cut); a variant 
 
 ## How it is built
 
-- `gen_layout.py`: the checks, the C tables (`--c`), the packed text (`--pack`), the docs section (`--docs`), the
-  canonical JSON (`--format`). The parameter ids come from `src/seq/ec_params.c` (spec names) and `ec_params.h`.
+- `gen_layout.py`: the checks, the C tables (`--c`), the packed text (`--pack`), the docs sections (`--docs`), the
+  canonical JSON (`--format`); the descriptions (`--desc FILE`, default `design/layout/descriptions.json`;
+  `--no-desc` skips them). The parameter ids come from `src/seq/ec_params.c` (spec names) and `ec_params.h`.
 - `src/app/ec_layout.h`: the tables (pages of variants of items; masks over the option values), read only by
   `ec_pages.c`. The screens pick their picture by the page's (`EC_PIC_*`), not by the page's number.
 - `layout_compile.js`: the same checks and the same pack in the page; `ec_layout_pack.c`: the pack read into a
@@ -143,4 +180,14 @@ at all; a cell label longer than 5 (the panel's knob label gets cut); a variant 
   plays; the page's pack of the shipped design = the generator's, and = what the firmware loaded; a parameter dropped
   onto another slot changes the preview's pixels, the knob and the live labels, and Export is exactly the expected
   JSON in the generator's canonical text; undo; a page moved to another category with a new lane; a bad title
-  refused. `results/layout/` (screenshots, SUMMARY.txt).
+  refused; every kind of `<select>` opened with the mouse stays open (2 s of the demo playing: the same element,
+  focused, its value kept); a slot's and a page header's tooltip, the inspector's descriptions, the tray's search
+  over descriptions; the panel by the mouse: SEQ -> TRIG, key LEDs for trigs, Shift-click latches SHIFT and the
+  live labels change, a lower key latched + the wheel on KN1 = a p-lock (the lock frame, K1's filled chip).
+  `results/layout/` (screenshots, SUMMARY.txt).
+
+Why the dropdowns used to close: a click anywhere on a page's header row (its picture or MOVE TO select, its title)
+selected the page, and selecting rebuilt the whole tree, replacing the select that had just opened. Now selecting
+only moves the marks, the inspector and the tray; the tree is rebuilt on real edits only (the focused control is
+focused again by its `data-key`); the live values and the unit's page are updated in place (text and classes, only
+where they differ), and not at all while a select has the focus.

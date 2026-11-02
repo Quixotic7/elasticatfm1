@@ -23,21 +23,23 @@
 </header>
 <main>
   <section id="tree" aria-label="Categories, pages, lanes"></section>
+  <section id="side">
+    <div id="inspector"></div>
+    <div id="tray"><div class="h">UNPLACED <input id="search" placeholder="search names and descriptions" spellcheck="false"></div><div id="traylist"></div></div>
+    <div id="diff"><div class="h">CHANGES FROM THE SHIPPED LAYOUT</div><div id="difflist"></div></div>
+    <div id="lint"></div>
+  </section>
   <section id="centre">
     <div id="ctxbar"></div>
     <div id="unit">
       <div id="screenwrap"><canvas id="screen" width="240" height="240"></canvas></div>
-      <div id="knobs"></div>
     </div>
     <div id="buttons"></div>
-    <div id="lint"></div>
-  </section>
-  <section id="side">
-    <div id="inspector"></div>
-    <div id="tray"><div class="h">UNPLACED <input id="search" placeholder="search all" spellcheck="false"></div><div id="traylist"></div></div>
-    <div id="diff"><div class="h">CHANGES FROM THE SHIPPED LAYOUT</div><div id="difflist"></div></div>
+    <div id="panelwrap" title=""><canvas id="panel" aria-label="The FM-1: click and hold buttons and keys, Shift-click to latch one, drag or wheel the knobs"></canvas>
+      <div class="panelhint">hold: press and hold · latch: Shift-click (click again to let go; Esc: all) · knobs: drag or wheel · keys: struck lower = louder · keyboard after a click on the panel</div></div>
   </section>
 </main>
+<div id="tip" hidden></div>
 <script src="ec_layout.js"></script>
 <script type="module" src="designer.js"></script>
 </body>

@@ -30,10 +30,10 @@ if(Python3_FOUND)
         COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json
                 --c ${CMAKE_CURRENT_SOURCE_DIR}/src/app/ec_layout_gen.c
                 --docs ${CMAKE_CURRENT_SOURCE_DIR}/docs/FM1-CONTROLS.md
-        COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/layout-0.4.0.json --quiet
+        COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/layout-0.4.0.json --quiet --no-desc
                 --c ${CMAKE_CURRENT_SOURCE_DIR}/host/ec_layout_test_gen.c --symbol EC_LAYOUT_TEST
         COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/ec_layout.stamp
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/descriptions.json
                 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/layout-0.4.0.json ${_lay_deps}
         BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/src/app/ec_layout_gen.c ${CMAKE_CURRENT_SOURCE_DIR}/host/ec_layout_test_gen.c
         COMMENT "gen_layout: design/layout/elasticat.json -> src/app/ec_layout_gen.c" VERBATIM)

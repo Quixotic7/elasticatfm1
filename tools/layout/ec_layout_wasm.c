@@ -283,3 +283,69 @@ API const char *lw_catalog(void)
     n += snprintf(g_out + n, (size_t)(cap - n), "]");
     return g_out;
 }
+
+/* The drawn FM-1 (tools/layout/fm1/): the whole panel as the unit has it. A button by label held / let go (a press
+ * also marks a tap, so a click shorter than a millisecond of device time still counts); a note key 0..26 held with
+ * a velocity 1..127 / let go; the MASTER pot 0..1023. Knobs: lw_turn (the firmware accelerates by the detents'
+ * timing, as on the unit). */
+API void lw_button(int b, int down)
+{
+    if (b < 0 || b >= FM1P_NB)
+        return;
+    g_release[b] = 0;
+    if (down) {
+        P->buttons |= 1u << P->btn_id[b];
+        P->buttons_tap |= 1u << P->btn_id[b];
+    } else
+        P->buttons &= ~(1u << P->btn_id[b]);
+}
+API void lw_key(int k, int down, int vel)
+{
+    if (k < 0 || k >= FM1P_NKEY)
+        return;
+    if (down) {
+        P->key_vel[k] = (uint8_t)(vel < 1 ? 100 : vel > 127 ? 127 : vel);
+        P->keys |= 1u << k;
+        P->keys_tap |= 1u << k;
+    } else {
+        P->keys &= ~(1u << k);
+        P->key_vel[k] = 0;
+    }
+}
+API void lw_master(int v) { P->master = v < 0 ? 0 : v > 1023 ? 1023 : v; }
+/* the LEDs: 44 levels (column * 4 + line, the panel's wiring) then PLAY's green */
+API const uint8_t *lw_leds(void) { return &P->led[0][0]; }
+/* the wiring: 66 ids (row * 11 + column; 0..13 matrix button, 14 + n note key n, -1 none) and the 14 buttons'
+ * matrix ids by label: JSON {"keymap":[...],"btn":[...]} */
+API const char *lw_wiring(void)
+{
+    int n = 0, i;
+    const int cap = (int)sizeof g_out;
+    n += snprintf(g_out + n, (size_t)(cap - n), "{\"keymap\":[");
+    for (i = 0; i < 6 * FM1P_NCOL; i++)
+        n += snprintf(g_out + n, (size_t)(cap - n), "%s%d", i ? "," : "", C->keymap ? C->keymap[i] : -1);
+    n += snprintf(g_out + n, (size_t)(cap - n), "],\"btn\":[");
+    for (i = 0; i < FM1P_NB; i++)
+        n += snprintf(g_out + n, (size_t)(cap - n), "%s%d", i ? "," : "", P->btn_id[i]);
+    n += snprintf(g_out + n, (size_t)(cap - n), "]}");
+    return g_out;
+}
+/* the 49 live labels (fm1core_label: knobs, buttons, white keys, black keys; null = not given) and their epoch */
+API const char *lw_labels(void)
+{
+    int n = 0, i;
+    const int cap = (int)sizeof g_out;
+    n += snprintf(g_out + n, (size_t)(cap - n), "{\"epoch\":%u,\"list\":[", fm1core_labels_epoch());
+    for (i = 0; i < FM1CORE_LBL_N; i++) {
+        const char *s = fm1core_label(i);
+        if (i)
+            n += snprintf(g_out + n, (size_t)(cap - n), ",");
+        if (s)
+            n = jstr(g_out, n, cap, s);
+        else
+            n += snprintf(g_out + n, (size_t)(cap - n), "null");
+    }
+    n += snprintf(g_out + n, (size_t)(cap - n), "]}");
+    return g_out;
+}
+

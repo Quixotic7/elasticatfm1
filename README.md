@@ -139,7 +139,7 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    `testloop_bpm120.wav` from FM1VST's `core-glue/elasticat/test_folder/audio/`).
 2. Open https://remotefm1.com in Chrome or Edge (they can keep a picked folder; Safari and Firefox copy the files
    into the site's own storage instead).
-3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.4.0.rfm1` (or drop the file
+3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.4.1.rfm1` (or drop the file
    on the page). It goes into "Your firmware" with the Fantasy CFW badge.
 4. When the page asks **Pick your RemoteFM1 folder**, pick the `RemoteFM1/` folder. On a later visit, click
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
@@ -155,7 +155,7 @@ and is saved; on a site without ain1 those checks are skipped.
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open
-`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.4.0.rfm1&rfm1id=elasticat`. That is what its
+`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.4.1.rfm1&rfm1id=elasticat`. That is what its
 **Test in RemoteFM1** link does, but the link only lists firmwares in its catalog.
 
 ## Licence

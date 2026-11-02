@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "ec_params.h"
+#include "ec_razor.h"   /* E3 */
 
 #define EC_NTRACK 6
 #define EC_NPAT 16
@@ -49,7 +50,7 @@ typedef struct {
 /* pattern change quantization (PatternStore.QUANT) */
 enum { EC_Q_SEQUENTIAL = 1, EC_Q_DIRECT_JUMP, EC_Q_DIRECT_START, EC_Q_TEMP_JUMP };
 
-typedef struct {
+typedef struct ec_project {
     float bpm;                    /* 20..300 */
     float swing;                  /* 50..75 (%) */
     int glen;                     /* global pattern length 1..256 (sequential switches engage on its boundary) */
@@ -58,6 +59,7 @@ typedef struct {
     int current;                  /* the live pattern 0..15 */
     ec_slot_t slot[EC_NSLOT];
     ec_pattern_t pat[EC_NPAT];
+    ec_razor_t razor[EC_NTRACK];  /* E3: each track's razor slices + per-slice settings (chunk "RZR1") */
 } ec_project_t;
 
 void ec_project_init(ec_project_t *p);                       /* a new project */

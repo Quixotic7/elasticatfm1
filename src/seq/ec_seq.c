@@ -194,7 +194,8 @@ static void fire_slices(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note)
             e.velocity = field(rec, v, EC_P_VELOCITY);
             e.pitch = field(rec, v, EC_P_PITCH);
             e.length = mode == EC_SLICE_ONESHOT ? 0 : (int)(note > 0x7FFFFFFF ? 0x7FFFFFFF : note);
-            emit(s, &e);
+            if (ec_razor_slice_event(s->proj, t, &e, (int64_t)note))   /* E3: razor range, per-slice settings */
+                emit(s, &e);
         }
     s->tr[t].fired_slices = slices;
 }
@@ -772,7 +773,7 @@ void ec_seq_loop_key(ec_seq_t *s, int t, int key, int pressed)
 
 static void pad(ec_seq_t *s, int t, int slice, int pressed, float vel, float pitch)
 {
-    const int mode = iv(ptr(s, t)->v, EC_P_SLICE_PLAY_MODE);
+    const int mode = ec_razor_play_mode(s->proj, t, slice);   /* E3: per-slice play mode */
     ec_event_t e;
     if (pressed) {
         e = ev0(EC_EV_SLICE_ON, t);
@@ -782,7 +783,8 @@ static void pad(ec_seq_t *s, int t, int slice, int pressed, float vel, float pit
         e.length = mode == EC_SLICE_ONESHOT ? 0 : (int)(60.0 * s->fs);   /* held until the key comes up */
         s->tr[t].pads |= 1u << (slice - 1);
         s->tr[t].last_fire = s->now;
-        emit(s, &e);
+        if (ec_razor_slice_event(s->proj, t, &e, (int64_t)(60.0 * s->fs)))   /* E3: razor range, per-slice */
+            emit(s, &e);
     } else {
         s->tr[t].pads &= ~(1u << (slice - 1));
         if (mode != EC_SLICE_ONESHOT) {

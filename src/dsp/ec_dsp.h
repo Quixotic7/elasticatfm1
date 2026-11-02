@@ -308,8 +308,9 @@ enum {
     EC_EV_SLICE_ON = 15,  /* slice = 1..32; start/end = slice range 0..128 (track
                              space) or < 0 for the grid division of slice_count;
                              velocity, pitch (st, absolute), length (gate samples,
-                             0 = one-shot / natural length), choke 0..8.
-                             Play mode / reverse / sync / rate come from the params. */
+                             0 = one-shot / natural length), choke 0..8; mode 1..6 =
+                             a per-slice play mode (E3), 0 = the track's.
+                             Reverse / sync / rate come from the params. */
     EC_EV_SLICE_OFF = 16, /* release slice `slice` (live key up) */
     EC_EV_LOOP_KEY = 17,  /* loop key `slice` = 1..32, value 1 press / 0 release.
                              EC_TF_AUDITION on a press while stopped: the reader

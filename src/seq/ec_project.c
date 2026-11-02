@@ -30,6 +30,7 @@ void ec_project_init(ec_project_t *p)
     for (t = 0; t < EC_NTRACK; t++) {
         ec_params_default(p->pat[0].tr[t].v);
         p->pat[0].tr[t].v[EC_P_SLOT] = (float)(t + 1);   /* (each track starts on its own pool slot) */
+        ec_razor_init(&p->razor[t]);                     /* E3 */
     }
 }
 
@@ -322,6 +323,15 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
             }
         }
     }
+    /* Tagged chunks after the patterns (E3+): tag u32, length u32, payload. An old record ends after the
+     * patterns; a loader skips tags it does not know. */
+    if (!o.bad) {   /* E3: the razor tables */
+        const int32_t k = ec_razor_save_chunk(p, buf + o.n, cap > o.n ? cap - o.n : 0);
+        if (k < 0)
+            o.bad = 1;
+        else
+            o.n += (uint32_t)k;
+    }
     if (o.bad)
         return -1;
     {
@@ -423,6 +433,16 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
                 }
             }
         }
+    }
+    while (!o.bad && o.n + 8 <= o.cap) {   /* tagged chunks (E3+) */
+        const uint32_t tag = r32(&o), clen = r32(&o);
+        if (clen > o.cap - o.n) {
+            o.bad = 1;
+            break;
+        }
+        if (tag == EC_RAZOR_TAG)   /* E3 */
+            ec_razor_load_chunk(p, o.r + o.n, clen);
+        o.n += clen;
     }
     if (o.bad)
         return -1;

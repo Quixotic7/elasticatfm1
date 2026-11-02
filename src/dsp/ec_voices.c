@@ -132,7 +132,8 @@ void ec_voice_slice_on(ec_dsp_t *d, int track, const ec_event_t *ev)
     double es = ec_clampd(ec_track_map(t, s128) * 128.0, 0.0, 127.99);
     double ee = ec_clampd(ec_track_map(t, e128) * 128.0, 0.01, 128.0);
     if (ee <= es) ee = es + 0.01 > 128.0 ? 128.0 : es + 0.01;
-    int mode = ec_clampi(p->slice_play_mode - 1, 0, 5);
+    /* E3: ev->mode 1..6 = a per-slice play mode (razor editor PLAY), else the track's */
+    int mode = ec_clampi((ev->mode >= 1 && ev->mode <= 6 ? ev->mode : p->slice_play_mode) - 1, 0, 5);
     int rev = p->slice_reverse ? 1 : 0;
     float pitch = ec_clampf(ev->pitch, -48.f, 48.f);
     double pr = ec_midiratio(pitch);

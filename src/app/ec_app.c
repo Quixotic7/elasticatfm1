@@ -22,7 +22,7 @@ ec_app_t ec_app;
 #define SEL_TAP_MS 400
 #define AUTOSAVE_MS 2000
 
-static uint8_t g_dsp_mem[1u << 20] __attribute__((aligned(16)));
+static uint8_t g_dsp_mem[4u << 20] __attribute__((aligned(16)));   /* E3: 3.6 MB (post-stage delay lines) */
 static float g_buf[1024 * 2];
 
 /* ------------------------------------------------------------------------------------------- small helpers --- */
@@ -961,6 +961,9 @@ void ec_app_init(void)
     ec_seq_sink_t sink;
     int i;
     memset(A, 0, sizeof *A);
+    if (ec_dsp_mem_size() > sizeof g_dsp_mem)   /* (a build error in disguise: never run past the arena) */
+        for (;;) {
+        }
     A->dsp = ec_dsp_init(g_dsp_mem, (float)EC_FS);
     A->load_slot = -1;
     A->tap_key = -1;

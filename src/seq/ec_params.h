@@ -45,6 +45,10 @@ enum {
     EC_P_LENGTH,          /* default_length (steps); its step lock is the trig's length */
     EC_P_VELOCITY,        /* default_velocity 0..1; its step lock is the trig's velocity */
     EC_P_RATE,            /* the track's pattern rate index 1..21 (TrackSequencer.RATE_FRACTIONS; 13 = 1x) */
+    /* E3: the other warp modes */
+    EC_P_HARM_INTERVAL, EC_P_HARM_INTERVAL2, EC_P_HARM_INTERVAL3, EC_P_WSOLA_WINDOW, EC_P_WSOLA_SEARCH,
+    EC_P_PV_WINDOW, EC_P_PV_DISPERSION, EC_P_WT_WINDOW, EC_P_WT_CYCLE, EC_P_WT_LFO_RATE, EC_P_WT_LFO_DEPTH,
+    EC_P_WT_LFO_SHAPE, EC_P_FREEZE_AMOUNT, EC_P_SPECTRAL_BLUR, EC_P_FORMANT_SHIFT,
     EC_NP
 };
 
@@ -61,6 +65,7 @@ enum {
 #define EC_PF_SEQ 4u           /* steers the sequencer, never the engine (SEQUENCER_DOMAIN_LOCKS) */
 #define EC_PF_MOMENT 8u        /* consumed at trigger time, never held (length, velocity) */
 #define EC_PF_E4 16u           /* stored only: its engine half lands in E4 */
+#define EC_PF_EXPSTEP 32u      /* E3: a detent multiplies by 2^(1/12) (wide ranges: wt_cycle, wt_lfo_rate) */
 
 typedef struct {
     const char *name;          /* params_spec suffix */

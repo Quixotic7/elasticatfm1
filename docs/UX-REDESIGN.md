@@ -1,4 +1,4 @@
-# Elasticat FM-1: UX redesign along ChoralRoot and FIZZ (proposal, 2026-11-02)
+# Elasticat FM-1: UX redesign along ChoralRoot and FIZZ (2026-11-02; built in 0.3.0)
 
 The owner asked for Elasticat's button and knob interactions to work like ChoralRoot's and FIZZ's. Sources:
 ChoralRoot `docs/MANUAL.md` §3 (the panel), §12 (the sound editor), §18 (quick reference); FIZZ `PLAYING.md` ("Names
@@ -81,3 +81,35 @@ holds, SHIFT + button for shortcuts, no tutorial text, nothing under ~12 px, str
 4. **Setup = SHIFT + category, or hold the category button** (a hold opens it at 400 ms; it stays open on release).
    SRC is special: held with a lower key it is the loop keys; held 400 ms and released with no lower key used, it
    opens the SRC setup.
+
+## Built in 0.3.0: where the proposal met the existing panel
+
+docs/FM1-CONTROLS.md is the player's reference; these are the clashes and how they were settled.
+
+1. **RAZOR keeps its page-local OCT keys**: SHIFT + OCT+ / OCT- stay Auto-Chop / Redistribute there (undo / redo
+   everywhere else). A pop-up's OCT keys still come first.
+2. **SELECT stays the picker on the two FILE pages** (SAMPLE's file cursor, RAZOR's slice). There SAVE steps the
+   lanes and then the pages: SAMPLE (BPM STEP GAIN SLOT / T-ST T-EN), RAZOR (STRT END PLAY ZOOM / SNAP CHOK P/T SENS),
+   round. On SAMPLE a SAVE with the cursor on another file still loads it.
+3. **The MST upper key is the MST category** (tap: MIX, again MASTER, SCENE; hold: its setup); the master bus is
+   picked with ALGORITHM after S2.
+4. **One gesture clears every mute and solo: FILL held + a track key** (FIZZ's B11 is PATN here, which stays the
+   pattern overlay). Solos are the session's (not saved); mutes stay the pattern's MUTE param.
+5. **Taps act on release where a hold means something else**: PLAY (hold = F3), the category buttons (hold =
+   setup), the track keys (hold = mute), the MST key (hold = setup). A scope held + PLAY still acts at once.
+6. **OCT taps toggle two bits**: OCT- = LOOP KEYS, OCT+ = KEYS, both lit = SCENE (0.2.0 cycled four modes).
+7. **The PAGE overlay became F3**: a lower key tapped edits that page, held 0.4 s puts it in / out of the loop (FIZZ),
+   the pattern rate is KN2. An OCT key held is still the PAGE scope for REC / PLAY copy / clear / paste. F3's KN3 /
+   KN4 carry the global length and the change mode (the rest of the PAT page's timing).
+8. **Naming**: OCT+ keeps the name, OCT- / HOME cancel (0.2.0: SAVE / an FN tap). The pattern is named with SHIFT +
+   PATN (0.2.0: PATN overlay + SAVE).
+9. **The pattern clear is a question that stays open**: OCT+ yes; OCT-, HOME or any other button no (0.2.0: PLAY
+   again within 3 s).
+10. **SHIFT with the lower keys keeps their jobs** (ghost trig, keys / pads 17-32, scene store, razor slice mute), so
+    the lower keys keep their lights; only the upper keys and buttons without a SHIFT job go dark.
+11. **In a setup** OCT- / OCT+ close it and another category's tap opens that category's pages (0.2.0: its setup);
+    SHIFT + the same button goes back.
+12. **The snap tables** are the norns script's per-item `snaps` / `fn_snap_multiple` (src/seq/ec_snap.c); params
+    without one follow ChoralRoot's OPT rules. The swing's list (50 54 58 62 67 71 75) is new.
+13. **Knob speed**: the multiplier comes from the gap since the knob's last turn (90 ms and slower: 1; 10 ms: up to
+    1/16 of the range a click, squared in between); lists and ranges of 24 steps or fewer never speed up.

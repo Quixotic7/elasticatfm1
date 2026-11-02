@@ -81,7 +81,7 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **E5**: scenes A/B + crossfader, copy/clear/paste, page modes, memorize/recall.
 - **E6** (separate project): audio input in the core ABI and hosts; REC page and the input machine.
 
-## Status (0.2.0, 2026-11-02)
+## Status (0.3.0, 2026-11-02)
 
 - **E0-E2** done (0.1.0): the pipe, the core loop, the playable instrument; web player e2e.
 - **E3** done: RAZOR / R.POLY + the FILE / RAZOR page (Auto-Chop, snaps, split / delete, per-slice settings), every
@@ -95,6 +95,13 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
   (FN + SAVE = undo; SAVE on SAMPLE opens RAZOR for the track's own file; OCT keys are the razor's only on RAZOR).
   Tests: ctest 14 (incl. test_v020: the seams through the real chain, and the v020 demo + reboot), make -C tests/dsp
   (66 + 43 + 262 + 28), clang and emcc -Wall -Wextra clean.
+- **UX redesign** (0.3.0): the panel along ChoralRoot and FIZZ (docs/UX-REDESIGN.md, the owner's decisions;
+  docs/FM1-CONTROLS.md "What moved in 0.3.0"): SHIFT on GLO (snap, shortcuts, its map), lanes of four stepped by
+  SELECT, setup by a 0.4 s hold or SHIFT, HOME back to SRC, the MST key = the MST category, PRESETS = the track's
+  sample (debounced), F3 (OCT- + OCT+ or PLAY held), pop-ups with OCT- back / OCT+ OK, redo, knob acceleration,
+  the held-step frame + lock chips, OCT+ held + a knob clears a lock, track keys hold = mute / double-tap = solo,
+  the knob takeover, the live panel labels (ec_app_labels). Tests: ctest 16 (test_ux, the ux demo; every demo's
+  gestures updated), the web e2e with a live-label check. CPU: the heavy project 2.4x in wasm3.
 - **Memory** (wasm, MEMORY_MIB 128): engine 17 523 904 bytes (EC_DSP_MEM_MAX 18 MiB, checked at compile time),
   sample arena 96 MiB (~9.5 min of stereo 44.1 kHz), the app state 2.5 MiB + the memorize copy 2.3 MiB, the flash
   buffers and host shim ~3.4 MiB, the stack 1 MiB: the stack top is at 123.1 MiB, 4.9 MiB free. The arena stays 96 MiB.

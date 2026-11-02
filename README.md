@@ -5,7 +5,9 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (the remotefm1.com web player first), with the FM-1 as its panel and samples from the shared RemoteFM1 folder
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
-**Status: E1-E5 (0.2.0).** Six tracks, each with a sample from `/audio`, a machine (loop, loop_trig, grid_slice,
+**Status: E1-E5 + the UX redesign (0.3.0).** The panel works like ChoralRoot's and FIZZ's (lanes, setup by a hold
+or SHIFT, HOME, F3, pop-ups with OCT- back / OCT+ OK, SHIFT's keys, knob speed and snap, PRESETS = the track's
+sample, live panel labels: docs/UX-REDESIGN.md). Six tracks, each with a sample from `/audio`, a machine (loop, loop_trig, grid_slice,
 slice_poly, razor_slice, razor_poly with the RAZOR slice editor, neighbor), one of thirteen warp modes, a filter
 machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan, an insert FX (18 machines), sends
 to S1 / S2 and MOD (2 LFOs, mod env, velocity, macros); the master insert; 16 patterns of up to 256 steps per track
@@ -43,8 +45,9 @@ host/       ec_run (headless native harness: scripted input, WAV + PNG out), tes
             E3: test_e3, demo_e3.txt + render_e3.sh; E4: test_seq_e4, demo_e4.txt + render_e4.sh; E5: test_e5
             (scenes, glide, clipboards, page loop, BPM, memorize, undo, slices, the record + an E2 save in
             fixtures/e2_flash.bin), demo_e5.txt + render_e5.sh; 0.2.0: test_v020 (the E3 / E4 / E5 seams through
-            the real chain), demo_v020.txt + render_v020.sh (+ a reboot), make_heavy.c (the CPU worst case)
-results/    proof files: e0/ .. e5/, v020/ (the screens; WAVs stay untracked), web/ (the web player test's
+            the real chain), demo_v020.txt + render_v020.sh (+ a reboot), make_heavy.c (the CPU worst case);
+            0.3.0: test_ux (the panel's gestures and live labels through the core), demo_ux.txt + render_ux.sh
+results/    proof files: e0/ .. e5/, v020/, ux/ (the screens; WAVs stay untracked), web/ (the web player test's
             screenshots + SUMMARY.txt)
 ```
 
@@ -74,6 +77,7 @@ cmake -S . -B build && cmake --build build -j8 && ctest --test-dir build --outpu
 build/ec_run --folder <RemoteFM1 root> --press PLAY@1000 --wav out.wav --png screen.png --png-scale 2
 host/render_e1.sh build results/e1     # the E1 demo: screens + WAVs, reboot from the saved flash, a missing sample
 host/render_v020.sh build results/v020 # the 0.2.0 seams demo + a reboot (render_e3 / e4 / e5.sh likewise)
+host/render_ux.sh build results/ux     # 0.3.0: the new screens (lanes, setup, F3, SHIFT's map, locks, takeover)
 make -C tests/dsp && make -C tests/dsp bench   # the engine's own tests (test_dsp, test_e3, test_fx, test_e4) + CPU
 ```
 
@@ -97,7 +101,7 @@ ctest --test-dir build-rfm1 -R rfm1_elasticat -V        # rfm1_check + rfm1_run 
 CPU in wasm3 (must stay >= 2x real time): `build/ec_make_heavy heavy.flash` writes the worst-case project for
 `build/demo_folder` (six busy tracks across the E3 modes, every insert, both sends, master COMP, LFOs), then
 `rfm1_run --folder build/demo_folder --flash-in heavy.flash --settle 3000 --seconds 10 --press PLAY@1500 <the .rfm1>`:
-2.1x real time while playing in 0.2.0 (M-series); the v020 demo's project 5.9x.
+2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0; the v020 demo's project 5.9x.
 
 ## Trying it in the RemoteFM1 web player
 
@@ -107,7 +111,7 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    `testloop_bpm120.wav` from FM1VST's `core-glue/elasticat/test_folder/audio/`).
 2. Open https://remotefm1.com in Chrome or Edge (they can keep a picked folder; Safari and Firefox copy the files
    into the site's own storage instead).
-3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.2.0.rfm1` (or drop the file
+3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.3.0.rfm1` (or drop the file
    on the page). It goes into "Your firmware" with the Fantasy CFW badge.
 4. When the page asks **Pick your RemoteFM1 folder**, pick the `RemoteFM1/` folder. On a later visit, click
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
@@ -120,7 +124,7 @@ folder prompt with the demo loops, plays, programs steps, loads a file on T2, re
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open
-`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.2.0.rfm1&rfm1id=elasticat`. That is what its
+`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.3.0.rfm1&rfm1id=elasticat`. That is what its
 **Test in RemoteFM1** link does, but the link only lists firmwares in its catalog.
 
 ## Licence

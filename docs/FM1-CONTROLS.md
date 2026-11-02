@@ -1,74 +1,147 @@
-# Elasticat on the FM-1: controls (0.2.0)
+# Elasticat on the FM-1: controls (0.3.0)
 
-The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder.
-**FN** is the GLO button (hold it). Six tracks **T1-T6**, each with its own sample, machine, warp mode, filter, amp,
-insert FX, sends, MOD and 16-step pages; two send buses **S1**, **S2** and the master insert **MST**; 16 patterns; two
-scenes **A / B** with a crossfader. A new project loads the first file in `/audio` onto T1.
+The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
+tracks **T1-T6**, each with its own sample, machine, warp mode, filter, amp, insert FX, sends, MOD and 16-step pages;
+two send buses **S1**, **S2** and the master insert **MST**; 16 patterns; two scenes **A / B** with a crossfader. A
+new project loads the first file in `/audio` onto T1.
+
+0.3.0 works like ChoralRoot and FIZZ (docs/UX-REDESIGN.md has the why and the owner's decisions). The rules:
+
+- **GLO is SHIFT.** Held with a knob: the value snaps to useful values. Held with a button or key: that key's
+  shortcut. While it is held only the shortcut keys light, and after a quarter second alone its map shows.
+- **A category button opens its page; tapped again: its next page.** Held for 0.4 s (or with SHIFT): its **setup**,
+  which stays open on release.
+- **Lanes.** A page shows four values at a time on KNOB 1-4, the active lane; **SELECT steps the lanes and runs on
+  into the next page**, so SELECT alone reaches everything in a category. The tabs over the right-hand cell show the
+  lanes (the active one bright).
+- **HOME** goes back to the main view (SRC with the waveform) from anywhere in one press, closing whatever is open.
+  Each category keeps its page and lane.
+- **Pop-ups stay open on release**: F3, the PATN overlay, a setup, naming, a question. In a pop-up **OCT- = back /
+  cancel, OCT+ = OK / yes**, HOME closes it. Two small arrows top right mark a pop-up.
+- **Knobs accelerate**: turned slowly a click is the finest step; spun, the steps grow up to about a sixteenth of
+  the range a click. Lists (machines, modes, waves, options) are always one item a click.
+- **A held step owns the knobs**: an orange frame round the screen, the count of held steps top right, every turned
+  value becomes that step's lock (a filled orange chip; an outlined chip = locked on some step). **OCT+ held + a knob
+  clears that lock** (nothing held: on every step of the track).
+- **A value turned while its cell isn't on the screen** (the MIX page, the PATN overlay) takes over the screen for a
+  second: the value big, a row of stripes, its name.
+- The host's panel shows what every control does right now (the live labels: SHIFT's shortcuts while it is held,
+  the lane's value names on the knobs, the lower keys' layer).
 
 ## Knobs
 
-| Knob | Does |
-|---|---|
-| MASTER | Master volume |
-| SELECT | Page within the category (FILE: the file cursor; RAZOR: the selected slice; naming: the place; PAGE overlay: its mode) |
-| PRESETS | Pattern -/+ (queued to the next bar, see PAT) |
-| ALGORITHM | Track: T1..T6, then S1, S2, MST |
-| KN1-KN4 | The page's cells 1-4. **Hold FN: cells 5-8** (the orange tick at the right of the cell grid shows which bank) |
+| Knob | Does | With SHIFT |
+|---|---|---|
+| MASTER | Master volume | |
+| SELECT | The next lane, on into the next page (the FILE list: the file cursor; RAZOR: the selected slice; a setup: its lanes; naming: the place; F3: the tempo) | |
+| PRESETS | **The track's sample**: the next / previous file of the folder, loaded into the track's slot and heard at once (the name big on the screen; a fast spin loads once it rests) | **The pattern** (queued to the next change, see PAT) |
+| ALGORITHM | Track: T1..T6, then S1, S2, MST (F3: the swing) | |
+| KNOB 1-4 | The active lane's four values | Snap (below) |
 
-Hold a step + turn a knob = **p-lock** that cell on the step (the value turns orange). Hold slice pad(s) + turn = the
-slice's own lock (see Slices). Hold scene A or B + turn = that param into the scene only (see Scenes).
+**Snap** (SHIFT + a value knob): each click goes to the next useful value. The norns script's own snap lists where it
+has them (P/T -24 -12 -7 0 7 12 24; STRT / END 0 8 16 32 64 96 120 128; R-ST / R-EN multiples of 8; CUT / RES /
+DRIV / MIX 0 32 64 96 127; VOL 0 32 64 100 127; LEN 4 8 16 32 48 64 96 128 256; RATE 1/2 1 2; BPM 60 80 90 100 110
+120 128 136 140 160 180; the harmonizer's intervals; the warp, grain, chop, wavetable and FX lists ...), else
+ChoralRoot's rules: 0..127 to 0 16 32 .. 112 127, 0..128 and the bipolar values to steps of 8, semitones to octaves,
+values with decimals to whole numbers (0..1 to quarters), a small range one step a click. Lists don't snap. Trim
+(FILE T-ST / T-EN) and RAZOR's STRT / END take the finest step instead.
 
 ## Buttons
 
-| Button | Category | Tap again | FN + tap |
+| Button | Tap | Tap again | Held 0.4 s / SHIFT + |
 |---|---|---|---|
-| SEQ | TRIG: NOTE LEN VEL, resets / COND: chance, condition, ratchet / MTRIG or SLICE | next page | setup: swing |
-| SEL | SRC: SOURCE / MACHINE / WARP / RANGE (acts on release) | next page | setup: machine, warp, loop division, poly |
+| SEQ | TRIG: TRIG (NOTE LEN VEL; ERST LRST FRST), COND (chance, condition, ratchet), MTRIG or SLICE | next page | setup: swing |
+| SEL | SRC: SOURCE / MACHINE / WARP / RANGE (the waveform) | next page | **held with a lower key: the loop keys** (below); held 0.4 s and let go with no key used: setup (machine, warp, loop division, poly). SHIFT + SEL: the setup at once |
 | EDIT | FILT: FILTER (curve) / F.ENV / F.MIX | next page | setup: filter machine, filter env mode, mix mode |
-| ENV | AMP: envelope, VOL, PAN | - | setup: env mode, env range, portamento, slice hold |
+| ENV | AMP: envelope, VOL, PAN, sends (two lanes) | - | setup: env mode, env range, portamento, slice hold |
 | FX | FX: the insert machine's params (a picture per machine) / SENDS: S1, S2 levels, TAP. On S1 / S2 / MST: that bus's machine | next page | setup: **the FX machine** (insert, or the selected bus's), send tap |
-| LFO | MOD: LFO 1 / LFO 2 / MOD ENV / VELOCITY / MACROS / MACRO 1-4 (value + depth to PTCH CUT RES AMP PAN) | next page | - |
-| HOME | MASTER: MIX (meters + faders) / MASTER (BPM, swing, global length, playhead return) / SCENE | next page | setup: RTN, BPM, GBPM, NAME |
-| SAVE | FILE: page 1 SAMPLE (the browser) | **SAMPLE: loads the file under the cursor** into the track's slot; when the cursor is already on the track's file: page 2 **RAZOR**. RAZOR: back to SAMPLE | **UNDO** |
-| ARP | PAT: length, rate, global length, change mode | - | setup |
-| PLAY | Play / pause (resume keeps the position). With a scope held = **CLEAR** | | **stop + back to step 1** (twice: all voices off). With a scope held = **PASTE** |
-| REC | With a scope held = **COPY** | | **save the project now** |
-| OCT- / OCT+ | Tap (on release): the lower keys STEPS / LOOP KEYS / KEYS / SCENE (OCT- lit = loop keys, OCT+ lit = keyboard, both = scene). **Hold = PAGE** overlay. On RAZOR: OCT+ split, OCT- delete | | OCT+ **memorize**, OCT- **recall**. On RAZOR: OCT+ Auto-Chop, OCT- redistribute |
+| LFO | MOD: LFO 1 / LFO 2 / MOD ENV / VELOCITY / MACROS / MACRO 1-4 | next page | (no setup: a hold is a tap) |
+| SAVE | FILE: SAMPLE (the browser; SELECT is its cursor) | **on SAMPLE: loads the file under the cursor** into the track's slot; on the track's own file it steps the lanes, then the pages: SAMPLE (2 lanes), RAZOR (2 lanes), round | |
+| ARP | PAT: length, rate, global length, change mode | - | setup: quantize, global length |
+| HOME | Back to the main view (SRC), every pop-up closed | | |
+| PLAY | Play / pause (on its release; resume keeps the position). With a scope held: **CLEAR** | | **Held 0.4 s: F3.** SHIFT + PLAY: **stop + back to step 1** (twice: all voices off); with a scope held: **PASTE** |
+| REC | With a scope held: **COPY** | | SHIFT + REC: **save the project now** |
+| OCT- | The lower keys: STEPS ↔ **LOOP KEYS** (lit) | | **OCT- + OCT+ together: F3.** Held: the PAGE scope (REC / PLAY). SHIFT + OCT-: **undo** |
+| OCT+ | The lower keys: STEPS ↔ **KEYS** (lit); both lit = **SCENE** | | Held + a knob: clear that lock. SHIFT + OCT+: **redo** |
 
-In a setup list, FN + the same button goes back to the category's pages; another button jumps to its setup.
-Warp mode, filter machine and filter mix mode change only while stopped (the list says STOP). An FX machine changes
-any time (a short fade, no click).
+In a setup the same button (or SHIFT + it) goes back to the category's pages, OCT- / OCT+ close it, another button
+opens that category's pages. Warp mode, filter machine and filter mix mode change only while stopped (the list says
+STOP). An FX machine changes any time (a short fade, no click).
+
+**On the RAZOR page** the OCT keys are its own (OCT+ split, OCT- delete; SHIFT: Auto-Chop / Redistribute; not undo
+/ redo there) and a pop-up's OCT keys still come first.
+
+## F3 (OCT- + OCT+ together, or PLAY held)
+
+The timing menu. It stays open; OCT- / OCT+ / HOME close it; PLAY still plays and stops.
+
+| Control | Does |
+|---|---|
+| SELECT | The tempo (BPM; SHIFT snaps) |
+| ALGORITHM | The swing |
+| KNOB 1 / 2 | The track's pattern **LEN** (steps) / **RATE** (1/16 .. 2x) |
+| KNOB 3 / 4 | The global length (GLEN) / the pattern change mode (QUANT) |
+| Lower key tapped | Edit that step page (the keys and the screen follow) |
+| Lower key held 0.4 s | That page into / out of the playing loop (never empty) |
+
+The screen: the tempo and swing big, the pattern's pages (filled = in the loop, bright = the one you edit, orange
+underline = playing), the four cells.
+
+## SHIFT's keys (lit while SHIFT is held)
+
+| SHIFT + | Does |
+|---|---|
+| OCT- / OCT+ | **Undo / redo** (16 deep, per gesture: a knob turn, a fader glide, a step tap, a lock, a paste, a page clear; a pause of a second starts a new gesture; a new edit drops the redo) |
+| upper T1 / T2 | **Memorize** the whole project to RAM / **recall** it (also while playing: the pattern restarts at step 1; only changed samples reload). T2 lights once something is memorized |
+| upper S1 / S2 | **Copy** the pattern / **paste** it onto the current one |
+| upper MST | **Tap tempo** (the average of the last four taps; the tempo big on the screen) |
+| FILL | **Latch** fill on / off |
+| PATN | **Name the pattern** |
+| PRESETS | The pattern |
+| a value knob | Snap |
+| PLAY / REC | Stop + step 1 (with a scope: paste) / save (with a scope: copy) |
+| a category button | Its setup |
+
+SHIFT with the lower keys keeps their own meanings: a step tapped = a **ghost trig**; in the loop layer, keys / pads
+**17-32**; on the scene row, **store** A / B; on RAZOR, **mute** the slice; a glide key: the slow, linear glide.
+
+The map (SHIFT held alone) draws the panel small: the upper keys with their icons (memorize, recall, copy, paste,
+tap, latch, name), the buttons (undo, redo, stop, save, setup), PRESETS (patterns) and the knobs (snap).
 
 ## Upper keys
 
-| Key | Does | FN + key |
-|---|---|---|
-| T1-T6 | Select the track (steps, pages and knobs follow) | Mute / unmute |
-| S1, S2 | Select the send bus: its FX page (any category but MST / FILE / PAT) | |
-| MST | Select the master bus: SRC shows the MIX, the other categories the master insert | |
-| FILL | Hold = fill (FILL / !FILL trig conditions) | Latch fill on / off |
-| PATN | Hold = pattern overlay (+ REC / PLAY / FN + PLAY = the pattern scope); tap = latch it open. Lower keys 1-16 pick the pattern. Overlay open + SAVE = **name the pattern** | |
+| Key | Tap | Hold 0.4 s | Double-tap |
+|---|---|---|---|
+| T1-T6 | Select the track (steps, pages and knobs follow; on release) | **Mute / unmute** | **Solo / unsolo** (soloed: the key blinks; when any track is soloed only soloed ones play) |
+| S1, S2 | Select the send bus: its FX page (any category but MST / FILE / PAT) | | |
+| MST | **The MST category**: MIX, then MASTER (BPM, swing, global length, playhead return), then SCENE | its setup: RTN, BPM, GBPM, NAME | |
+| FILL | Held: fill (FILL / !FILL trig conditions). **FILL held + a track key: every mute and solo off** | | |
+| PATN | The pattern overlay; **it stays open** until a pattern is picked, PATN again, OCT- / OCT+ or HOME. Held while you pick or copy: it closes on release. Held: the pattern scope (REC / PLAY / SHIFT + PLAY) | | |
+
+The master bus is selected with ALGORITHM (after S2). Mutes are the pattern's (saved); solos are the session's.
 
 ## Lower keys (16)
 
-**STEPS** (default): quick tap = trig on / off (a new trig keeps the key's velocity); **FN + tap = ghost trig**
+**STEPS** (default): quick tap = trig on / off (a new trig keeps the key's velocity); **SHIFT + tap = ghost trig**
 (plays nothing new, carries the last note's locks). Hold a step + turn a knob = p-lock. Holding a trig step while
 stopped plays it (step preview).
 
 **Hold SEL = loop keys 1-16** (the live scrub): hold one key to loop that slice of the region, two or more to span
 them; let go and the playhead returns per MASTER > RTN (return / boomerang / reset). While stopped they audition.
-On slice machines (SLICE, S.POLY, RAZOR, R.POLY) the keys are **slice pads**, velocity sensitive. **FN + key =
+On slice machines (SLICE, S.POLY, RAZOR, R.POLY) the keys are **slice pads**, velocity sensitive. **SHIFT + key =
 17-32** when the track has them (loop division above 16, more than 16 slices).
 
 **Hold a step, then hold SEL and press loop keys** = lock that step's region: first tap start + end, the same key again
 start only (end follows the track), two keys = their span. On slice machines it picks the step's slice(s) (mono
 machines: one, poly: several).
 
-**KEYS** (OCT+): a white-key keyboard, -12..+14 semitones, centre C on key 8. Slices play the track's slice at that
-pitch; loops transpose while held; WAVETABLE plays its oscillator. Hold a step + a key = lock the step's pitch.
+**LOOP KEYS** (OCT- lit): the loop keys without holding SEL.
 
-**SCENE** (OCT- from STEPS; both OCT LEDs lit): the crossfader row, see Scenes. On MST > SCENE the lower keys are the
-scene row whatever the key mode; on RAZOR they are the razor pads whatever the key mode.
+**KEYS** (OCT+ lit): a white-key keyboard, -12..+14 semitones, centre C on key 8. Slices play the track's slice at
+that pitch; loops transpose while held; WAVETABLE plays its oscillator. Hold a step + a key = lock the step's pitch.
+
+**SCENE** (both OCT LEDs lit): the crossfader row, see Scenes. On MST > SCENE the lower keys are the scene row whatever
+the key mode; on RAZOR they are the razor pads; in F3 the pages; with the PATN overlay the patterns.
 
 ## Sources: machines and warp modes
 
@@ -77,11 +150,11 @@ razor table's slices, mono / up to 8 voices), **NEIGH** (T2-T6). Warp modes (SRC
 TEMPO VARISPEED, DOMINO, GRANULAR, RANDOM OLA, PITCH CORRECT, HARMONIZER, WAVETABLE, SPECTRAL FREEZE, FORMANT,
 GSTRETCH, GSTRETCH 2, CHOPPED.
 
-The WARP page (SRC page 3) shows each mode's params in the original's layout: DOMINO SLCS SLEN LOOP RATE / ATK REL
-GATE; RANDOM OLA CHAOS OWIN OWAN RATE; PITCH CORRECT SMEAR PCWN PCDS RATE; HARMONIZER MIX IN1 IN2 IN3 / RATE (an
-interval of 0 = that voice off); WAVETABLE MORF WSIZ CYCW LRAT / LDEP LSHP XFAD RATE (pitch from P/T, base C3);
-SPECTRAL FREEZE FRZE BLUR RATE; FORMANT FORM FRZE RATE; GSTRETCH / GSTRETCH 2 STRCH PWIN SMTH RATE. CYCW and LRAT move
-in semitone ratios. The spectral modes are limited to a few tracks at a time, as the original limits them.
+The WARP page (SRC page 3) shows each mode's params in the original's layout, in lanes of four: DOMINO SLCS SLEN LOOP
+RATE / ATK REL GATE; RANDOM OLA CHAOS OWIN OWAN RATE; PITCH CORRECT SMEAR PCWN PCDS RATE; HARMONIZER MIX IN1 IN2 IN3 /
+RATE (an interval of 0 = that voice off); WAVETABLE MORF WSIZ CYCW LRAT / LDEP LSHP XFAD RATE (pitch from P/T, base
+C3); SPECTRAL FREEZE FRZE BLUR RATE; FORMANT FORM FRZE RATE; GSTRETCH / GSTRETCH 2 STRCH PWIN SMTH RATE. CYCW and LRAT
+move in semitone ratios. The spectral modes are limited to a few tracks at a time, as the original limits them.
 
 **NEIGH**: the track's source is the track to its left, whole: after its filter, amp, insert FX, mute and pan (the
 original re-points the left track's mix output). The left track is then heard only through this one: this track's
@@ -90,29 +163,30 @@ the routing and both levels. Chains work (T2 into T3 into T4). A NEIGH track nev
 
 ## FILE / RAZOR: the samples and the razor slice editor
 
-SAVE opens FILE page 1, **SAMPLE**: SELECT moves the cursor, SAVE loads the file under it into the track's slot. When
-the cursor is on the track's own file, SAVE opens page 2, **RAZOR**, for that file; SAVE there goes back. The razor
-machines (RAZOR, R.POLY) play each slice from its own start / end. The table is per track and saved with the project;
-its per-slice settings (PLAY, CHOK, P/T, mute) apply to every slice machine.
+**PRESETS** steps the track's sample through the folder from any page. SAVE opens FILE, **SAMPLE**: SELECT moves the
+cursor, SAVE loads the file under it into the track's slot (BPM STEP GAIN SLOT, then T-ST T-EN on lane 2). When the
+cursor is on the track's own file, SAVE steps the lanes and then opens **RAZOR** for that file; SAVE there steps its
+two lanes and goes back to SAMPLE. The razor machines (RAZOR, R.POLY) play each slice from its own start / end. The
+table is per track and saved with the project; its per-slice settings (PLAY, CHOK, P/T, mute) apply to every slice
+machine.
 
 | On RAZOR | Does |
 |---|---|
 | Lower keys 1-16 | Select that slice and play it (velocity); slices 17-32 when the selected slice is in that bank |
-| FN + lower key | Mute / unmute the slice in the razor table (it stays on its steps, plays nothing) |
+| SHIFT + lower key | Mute / unmute the slice in the razor table (it stays on its steps, plays nothing) |
 | SELECT | Select the slice |
-| KN1 / KN2 | **STRT / END** of the selected slice (0..1 of the track window), under the SNAP mode |
-| KN3 | **PLAY**: the slice's play mode (TRACK = the track's) |
-| KN4 | **ZOOM** 1X..64X, centred on the point you last moved |
-| FN + KN1 | **SNAP**: GRID (next slice_count division), ZOOM (0.5 / zoom per detent, the plain mode), ZERO-X (the nearest zero crossing), TRANS (the next / previous transient), FRIEND (also drags the touching neighbour point) |
-| FN + KN2 | **CHOK**: the slice's choke group A-H (a new voice in the group cuts the others; OFF) |
-| FN + KN3 | **P/T**: the slice's pitch offset |
-| FN + KN4 | **SENS**: Auto-Chop / transient sensitivity (the ticks over the waveform) |
+| Lane 1: KN1 / KN2 | **STRT / END** of the selected slice (0..1 of the track window), under the SNAP mode |
+| Lane 1: KN3 | **PLAY**: the slice's play mode (TRACK = the track's) |
+| Lane 1: KN4 | **ZOOM** 1X..64X, centred on the point you last moved |
+| Lane 2: KN1 | **SNAP**: GRID (next slice_count division), ZOOM (0.5 / zoom per detent, the plain mode), ZERO-X (the nearest zero crossing), TRANS (the next / previous transient), FRIEND (also drags the touching neighbour point) |
+| Lane 2: KN2 | **CHOK**: the slice's choke group A-H (a new voice in the group cuts the others; OFF) |
+| Lane 2: KN3 | **P/T**: the slice's pitch offset |
+| Lane 2: KN4 | **SENS**: Auto-Chop / transient sensitivity (the ticks over the waveform) |
 | OCT+ | **Split** the selected slice at the point you last moved (else in the middle) |
 | OCT- | **Delete** the selected slice |
-| FN + OCT+ | **Auto-Chop**: one slice per transient (the head before the first one left out), the slice count follows |
-| FN + OCT- | **Redistribute**: the slices in use as even divisions |
+| SHIFT + OCT+ | **Auto-Chop**: one slice per transient (the head before the first one left out), the slice count follows |
+| SHIFT + OCT- | **Redistribute**: the slices in use as even divisions |
 
-The OCT keys mean this only while RAZOR shows: there a held OCT opens no PAGE overlay and a tap changes no key mode.
 Split and delete renumber the slices after it; the track's steps follow (a step on slice 6 stays on that audio).
 The screen: the waveform of the track window (trim x Range), the selected slice as a cream block, slice numbers,
 the transients at SENS as ticks, the sounding voices in orange, the zoom window as a bar, the 16 pads of the bank.
@@ -121,9 +195,9 @@ the transients at SENS as ticks, the sounding voices in orange, the zoom window 
 
 - **18 FX machines** (NONE, DELAY, REVERB, LOFI, COMP, DESTROY, ECHO, BLACKHOLE, CHORUS, FLANGER, PHASER, DJ EQ, DUCK,
   TAPE ECHO, CASSETTE, MOTION, RINGS, LIMIT) on four kinds of slot: each track's insert, the S1 and S2 send returns,
-  the master insert. The machine is chosen in the setup (**FN + FX**, KN1) so a knob turn never swaps it by
-  accident. On a send, NONE returns nothing.
-- The FX page shows the machine's cells (FN for cells 5-8) over a picture: the delay taps, the reverb's decay, the
+  the master insert. The machine is chosen in the setup (FX held, or SHIFT + FX; KN1) so a knob turn never swaps it
+  by accident. On a send, NONE returns nothing.
+- The FX page shows the machine's cells (lanes of four) over a picture: the delay taps, the reverb's decay, the
   compressor / limiter curve with the live IN and GR meters, the crushed wave, the sweep, the EQ bands; the bar at
   the right is the slot's output level.
 - **SENDS** (FX, page 2): S1 / S2 levels and TAP (PRE = after the filter, POST = after the insert). A muted track
@@ -134,74 +208,54 @@ the transients at SENS as ticks, the sounding voices in orange, the zoom window 
 
 ## MOD
 
-Two LFOs (DEST, WAVE, SPD synced, DEP bipolar, MODE free / trig / one / hold), the mod envelope (ADSR, DEST, DEPTH;
-retriggered where the step's ERST is on, the LFOs where LRST is on), velocity (slice trigs) and four macros. DEST:
-PITCH (+-12 st), CUTOFF, RES, AMP, PAN, or a macro (M1-M4). PITCH reaches every warp mode as in the original: the
-readers, the wavetable oscillator, the spectral pitch shift and each harmonizer interval. The bar at the right of the
-LFO / env / velocity pages is the live value at the destination. Depths, speeds, the env times and macro values
-p-lock; DEST, WAVE and MODE do not (as the original).
+Two LFOs (DEST, WAVE, SPD synced, DEP bipolar; MODE free / trig / one / hold on lane 2), the mod envelope (ADSR; DEST,
+DEPTH on lane 2; retriggered where the step's ERST is on, the LFOs where LRST is on), velocity (slice trigs) and four
+macros (MACRO n: VAL and the depths to PTCH CUT RES, then AMP PAN). DEST: PITCH (+-12 st), CUTOFF, RES, AMP, PAN, or
+a macro (M1-M4). PITCH reaches every warp mode as in the original. The bar at the right of the LFO / env / velocity
+pages is the live value at the destination. Depths, speeds, the env times and macro values p-lock; DEST, WAVE and
+MODE do not (as the original).
 
 ## Scenes and the crossfader
 
 Two scenes, A and B, each a sparse set of param values for every track and the three buses; the fader morphs between
-them. **MST > SCENE** (HOME, page 3) is the overview: the fader with its six glide positions and where a glide is
-heading, and the params that morph (track or bus, label, both ends, where the morph is now); **KN1 = XFD**, the fader
-as a direct 0..128 knob. The scene row is on the lower keys in the SCENE key mode (a strip with the fader sits over
-the page) and always on MST > SCENE: lower keys 9-16 = A, six glide keys, B (the grid's row 5), mirrored on 1-8.
+them. **MST > SCENE** (the MST key, page 3) is the overview: the fader with its six glide positions and where a glide
+is heading, and the params that morph; **KN1 = XFD**, the fader as a direct 0..128 knob (SHIFT: 0 32 64 96 128). The
+scene row is on the lower keys in the SCENE key mode (a strip with the fader sits over the page) and always on MST >
+SCENE: lower keys 9-16 = A, six glide keys, B (the grid's row 5), mirrored on 1-8.
 
 | Gesture (scene row) | Does |
 |---|---|
-| FN + A (key 1 / 9), FN + B (key 8 / 16) | Capture every morphable param of every track and bus into the scene (sparse: a param at its default is stored only when the other scene holds it) |
-| Hold A or B + turn a cell | That param (selected track) into the held scene only; the sound does not move until the fader does. A cell shows the scene's value in orange while the anchor is held |
+| SHIFT + A (key 1 / 9), SHIFT + B (key 8 / 16) | Capture every morphable param of every track and bus into the scene (sparse) |
+| Hold A or B + turn a cell | That param (selected track) into the held scene only; the sound does not move until the fader does. The cell shows the scene's value as a filled chip while the anchor is held |
 | Hold A or B + PLAY | Clear that scene |
 | Hold a glide key (2-7 / 10-15 = 0, 0.2 .. 1) | Ease the fader there (5 /s exponential, lands in ~1 s); release freezes; another key still held takes over |
-| FN + hold a glide key | The slow, linear move: the whole A..B travel in 5 s |
-| MST > SCENE KN1 (XFD) | The fader, 0..128 |
+| SHIFT + hold a glide key | The slow, linear move: the whole A..B travel in 5 s |
 
 Morphing is the base-value resolver's source 2: a firing step's p-lock wins, then the fader, then the track value.
 The track value is never written; turning a param's knob by hand gives it back to the knob until the fader next
-moves. A param one scene does not hold morphs against its track value. Only continuous params morph: every track's
-(warp, FX, MOD params included), and the buses' FX params; not options, lengths, slots, slice counts, rates or the
-track volume. The scenes and the fader are saved with the project (one pair for all patterns) and re-applied after a
-pattern switch.
+moves. Only continuous params morph. The scenes and the fader are saved with the project (one pair for all patterns)
+and re-applied after a pattern switch.
 
 ## Copy / clear / paste (each scope keeps its own buffer)
 
-| Scope held | REC = copy | PLAY = clear | FN + PLAY = paste |
+| Scope held | REC = copy | PLAY = clear | SHIFT + PLAY = paste |
 |---|---|---|---|
 | Step(s) | the held steps with their locks | their p-locks (the trig stays) | onto the held step(s), the copied steps' spacing kept (past the page edge: dropped) |
 | Slice pad(s) (loop layer, slice machines) | the pad's program: locks, choke, mute | the programs | onto the held pads |
 | PAGE (an OCT key held) | the step page | the step page | onto the step page |
-| PATN (held) | the pattern: params, steps, BPM, page loops, slice programs | **the trigs** of every track, after a second PLAY (the box says CLEAR P01? PLAY) | onto the current pattern (its name stays) |
+| PATN (held) | the pattern: params, steps, BPM, page loops, slice programs | **the trigs** of every track: a question, **CLEAR P01?**, that stays open: OCT+ yes, OCT- / HOME no | onto the current pattern (its name stays) |
 
-A toast in the middle of the screen says what happened.
+SHIFT + S1 / S2 copy / paste the pattern without holding PATN. A toast in the middle of the screen says what happened.
 
-## PAGE (hold OCT- or OCT+, not on RAZOR)
+## Naming
 
-While an OCT key is held the screen and the lower keys show the pattern's pages. **SELECT** picks the mode:
-
-| Mode | A key | The LEDs |
-|---|---|---|
-| SEL | the step page the keys edit | the selected page bright, the playing page blinks |
-| LOOP | the page in / out of the playing loop (never empty) | pages in the loop mid |
-| RATE | the track's pattern rate (16 of the 21: key 9 = 1x) | the current rate |
-
-## Memorize / recall, undo, names
-
-| Gesture | Does |
-|---|---|
-| FN + OCT+ | **Memorize**: the whole project (patterns, params, pool, scenes) to RAM |
-| FN + OCT- | **Recall** it, also while playing (the pattern restarts at step 1; only changed samples reload). OCT- lights with FN once something is memorized |
-| FN + SAVE | **Undo** the last change, 16 deep, per gesture (a knob turn, a fader glide, a step tap, a lock, a paste or a page clear); a pause of a second starts a new gesture |
-| PATN overlay open + SAVE | **Name the pattern** |
-| MST setup NAME (turn) | **Name the project** |
-| Naming screen | KN1 / SELECT the place, KN2 the character, KN3 a random name, KN4 left = delete, right = insert a space; **SAVE** keeps it, a tap of FN cancels |
+SHIFT + PATN names the pattern; MST setup NAME (turn) names the project. KN1 / SELECT the place, KN2 the character,
+KN3 a random name, KN4 left = delete, right = insert a space; **OCT+ keeps it**, OCT- or HOME cancels.
 
 ## Slices and patterns
 
-- Hold slice pad(s) (loop layer) + turn a lockable cell = that slice's own lock in the pattern (its pitch / velocity
-  per voice, the rest held for the note under the step's own locks). The slice SOURCE page has **CHOK** (choke group
-  NONE, 1-8) and **SMUT** (mute) for the held pads, else for the SLIC slice.
+- Hold slice pad(s) (loop layer) + turn a lockable cell = that slice's own lock in the pattern. The slice SOURCE page
+  has **CHOK** (choke group NONE, 1-8) and **SMUT** (mute) on its lane 2 for the held pads, else for the SLIC slice.
 - A slice has two homes: the **razor table** (per track, every pattern: range, PLAY, CHOK, P/T, mute) and the
   **pattern's slice program** (locks, CHOK, SMUT). A slice is silent when either mutes it; the pattern's choke group
   wins, else the razor table's.
@@ -210,32 +264,58 @@ While an OCT key is held the screen and the lower keys show the pattern's pages.
 ## LEDs
 
 Steps: trig = mid, p-locked trig = flicker, ghost = dim, playhead = bright. Loop keys: the region dim, the playhead's
-key mid, held keys bright. RAZOR: the bank's slices dim, the selected one bright, the sounding ones mid, muted ones
-faint, both OCT keys dim. Upper keys: the
-selected track bright, the others by their level, muted off. Category buttons: the current one lit (blinking in
-setup). PLAY green while playing. REC dim when the project has unsaved changes.
+key mid, held keys bright. F3: the page you edit lit, the loop's pages mid, the playing one blinks. RAZOR: the bank's
+slices dim, the selected one bright, the sounding ones mid, muted ones faint. Upper keys: the selected track bright,
+the others by their level, muted (or silenced by a solo) off, soloed blinking; MST lit on its category. Category
+buttons: the current one lit (blinking in its setup). OCT- / OCT+: the key mode (OCT- loop keys, OCT+ keys, both
+scene); in a pop-up OCT- lit and OCT+ blinking. PLAY green while playing. REC dim when the project has unsaved
+changes, mid when a scope is held. **SHIFT held**: only its keys light (T1, T2 once memorized, S1, S2 once copied,
+MST blinking, FILL, PATN; OCT- / OCT+ when there is something to undo / redo; PLAY, REC; the categories with a setup).
 
 ## Differences from the norns version
 
 - **The panel.** The grid's rows (loop keys, steps, keyboard, pattern slots, the crossfader) share the 16 lower keys:
-  SEL held, the OCT key modes, the PATN overlay and PAGE switch them. STOP is FN + PLAY; the grid's PAGE key is an OCT
-  key held; the norns K2/K3 pair navigation is four knobs on four cells (FN for the next four). Undo (the grid's NO)
-  is FN + SAVE, memorize / recall FN + OCT.
+  SEL held, the OCT key modes, the PATN overlay and F3 switch them. STOP is SHIFT + PLAY; the grid's PAGE key is F3
+  (and an OCT key held for the page scope); the norns K2/K3 pair navigation is four knobs on lanes of four (SELECT
+  steps them); the norns K1 + E2 / E3 snap is SHIFT + a knob, with the same lists. Undo (the grid's NO) is SHIFT +
+  OCT-, and there is a redo (SHIFT + OCT+); memorize / recall are SHIFT + T1 / T2. Solo is added (a double-tap).
 - **Razor.** The table is per track (the original shared one global table); the plain STRT / END turn is the ZOOM
   snap and the other snaps act on every turn; split / delete / per-slice play mode + pitch are added; the onset
   envelope reads 32 frames per window (the Lua 8).
 - **FX.** The bus FX (S1, S2, MST) are global and not p-lockable (the original's bus lanes are not ported); they do
   morph with the scenes, as in the original. The macro depth matrix is edited on the MACRO 1-4 pages (the original
-  used a grid gesture). The FX machine list is the original's 18 (DRIVE removed): a 0.1.0 project's stored insert
-  machine lands on a different machine (none was audible in 0.1.0).
-- **Patterns.** The pattern scope of copy / clear / paste is PATN held (the grid's FN + REC / PLAY / STOP were removed
-  there; FN + REC saves here); the STOP-held CUT/PASTE mode is not ported. Page loop plays (the original stores it but
-  ignores it in playback); RATE in the PAGE overlay sets the track's pattern rate. Per-page rates are not done.
+  used a grid gesture). The FX machine list is the original's 18 (DRIVE removed).
+- **Patterns.** The pattern scope of copy / clear / paste is PATN held (or SHIFT + S1 / S2); the STOP-held CUT/PASTE
+  mode is not ported. Page loop plays (the original stores it but ignores it in playback); F3's KN2 sets the track's
+  pattern rate. Per-page rates are not done.
+- **Samples.** PRESETS steps the track's sample through the folder (the original picks a file in its browser only).
 - **Scenes.** The scene base is the track value itself (the original's stashed base always equals it). Hold an anchor
   + PLAY clears the whole scene (the original clears one param of both scenes with K2/K3).
-- **Slices.** Slice mute is the SMUT cell (FN + key = 17-32 here) or FN + key on RAZOR. Slice locks apply to live pads
-  for pitch / velocity only.
+- **Slices.** Slice mute is the SMUT cell or SHIFT + key on RAZOR. Slice locks apply to live pads for pitch /
+  velocity only.
 - **Not ported.** Live step trig (an editor pref), the step preview pref, the visualizer, audio input (E6). Names use
   A-Z 0-9 and a few signs (the 3x5 font has no lower case). Undo covers params, globals, the fader, step edits,
   pastes and page clears; not scene edits, pattern-scope operations, sample loads or recalls (as the original).
 - The engine's own deviations (control rate, feedback loops, click-free swaps, ...) are listed in src/dsp/README.md.
+
+## What moved in 0.3.0 (from 0.2.0)
+
+| 0.2.0 | 0.3.0 |
+|---|---|
+| FN (GLO) + KN1-4 = cells 5-8 | lanes: SELECT steps them; SHIFT + a knob snaps |
+| SELECT = the page | SELECT = the lane, on into the next page |
+| FN + a category = setup | the same, or hold the button 0.4 s (SRC: held and let go with no loop key used) |
+| HOME = the MST category | HOME = back to SRC; the MST upper key = the MST category (hold: its setup) |
+| MST upper key = the master bus | ALGORITHM past S2 |
+| PRESETS = the pattern | PRESETS = the track's sample; SHIFT + PRESETS = the pattern |
+| OCT taps cycle STEPS / LOOP / KEYS / SCENE | OCT- toggles LOOP KEYS, OCT+ toggles KEYS, both = SCENE |
+| OCT held = the PAGE overlay (SELECT: SEL / LOOP / RATE) | F3 (OCT- + OCT+, or PLAY held): tap a key = edit the page, hold = loop it, KN2 = rate; an OCT key held stays the PAGE scope |
+| PLAY acts on its press | on its release (a hold opens F3) |
+| FN + OCT+ / OCT- memorize / recall | SHIFT + T1 / T2 |
+| FN + SAVE undo | SHIFT + OCT- (SHIFT + OCT+ redo) |
+| FN + a track key = mute | hold a track key; double-tap = solo; FILL + a track key = all on |
+| PATN overlay + SAVE = name the pattern; naming SAVE keeps, FN tap cancels | SHIFT + PATN; OCT+ keeps, OCT- / HOME cancel |
+| CLEAR P01? PLAY again within 3 s | the question stays: OCT+ yes, OCT- / HOME no |
+| FILE: SAVE on the track's file = RAZOR, RAZOR: SAVE = back | SAVE steps the lanes, then the pages (SAMPLE 2 lanes, RAZOR 2 lanes) |
+| RAZOR FN + KN1-4 = SNAP CHOK P/T SENS | RAZOR lane 2 (SAVE) |
+| locks in orange text, "LCK" | a filled chip (outlined: locked on some step), the orange frame, the held count |

@@ -17,6 +17,8 @@ event list are documented at the top of **`ec_dsp.h`**.
 | `ec_voices.c` | slice voices (raw + Warp1-like grain cloud), voice budget, stealing, choke |
 | `ec_filter.c` | filter machines + AMP/PAN stage |
 | `ec_env.c` | SC EnvGen segments, ADSR / AHR / gated voice envelopes |
+| `ec_fx.h` / `ec_fx.c` / `ec_fx_state.h` | E4: the 18 FX machines (`\elasticatFx*`), one slot = one insert / send return / master insert |
+| `ec_mod.h` / `ec_mod.c` | E4: `\elasticatMod` -- 2 LFOs, mod envelope, velocity, 4 macros x 5 destinations |
 | `ec_internal.h` | internal structs + inline helpers |
 
 Tests, demo renders and the benchmark: `tests/dsp` (`make -C tests/dsp`, `render`, `bench`, `wasm`).
@@ -38,15 +40,54 @@ Tests, demo renders and the benchmark: `tests/dsp` (`make -C tests/dsp`, `render
 - Amp: ADSR / AHR with the Elektron time curve (xform helpers), portamento legato, noteOff for held notes,
   amp ×2.63 makeup + Balance2 pan as in the SC filter stage.
 
+## E4: FX, sends, master insert, MOD
+
+- **Chain** (`track_chunk`): source -> filter (+ the PITCH / CUTOFF / RES / AMP / PAN mod sums) -> send taps
+  (`send_tap` 1 pre / 2 post insert, levels Lag 0.02) -> the insert (`p.fx`) -> the track mix (mute x centre
+  Balance2, moved here from the filter stage as \elasticatTrackMix) -> master. Then S1 / S2 returns
+  (`ec_dsp_bus_params`), the master insert, the master volume and the soft limiter.
+- **Duck key** as the SC `keyIn = masterBus`: a track's insert hears the tracks mixed before it (tracks 1..N-1,
+  the node order), S1 / S2 the sum of the six tracks, the master insert its own input.
+- **Memory**: the 9 FX slots' delay lines follow the state in the caller's block: `ec_dsp_mem_size()` = 14 186 240
+  bytes (13.5 MiB; `EC_DSP_MEM_MAX` = 14 MiB for static buffers).
+- **Machines** (`ec_fx.c`): DELAY / ECHO / TAPE ECHO (cubic DelayC, time Lag 0.15 s), REVERB (SC FreeVerb2,
+  line-for-line), BLACKHOLE (predelay + 4 modulated AllpassC + LPF/HPF/LeakDC + SC Limiter in the loop), COMP (SC
+  Compander), LIMIT (SC Limiter, 3 buffers), DUCK (Amplitude follower), LOFI / DESTROY (Latch + round, fold2,
+  tanh, softclip), CHORUS / FLANGER / PHASER (DelayC / FOS), DJ EQ (LPF + HPF + remainder), CASSETTE (SC PinkNoise,
+  Dust2 -> Decay -> BPF), MOTION, RINGS (SC FreqShift's 12-coefficient Hilbert). Swaps fade 10 ms to dry
+  (silence on a send), restart, fade in; a send set to NONE returns nothing (spawnSend1).
+- **MOD** (`ec_mod.c`): evaluated per engine chunk (<= 16 samples); a track with every depth at 0 computes nothing
+  (needsMod). LFO modes FREE / TRIG / ONE / HOLD, waves sine tri saw ramp square S&H; the sequencer sends
+  `EC_EV_MOD_TRIG` (lfo_reset / env_reset of the firing step, the mod env gate = the note length); velocity is
+  latched from slice trigs (Lag 0.01). Macros: base + LFO/env/velocity routed at them (dest M1..M4), then the 4 x 5
+  depth matrix; CUTOFF's LFO/env/macro terms x0.3, velocity at full weight.
+- **Idle CPU saver** (`\elasticatTrackMix`'s Amplitude + `idleScan`): a track that is not playing, has no voices
+  / reader / audition and whose post-mix level stayed <= 0.001 for 4 s is skipped whole; any event for it, a
+  param change, a sample change or the transport start wakes it. FX tails keep it awake until they decay.
+- **Panic** (stop twice) also clears every FX tail (panicClearFx).
+
+### E4 deviations
+
+15. **Feedback without the block delay**: LocalIn/LocalOut loops are per sample (SC added 64 samples), so flanger /
+    phaser / rings resonances sit at the true pitch.
+16. **Control rate 16 samples** (LFOs, Lags, Compander gain, the mod sources) instead of 64; Amplitude-based
+    meters / the duck key follow per sample. LFNoise2 is a bounded midpoint Bezier.
+17. **Swaps are click-free** (fade out, restart, fade in; delay-based machines wait until their line has output
+    before fading in) where SC freed and respawned the synth. LIMIT's REL change respawns (SC fixed it at spawn).
+18. **Tails end below -120 dBFS** (each slot sleeps once input and output stay that quiet; COMP / DUCK / LIMIT never
+    sleep). Inputs are sanitised (NaN / Inf / > 1e4 -> 0).
+19. **The mute is applied after the send taps** (faithful: \elasticatSendTap reads before \elasticatTrackMix), so
+    a muted track still feeds S1 / S2.
+20. **The idle saver runs inside the engine** with a 4 s grace on a post-mix peak follower (SC: a 2 s scan of a 2 Hz
+    Amplitude feed, never the viewed track). The engine has no "viewed track".
+21. **Velocity as a mod source** latches on slice trigs only (as `trackTriggerSlice`); loop trigs leave it.
+
 ## Not yet (hooks in place)
 
 - Warp modes domino, random_ola, pitch_corrected, harmonizer, wavetable, spectral_freeze, formant,
   gstretch, gstretch2: they **fall back to the tempo_varispeed reader** (`ec_track_status_t.mode_implemented
   = 0`). Add a family in `warp_family()` + a render case in `fam_render()`.
 - `neighbor` (E3): marked "E3 hook" in `track_chunk()`; silent today.
-- Insert FX, sends S1/S2, master insert (E4): marked "E4 hook" in `track_chunk()` / `ec_dsp_process()`;
-  `send_tap` / `send1_level` / `send2_level` are stored, unused.
-- MOD (LFOs, mod env, macros, velocity mod): the cutoff / res / pitch / amp / pan mod buses are zero.
 
 ## Deliberate deviations from the original
 

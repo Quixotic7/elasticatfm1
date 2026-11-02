@@ -9,7 +9,8 @@
 //   3. PLAY (the page's panel API, FM1Site.panel): sound (peak + RMS on an AnalyserNode after the worklet)
 //   4. steps on the lower keys, T2 + FILE (SAVE) + SELECT + SAVE loads the second file on T2, a knob turned
 //   5. the worklet's load reports while it plays (render share, busiest 21 ms, late ms)
-//   6. stop, the autosave, a reload: the project comes back (T1's file, T2's file) and plays
+//   6. the live panel labels (0.3.0: the player's "labels" message): OCT- says LOOP KEYS, SHIFT held: UNDO, MEMORIZE
+//   7. stop (SHIFT + PLAY), the autosave, a reload: the project comes back (T1's file, T2's file) and plays
 // Screenshots + SUMMARY.txt to results/web/.
 //   node host/web_e2e.mjs --site=<RemoteFM1 origin/main export> --rfm1=<elasticat .rfm1> [--out=results/web]
 import { spawn, spawnSync } from "node:child_process";
@@ -82,7 +83,8 @@ async function shot(name) {
 }
 const running = `window.FM1Site && FM1Site.current().info && FM1Site.current().engine === "rfm1" && FM1Site.current().info.id === "elasticat"`;
 // the frames, the output's level (peak and RMS per 40 ms on an AnalyserNode after the worklet node), the load reports
-const WATCH = `(() => { const p = FM1Rec.o.getPlayer(); if (window.__w) clearInterval(window.__w.timer); const W = window.__w = { frames: 0, lv: [], loads: [], errors: [] };
+const WATCH = `(() => { const p = FM1Rec.o.getPlayer(); if (window.__w) clearInterval(window.__w.timer); const W = window.__w = { frames: 0, lv: [], loads: [], errors: [], labels: null, nlabels: 0 };
+  const fb = p.ev.__labels || p.ev.labels; p.ev.__labels = fb; p.ev.labels = (m) => { W.labels = m.list || null; W.nlabels++; if (fb) fb(m); };
   const ff = p.ev.__frame || p.ev.frame; p.ev.__frame = ff; p.ev.frame = (px, seq) => { W.frames++; if (ff) ff(px, seq); };
   const fe = p.ev.__error || p.ev.error; p.ev.__error = fe; p.ev.error = (m) => { W.errors.push(String(m)); if (fe) fe(m); };
   const fl = p.ev.__load || p.ev.load; p.ev.__load = fl; p.ev.load = (m) => { W.loads.push({ t: performance.now(), ...m }); if (fl) fl(m); };
@@ -98,7 +100,7 @@ const fmtL = (l) => `peak ${l.peak.toFixed(3)}, RMS ${l.rms.toFixed(4)}`;
 
 // the panel (FM1Site.panel: remote-hook.js). Buttons by label (panel.js PANEL_LABELS = the cart's EC_B_x order) ->
 // matrix; encoders by matrix (0 SELECT 1 ALGO 2..5 KNOB1..4 6 PRESETS); keys 0..26 = F3..G5, the lower row the naturals
-const B = { FX: 0, SEL: 1, ENV: 2, LFO: 3, EDIT: 4, HOME: 5, GLO: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, "OCT-": 12, "OCT+": 13 };
+const B = { FX: 0, SEL: 1, ENV: 2, LFO: 3, EDIT: 4, GLO: 5, HOME: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, "OCT-": 12, "OCT+": 13 };
 const toMatrix = (b) => (b < 12 ? b + 2 : b - 12);
 const LOWER = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26], UPPER = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25];
 const E = { SELECT: 0, ALGO: 1, K1: 2, K2: 3, K3: 4, K4: 5, PRESETS: 6 };
@@ -133,7 +135,7 @@ async function untilText(str, ms, what) {
   return null;
 }
 // a whole Escape press (down + up), as a real key: a lone keyDown that reached the panel would leave OCT- held
-// (Escape = OCT- in the page's key map), which 0.2.0 shows as the PAGE overlay
+// (Escape = OCT- in the page's key map; 0.3.0: an OCT key held is the PAGE scope, its tap the LOOP KEYS mode)
 const esc = async () => {
   await cdp("Input.dispatchKeyEvent", { type: "keyDown", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
   await cdp("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
@@ -186,7 +188,7 @@ try {
   ok(await js(`!!document.querySelector(".cards.mine .card[data-sha] .fantasy-badge")`), "Your firmware: the card has the Fantasy CFW badge");
   await shot("01_your_firmware_badge");
   // Escape only while the sheet is open (aside.sheet.open: the page's own sheet.isOpen); a closing sheet is still
-  // visible but no longer takes the key, which then reaches the panel as OCT- (0.2.0: a tap = the SCENE key mode)
+  // visible but no longer takes the key, which then reaches the panel as OCT- (0.3.0: a tap = the LOOP KEYS mode)
   for (let i = 0; i < 3 && await js(`!!document.querySelector("aside.sheet.open")`); i++) { await esc(); await sleep(400); }
 
   // 2. the prompt, the folder, the first file on T1
@@ -253,10 +255,22 @@ try {
   ok(ld.length >= 4 && nums.load.load < 0.5 && nums.load.peak < 0.95, `the worklet's load while playing (${ld.length} reports, 8 s): render share max ${(nums.load.load * 100).toFixed(1)} %, busiest 21 ms ${(nums.load.peak * 100).toFixed(1)} %, late ${nums.load.late.toFixed(0)} ms, quantum p99 ${nums.load.p99.toFixed(2)} ms / max ${nums.load.max.toFixed(2)} ms`);
   ok(!(await js(`window.__w.errors.length`)), `no worklet errors${(await js(`window.__w.errors.join(" | ")`)) ? ": " + (await js(`window.__w.errors.join(" | ")`)) : ""}`);
 
-  // 6. stop (FN + PLAY), the autosave (the cart: stopped + 2 s quiet; the page: the flash read 1.5 s later), a reload
+  // 6. the live labels: the slots are FIZZ's 49 (8 + the button's FM1P_B_* index; 38 + the black key)
+  const LB = (i) => js(`(window.__w.labels || [])[${i}] ?? null`);
+  await until(`window.__w.labels`, 5000, "a labels message");
+  const offDn = await LB(8 + 12), offT1 = await LB(38), offGlo = await LB(8 + 5);
+  await btnDown("GLO", true); await sleep(400);
+  const onDn = await LB(8 + 12), onT1 = await LB(38), onUp = await LB(8 + 13);
+  await shot("10_shift_map");
+  await btnDown("GLO", false); await sleep(400);
+  const backDn = await LB(8 + 12);
+  ok(offDn === "LOOP KEYS" && offGlo === "SHIFT" && offT1 === "T1" && onDn === "UNDO" && onUp === "REDO" && onT1 === "MEMORIZE" && backDn === offDn,
+    `live labels: OCT- "${offDn}", GLO "${offGlo}", T1 "${offT1}"; SHIFT held: OCT- "${onDn}", OCT+ "${onUp}", T1 "${onT1}"; released: OCT- "${backDn}" (${await js("window.__w.nlabels")} labels messages)`);
+
+  // 7. stop (SHIFT + PLAY), the autosave (the cart: stopped + 2 s quiet; the page: the flash read 1.5 s later), a reload
   await btnDown("GLO", true); await sleep(80); await tap("PLAY"); await btnDown("GLO", false);
   await sleep(7000);
-  await shot("10_stopped_saved");
+  await shot("11_stopped_saved");
   await js("(window.__before = true)"); await cdp("Page.reload", {});
   await until(`!window.__before && window.FM1Folder && window.FM1Rec && ${running}`, 60000, "the cart after the reload");
   await js("FM1Folder.ready");
@@ -266,10 +280,10 @@ try {
   await keyTap(UPPER[1]);                       // T2
   await tap("SAVE");                            // FILE (from SRC, where a boot starts: one tap)
   const r2 = await fileHeader("B_BASS_BPM120.WAV");
-  await shot("11_reloaded_t2_file");
+  await shot("12_reloaded_t2_file");
   await keyTap(UPPER[0]);                       // T1, FILE stays
   const r1 = await fileHeader("A_DRUMS_BPM120.WAV");
-  await shot("12_reloaded_t1_file");
+  await shot("13_reloaded_t1_file");
   await tap("SEQ");
   ok(!!r1 && !!r2, `after a reload (folder ${fst.name}, ${fst.state}): the project is back, T2 B_BASS_BPM120.WAV ${r2 ? "ok" : "missing"}, T1 A_DRUMS_BPM120.WAV ${r1 ? "ok" : "missing"}`);
   await tap("PLAY");
@@ -277,7 +291,7 @@ try {
   const l3 = await level(2500);
   nums.play3 = l3;
   ok(l3.rms > 0.005 && l3.peak > 0.02, `after the reload PLAY plays (${fmtL(l3)})`);
-  await shot("13_reloaded_playing");
+  await shot("14_reloaded_playing");
 
   ok(!exceptions.length, `no exceptions in the page${exceptions.length ? ": " + exceptions.join(" | ") : ""}`);
   if (warnings.length) log(`  page warnings: ${[...new Set(warnings)].slice(0, 8).join(" | ")}`);

@@ -22,7 +22,7 @@ turn SELECT@3100:1
 press SAVE@3200
 png 3212:03_file_loading.png
 
-# ---- T4: the SLICE machine (FN + SRC = the SRC setup list)
+# ---- T4: the SLICE machine (SHIFT + SRC = the SRC setup list)
 press GLO@3700+150
 press SEL@3750+60
 turn K1@3950:2
@@ -42,11 +42,11 @@ press SEL@5550+60
 turn K2@5700:3
 press GLO@5900+150
 press SEL@6000+60
-turn SELECT@6100:2
+turn SELECT@6100:3
 turn K1@6200:8
 turn K2@6300:20
 png 6400:06_warp_granular.png
-turn SELECT@6500:-2
+turn SELECT@6500:-3
 
 # ---- T1: trigs on 1 and 9, step 13 locks the region of loop key 5 (hold step + hold SEL + key), step 15 a ghost,
 #      step 16 a FILL trig (TRIG page 2, hold step + KN2)
@@ -149,20 +149,19 @@ lower 4@24600+60
 lower 8@24700+60
 lower 12@24800+60
 png 25000:18_pattern2.png
+press GLO@25450+150
 turn PRESETS@25500:-1
 
 # ---- back on pattern 1: hold FILL for a bar (T1's step 16 plays)
 upper 9@26100+2000
 
-# ---- MASTER / MIX: T3's level down, T2 muted for a bar
-press HOME@28200
+# ---- MASTER / MIX (the MST key): T3's level down, T2 muted for a bar (a track key held = mute)
+upper 8@28200+60
 upper 2@28300+80
 turn K1@28400:-30
-press GLO@28600+200
-upper 1@28650+80
-png 29000:19_mix.png
-press GLO@30000+200
-upper 1@30050+80
+upper 1@28600+500
+png 29500:19_mix.png
+upper 1@30000+500
 
 # ---- the other pages
 press ARP@30300
@@ -175,7 +174,7 @@ png 31100:22_filt_setup.png
 press GLO@31300+300
 press EDIT@31400+60
 
-# ---- save (FN + REC), then stop (FN + PLAY)
+# ---- save (SHIFT + REC), then stop (SHIFT + PLAY)
 press GLO@31800+300
 press REC@31900+60
 png 32000:23_saved.png

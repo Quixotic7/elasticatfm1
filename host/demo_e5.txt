@@ -1,28 +1,28 @@
 # The E5 demo, through panel input only (ec_run --out DIR --script ...; host/render_e5.sh runs it): scenes + the
-# glide, the scene strip, copy / paste, the PAGE overlay, naming, memorize / recall, undo, the pattern clear prompt,
-# slice programs. A fresh project with build/demo_folder (host/make_demo_folder.py). Times are device ms; lower I =
+# glide, the scene strip, copy / paste, F3's pages, naming, memorize / recall, undo / redo, the pattern clear
+# question, slice programs (0.3.0's gestures: docs/FM1-CONTROLS.md). A fresh project with build/demo_folder (host/make_demo_folder.py). Times are device ms; lower I =
 # step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN (0..10).
 
 png-scale 2
 master 640@0
 press PLAY@1200
 
-# ---- a sound for scene A: FILT cutoff 100, res 30; HOME x3 = MST > SCENE; FN + key 1 = capture A
+# ---- a sound for scene A: FILT cutoff 100, res 30; the MST key x3 = MST > SCENE; SHIFT + key 1 = capture A
 press EDIT@1500
 turn K1@1600:-27
 turn K2@1650:30
-press HOME@1900
-press HOME@2000
-press HOME@2100
+upper 8@1900+60
+upper 8@2000+60
+upper 8@2100+60
 press GLO@2300+400
 lower 0@2400+80
 png 2450:01_scene_capture_a.png
 
-# ---- another for B: cutoff 40, res 90; FN + key 8 = capture B
+# ---- another for B: cutoff 40, res 90; SHIFT + key 8 = capture B
 press EDIT@2800
 turn K1@2900:-60
 turn K2@2950:60
-press HOME@3200
+upper 8@3200+60
 press GLO@3300+300
 lower 7@3400+80
 png 3700:02_scene_page.png
@@ -34,13 +34,16 @@ png 4600:04_scene_at_b.png
 lower 3@4700+120
 png 5000:05_scene_nudge.png
 
-# ---- the scene row on another page (OCT- from STEPS = SCENE): the strip over FILT; hold A + KN4 = DPTH into A only
+# ---- the scene row on another page (OCT- and OCT+ tapped: both lit = SCENE): the strip over FILT; hold A + KN4 =
+#      DPTH into A only
 press EDIT@5200
 press OCT-@5300+60
+press OCT+@5400+60
 png 5550:06_scene_strip.png
 lower 0@5600+600
 turn K4@5800:30
 png 5900:07_scene_anchor_edit.png
+press OCT-@6300+60
 press OCT+@6400+60
 
 # ---- PAT: T1 32 steps; trigs on 1, 5, 9
@@ -50,7 +53,7 @@ lower 0@6800+80
 lower 4@6950+80
 lower 8@7100+80
 
-# ---- copy steps 1 + 5 (hold + REC), paste on 11 (hold + FN + PLAY): 11 and 15, the spacing kept
+# ---- copy steps 1 + 5 (hold + REC), paste on 11 (hold + SHIFT + PLAY): 11 and 15, the spacing kept
 lower 0@7600+500
 lower 4@7650+450
 press REC@7800
@@ -60,51 +63,55 @@ press GLO@8350+300
 press PLAY@8450
 png 8500:09_paste_steps.png
 
-# ---- PAGE: hold OCT+; key 2 selects page 2; SELECT -> LOOP, key 1 drops page 1; SELECT -> RATE; REC copies the page
-press OCT+@9000+1600
+# ---- F3 (OCT- + OCT+): key 2 tapped edits page 2; key 1 held drops page 1 from the loop; KN2 the pattern rate;
+#      OCT- closes; an OCT key held + REC copies the page
+press OCT-@9000+120
+press OCT+@9050+100
 lower 1@9300+80
-png 9450:10_page_select.png
-turn SELECT@9600:1
-lower 0@9700+80
-png 9850:11_page_loop.png
-turn SELECT@10000:1
-png 10100:12_page_rate.png
-press REC@10300
-png 10350:13_page_copy.png
+png 9450:10_f3_page_select.png
+lower 0@9600+500
+png 10150:11_f3_page_loop.png
+turn K2@10200:-4
+png 10300:12_f3_rate.png
+turn K2@10350:4
+press OCT-@10400+60
+press OCT+@10500+400
+press REC@10700
+png 10750:13_page_copy.png
 
-# ---- name the pattern: PATN tap (overlay) + SAVE; KN3 = a random name, KN1 / KN2 edit; SAVE keeps it
-upper 10@10800+80
-press SAVE@11000
+# ---- name the pattern: SHIFT + PATN; KN3 = a random name, KN1 / KN2 edit; OCT+ keeps it
+press GLO@10950+150
+upper 10@11000+60
 turn K3@11200:1
 png 11300:14_name_random.png
 turn K1@11400:-3
 turn K2@11500:5
 png 11600:15_name_edit.png
-press SAVE@11800
+press OCT+@11800+60
 png 12000:16_pattern_named.png
 
-# ---- memorize (FN + OCT+), change the cutoff, recall (FN + OCT-) while playing, then undo (FN + SAVE)
+# ---- memorize (SHIFT + T1), change the cutoff, recall (SHIFT + T2) while playing, then undo (SHIFT + OCT-)
 press GLO@12300+300
-press OCT+@12400+60
+upper 0@12400+60
 png 12450:17_memorize.png
 press EDIT@12800
 turn K1@12900:50
 press GLO@13200+300
-press OCT-@13300+60
+upper 1@13300+60
 png 13350:18_recall.png
 turn K2@13500:20
 press GLO@13700+300
-press SAVE@13800
+press OCT-@13800+60
 png 13850:19_undo.png
 
-# ---- the pattern scope: hold PATN + PLAY = clear (asks), PLAY again = cleared
-upper 10@14200+900
+# ---- the pattern scope: hold PATN + PLAY = clear: the question stays open; OCT+ = yes
+upper 10@14200+400
 press PLAY@14400
-png 14450:20_clear_prompt.png
-press PLAY@14700
-png 14750:21_cleared.png
+png 14650:20_clear_question.png
+press OCT+@14700+60
+png 14800:21_cleared.png
 
-# ---- slice programs on T2: load the bass, SLICE machine (FN + SEL setup), OCT+ = loop keys (the slice pads)
+# ---- slice programs on T2: load the bass, SLICE machine (SHIFT + SEL setup), OCT- = loop keys (the slice pads)
 upper 1@15400+80
 press SAVE@15500
 turn SELECT@15600:1
@@ -114,20 +121,19 @@ press SEL@16400+60
 turn K1@16650:2
 press GLO@16750+250
 press SEL@16800+60
-press OCT+@17100+60
-# hold pad 3 + KN1 (pitch) = that slice's lock; + FN, KN2 = CHOK (its choke group)
+press OCT-@17100+60
+# hold pad 3 + KN1 (pitch) = that slice's lock; SELECT = SOURCE's lane 2, KN2 = CHOK (its choke group)
 lower 2@17300+900
 turn K1@17500:5
 png 17600:22_slice_lock.png
-press GLO@17700+400
+turn SELECT@17700:1
 turn K2@17900:2
 png 18000:23_slice_choke.png
-# hold pad 5 + FN + KN3 (SMUT) = mute the slice (its pad goes faint, the steps skip it)
+# hold pad 5 + KN3 (SMUT, lane 2) = mute the slice (its pad goes faint, the steps skip it)
 lower 4@18350+400
-press GLO@18400+300
 turn K3@18500:1
 png 18600:24_slice_mute.png
-# hold pad 3 + REC = copy its program; hold pad 7 + FN + PLAY = paste
+# hold pad 3 + REC = copy its program; hold pad 7 + SHIFT + PLAY = paste
 lower 2@19000+400
 press REC@19200
 lower 6@19600+500
@@ -135,8 +141,7 @@ press GLO@19700+300
 press PLAY@19800
 png 19850:25_slice_paste.png
 
-# ---- 32 slices (FN + KN1 = CNT): FN + pad 1 = slice 17
-press GLO@20500+300
+# ---- 32 slices (lane 2's KN1 = CNT): SHIFT + pad 1 = slice 17
 turn K1@20600:16
 press GLO@20950+400
 lower 0@21000+300

@@ -12,5 +12,5 @@ rm -f "$B/e3_flash.bin"
     --flash "$B/e3_flash.bin" --rms-from 5000 --min-rms 0.02 --expect-ui ready:2 --expect-ui dirty:0
 # power on again: T1's auto-chopped razor table is back (SRC, then FILE / RAZOR)
 "$B/ec_run" --folder "$B/demo_folder" --flash "$B/e3_flash.bin" --ms 3000 --png-scale 2 \
-    --png-at 1400:"$OUT/e3_reload_src.png" --press SAVE@1600 --press SAVE@1750+60 \
+    --png-at 1400:"$OUT/e3_reload_src.png" --press SAVE@1600 --press SAVE@1750+60 --press SAVE@1900+60 \
     --png-at 2200:"$OUT/e3_reload_razor.png" --expect-ui ready:2

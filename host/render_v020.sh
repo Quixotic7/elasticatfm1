@@ -19,5 +19,5 @@ want=$(sed -n 's/.*ui_info: //p' "$B/v020_run1.txt" | tail -1 | tr ' ' '\n' | gr
 set --
 for w in $want; do set -- "$@" --expect-ui "$w"; done
 "$B/ec_run" --folder "$B/demo_folder" --flash "$B/v020_flash.bin" --ms 4000 --png-scale 2 \
-    --press PLAY@1500 --png-at 1400:"$OUT/13_reboot.png" --press HOME@2000 --press HOME@2100 --press HOME@2200 \
+    --press PLAY@1500 --png-at 1400:"$OUT/13_reboot.png" --upper 8@2000+60 --upper 8@2100+60 --upper 8@2200+60 \
     --png-at 2600:"$OUT/14_reboot_scene.png" --rms-from 1600 --min-rms 0.02 "$@"

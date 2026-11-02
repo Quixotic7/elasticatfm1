@@ -4,7 +4,7 @@
 png-scale 2
 master 640@0
 
-# ---- T1: the RAZOR machine (FN + SRC = setup; K1: LOOP TRIG SLICE RAZOR)
+# ---- T1: the RAZOR machine (SHIFT + SRC = setup; K1: LOOP TRIG SLICE RAZOR)
 press GLO@1200+150
 press SEL@1250+60
 turn K1@1400:3
@@ -12,11 +12,12 @@ png 1450:e3_01_src_setup_razor.png
 press GLO@1600+150
 press SEL@1650+60
 
-# ---- FILE, then SAVE again = the RAZOR page (the cursor is on T1's file): 16 even slices
+# ---- FILE, then SAVE again = SAMPLE's lane 2, again = the RAZOR page (the cursor is on T1's file): 16 even slices
 press SAVE@1900
-press SAVE@2050+60
+press SAVE@2000+60
+press SAVE@2120+60
 png 2300:e3_02_razor_even.png
-# FN + OCT+ = Auto-Chop (one slice per transient)
+# SHIFT + OCT+ = Auto-Chop (one slice per transient)
 press GLO@2500+150
 press OCT+@2550+60
 png 2700:e3_03_razor_autochop.png
@@ -28,14 +29,17 @@ png 3200:e3_04_razor_selected_playing.png
 turn K4@3600:3
 turn K1@3700:-6
 png 3800:e3_05_razor_zoom.png
-# FN bank: K1 snap ZERO-X, K2 choke group B
-press GLO@3900+500
+# SAVE: RAZOR's lane 2: K1 snap ZERO-X, K2 choke group B
+press SAVE@3900+60
 turn K1@4000:1
 turn K2@4100:2
-png 4250:e3_06_razor_fn_bank.png
-# OCT+ splits slice 5 at the edited point; K4 back to 1x
+png 4250:e3_06_razor_lane2.png
+# OCT+ splits slice 5 at the edited point; SAVE x3 (SAMPLE, its lane 2, RAZOR lane 1): K4 back to 1x
 press OCT+@4600
-turn K4@4700:-3
+press SAVE@4620+20
+press SAVE@4650+20
+press SAVE@4680+20
+turn K4@4720:-3
 png 4800:e3_07_razor_split.png
 # the pads: slices 1..12 played from the lower keys
 
@@ -62,13 +66,14 @@ upper 1@7400+80
 press SAVE@7500
 press SAVE@7600
 press SAVE@7700
+press SAVE@7800
 # domino
 press GLO@8600+150
 press SEL@8650+60
 turn K2@8800:2
 press GLO@8900+150
 press SEL@8950+60
-turn SELECT@9050:2
+turn SELECT@9050:3
 press PLAY@9200
 png 9900:e3_10_warp_domino.png
 press GLO@10000+150
@@ -173,9 +178,9 @@ press EDIT@24700
 turn K1@24800:-35
 press SEL@24900+60
 png 25400:e3_19_neighbor_src.png
-press HOME@25600
+upper 8@25600+60
 png 25900:e3_20_neighbor_mix.png
-# ---- save (FN + REC), stop (FN + PLAY)
+# ---- save (SHIFT + REC), stop (SHIFT + PLAY)
 press GLO@26200+300
 press REC@26300+60
 press GLO@26700+300

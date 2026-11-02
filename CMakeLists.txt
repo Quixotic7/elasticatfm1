@@ -60,6 +60,8 @@ target_compile_options(ec_test_ux PRIVATE -Wall -Wextra)
 enable_testing()
 add_test(NAME e5 COMMAND ec_test_e5 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/e2_flash.bin)   # E5
 add_test(NAME v020 COMMAND ec_test_v020)
+# 0.3.0: the new screens through panel input (host/render_ux.sh -> results/ux)
+add_test(NAME ux_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_ux.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/ux)
 # 0.3.0: lanes, setup, PRESETS = the sample, knob speed / snap, F3, pop-ups, track keys, lock clear, SHIFT, labels
 add_test(NAME ux COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/ux_folder >/dev/null && $<TARGET_FILE:ec_test_ux> ${CMAKE_BINARY_DIR}/ux_folder")
 # 0.2.0: the seams demo through panel input + a reboot from its flash (host/render_v020.sh)

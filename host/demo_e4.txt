@@ -22,7 +22,7 @@ lower 12@4000+60
 press PLAY@4200
 press FX@4400
 png 4600:01_fx_insert_none.png
-# ---- every FX machine on T1's insert: FN + FX = the setup (KN1 = the insert machine), FN + FX back
+# ---- every FX machine on T1's insert: SHIFT + FX = the setup (KN1 = the insert machine), SHIFT + FX back
 press GLO@5000+200
 press FX@5050+60
 png 5150:02_fx_setup.png
@@ -137,8 +137,6 @@ upper 1@23000+80
 press FX@23100
 turn K1@23200:70
 turn K2@23300:40
-press GLO@23350+300
-turn K3@23400:1
 png 23800:20_sends.png
 upper 2@24000+80
 turn K1@24200:50
@@ -161,7 +159,7 @@ press GLO@26600+200
 press FX@26650+60
 png 27300:23_s2_delay.png
 # ---- MST: COMP, threshold down (the gain reduction meter)
-upper 8@27600+80
+turn ALGO@27600:1
 press FX@27700
 press GLO@27800+200
 press FX@27850+60
@@ -172,7 +170,7 @@ turn K1@28500:-25
 turn K2@28600:40
 png 29100:24_mst_comp.png
 # ---- MIX: the S1 / S2 returns metered
-press HOME@29400
+upper 8@29400+60
 png 29800:25_mix.png
 # ---- MOD on T3: LFO 1 -> CUTOFF, LFO 2 -> PAN (tri), the mod env -> RES, velocity, macros
 upper 2@30100+80
@@ -181,20 +179,20 @@ turn K1@30300:2
 turn K3@30400:2
 turn K4@30500:-40
 png 31000:26_mod_lfo1.png
-turn SELECT@31300:1
+turn SELECT@31300:2
 turn K1@31400:5
 turn K2@31500:1
 turn K3@31600:3
 turn K4@31700:50
 turn K1@31800:-0
-press GLO@31900+300
+turn SELECT@31900:1
 turn K1@32000:3
 png 32500:27_mod_lfo2.png
 turn SELECT@32800:1
 turn K1@32900:10
 turn K2@33000:-20
 turn K3@33100:-40
-press GLO@33200+400
+turn SELECT@33200:1
 turn K1@33300:3
 turn K2@33400:40
 png 33900:28_mod_env.png
@@ -209,11 +207,11 @@ png 35700:30_mod_macros.png
 turn SELECT@36000:1
 turn K2@36100:-30
 turn K3@36200:50
-press GLO@36300+300
+turn SELECT@36300:1
 turn K1@36400:-40
 png 36900:31_mod_macro1.png
 # ---- a held step locks LFO 1's depth on T3 (p-lock), then stop
-turn SELECT@37200:-5
+turn SELECT@37200:-9
 lower 0@37400+600
 turn K4@37600:60
 png 37750:32_mod_lfo_lock.png

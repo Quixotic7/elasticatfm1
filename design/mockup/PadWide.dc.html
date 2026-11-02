@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat iPad hardware box</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1194px; height: 834px; box-sizing: border-box; padding: 24px 28px 28px; background: #1C1C1A; color: #F6F3E8; font-family: 'VT323', monospace; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden">
+
+<div style="height: 36px; display: flex; align-items: center; gap: 12px">
+<svg aria-hidden="true" width="26" height="21" viewBox="0 0 11 9" shape-rendering="crispEdges"><path d="M0 0h1v1h-1zM10 0h1v1h-1zM0 1h2v1h-2zM9 1h2v1h-2zM0 2h3v1h-3zM8 2h3v1h-3zM0 3h11v1h-11zM0 4h2v1h-2zM3 4h5v1h-5zM9 4h2v1h-2zM0 5h11v1h-11zM0 6h6v1h-6zM7 6h4v1h-4zM1 7h9v1h-9zM2 8h7v1h-7z" fill="#CFCBBE"></path></svg>
+<span style="font: 700 16px/1 'Silkscreen', monospace; letter-spacing: 3px; color: #CFCBBE">ELASTICAT</span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B; letter-spacing: 1px">6-TRACK SAMPLE MANGLER</span>
+<span style="flex: 1"></span>
+<a href="PadGrid.dc.html" aria-label="No grid connected. Show grid view" style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 2px dashed #55524A; color: #9A978B; text-decoration: none; font: 400 20px/1 'VT323', monospace"><span style="width: 8px; height: 8px; box-sizing: border-box; border: 2px solid #9A978B"></span>GRID</a>
+<a href="Connect.dc.html" aria-label="FM-1 linked over USB" style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 2px solid #2E2D29; background: #141412; color: #F6F3E8; text-decoration: none; font: 400 20px/1 'VT323', monospace"><span style="width: 8px; height: 8px; background: #F6F3E8"></span>FM-1 · USB</a>
+</div>
+
+<div style="display: flex; gap: 28px; align-items: flex-start">
+
+<div style="width: 176px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">TRACK</span>
+<div role="tablist" aria-label="Tracks and buses" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{tracks}}" as="t" hint-placeholder-count="9">
+<button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0; cursor: pointer">
+<span style="width: 22px; height: 4px; background: {{t.led}}"></span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">{{t.name}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<dc-import name="Display" mode="warp" cols="{{240}}" rows="{{132}}" scale="{{2}}" pad="{{12}}" hint-size="508px,292px"></dc-import>
+<div style="display: flex; justify-content: space-between; font: 400 8px/1 'Silkscreen', monospace; color: #55524A"><span>SRC · WARP · GRANULAR</span><span>48 KHZ · 6 TRACKS</span></div>
+</div>
+
+<div style="flex: 1; display: flex; flex-direction: column; gap: 18px">
+<div role="group" aria-label="Data entry encoders A to H" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 8px">
+<sc-for list="{{knobs}}" as="k" hint-placeholder-count="8">
+<button type="button" aria-label="{{k.aria}}" style="border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">{{k.letter}}</span>
+<span style="width: 60px; height: 60px; box-sizing: border-box; border-radius: 50%; background: #0F0F0E; border: 3px solid #34332E; box-shadow: 0 4px 0 #080807; display: flex; align-items: center; justify-content: center">
+<span style="width: 44px; height: 44px; border-radius: 50%; background: #191917; display: flex; justify-content: center; transform: rotate({{k.deg}}deg)"><span style="width: 4px; height: 14px; margin-top: 3px; background: {{k.mark}}"></span></span>
+</span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">{{k.name}}</span>
+<span style="font: 400 22px/0.8 'VT323', monospace; color: {{k.vc}}">{{k.v}}</span>
+</button>
+</sc-for>
+</div>
+<div role="tablist" aria-label="Parameter categories" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="10">
+<button type="button" role="tab" aria-selected="{{c.sel}}" onClick="{{c.pick}}" style="height: 44px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0; cursor: pointer">
+<span style="width: 18px; height: 3px; background: {{c.led}}"></span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: {{c.fg}}">{{c.n}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display: flex; gap: 14px; align-items: center">
+<span style="width: 176px; font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">LOOP KEYS · HOLD TO JUMP</span>
+<div role="group" aria-label="Loop keys 1 to 16" style="flex: 1; display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{loops}}" as="l" hint-placeholder-count="16">
+<button type="button" aria-label="Loop key {{l.n}}" style="height: 34px; border: 0; border-radius: 3px; background: {{l.bg}}; box-shadow: 0 3px 0 #080807, inset 0 2px 0 #3A3934; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer"><span style="width: 14px; height: 4px; background: {{l.led}}"></span></button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; gap: 14px; align-items: center">
+<div style="width: 176px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<button type="button" style="height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer"><span style="width: 18px; height: 3px; background: #3A3833"></span><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">PATN</span></button>
+<button type="button" style="height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer"><span style="width: 18px; height: 3px; background: #3A3833"></span><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">PAGE</span></button>
+<button type="button" style="height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer"><span style="width: 18px; height: 3px; background: #3A3833"></span><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">FILL</span></button>
+</div>
+<button type="button" style="width: 64px; height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; color: #CFCBBE; font: 400 8px/1 'Silkscreen', monospace; cursor: pointer">SCENE A</button>
+<div role="slider" aria-label="Scene crossfader" aria-valuemin="0" aria-valuemax="128" aria-valuenow="64" tabindex="0" style="flex: 1; height: 48px; position: relative; display: flex; align-items: center">
+<span style="position: absolute; left: 0; right: 0; top: 21px; height: 6px; background: #080807; border-radius: 3px"></span>
+<span style="position: absolute; left: 0; right: 0; top: 4px; display: flex; justify-content: space-between"><sc-for list="{{ticks}}" as="t" hint-placeholder-count="17"><span style="width: 2px; height: {{t}}px; background: #3A3934"></span></sc-for></span>
+<span style="position: absolute; left: calc(50% - 22px); top: 4px; width: 44px; height: 40px; border-radius: 4px; background: #CFCBBE; box-shadow: 0 4px 0 #080807; display: flex; justify-content: center; align-items: center"><span style="width: 30px; height: 3px; background: #0B0B0A"></span></span>
+</div>
+<button type="button" style="width: 64px; height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; color: #CFCBBE; font: 400 8px/1 'Silkscreen', monospace; cursor: pointer">SCENE B</button>
+<button type="button" style="width: 64px; height: 48px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer"><span style="width: 18px; height: 3px; background: #FF6A1F"></span><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">FN</span></button>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; width: 263px; height: 186px">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">NAV</span>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<span></span>
+<button type="button" aria-label="Up" style="height: 40px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; cursor: pointer"><svg aria-hidden="true" width="12" height="8" viewBox="0 0 6 4" shape-rendering="crispEdges"><path d="M2 0h2v1h-2zM1 1h4v1h-4zM0 2h6v2h-6z" fill="#CFCBBE"></path></svg></button>
+<span></span>
+<button type="button" aria-label="Left" style="height: 40px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; cursor: pointer"><svg aria-hidden="true" width="8" height="12" viewBox="0 0 4 6" shape-rendering="crispEdges"><path d="M0 2h1v2h-1zM1 1h1v4h-1zM2 0h2v6h-2z" fill="#CFCBBE"></path></svg></button>
+<button type="button" aria-label="Down" style="height: 40px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; cursor: pointer"><svg aria-hidden="true" width="12" height="8" viewBox="0 0 6 4" shape-rendering="crispEdges"><path d="M0 0h6v2h-6zM1 2h4v1h-4zM2 3h2v1h-2z" fill="#CFCBBE"></path></svg></button>
+<button type="button" aria-label="Right" style="height: 40px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; cursor: pointer"><svg aria-hidden="true" width="8" height="12" viewBox="0 0 4 6" shape-rendering="crispEdges"><path d="M0 0h2v6h-2zM2 1h1v4h-1zM3 2h1v2h-1z" fill="#CFCBBE"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button type="button" style="height: 40px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; color: #CFCBBE; font: 400 8px/1 'Silkscreen', monospace; cursor: pointer">NO</button>
+<button type="button" style="height: 40px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; color: #CFCBBE; font: 400 8px/1 'Silkscreen', monospace; cursor: pointer">YES</button>
+</div>
+</div><div style="display: flex; gap: 14px; align-items: flex-end">
+<div style="width: 176px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<button type="button" aria-label="Record sample" style="height: 72px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M2 0h4v1h-4zM1 1h6v1h-6zM0 2h8v4h-8zM1 6h6v1h-6zM2 7h4v1h-4z" fill="#FF6A1F"></path></svg><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">REC</span></button>
+<button type="button" aria-label="Play" aria-pressed="true" style="height: 72px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer"><svg aria-hidden="true" width="12" height="14" viewBox="0 0 6 7" shape-rendering="crispEdges"><path d="M0 0h2v7h-2zM2 1h2v5h-2zM4 2h2v3h-2z" fill="#F6F3E8"></path></svg><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">PLAY</span></button>
+<button type="button" aria-label="Stop" style="height: 72px; border: 0; border-radius: 4px; background: #2A2926; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer"><span style="width: 12px; height: 12px; background: #5E5C54"></span><span style="font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">STOP</span></button>
+</div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+<div style="display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="16"><span style="font: 400 8px/1 'Silkscreen', monospace; color: {{s.nc}}; text-align: center">{{s.n}}</span></sc-for>
+</div>
+<div role="group" aria-label="Trig keys 1 to 16" style="display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="16">
+<button type="button" aria-label="{{s.aria}}" aria-pressed="{{s.on}}" onClick="{{s.tap}}" style="height: 72px; border: 0; border-radius: 4px; background: {{s.face}}; box-shadow: 0 4px 0 #080807, inset 0 2px 0 #3A3934; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 12px; gap: 8px; cursor: pointer">
+<span style="width: 26px; height: 6px; background: {{s.led}}"></span>
+<sc-if value="{{s.lock}}" hint-placeholder-val="{{ false }}"><span style="width: 6px; height: 6px; background: #F6F3E8"></span></sc-if>
+</button>
+</sc-for>
+</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1194,"height":834}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { track: 0, cat: 1, trigs: [1, 5, 7, 9, 11, 13, 15] }; }
+  renderVals() {
+    const names = ['T1','T2','T3','T4','T5','T6','S1','S2','MST'];
+    const tracks = names.map((n, i) => { const sel = i === this.state.track; return { name: n, sel: sel ? 'true' : 'false', led: sel ? '#F6F3E8' : (i === 3 ? '#3A3833' : '#5E5C54'), pick: () => this.setState({ track: i }) }; });
+    const K = [['GSIZ','120MS',0.45],['GDEN','18',0.3],['GJIT','35%',0.35],['OWIN','64',0.5],['OWAN','22',0.17],['CHOP','8',0.25],['LOOP','FWD',0],['RATE','1/1',0.6]];
+    const knobs = K.map((k, i) => { const lock = i === 2, sel = i < 2; return { letter: 'ABCDEFGH'[i], name: k[0], v: k[1], deg: Math.round(-135 + 270 * k[2]), mark: lock ? '#FF6A1F' : '#F6F3E8', vc: lock ? '#FF6A1F' : (sel ? '#F6F3E8' : '#CFCBBE'), aria: 'Encoder ' + 'ABCDEFGH'[i] + ', ' + k[0] + ' ' + k[1] + (lock ? ', locked on held step' : '') }; });
+    const cn = ['TRIG','SRC','FILT','AMP','FX','MOD','MST','FILE','PAT','SETUP'];
+    const cats = cn.map((n, i) => { const sel = i === this.state.cat; return { n, sel: sel ? 'true' : 'false', led: sel ? '#F6F3E8' : '#3A3833', fg: sel ? '#F6F3E8' : '#CFCBBE', pick: () => this.setState({ cat: i }) }; });
+    const loops = []; for (let i = 0; i < 16; i++) loops.push({ n: String(i + 1), bg: i === 6 ? '#3A3934' : '#2A2926', led: i === 6 ? '#F6F3E8' : (i >= 4 && i < 10 ? '#8E8B80' : '#3A3833') });
+    const ticks = []; for (let i = 0; i < 17; i++) ticks.push(i % 4 === 0 ? 10 : 5);
+    const play = 6, locked = [5, 11];
+    const steps = []; for (let i = 0; i < 16; i++) {
+      const n = i + 1, on = this.state.trigs.includes(n), cur = i === play;
+      steps.push({ n: String(n), nc: cur ? '#F6F3E8' : (i % 4 === 0 ? '#9A978B' : '#55524A'), on: on ? 'true' : 'false', lock: on && locked.includes(n),
+        face: i % 4 === 0 ? '#302F2B' : '#2A2926', led: cur ? '#F6F3E8' : on ? '#FF6A1F' : '#3A3833',
+        aria: 'Trig ' + n + (on ? ', on' : ', off') + (cur ? ', playing' : ''),
+        tap: () => { const tr = this.state.trigs.slice(); const k = tr.indexOf(n); if (k >= 0) tr.splice(k, 1); else tr.push(n); this.setState({ trigs: tr }); } });
+    }
+    return { tracks, knobs, cats, loops, ticks, steps };
+  }
+}
+</script>
+</body>
+</html>

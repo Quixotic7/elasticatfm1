@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat on the FM-1: panel mapping</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1240px; height: 760px; box-sizing: border-box; padding: 32px; background: #121210; color: #F6F3E8; font-family: 'VT323', monospace; display: flex; flex-direction: column; gap: 20px">
+
+<div style="height: 40px; display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font: 700 16px/1 'Silkscreen', monospace; letter-spacing: 1px">ELASTICAT LAYOUT v1</span>
+<span style="font: 400 20px/1 'VT323', monospace; color: #9A978B">Engine runs on the iPhone, iPad or Mac. The FM-1 runs RemoteFM1 and is the panel.</span>
+</div>
+<div style="display: flex; gap: 18px; font: 400 8px/1 'Silkscreen', monospace; color: #CFCBBE">
+<span style="display: flex; align-items: center; gap: 6px"><span style="padding: 3px 6px; background: #0B0B0A; color: #F6F3E8; font: 400 18px/1 'VT323', monospace">SRC</span>ELASTICAT FUNCTION</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 6px; background: #FF6A1F"></span>TRIG LED</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 6px; background: #FFF4DC"></span>PLAYHEAD</span>
+</div>
+</div>
+
+<div style="flex: 1; box-sizing: border-box; padding: 28px; background: #EE7A3C; border-radius: 28px; box-shadow: 0 8px 0 #A84E22; display: flex; flex-direction: column; gap: 22px; color: #3A1606">
+
+<div style="height: 260px; display: flex; gap: 36px; align-items: flex-start">
+
+<div style="width: 250px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px">
+<sc-for list="{{knobs}}" as="k" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+<span style="font: 400 8px/1 'Silkscreen', monospace">{{k.hw}}</span>
+<span style="width: 50px; height: 50px; border-radius: 50%; background: #1B1715; box-shadow: 0 4px 0 #5A2A14; display: flex; justify-content: center; padding-top: 5px; box-sizing: border-box"><span style="width: 4px; height: 14px; background: #F4EDE6"></span></span>
+<span style="padding: 3px 7px; background: #0B0B0A; color: #F6F3E8; font: 400 18px/1 'VT323', monospace; white-space: nowrap">{{k.fn}}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; align-items: center">
+<div style="display: flex; gap: 8px; padding: 6px; background: #874332; border-radius: 8px">
+<span style="width: 70px; height: 34px; background: #924E3A; color: #FBEDE3; border-radius: 5px; box-shadow: 0 3px 0 #64301F; display: flex; align-items: center; justify-content: center; font: 400 8px/1 'Silkscreen', monospace">OCT-</span>
+<span style="width: 70px; height: 34px; background: #924E3A; color: #FBEDE3; border-radius: 5px; box-shadow: 0 3px 0 #64301F; display: flex; align-items: center; justify-content: center; font: 400 8px/1 'Silkscreen', monospace">OCT+</span>
+</div>
+<span style="padding: 3px 7px; background: #0B0B0A; color: #F6F3E8; font: 400 18px/1 'VT323', monospace">KEY MODE ◂ ▸</span>
+</div>
+</div>
+
+<dc-import name="Display" mode="fm1" scale="{{2}}" pad="{{8}}" hint-size="260px,260px"></dc-import>
+
+<div style="flex: 1; display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: 20px repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start">
+<span style="width: 16px; height: 16px; background: #FF3B2F; margin-top: 18px" role="img" aria-label="Indicator LED: record armed"></span>
+<sc-for list="{{kn}}" as="k" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+<span style="font: 400 8px/1 'Silkscreen', monospace">{{k.hw}}</span>
+<span style="width: 46px; height: 46px; border-radius: 50%; background: #1B1715; box-shadow: 0 4px 0 #5A2A14; display: flex; justify-content: center; padding-top: 5px; box-sizing: border-box"><span style="width: 4px; height: 13px; background: #F4EDE6"></span></span>
+<span style="padding: 3px 7px; background: #0B0B0A; color: #F6F3E8; font: 400 18px/1 'VT323', monospace; white-space: nowrap">{{k.fn}}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding: 10px; background: #874332; border-radius: 10px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{buttons}}" as="b" hint-placeholder-count="12">
+<span style="height: 52px; background: {{b.bg}}; border-radius: 6px; box-shadow: 0 3px 0 #64301F; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: {{b.hc}}">{{b.hw}}</span>
+<span style="padding: 2px 6px; background: #0B0B0A; color: {{b.fc}}; font: 400 18px/1 'VT323', monospace">{{b.fn}}</span>
+</span>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center">
+<span style="font: 400 8px/1 'Silkscreen', monospace">UPPER KEYS: TRACKS, BUSES, FILL, PATTERN</span>
+<span style="padding: 3px 7px; background: #0B0B0A; color: #F6F3E8; font: 400 18px/1 'VT323', monospace">LOWER KEYS NOW: STEPS 1-16 · HOLD SEL = LOOP KEYS</span>
+</div>
+
+<div style="flex: 1; position: relative; background: #874332; border-radius: 18px">
+<sc-for list="{{sharps}}" as="k" hint-placeholder-count="11">
+<span style="position: absolute; left: {{k.x}}px; top: 14px; width: 54px; height: 72px; background: {{k.bg}}; border-radius: 12px; box-shadow: 0 4px 0 #64301F; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 9px 0 8px; box-sizing: border-box">
+<span style="width: 5px; height: 20px; border-radius: 2px; background: {{k.led}}"></span>
+<span style="padding: 2px 4px; background: #0B0B0A; color: {{k.fc}}; font: 400 16px/1 'VT323', monospace">{{k.fn}}</span>
+</span>
+</sc-for>
+<sc-for list="{{nats}}" as="k" hint-placeholder-count="16">
+<span style="position: absolute; left: {{k.x}}px; top: 96px; width: 60px; height: 92px; background: {{k.bg}}; border-radius: 13px; box-shadow: 0 4px 0 #64301F; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 0 9px; box-sizing: border-box">
+<span style="width: 6px; height: 34px; border-radius: 2px; background: {{k.led}}"></span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #FBEDE3">{{k.n}}</span>
+</span>
+</sc-for>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1240,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const knobs = [['MASTER','MASTER VOL'],['SELECT','PAGE'],['PRESETS','PATTERN'],['ALGORITHM','TRACK']].map(k => ({ hw: k[0], fn: k[1] }));
+    const kn = [['KN1','CELL 1/5'],['KN2','CELL 2/6'],['KN3','CELL 3/7'],['KN4','CELL 4/8']].map(k => ({ hw: k[0], fn: k[1] }));
+    const B = [['FX','FX'],['SEL','SRC'],['ENV','AMP'],['LFO','MOD'],['EDIT','FILT'],['GLO','MST'],['HOME','FN'],['SAVE','FILE'],['ARP','PAT'],['SEQ','TRIG'],['PLAY','PLAY'],['REC','REC']];
+    const buttons = B.map((b, i) => ({ hw: b[0], fn: b[1], bg: i === 1 ? '#A9614B' : '#924E3A', hc: '#FBEDE3', fc: b[1] === 'FN' || b[1] === 'REC' ? '#FF6A1F' : '#F6F3E8' }));
+    const W = 1120, pitch = W / 16, nw = 60;
+    const trigs = [1, 5, 7, 9, 11, 13, 15], play = 7;
+    const nats = []; for (let i = 0; i < 16; i++) { const n = i + 1; nats.push({ n: String(n), x: Math.round(i * pitch + (pitch - nw) / 2), bg: '#924E3A', led: n === play ? '#FFF4DC' : trigs.includes(n) ? '#FF6A1F' : '#6F6668' }); }
+    const after = [0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14];
+    const fns = ['T1','T2','T3','T4','T5','T6','S1','S2','MST','FILL','PATN'];
+    const sharps = after.map((i, j) => ({ x: Math.round((i + 1) * pitch - 27), fn: fns[j], bg: j === 0 ? '#A9614B' : '#924E3A', led: j === 0 ? '#FFF4DC' : j < 6 ? '#B0897A' : '#6F6668', fc: j === 9 ? '#FF6A1F' : '#F6F3E8' }));
+    return { knobs, kn, buttons, nats, sharps };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat desktop and plugin window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 24px; background: #121210; color: #F6F3E8; font-family: 'VT323', monospace; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+
+<div style="height: 48px; display: flex; align-items: stretch; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px; padding-right: 12px">
+<svg aria-hidden="true" width="33" height="27" viewBox="0 0 11 9" shape-rendering="crispEdges"><path d="M0 0h1v1h-1zM10 0h1v1h-1zM0 1h2v1h-2zM9 1h2v1h-2zM0 2h3v1h-3zM8 2h3v1h-3zM0 3h11v1h-11zM0 4h2v1h-2zM3 4h5v1h-5zM9 4h2v1h-2zM0 5h11v1h-11zM0 6h6v1h-6zM7 6h4v1h-4zM1 7h9v1h-9zM2 8h7v1h-7z" fill="#F6F3E8"></path></svg>
+<span style="font: 700 16px/1 'Silkscreen', monospace; letter-spacing: 1px">ELASTICAT</span>
+</div>
+<button type="button" aria-label="Play" aria-pressed="true" style="width: 52px; border: 0; background: #FF6A1F; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="16" height="18" viewBox="0 0 8 9" shape-rendering="crispEdges"><path d="M0 0h2v9h-2zM2 1h2v7h-2zM4 2h2v5h-2zM6 3h2v3h-2z" fill="#0B0B0A"></path></svg></button>
+<button type="button" aria-label="Stop" style="width: 52px; border: 2px solid #2E2D29; background: #1E1D1A; display: flex; align-items: center; justify-content: center; cursor: pointer"><span style="width: 14px; height: 14px; background: #CFCBBE"></span></button>
+<button type="button" aria-label="Record sample" style="width: 52px; border: 2px solid #2E2D29; background: #1E1D1A; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M2 0h4v1h-4zM1 1h6v1h-6zM0 2h8v4h-8zM1 6h6v1h-6zM2 7h4v1h-4z" fill="#FF6A1F"></path></svg></button>
+<div style="width: 120px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 0 10px; border: 2px solid #2E2D29; background: #0B0B0A"><span style="font: 400 30px/1 'VT323', monospace">136.0</span><span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">BPM</span></div>
+<button type="button" style="width: 60px; border: 2px solid #2E2D29; background: #1E1D1A; color: #F6F3E8; font: 400 24px/1 'VT323', monospace; cursor: pointer">P01</button>
+<div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 12px">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">PROJECT</span>
+<span style="font: 400 22px/0.8 'VT323', monospace">261029-2041 *</span>
+</div>
+<span style="flex: 1"></span>
+<div role="radiogroup" aria-label="Plugin format" style="display: flex; border: 2px solid #2E2D29">
+<button type="button" role="radio" aria-checked="true" style="border: 0; padding: 0 12px; background: #F6F3E8; color: #0B0B0A; font: 400 20px/1 'VT323', monospace">APP</button>
+<button type="button" role="radio" aria-checked="false" style="border: 0; padding: 0 12px; background: #1E1D1A; color: #9A978B; font: 400 20px/1 'VT323', monospace">VST3</button>
+<button type="button" role="radio" aria-checked="false" style="border: 0; padding: 0 12px; background: #1E1D1A; color: #9A978B; font: 400 20px/1 'VT323', monospace">AU</button>
+</div>
+<a href="Connect.dc.html" aria-label="FM-1 linked over USB" style="display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 2px solid #2E2D29; background: #1A1917; color: #F6F3E8; text-decoration: none; font: 400 20px/1 'VT323', monospace; box-shadow: 0 3px 0 #000000"><span style="width: 8px; height: 8px; background: #F6F3E8"></span>FM-1 · USB</a>
+</div>
+
+<div style="display: flex; gap: 16px">
+<div role="tablist" aria-label="Tracks and buses" aria-orientation="vertical" style="width: 180px; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{tracks}}" as="t" hint-placeholder-count="9">
+<button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="height: 40px; border: 2px solid {{t.line}}; background: {{t.bg}}; color: {{t.fg}}; display: grid; grid-template-columns: 30px 1fr 22px; align-items: center; gap: 6px; padding: 0 8px; text-align: left; cursor: pointer">
+<span style="font: 400 22px/1 'VT323', monospace">{{t.name}}</span>
+<span style="display: flex; flex-direction: column; gap: 4px"><span style="font: 400 8px/1 'Silkscreen', monospace; color: {{t.sub}}">{{t.mach}}</span><span style="height: 3px; width: {{t.meter}}; background: {{t.mc}}"></span></span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: {{t.mute}}">{{t.m}}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="width: 460px; display: flex; flex-direction: column; gap: 8px">
+<dc-import name="Display" mode="warp" cols="{{220}}" rows="{{120}}" scale="{{2}}" pad="{{8}}" hint-size="460px,260px"></dc-import>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{params}}" as="p" hint-placeholder-count="8">
+<button type="button" aria-label="{{p.k}} {{p.v}}" style="height: 60px; box-sizing: border-box; padding: 7px 8px; border: 2px solid {{p.line}}; background: #1A1917; color: #F6F3E8; display: flex; flex-direction: column; justify-content: space-between; text-align: left; cursor: pointer">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">{{p.k}}</span>
+<span style="font: 400 26px/0.8 'VT323', monospace; color: {{p.vc}}">{{p.v}}</span>
+<span style="display: flex; gap: 2px; height: 3px"><sc-for list="{{p.segs}}" as="g" hint-placeholder-count="10"><span style="flex: 1; background: {{g}}"></span></sc-for></span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+<dc-import name="Grid" cell-w="{{29}}" cell-h="{{29}}" gap="{{4}}" hint-size="552px,288px"></dc-import>
+<div style="height: 44px; display: grid; grid-template-columns: 60px 1fr 60px; gap: 6px">
+<button type="button" style="border: 2px solid #CFCBBE; background: #1E1D1A; color: #F6F3E8; font: 400 20px/1 'VT323', monospace; cursor: pointer">SC-A</button>
+<button type="button" aria-label="Scene crossfader at 50 percent" style="border: 2px solid #2E2D29; background: #0B0B0A; padding: 6px; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; cursor: pointer"><sc-for list="{{xfd}}" as="x" hint-placeholder-count="24"><span style="background: {{x}}"></span></sc-for></button>
+<button type="button" style="border: 2px solid #CFCBBE; background: #1E1D1A; color: #F6F3E8; font: 400 20px/1 'VT323', monospace; cursor: pointer">SC-B</button>
+</div>
+<div style="height: 44px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{macros}}" as="m" hint-placeholder-count="4">
+<button type="button" aria-label="Macro {{m.n}} at {{m.v}}" style="border: 2px solid #2E2D29; background: #1A1917; color: #F6F3E8; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; cursor: pointer"><span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">{{m.n}}</span><span style="font: 400 22px/1 'VT323', monospace">{{m.v}}</span></button>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div role="group" aria-label="Multitrack step lanes, page 1" style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: grid; grid-template-columns: 120px repeat(16, minmax(0, 1fr)); gap: 4px; height: 20px; align-items: center">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">LANES · PAGE 1/4</span>
+<sc-for list="{{nums}}" as="n" hint-placeholder-count="16"><span style="font: 400 8px/1 'Silkscreen', monospace; color: {{n.c}}; text-align: center">{{n.t}}</span></sc-for>
+</div>
+<sc-for list="{{lanes}}" as="l" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: 120px repeat(16, minmax(0, 1fr)); gap: 4px; height: 32px">
+<span style="display: flex; align-items: center; gap: 8px; font: 400 20px/1 'VT323', monospace; color: {{l.nc}}">{{l.name}}<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">{{l.mach}}</span></span>
+<sc-for list="{{l.cells}}" as="c" hint-placeholder-count="16">
+<button type="button" aria-label="{{c.aria}}" style="border: 0; padding: 0; position: relative; background: {{c.bg}}; box-shadow: {{c.sh}}; cursor: pointer"><sc-if value="{{c.lock}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; right: 4px; top: 4px; width: 5px; height: 5px; background: #0B0B0A"></span></sc-if></button>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { track: 0 }; }
+  renderVals() {
+    const T = [['T1','LOOP · GRANULAR',72],['T2','RAZOR POLY',55],['T3','LOOP · TAPE',81],['T4','GRID SLICE',0],['T5','NEIGHBOR',40],['T6','INPUT',62],['S1','REVERB',35],['S2','TAPE ECHO',28],['M','LIMIT',86]];
+    const tracks = T.map((t, i) => { const sel = i === this.state.track, muted = i === 3; return { name: t[0], mach: t[1], sel: sel ? 'true' : 'false', bg: sel ? '#F6F3E8' : (i > 5 ? '#161614' : '#1A1917'), fg: sel ? '#0B0B0A' : (muted ? '#5E5C54' : '#F6F3E8'), sub: sel ? '#34332E' : '#9A978B', line: sel ? '#F6F3E8' : '#2E2D29', meter: Math.round(t[2] * 0.9) + 'px', mc: sel ? '#0B0B0A' : (t[2] > 78 ? '#FF6A1F' : '#55524A'), m: muted ? 'MUTE' : '', mute: '#FF6A1F', pick: () => this.setState({ track: i }) }; });
+    const P = [['GSIZ','120MS',0.45],['GDEN','18',0.3],['GJIT','35%',0.35],['OWIN','64',0.5],['OWAN','22',0.17],['CHOP','8',0.25],['LOOP','FWD',0],['RATE','1/1',0.6]];
+    const params = P.map((p, i) => { const n = Math.round(p[2] * 10), lock = i === 2; const segs = []; for (let j = 0; j < 10; j++) segs.push(j < n ? (lock ? '#FF6A1F' : '#CFCBBE') : '#34332E'); return { k: p[0], v: p[1], vc: lock ? '#FF6A1F' : '#F6F3E8', line: i < 2 ? '#F6F3E8' : '#2E2D29', segs }; });
+    const xfd = []; for (let i = 0; i < 24; i++) xfd.push(i === 11 || i === 12 ? '#F6F3E8' : (i < 11 ? '#55524A' : '#24231F'));
+    const macros = [['MC1','88'],['MC2','40'],['MC3','0'],['MC4','0']].map(m => ({ n: m[0], v: m[1] }));
+    const play = 6;
+    const nums = []; for (let i = 0; i < 16; i++) nums.push({ t: String(i + 1), c: i === play ? '#FF6A1F' : '#5E5C54' });
+    const pat = [[1,5,7,9,11,13,15],[1,4,7,10,13],[1,9],[3,7,11,15],[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],[5,13]];
+    const locks = [[5,11],[10],[],[7],[],[13]];
+    const lanes = T.slice(0, 6).map((t, li) => {
+      const cells = []; for (let i = 0; i < 16; i++) { const n = i + 1, on = pat[li].includes(n), muted = li === 3; cells.push({ lock: on && locks[li].includes(n), bg: on ? (muted ? '#55524A' : '#FF6A1F') : (i % 4 === 0 ? '#24231F' : '#1C1B18'), sh: i === play ? 'inset 0 0 0 2px #F6F3E8' : 'none', aria: t[0] + ' step ' + n + (on ? ' trig' : ' empty') }); }
+      return { name: t[0], mach: t[1].split(' ')[0], nc: li === 3 ? '#5E5C54' : (li === this.state.track ? '#FF6A1F' : '#F6F3E8'), cells };
+    });
+    return { tracks, params, xfd, macros, nums, lanes };
+  }
+}
+</script>
+</body>
+</html>

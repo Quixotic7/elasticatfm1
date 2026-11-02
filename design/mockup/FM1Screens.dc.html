@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat FM-1 screens</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 940px; height: 380px; box-sizing: border-box; padding: 40px 40px 24px; background: #121210; color: #F6F3E8; font-family: 'VT323', monospace; display: flex; gap: 40px">
+<div style="width: 260px; display: flex; flex-direction: column; gap: 16px">
+<dc-import name="Display" mode="fm1" scale="{{2}}" pad="{{8}}" hint-size="260px,260px"></dc-import>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">SRC · WARP</span><span style="font: 400 20px/1 'VT323', monospace; color: #CFCBBE">KN1–KN4 edit the four cells</span></div>
+</div>
+<div style="width: 260px; display: flex; flex-direction: column; gap: 16px">
+<dc-import name="Display" mode="razor" cols="{{120}}" rows="{{120}}" scale="{{2}}" pad="{{8}}" hint-size="260px,260px"></dc-import>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">FILE · RAZOR</span><span style="font: 400 20px/1 'VT323', monospace; color: #CFCBBE">Lower keys play slices 1–16</span></div>
+</div>
+<div style="width: 260px; display: flex; flex-direction: column; gap: 16px">
+<dc-import name="Display" mode="mix" cols="{{120}}" rows="{{120}}" scale="{{2}}" pad="{{8}}" hint-size="260px,260px"></dc-import>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">MASTER · MIX</span><span style="font: 400 20px/1 'VT323', monospace; color: #CFCBBE">Upper keys select the strip</span></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":940,"height":380}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

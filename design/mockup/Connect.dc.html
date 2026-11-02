@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat link FM-1</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 14px 22px; background: #121210; color: #F6F3E8; font-family: 'VT323', monospace; display: flex; flex-direction: column; gap: 10px; overflow: hidden">
+
+<div style="height: 40px; display: flex; align-items: center; justify-content: space-between">
+<a href="Main.dc.html" aria-label="Back to perform" style="height: 40px; display: flex; align-items: center; gap: 8px; color: #CFCBBE; text-decoration: none; font: 400 22px/1 'VT323', monospace">
+<svg aria-hidden="true" width="10" height="16" viewBox="0 0 5 8" shape-rendering="crispEdges"><path d="M3 0h2v2h-2zM1 2h2v2h-2zM1 4h2v2h-2zM3 6h2v2h-2z" fill="#CFCBBE"></path></svg>PERFORM</a>
+<span style="font: 700 16px/1 'Silkscreen', monospace; letter-spacing: 1px">LINK</span>
+<span style="width: 92px"></span>
+</div>
+
+<div role="radiogroup" aria-label="Control panel" style="height: 44px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 2px solid #2E2D29; background: #0B0B0A">
+<button type="button" role="radio" aria-checked="false" style="border: 0; background: transparent; color: #9A978B; font: 400 20px/1 'VT323', monospace; cursor: pointer">ON-SCREEN ONLY</button>
+<button type="button" role="radio" aria-checked="true" style="border: 0; background: #F6F3E8; color: #0B0B0A; font: 400 20px/1 'VT323', monospace; cursor: pointer">FM-1 PANEL</button>
+</div>
+
+<div style="height: 92px; box-sizing: border-box; border: 2px solid #F6F3E8; background: #1A1917; padding: 12px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 0 #000000">
+<svg aria-hidden="true" width="64" height="44" viewBox="0 0 16 11" shape-rendering="crispEdges"><path d="M0 0h16v11h-16z" fill="#FF6A1F"></path><path d="M1 1h1v1h-1zM3 1h1v1h-1zM1 3h1v1h-1zM3 3h1v1h-1zM10 1h1v1h-1zM12 1h1v1h-1zM14 1h1v1h-1z" fill="#0B0B0A"></path><path d="M5 1h4v4h-4z" fill="#0B0B0A"></path><path d="M6 2h2v2h-2z" fill="#CFCBBE"></path><path d="M10 3h5v2h-5zM1 6h14v4h-14z" fill="#874332"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+<span style="font: 400 30px/0.8 'VT323', monospace">FM-1 1F2D</span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">REMOTEFM1 0.2.3 · USB-MIDI SYSEX</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px">
+<span style="display: flex; align-items: center; gap: 6px; font: 400 8px/1 'Silkscreen', monospace"><span style="width: 8px; height: 8px; background: #F6F3E8"></span>LINKED</span>
+<span role="img" aria-label="Battery three quarters" style="display: flex; gap: 2px; padding: 2px; border: 2px solid #CFCBBE"><span style="width: 5px; height: 8px; background: #CFCBBE"></span><span style="width: 5px; height: 8px; background: #CFCBBE"></span><span style="width: 5px; height: 8px; background: #CFCBBE"></span><span style="width: 5px; height: 8px; background: #34332E"></span></span>
+</div>
+</div>
+
+<div role="radiogroup" aria-label="Transport" style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{links}}" as="l" hint-placeholder-count="2">
+<button type="button" role="radio" aria-checked="{{l.on}}" onClick="{{l.pick}}" style="height: 64px; border: 2px solid {{l.line}}; background: {{l.bg}}; color: {{l.fg}}; display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 10px; padding: 0 12px; text-align: left; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3); cursor: pointer">
+<span style="font: 700 16px/1 'Silkscreen', monospace">{{l.n}}</span>
+<span style="display: flex; flex-direction: column; gap: 6px"><span style="font: 400 20px/0.8 'VT323', monospace">{{l.a}}</span><span style="font: 400 8px/1.2 'Silkscreen', monospace; color: {{l.sub}}">{{l.b}}</span></span>
+<span style="width: 14px; height: 14px; box-sizing: border-box; border: 2px solid {{l.fg}}; background: {{l.dot}}"></span>
+</button>
+</sc-for>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center">
+<dc-import name="Display" mode="fm1" scale="{{1}}" pad="{{4}}" hint-size="132px,132px"></dc-import>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">FM-1 SCREEN MIRROR</span>
+<span style="font: 400 20px/1 'VT323', monospace; color: #CFCBBE">240×240, 2× pixels. KN1–KN4 edit the four cells on screen.</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{toggles}}" as="t" hint-placeholder-count="3">
+<button type="button" role="switch" aria-checked="{{t.on}}" onClick="{{t.flip}}" style="height: 44px; border: 2px solid #2E2D29; background: #1A1917; color: #F6F3E8; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font: 400 20px/1 'VT323', monospace; text-align: left; cursor: pointer">
+<span>{{t.n}}</span>
+<span style="width: 44px; height: 20px; box-sizing: border-box; border: 2px solid {{t.c}}; display: flex; justify-content: {{t.j}}; padding: 2px"><span style="width: 16px; height: 12px; background: {{t.c}}"></span></span>
+</button>
+</sc-for>
+</div>
+
+<div style="height: 52px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px">
+<button type="button" style="border: 2px solid #2E2D29; background: #1E1D1A; color: #CFCBBE; font: 400 20px/1 'VT323', monospace; cursor: pointer">RELEASE FM-1</button>
+<a href="FM1Panel.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: #F6F3E8; color: #0B0B0A; text-decoration: none; font: 400 20px/1 'VT323', monospace; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3)">PANEL MAP ›</a>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { link: 0, tg: [true, true, true] }; }
+  renderVals() {
+    const L = [['USB','CABLE · FAST SCREEN','SYSEX OVER USB-MIDI · USB AUDIO IN'],['BLE','WIRELESS · NO CABLE','~5.5 KB/S · 4 COLOURS WHILE MOVING']];
+    const links = L.map((l, i) => { const on = i === this.state.link; return { n: l[0], a: l[1], b: l[2], on: on ? 'true' : 'false', bg: on ? '#F6F3E8' : '#1E1D1A', fg: on ? '#0B0B0A' : '#CFCBBE', sub: on ? '#34332E' : '#9A978B', line: on ? '#F6F3E8' : '#2E2D29', dot: on ? '#0B0B0A' : 'transparent', pick: () => this.setState({ link: i }) }; });
+    const T = ['FM-1 USB AUDIO AS REC SOURCE','KEY LEDS SHOW TRIGS','SHARE PANEL WITH AUV3'];
+    const toggles = T.map((n, i) => { const on = this.state.tg[i]; return { n, on: on ? 'true' : 'false', c: on ? '#FF6A1F' : '#5E5C54', j: on ? 'flex-end' : 'flex-start', flip: () => { const tg = this.state.tg.slice(); tg[i] = !tg[i]; this.setState({ tg }); } }; });
+    return { links, toggles };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat pixel display</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{ow}}px; height: {{oh}}px; box-sizing: border-box; padding: {{pad}}px; background: #000000; border: {{bw}}px solid #2E2D29; box-shadow: 0 4px 0 #000000; font-family: 'Silkscreen', monospace; color: #F6F3E8">
+<svg role="img" aria-label="{{aria}}" viewBox="0 0 {{W}} {{H}}" width="{{pw}}" height="{{ph}}" shape-rendering="crispEdges" style="display: block">
+<rect x="0" y="0" width="{{W}}" height="{{H}}" fill="#0B0B0A"></rect>
+<path d="{{P.l3}}" fill="#34332E"></path>
+<path d="{{P.l5}}" fill="#5E5C54"></path>
+<path d="{{P.l8}}" fill="#9A978B"></path>
+<path d="{{P.l12}}" fill="#CFCBBE"></path>
+<path d="{{P.k}}" fill="#0B0B0A"></path>
+<path d="{{P.t12}}" fill="#CFCBBE"></path>
+<path d="{{P.l15}}" fill="#F6F3E8"></path>
+<path d="{{P.acc}}" fill="#FF6A1F"></path>
+<path d="{{P.k2}}" fill="#0B0B0A"></path>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["warp","razor","rec","mix","fm1"],"default":"warp"},"scale":{"editor":"float","min":1,"max":4,"step":0.25,"default":2},"cols":{"editor":"int","min":96,"max":320,"default":176},"rows":{"editor":"int","min":64,"max":200,"default":110},"pad":{"editor":"int","min":0,"max":24,"default":8},"$preview":{"width":372,"height":240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? 'warp';
+    const fm = mode === 'fm1';
+    const W = this.props.cols ?? (fm ? 120 : 176);
+    const H = this.props.rows ?? (fm ? 120 : 110);
+    const s = this.props.scale ?? 2;
+    const pad = this.props.pad ?? 8;
+    const bw = pad > 0 ? 2 : 0;
+    const P = { l3: '', l5: '', l8: '', l12: '', k: '', t12: '', l15: '', acc: '', k2: '' };
+    const r = (c, x, y, w, h) => { if (w <= 0 || h <= 0) return; P[c] += 'M' + x + ' ' + y + 'h' + w + 'v' + h + 'h' + (-w) + 'z'; };
+    const G = {
+      '0':'111 101 101 101 111','1':'010 110 010 010 111','2':'111 001 111 100 111','3':'111 001 011 001 111','4':'101 101 111 001 001',
+      '5':'111 100 111 001 111','6':'111 100 111 101 111','7':'111 001 010 010 010','8':'111 101 111 101 111','9':'111 101 111 001 111',
+      'A':'010 101 111 101 101','B':'110 101 110 101 110','C':'011 100 100 100 011','D':'110 101 101 101 110','E':'111 100 110 100 111',
+      'F':'111 100 110 100 100','G':'011 100 101 101 011','H':'101 101 111 101 101','I':'111 010 010 010 111','J':'001 001 001 101 010',
+      'K':'101 101 110 101 101','L':'100 100 100 100 111','M':'101 111 111 101 101','N':'110 101 101 101 101','O':'010 101 101 101 010',
+      'P':'110 101 110 100 100','Q':'010 101 101 110 011','R':'110 101 110 101 101','S':'011 100 010 001 110','T':'111 010 010 010 010',
+      'U':'101 101 101 101 111','V':'101 101 101 101 010','W':'101 101 111 111 101','X':'101 101 010 101 101','Y':'101 101 010 010 010',
+      'Z':'111 001 010 100 111',' ':'000 000 000 000 000','.':'000 000 000 000 010',':':'000 010 000 010 000','-':'000 000 111 000 000',
+      '/':'001 001 010 100 100','%':'101 001 010 100 101','+':'000 010 111 010 000','>':'100 010 001 010 100','<':'001 010 100 010 001',
+      '=':'000 111 000 111 000','_':'000 000 000 000 111'
+    };
+    const tw = (str, sc) => String(str).length * 4 * (sc || 1) - (sc || 1);
+    const t = (c, str, x, y, sc, al) => {
+      sc = sc || 1; str = String(str).toUpperCase();
+      const x0 = al === 'r' ? x - tw(str, sc) : al === 'c' ? x - Math.floor(tw(str, sc) / 2) : x;
+      for (let i = 0; i < str.length; i++) {
+        const g = (G[str[i]] || G[' ']).split(' ');
+        for (let row = 0; row < 5; row++) for (let col = 0; col < 3; col++) if (g[row][col] === '1') r(c, x0 + i * 4 * sc + col * sc, y + row * sc, sc, sc);
+      }
+    };
+    const frac = v => v - Math.floor(v);
+    const noise = i => frac(Math.sin(i * 12.9898 + 4.1) * 43758.5453);
+    const hits = [[0,1],[0.125,0.55],[0.1875,0.7],[0.25,0.95],[0.375,0.6],[0.5,1],[0.5625,0.5],[0.625,0.9],[0.75,0.95],[0.8125,0.55],[0.875,0.7],[0.9375,0.6]];
+    const amp = u => { let a = 0.05; for (const hg of hits) { const d = u - hg[0]; if (d >= 0 && d < 0.2) a += hg[1] * Math.exp(-d * 30); } return Math.min(1, a * (0.6 + 0.4 * noise(Math.round(u * 997)))); };
+    const wave = (x0, x1, top, bot, colorAt) => {
+      const mid = Math.round((top + bot) / 2), half = Math.floor((bot - top) / 2);
+      for (let x = x0; x < x1; x++) { const u = (x - x0) / (x1 - x0); const h = Math.max(0, Math.round(amp(u) * half)); r(colorAt(x), x, mid - h, 1, 2 * h + 1); }
+    };
+    const dotsH = (c, x0, x1, y, step) => { for (let x = x0; x < x1; x += (step || 2)) r(c, x, y, 1, 1); };
+    const dotsV = (c, x, y0, y1, step) => { for (let y = y0; y < y1; y += (step || 2)) r(c, x, y, 1, 1); };
+    const header = (trk, title, page, right) => {
+      r('l12', 0, 0, W, 10); r('k', 0, 0, 14, 10); t('t12', trk, 7, 3, 1, 'c');
+      t('k', title, 17, 3);
+      r('k', W - 11, 0, 11, 10); t('t12', page, W - 6, 3, 1, 'c');
+      if (right === 'meter') { const mx = W - 58; r('k', mx, 2, 44, 2); r('k', mx, 6, 44, 2); r('t12', mx, 2, 31, 2); r('t12', mx, 6, 27, 2); }
+      else if (right) t('k', right, W - 14, 3, 1, 'r');
+    };
+    let aria = '';
+
+    if (mode === 'warp' || mode === 'fm1') {
+      header('T1', 'SRC/WARP', '2', fm ? 'P01' : 'meter');
+      t('l15', 'GRANULAR', 2, 13); t('l8', fm ? '136' : 'P01  136 BPM', W - 2, 13, 1, 'r');
+      const top = 22, bot = fm ? 66 : H - 31;
+      const rs = Math.round(2 + (W - 4) * 0.25), re = Math.round(2 + (W - 4) * 0.625);
+      dotsH('l3', 2, W - 2, Math.round((top + bot) / 2), 2);
+      wave(2, W - 2, top, bot, x => (x >= rs && x < re) ? 'l15' : 'l5');
+      r('l12', rs - 1, top - 3, 1, bot - top + 6); r('l12', rs - 1, top - 3, 4, 2);
+      r('l12', re, top - 3, 1, bot - top + 6); r('l12', re - 3, top - 3, 4, 2);
+      const ph = rs + Math.round((re - rs) * 0.42); r('acc', ph, top - 1, 1, bot - top + 2);
+      const ky = bot + 5, cw = (W - 4) / 16;
+      for (let i = 0; i < 16; i++) { const x = Math.round(2 + i * cw), w = Math.round(cw) - 2; if (i === 6) r('l15', x, ky - 1, w, 3); else r((i >= 4 && i < 10) ? 'l8' : 'l3', x, ky, w, 1); }
+      if (!fm) {
+        dotsH('l3', 0, W, H - 23, 2);
+        t('l8', 'GSIZ', 2, H - 19); t('l5', 'E2', W / 2 - 4, H - 19, 1, 'r');
+        t('l15', '120', 2, H - 12, 2); t('l8', 'MS', 2 + tw('120', 2) + 3, H - 7);
+        const hx = Math.round(W / 2) + 4;
+        t('l8', 'GDEN', hx, H - 19); t('l5', 'E3', W - 2, H - 19, 1, 'r');
+        t('l15', '18', hx, H - 12, 2); t('l8', 'GR/S', hx + tw('18', 2) + 3, H - 7);
+      } else {
+        r('l3', 0, 76, W, 1); r('l3', 60, 76, 1, 44); r('l3', 0, 98, W, 1);
+        const cells = [['GSIZ', '120', 'K1'], ['GDEN', '18', 'K2'], ['GJIT', '35%', 'K3'], ['RATE', '1/1', 'K4']];
+        cells.forEach((c, i) => { const x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101; t('l8', c[0], x, y); t('l5', c[2], x + 54, y, 1, 'r'); t('l15', c[1], x, y + 7, 2); });
+      }
+      aria = 'Warp page: granular track 1, region highlighted, playhead and held loop key 7';
+    }
+
+    if (mode === 'razor') {
+      header('T2', 'FILE/RAZOR', '3', 'ZOOM 1X');
+      t('l15', 'BREAK_136.WAV', 2, 13); t('l8', 'SNAP ZC', W - 2, 13, 1, 'r');
+      const top = 22, bot = H - 35;
+      const cuts = [0,0.125,0.1875,0.25,0.375,0.5,0.5625,0.625,0.75,0.8125,0.875,0.9375,1];
+      const X = u => 2 + Math.round((W - 4) * u);
+      const sel = 4, xs = X(cuts[sel]), xe = X(cuts[sel + 1]);
+      r('l15', xs, top - 2, xe - xs, bot - top + 4);
+      for (let i = 1; i < cuts.length - 1; i++) dotsV('l8', X(cuts[i]), top - 2, bot + 3, 2);
+      wave(2, W - 2, top, bot, x => (x >= xs && x < xe) ? 'k2' : 'l12');
+      for (let i = 0; i < cuts.length - 1; i++) { const cx = Math.round((X(cuts[i]) + X(cuts[i + 1])) / 2); const lbl = String(i + 1); if (i === sel || X(cuts[i + 1]) - X(cuts[i]) >= tw(lbl) + 2) t(i === sel ? 'l15' : 'l8', lbl, cx, bot + 5, 1, 'c'); }
+      dotsH('l3', 0, W, H - 23, 2);
+      t('l8', 'SLICE', 2, H - 19); t('l15', '05', 2, H - 12, 2);
+      const mx = Math.round(W * 0.28);
+      t('l8', 'STRT', mx, H - 19); t('l15', '0.375', mx + 20, H - 19);
+      t('l8', 'END', mx, H - 11); t('l15', '0.500', mx + 20, H - 11);
+      t('l8', 'PLAY', W - 2, H - 19, 1, 'r'); t('l15', 'ONE SHOT', W - 2, H - 11, 1, 'r');
+      aria = 'Razor slice editor: 12 slices, slice 5 selected';
+    }
+
+    if (mode === 'rec') {
+      header('T3', 'FILE/REC', '1', 'ARMED');
+      t('l15', 'IN L+R > POOL 07', 2, 13);
+      r('acc', W - 46, 12, 44, 7); t('k2', 'REC 0:07', W - 24, 13, 1, 'c');
+      const top = 23, bot = H - 35, xr = Math.round(W * 0.68);
+      for (let i = 0; i <= 16; i++) r(i % 4 === 0 ? 'l8' : 'l3', 2 + Math.round((W - 4) * i / 16), top - 3, 1, i % 4 === 0 ? 3 : 2);
+      dotsH('l8', 2, W - 2, top + 5, 3); dotsH('l8', 2, W - 2, bot - 5, 3);
+      dotsH('l3', xr, W - 2, Math.round((top + bot) / 2), 2);
+      wave(2, xr, top, bot, () => 'l15');
+      r('acc', xr, top - 2, 1, bot - top + 4);
+      dotsH('l3', 0, W, H - 23, 2);
+      t('l8', 'IN', 2, H - 19);
+      r('l3', 12, H - 19, 60, 2); r('l12', 12, H - 19, 44, 2); r('l3', 12, H - 16, 60, 2); r('l12', 12, H - 16, 39, 2); r('l15', 58, H - 19, 1, 5);
+      t('l8', 'LEN', 2, H - 9); t('l15', '4 BAR', 18, H - 9);
+      const hx = Math.round(W / 2) + 4;
+      t('l8', 'THR', hx, H - 19); t('l15', '-24DB', hx + 16, H - 19);
+      t('l8', 'SYNC', hx, H - 9); t('l15', 'ON PLAY', hx + 20, H - 9);
+      aria = 'Sample record page: recording input into pool slot 7, 7 seconds in';
+    }
+
+    if (mode === 'mix') {
+      header('MST', 'MASTER/MIX', '1', 'CPU 41%');
+      const names = ['T1','T2','T3','T4','T5','T6','S1','S2','M'];
+      const lev = [0.72,0.55,0.81,0,0.4,0.62,0.35,0.28,0.86];
+      const vol = [0.8,0.7,0.75,0.6,0.5,0.7,0.6,0.55,0.9];
+      const top = 14, mh = H - 18 - top, cw = (W - 4) / 9;
+      names.forEach((n, i) => {
+        const x = Math.round(2 + i * cw), cx = x + Math.floor(cw / 2), x0 = cx - 5, muted = i === 3;
+        r('l3', x0, top, 4, mh);
+        const h = Math.round(mh * lev[i]); r(muted ? 'l5' : 'l12', x0, top + mh - h, 4, h);
+        if (lev[i] > 0.78) r('acc', x0, top + mh - h, 4, 3);
+        r('l5', cx + 2, top, 1, mh); r('l15', cx + 1, top + Math.round(mh * (1 - vol[i])) - 1, 4, 3);
+        if (i === 2) { r('l15', x + 1, H - 14, Math.round(cw) - 2, 9); t('k2', n, cx, H - 12, 1, 'c'); }
+        else t(muted ? 'l5' : 'l8', n, cx, H - 12, 1, 'c');
+      });
+      aria = 'Mix overview: meters and faders for six tracks, two sends and master';
+    }
+
+    return { W, H, P, aria, pad, bw, pw: W * s, ph: H * s, ow: W * s + 2 * pad + 2 * bw, oh: H * s + 2 * pad + 2 * bw };
+  }
+}
+</script>
+</body>
+</html>

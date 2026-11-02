@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat virtual grid</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{ow}}px; height: {{oh}}px; box-sizing: border-box; padding: 12px; background: #0E0E0C; border: 2px solid #2E2D29; box-shadow: 0 4px 0 #000000; font-family: 'Silkscreen', monospace; color: #9A978B">
+<div role="group" aria-label="Virtual 16 by 8 grid" style="display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: {{gap}}px">
+<sc-for list="{{cells}}" as="c" hint-placeholder-count="128">
+<button type="button" aria-label="{{c.aria}}" aria-pressed="{{c.on}}" onClick="{{c.tap}}" style="height: {{cellH}}px; min-width: 0; padding: 0; margin: 0; border: 0; border-radius: 4px; background: {{c.bg}}; color: {{c.fg}}; box-shadow: {{c.sh}}; font: 400 {{fs}}px/1 'Silkscreen', monospace; letter-spacing: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; box-sizing: border-box; cursor: pointer; overflow: hidden; white-space: nowrap">{{c.label}}</button>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"cellW":{"editor":"int","min":20,"max":80,"default":44},"cellH":{"editor":"int","min":20,"max":80,"default":44},"gap":{"editor":"int","min":2,"max":12,"default":6},"legends":{"editor":"boolean","default":true},"$preview":{"width":822,"height":422}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { trigs: [1, 5, 7, 9, 11, 13, 15], track: 8 }; }
+  renderVals() {
+    const cw = this.props.cellW ?? 44, ch = this.props.cellH ?? 44, gap = this.props.gap ?? 6, legends = this.props.legends ?? true;
+    const LV = { 0: '#151513', 1: '#1E1D1A', 2: '#2C2B27', 4: '#55524A', 8: '#9E9886', 12: '#D9D2BE', 15: '#FFF4DC', a: '#FF6A1F' };
+    const map = [
+      ['FN','','REC','PLAY','STOP','','MST','FILE','PAT','','TRIG','SRC','FILT','AMP','FX','MOD'],
+      ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16'],
+      ['17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32'],
+      ['MC1','MC2','MC3','MC4','','','','T1','T2','T3','T4','T5','T6','SD1','SD2','MST'],
+      ['OCT-','OCT+','','','','','','PATN','SC-A','XF1','XF2','XF3','XF4','XF5','XF6','SC-B'],
+      ['','C#','D#','','F#','G#','A#','','','','YES','','UP','','','FILL'],
+      ['C','D','E','F','G','A','B','C+','','','NO','LEFT','DOWN','RGHT','','PAGE'],
+      ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']
+    ];
+    const trigs = this.state.trigs, play = 6, locked = [5, 11];
+    const level = (x, y, lbl) => {
+      if (lbl === '') return 0;
+      if (y === 0) { if (lbl === 'PLAY') return 'a'; if (lbl === 'SRC') return 15; if (lbl === 'FN') return 4; return ['REC','STOP'].includes(lbl) ? 4 : 2; }
+      if (y === 1) { if (x === 6) return 15; if (x >= 4 && x < 10) return 8; return 2; }
+      if (y === 2) return 1;
+      if (y === 3) { if (x < 4) return [8, 4, 2, 2][x]; if (x === this.state.track) return 15; if (x >= 7 && x <= 12) return 4; return 2; }
+      if (y === 4) { if (x === 11) return 15; if (x === 10 || x === 12) return 8; if (lbl === 'SC-A' || lbl === 'SC-B') return 8; return 2; }
+      if (y === 5 || y === 6) { if (x < 8) return 2; return 4; }
+      if (y === 7) { if (x === play) return 'a'; if (trigs.includes(x + 1)) return locked.includes(x + 1) ? 15 : 12; return 2; }
+      return 1;
+    };
+    const cells = [];
+    map.forEach((row, y) => row.forEach((lbl, x) => {
+      const l = level(x, y, lbl), bg = LV[l];
+      const bright = l === 'a' || l >= 8;
+      const tap = y === 7 ? () => { const tr = this.state.trigs.slice(); const n = x + 1; const i = tr.indexOf(n); if (i >= 0) tr.splice(i, 1); else tr.push(n); this.setState({ trigs: tr }); }
+        : (y === 3 && x >= 7 && x <= 12) ? () => this.setState({ track: x }) : undefined;
+      cells.push({
+        label: legends ? lbl : '', bg, fg: bright ? '#0B0B0A' : (l === 0 ? '#5E5C54' : '#9A978B'),
+        sh: l === 0 ? 'inset 0 0 0 1px #24231F' : 'inset 0 -3px 0 rgba(0,0,0,0.35)',
+        on: bright ? 'true' : 'false', aria: (lbl || 'unused') + ' row ' + (y + 1) + ' column ' + (x + 1), tap
+      });
+    }));
+    return { cells, gap, cellH: ch, fs: cw < 34 ? 6 : 8, ow: 16 * cw + 15 * gap + 28, oh: 8 * ch + 7 * gap + 28 };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Elasticat iPhone perform</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 14px 22px; background: #121210; color: #F6F3E8; font-family: 'VT323', monospace; display: flex; flex-direction: column; gap: 10px; overflow: hidden">
+
+<div style="height: 40px; display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 10px">
+<svg aria-hidden="true" width="33" height="27" viewBox="0 0 11 9" shape-rendering="crispEdges"><path d="M0 0h1v1h-1zM10 0h1v1h-1zM0 1h2v1h-2zM9 1h2v1h-2zM0 2h3v1h-3zM8 2h3v1h-3zM0 3h11v1h-11zM0 4h2v1h-2zM3 4h5v1h-5zM9 4h2v1h-2zM0 5h11v1h-11zM0 6h6v1h-6zM7 6h4v1h-4zM1 7h9v1h-9zM2 8h7v1h-7z" fill="#F6F3E8"></path></svg>
+<span style="font: 700 16px/1 'Silkscreen', monospace; letter-spacing: 1px">ELASTICAT</span>
+</div>
+<a href="Connect.dc.html" aria-label="FM-1 linked over USB. Open link settings" style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 2px solid #2E2D29; background: #1A1917; color: #F6F3E8; text-decoration: none; font: 400 20px/1 'VT323', monospace; box-shadow: 0 3px 0 #000000">
+<span style="width: 8px; height: 8px; background: #F6F3E8"></span>FM-1 · USB</a>
+</div>
+
+<div style="height: 44px; display: flex; align-items: stretch; gap: 6px">
+<button type="button" aria-label="Play" aria-pressed="true" style="width: 52px; border: 0; background: #FF6A1F; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="16" height="18" viewBox="0 0 8 9" shape-rendering="crispEdges"><path d="M0 0h2v9h-2zM2 1h2v7h-2zM4 2h2v5h-2zM6 3h2v3h-2z" fill="#0B0B0A"></path></svg></button>
+<button type="button" aria-label="Stop" style="width: 52px; border: 2px solid #2E2D29; background: #1E1D1A; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer"><span style="width: 14px; height: 14px; background: #CFCBBE"></span></button>
+<button type="button" aria-label="Record sample" style="width: 52px; border: 2px solid #2E2D29; background: #1E1D1A; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M2 0h4v1h-4zM1 1h6v1h-6zM0 2h8v4h-8zM1 6h6v1h-6zM2 7h4v1h-4z" fill="#FF6A1F"></path></svg></button>
+<div style="flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 0 8px; border: 2px solid #2E2D29; background: #0B0B0A">
+<span style="font: 400 30px/1 'VT323', monospace">136.0</span>
+<span style="font: 400 8px/1 'Silkscreen', monospace; color: #9A978B">BPM</span>
+</div>
+<button type="button" aria-label="Pattern 1. Open patterns" style="width: 56px; border: 2px solid #2E2D29; background: #1E1D1A; color: #F6F3E8; font: 400 22px/1 'VT323', monospace; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3); cursor: pointer">P01</button>
+</div>
+
+<div role="tablist" aria-label="Tracks and buses" style="height: 40px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{tracks}}" as="t" hint-placeholder-count="9">
+<button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="border: 0; padding: 0 0 6px; background: {{t.bg}}; color: {{t.fg}}; font: 400 20px/1 'VT323', monospace; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.35); position: relative; cursor: pointer">{{t.name}}<span style="position: absolute; left: 5px; bottom: 5px; height: 3px; width: {{t.meter}}; background: {{t.mc}}"></span></button>
+</sc-for>
+</div>
+
+<dc-import name="Display" mode="warp" cols="{{176}}" rows="{{110}}" scale="{{2}}" pad="{{3}}" hint-size="362px,230px"></dc-import>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{params}}" as="p" hint-placeholder-count="8">
+<button type="button" aria-label="{{p.aria}}" style="height: 56px; box-sizing: border-box; padding: 6px 7px 6px; border: 2px solid {{p.line}}; background: #1A1917; color: #F6F3E8; display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; text-align: left; cursor: pointer">
+<span style="display: flex; justify-content: space-between; font: 400 8px/1 'Silkscreen', monospace; color: #9A978B"><span>{{p.k}}</span><span style="color: {{p.tagc}}">{{p.tag}}</span></span>
+<span style="font: 400 22px/0.8 'VT323', monospace; color: {{p.vc}}; white-space: nowrap">{{p.v}}</span>
+<span style="display: flex; gap: 1px; height: 3px"><sc-for list="{{p.segs}}" as="g" hint-placeholder-count="10"><span style="flex: 1; background: {{g}}"></span></sc-for></span>
+</button>
+</sc-for>
+</div>
+
+<button type="button" aria-label="Loop scrub strip, 16 positions. Key 7 held" style="height: 48px; padding: 4px; border: 2px solid #2E2D29; background: #0B0B0A; display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 2px; cursor: pointer">
+<sc-for list="{{loopKeys}}" as="l" hint-placeholder-count="16">
+<span style="background: {{l.bg}}; color: {{l.fg}}; font: 400 8px/1 'Silkscreen', monospace; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px">{{l.n}}</span>
+</sc-for>
+</button>
+
+<div role="group" aria-label="Steps 1 to 16" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="16">
+<button type="button" aria-label="{{s.aria}}" aria-pressed="{{s.on}}" onClick="{{s.tap}}" style="height: 42px; border: 0; padding: 0; position: relative; background: {{s.bg}}; box-shadow: {{s.sh}}; cursor: pointer">
+<span style="position: absolute; left: 5px; bottom: 6px; font: 400 8px/1 'Silkscreen', monospace; color: {{s.fg}}">{{s.n}}</span>
+<sc-if value="{{s.lock}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; right: 5px; top: 5px; width: 6px; height: 6px; background: #0B0B0A"></span></sc-if>
+</button>
+</sc-for>
+</div>
+
+<div role="tablist" aria-label="Parameter categories" style="height: 44px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+<button type="button" role="tab" aria-selected="{{c.sel}}" onClick="{{c.pick}}" style="border: 2px solid {{c.line}}; background: {{c.bg}}; color: {{c.fg}}; font: 400 20px/1 'VT323', monospace; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.35); padding: 0; cursor: pointer">{{c.n}}</button>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { track: 0, cat: 2, trigs: [1, 5, 7, 9, 11, 13, 15] }; }
+  renderVals() {
+    const names = ['T1','T2','T3','T4','T5','T6','S1','S2','M'];
+    const meters = [72, 55, 81, 0, 40, 62, 35, 28, 86];
+    const tracks = names.map((n, i) => {
+      const sel = i === this.state.track;
+      return { name: n, sel: sel ? 'true' : 'false', bg: sel ? '#F6F3E8' : (i > 5 ? '#161614' : '#1E1D1A'), fg: sel ? '#0B0B0A' : (i === 3 ? '#5E5C54' : '#CFCBBE'),
+        meter: Math.round(meters[i] * 0.3) + 'px', mc: sel ? '#0B0B0A' : (meters[i] > 78 ? '#FF6A1F' : '#55524A'), pick: () => this.setState({ track: i }) };
+    });
+    const P = [['GSIZ','120MS',0.45,'E2'],['GDEN','18',0.3,'E3'],['GJIT','35%',0.35,'LOCK'],['OWIN','64',0.5,''],['OWAN','22',0.17,''],['CHOP','8',0.25,''],['LOOP','FWD',0,''],['RATE','1/1',0.6,'']];
+    const params = P.map((p, i) => {
+      const sel = i < 2, lock = p[3] === 'LOCK', n = Math.round(p[2] * 10);
+      const segs = []; for (let j = 0; j < 10; j++) segs.push(j < n ? (lock ? '#FF6A1F' : '#CFCBBE') : '#34332E');
+      return { k: p[0], v: p[1], tag: p[3], tagc: lock ? '#FF6A1F' : '#9A978B', vc: lock ? '#FF6A1F' : '#F6F3E8', line: sel ? '#F6F3E8' : '#2E2D29', segs,
+        aria: p[0] + ' ' + p[1] + (lock ? ', locked on held step' : '') };
+    });
+    const loopKeys = []; for (let i = 0; i < 16; i++) loopKeys.push({ n: String(i + 1), bg: i === 6 ? '#F6F3E8' : (i >= 4 && i < 10 ? '#55524A' : '#1E1D1A'), fg: i === 6 ? '#0B0B0A' : (i >= 4 && i < 10 ? '#F6F3E8' : '#9A978B') });
+    const play = 6, locked = [5, 11];
+    const steps = []; for (let i = 0; i < 16; i++) {
+      const n = i + 1, on = this.state.trigs.includes(n), lock = on && locked.includes(n), cur = i === play;
+      steps.push({ n: String(n), on: on ? 'true' : 'false', lock,
+        bg: on ? '#FF6A1F' : (i % 4 === 0 ? '#24231F' : '#1E1D1A'), fg: on ? '#0B0B0A' : '#9A978B',
+        sh: cur ? 'inset 0 0 0 3px #F6F3E8' : 'inset 0 -3px 0 rgba(0,0,0,0.35)',
+        aria: 'Step ' + n + (on ? ', trig' : ', empty') + (lock ? ', parameter locked' : '') + (cur ? ', playing' : ''),
+        tap: () => { const tr = this.state.trigs.slice(); const k = tr.indexOf(n); if (k >= 0) tr.splice(k, 1); else tr.push(n); this.setState({ trigs: tr }); } });
+    }
+    const cn = ['FN','TRIG','SRC','FILT','AMP','FX','MOD'];
+    const cats = cn.map((n, i) => { const sel = i === this.state.cat; return { n, sel: sel ? 'true' : 'false', bg: sel ? '#F6F3E8' : '#1E1D1A', fg: sel ? '#0B0B0A' : (i === 0 ? '#FF6A1F' : '#CFCBBE'), line: sel ? '#F6F3E8' : '#2E2D29', pick: () => this.setState({ cat: i }) }; });
+    return { tracks, params, loopKeys, steps, cats };
+  }
+}
+</script>
+</body>
+</html>

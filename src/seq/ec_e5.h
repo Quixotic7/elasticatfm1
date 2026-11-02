@@ -95,6 +95,9 @@ typedef struct {
     int n;
     uint32_t last_key, last_ms;
     int last_ok;
+    ec_undo_entry_t r[EC_UNDO_DEPTH];   /* 0.3.0: redo (what an undo replaced); a new edit empties it */
+    int nr;
+    float (*gget)(int id);              /* the app's current value of global id (redo of a global), or NULL */
 } ec_undo_t;
 void ec_undo_clear(ec_undo_t *u);
 /* start (or extend: same key inside the window) a gesture; returns the new entry to fill, or 0 when coalesced */
@@ -107,6 +110,8 @@ void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int track, int page, uin
 /* pop the last entry into the project; returns its kind (0: nothing to undo). EC_U_GLOBAL: *gid / *gval are the
  * global's id and value for the caller to apply (the project globals belong to the app) */
 int ec_undo_pop(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap);
+/* 0.3.0: redo the last undone entry (the same out-params as ec_undo_pop); 0: nothing to redo */
+int ec_undo_redo(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap);
 
 /* ---- memorize / recall: the whole project to RAM and back (sample paths compared by the caller) ---- */
 void ec_e5_recall(ec_project_t *dst, const ec_project_t *memo);

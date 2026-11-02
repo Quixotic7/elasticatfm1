@@ -517,6 +517,7 @@ ec_undo_entry_t *ec_undo_record(ec_undo_t *u, uint32_t key, uint32_t ms)
         u->last_ms = ms;                         /* the same gesture: keep it alive */
         return 0;
     }
+    u->nr = 0;                                   /* a new edit drops what could have been redone */
     if (u->n == EC_UNDO_DEPTH) {
         memmove(&u->e[0], &u->e[1], (EC_UNDO_DEPTH - 1) * sizeof u->e[0]);
         u->n--;
@@ -588,39 +589,84 @@ void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int t, int page, uint16_
     snprintf(e->label, sizeof e->label, "%s", label);
 }
 
-int ec_undo_pop(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap)
+/* apply entry e to the project, leaving in e what it replaced (so applying it again undoes the apply) */
+static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *track, int *gid, float *gval, char *label,
+                     int cap)
 {
-    ec_undo_entry_t *e;
     int i;
-    u->last_ok = 0;                            /* the next edit always starts a fresh gesture */
-    if (u->n <= 0)
-        return 0;
-    e = &u->e[--u->n];
     if (label)
         snprintf(label, (size_t)cap, "%s", e->label);
     if (track)
         *track = e->track;
     switch (e->kind) {
     case EC_U_PARAM:
-        if (e->pat >= 0 && e->pat < EC_NPAT && e->track >= 0 && e->track < EC_NTRACK)
-            p->pat[(int)e->pat].tr[(int)e->track].v[e->id] = e->val;
+        if (e->pat >= 0 && e->pat < EC_NPAT && e->track >= 0 && e->track < EC_NTRACK) {
+            float *v = &p->pat[(int)e->pat].tr[(int)e->track].v[e->id];
+            const float old = *v;
+            *v = e->val;
+            e->val = old;
+        }
         break;
     case EC_U_GLOBAL:
         if (gid)
             *gid = e->id;
         if (gval)
             *gval = e->val;
+        if (u->gget)
+            e->val = u->gget(e->id);
         break;
-    case EC_U_XFADE: ec_scene_apply(p, e->val); break;
+    case EC_U_XFADE: {
+        const float old = p->e5.sc.pos;
+        ec_scene_apply(p, e->val);
+        e->val = old;
+    } break;
     case EC_U_STEPS:
         if (e->pat >= 0 && e->pat < EC_NPAT && e->track >= 0 && e->track < EC_NTRACK)
             for (i = 0; i < 16; i++)
-                if (e->mask >> i & 1u)
-                    p->pat[(int)e->pat].tr[(int)e->track].steps[e->id * 16 + i] = e->st[i];
+                if (e->mask >> i & 1u) {
+                    ec_step_t *s = &p->pat[(int)e->pat].tr[(int)e->track].steps[e->id * 16 + i];
+                    const ec_step_t old = *s;
+                    *s = e->st[i];
+                    e->st[i] = old;
+                }
         break;
     default: break;
     }
     return e->kind;
+}
+
+int ec_undo_pop(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap)
+{
+    ec_undo_entry_t e;
+    int kind;
+    u->last_ok = 0;                            /* the next edit always starts a fresh gesture */
+    if (u->n <= 0)
+        return 0;
+    e = u->e[--u->n];
+    kind = undo_swap(u, &e, p, track, gid, gval, label, cap);
+    if (u->nr == EC_UNDO_DEPTH) {
+        memmove(&u->r[0], &u->r[1], (EC_UNDO_DEPTH - 1) * sizeof u->r[0]);
+        u->nr--;
+    }
+    u->r[u->nr++] = e;                         /* e now holds what the undo replaced */
+    return kind;
+}
+
+int ec_undo_redo(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap)
+{
+    ec_undo_entry_t e;
+    int kind;
+    u->last_ok = 0;
+    if (u->nr <= 0)
+        return 0;
+    e = u->r[--u->nr];
+    kind = undo_swap(u, &e, p, track, gid, gval, label, cap);
+    if (u->n == EC_UNDO_DEPTH) {
+        memmove(&u->e[0], &u->e[1], (EC_UNDO_DEPTH - 1) * sizeof u->e[0]);
+        u->n--;
+    }
+    u->e[u->n++] = e;
+    return kind;
 }
 
 /* ------------------------------------------------------------------------------------------- memorize / recall --- */

@@ -273,6 +273,26 @@ typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);
 typedef uint32_t (*fm1core_latency_fn)(void);
 typedef int (*fm1core_boot_option_fn)(const char *key, const char *value);
 
+/*   uint32_t fm1core_labels_epoch(void)
+ *       moves whenever any live label changed; 0 = the core offers no live labels (yet). Host: after each frame()
+ *       (or at its UI rate) read it; when it differs from the last one read, re-read all 49 labels and redraw.
+ *   const char *fm1core_label(int32_t which)
+ *       the live label now (FIZZ's 49 slots, FMToneSeq docs/SYSEX.md "20 LABELS"): which 0..7 the knobs (FM1P_E_*
+ *       order), 8..21 the buttons (FM1P_B_* order), 22..37 the white keys W1..W16, 38..48 the black keys B1..B11
+ *       (ascending). 0..10 upper case printable ASCII chars; "" = the control has no job here (drawn blank / dim),
+ *       NULL = not given (the host shows its own: button_names -> printed, knob: its own name, key: nothing).
+ *       Valid until the next call into the core: hosts copy it. */
+#define FM1CORE_LABELS_EPOCH_SYMBOL "fm1core_labels_epoch"
+#define FM1CORE_LABEL_SYMBOL "fm1core_label"
+#define FM1CORE_LBL_KNOB0 0
+#define FM1CORE_LBL_BTN0 8
+#define FM1CORE_LBL_WHITE0 22
+#define FM1CORE_LBL_BLACK0 38
+#define FM1CORE_LBL_N 49
+#define FM1CORE_LBL_LEN 11   /* 10 chars + NUL */
+typedef uint32_t (*fm1core_labels_epoch_fn)(void);
+typedef const char *(*fm1core_label_fn)(int32_t which);
+
 #if defined(__GNUC__) || defined(__clang__)
 #define FM1CORE_EXPORT __attribute__((visibility("default")))
 #else

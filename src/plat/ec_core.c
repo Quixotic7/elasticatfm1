@@ -144,6 +144,77 @@ uint8_t *ec_plat_record(uint32_t *size)
 void ec_plat_record_changed(void) { g_flash_dirty++; }
 int ec_plat_record_fresh(void) { return g_fresh; }
 
+/* ------------------------------------------------------------------------------------------- live labels --- */
+/* fm1core_labels_epoch / fm1core_label (fm1core.h optional module symbols) read this table; ec_plat_label fills it */
+static char g_lbl[EC_LBL_N][11];
+static uint8_t g_lbl_given[EC_LBL_N];
+static uint32_t g_lbl_epoch;           /* 0 until the table first holds a label */
+
+static void lbl_changed(void)
+{
+    if (++g_lbl_epoch == 0)
+        g_lbl_epoch = 1;                   /* (0 means "no live labels": skip it on a wrap) */
+}
+void ec_plat_label(int which, const char *s)
+{
+    char t[11];
+    int n = 0;
+    if (which < 0 || which >= EC_LBL_N)
+        return;
+    if (!s) {
+        if (g_lbl_given[which]) {
+            g_lbl_given[which] = 0;
+            g_lbl[which][0] = 0;
+            lbl_changed();
+        }
+        return;
+    }
+    for (; n < 10 && s[n]; n++) {
+        const char ch = s[n] >= 'a' && s[n] <= 'z' ? (char)(s[n] - 32) : s[n];
+        t[n] = ch >= ' ' && ch <= '~' ? ch : ' ';
+    }
+    t[n] = 0;
+    if (!g_lbl_given[which] || strcmp(g_lbl[which], t) != 0) {
+        g_lbl_given[which] = 1;
+        memcpy(g_lbl[which], t, (size_t)n + 1);
+        lbl_changed();
+    }
+}
+void ec_plat_labels_clear(void)
+{
+    int i;
+    for (i = 0; i < EC_LBL_N; i++)
+        ec_plat_label(i, NULL);
+}
+
+/* The default filler (the app may define its own ec_app_labels): while FN (GLO) is held the buttons show what they
+ * do with FN, otherwise nothing is given (the host draws button_names). "FN held" is the GLO bit of the buttons this
+ * layer hands the app (g_in.btn_held), which the app's A->fn follows exactly (ec_app.c button_down / button_up; E5
+ * passes FN through). The FN layer as the code has it: ec_e5.c ec_e5_button_down (SAVE undo, OCT+ memorize, OCT-
+ * recall), ec_app.c button_down (PLAY stop, REC save) and category() (FN + a category with a setup list,
+ * ec_pages.c ec_settings_items; MOD has none: ""). Page-local meanings (RAZOR's OCT Auto-Chop / Redistribute, PLAY
+ * = PASTE with a scope held, FN + the category in a setup list going back) need the app's state: not shown here. */
+static const char *const FN_LABEL[EC_NB] = {
+    [EC_B_FX] = "SET",    [EC_B_SEL] = "SET",  [EC_B_ENV] = "SET",   [EC_B_LFO] = "",      [EC_B_EDIT] = "SET",
+    [EC_B_GLO] = NULL,    [EC_B_HOME] = "SET", [EC_B_SAVE] = "UNDO", [EC_B_ARP] = "SET",   [EC_B_SEQ] = "SET",
+    [EC_B_PLAY] = "STOP", [EC_B_REC] = "SAVE", [EC_B_OCTDN] = "RCL", [EC_B_OCTUP] = "MEM",
+};
+__attribute__((weak)) void ec_app_labels(void)
+{
+    const int fn = g_in.btn_held >> EC_B_FN & 1u;
+    int b;
+    for (b = 0; b < EC_NB; b++)
+        ec_plat_label(EC_LBL_BTN0 + b, fn ? FN_LABEL[b] : NULL);
+}
+
+FM1CORE_EXPORT uint32_t fm1core_labels_epoch(void) { return g_lbl_epoch; }
+FM1CORE_EXPORT const char *fm1core_label(int32_t which)
+{
+    if (which < 0 || which >= EC_LBL_N || !g_lbl_given[which])
+        return NULL;
+    return g_lbl[which];
+}
+
 /* ------------------------------------------------------------------------------------------- the flash --- */
 static void flash_format(void)
 {
@@ -275,8 +346,10 @@ static void c_init(int demo)
     memset(&g_in, 0, sizeof g_in);
     g_shut = 0;
     flash_load();
+    ec_plat_labels_clear();
     ec_app_init();
     ec_app_frame();                        /* the first screen */
+    ec_app_labels();
     g_running = 1;
     if (g_panel.ready == 0)
         g_panel.ready = 1;
@@ -294,6 +367,7 @@ static void c_frame(void)
     if (!g_running)
         return;
     ec_app_frame();
+    ec_app_labels();
 }
 static void c_idle(void) {}
 static void c_audio(int16_t *stereo, uint32_t frames)

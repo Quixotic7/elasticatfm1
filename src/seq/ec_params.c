@@ -199,7 +199,7 @@ float ec_param_nudge(int id, float x, int det)
     if (d->flags & EC_PF_EXPSTEP) {   /* E3: semitone ratios per detent; from 0 the first detent is one step */
         const float lo = d->min > 0 ? d->min : d->step;
         if (x < lo)
-            y = det > 0 ? lo : d->min;
+            y = det > 0 ? lo * powf(2.0f, (float)(det - 1) / 12.0f) : d->min;
         else {
             y = x * powf(2.0f, (float)det / 12.0f);
             if (y < lo)

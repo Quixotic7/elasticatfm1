@@ -12,6 +12,7 @@
 #include "ec_gfx.h"
 #include "ec_leds.h"
 #include "ec_loader.h"
+#include "ec_razor_ui.h"   /* E3 */
 #include "ec_screens.h"
 #include "ec_version.h"
 
@@ -139,6 +140,7 @@ float ec_app_item_value(const ec_app_t *a, const ec_item_t *it, int *locked)
         default: return sl->trim_end;
         }
     }
+    case EC_IT_RAZOR: return ec_rzui_value(a, it->id);   /* E3 */
     default: return 0;
     }
 }
@@ -150,6 +152,10 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
     char b[24];
     if (it->kind == EC_IT_BLANK) {
         out[0] = 0;
+        return;
+    }
+    if (it->kind == EC_IT_RAZOR) {   /* E3 */
+        ec_rzui_format(a, it->id, x, out, cap);
         return;
     }
     if (it->kind == EC_IT_PARAM) {
@@ -207,6 +213,7 @@ float ec_app_item_frac(const ec_app_t *a, const ec_item_t *it, float x)
         case EC_S_GAIN: return x / 4;
         default: return x;
         }
+    case EC_IT_RAZOR: return ec_rzui_frac(a, it->id, x);   /* E3 */
     default: return 0;
     }
 }
@@ -492,12 +499,9 @@ static int accel(int r)
 
 static float nudge_machine(float m, int det)
 {
-    static const int M[] = {EC_MACH_LOOP, EC_MACH_LOOP_TRIG, EC_MACH_GRID_SLICE, EC_MACH_SLICE_POLY};
-    int i, k = 0;
-    for (i = 0; i < 4; i++)
-        if (M[i] == (int)(m + 0.5f))
-            k = i;
-    return (float)M[clampi(k + det, 0, 3)];
+    /* E3: every machine but INPUT (E6); NEIGHBOR from track 2 on (track 1 has no left neighbour) */
+    const int top = A->track > 0 ? EC_MACH_NEIGHBOR : EC_MACH_RAZOR_POLY;
+    return (float)clampi((int)(m + 0.5f) + det, EC_MACH_LOOP, top);
 }
 
 static void edit_param(int id, int det, int mult, int flags)
@@ -615,6 +619,7 @@ static void knob_cell(int k, int det)
     case EC_IT_PARAM: edit_param(pg.it[cell].id, det, mult, pg.it[cell].flags); break;
     case EC_IT_GLOBAL: edit_global(pg.it[cell].id, det, mult); break;
     case EC_IT_SLOT: edit_slot(pg.it[cell].id, det, mult); break;
+    case EC_IT_RAZOR: ec_rzui_edit(A, pg.it[cell].id, det, mult); break;   /* E3 */
     default: break;
     }
     A->redraw = 1;
@@ -651,7 +656,9 @@ static void category(int c)
     } else if (A->fn && has_settings(c)) {
         A->settings = 1;
         A->cat = c;
-    } else if (c == EC_CAT_FILE && A->cat == EC_CAT_FILE)
+    } else if (c == EC_CAT_FILE && A->cat == EC_CAT_FILE && (A->fn || A->page[c] == 1))
+        A->page[c] ^= 1;                               /* E3: FN + SAVE = RAZOR, SAVE there = back to the browser */
+    else if (c == EC_CAT_FILE && A->cat == EC_CAT_FILE)
         load_cursor_file();
     else if (c == A->cat)
         A->page[c] = (A->page[c] + 1) % ec_cat_pages(c, ec_app_params(A));
@@ -671,7 +678,7 @@ static void select_target(int i)      /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
 }
 
 /* ------------------------------------------------------------------------------------------- keys --- */
-enum { R_NONE, R_STEP, R_LOOP_LIVE, R_LOOP_PROG, R_PAD, R_SLICE_PROG, R_KEY, R_KEY_PROG, R_PAT };
+enum { R_NONE, R_STEP, R_LOOP_LIVE, R_LOOP_PROG, R_PAD, R_SLICE_PROG, R_KEY, R_KEY_PROG, R_PAT, R_RAZOR /* E3 */ };
 
 static int loop_mode(void) { return A->sel_held || A->keymode == EC_KM_LOOP; }
 
@@ -742,6 +749,11 @@ static void lower_down(int k, int i, int vel)
             A->patn_open = A->patn_latched = 0;
         A->key_role[k] = R_PAT;
         mark_dirty();
+        return;
+    }
+    if (ec_rzui_active(A) && !A->sel_held) {         /* E3: the RAZOR page: the keys are its slices */
+        ec_rzui_key(A, i, 1, vel);
+        A->key_role[k] = R_RAZOR;
         return;
     }
     if (loop_mode()) {
@@ -824,6 +836,7 @@ static void lower_up(int k, int i, int vel)
     case R_LOOP_PROG: A->prog_keys &= ~(1u << i); break;
     case R_PAD: ec_seq_slice_pad(&A->seq, A->track, i + 1, 0, 0); break;
     case R_KEY: ec_seq_keyboard(&A->seq, A->track, key_semis(i), 0, 0); break;
+    case R_RAZOR: ec_rzui_key(A, i, 0, 0); break;   /* E3 */
     default: break;
     }
     A->key_role[k] = R_NONE;
@@ -923,6 +936,10 @@ static void button_down(int b)
     case EC_B_OCTDN:
     case EC_B_OCTUP: {
         const int d = b == EC_B_OCTUP ? 1 : -1;
+        if (ec_rzui_active(A)) {                     /* E3: OCT+ split / OCT- delete; FN: Auto-Chop / Redistribute */
+            ec_rzui_oct(A, d > 0);
+            break;
+        }
         if (A->fn) {
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
             A->step_page = clampi(A->step_page + d, 0, pages - 1);
@@ -1031,7 +1048,9 @@ void ec_app_tick(const ec_input_t *in)
         if (!d)
             continue;
         if (r == EC_E_SELECT) {
-            if (A->cat == EC_CAT_FILE && !A->settings) {
+            if (ec_rzui_active(A))
+                ec_rzui_select(A, d);                 /* E3: SELECT picks the slice on the RAZOR page */
+            else if (A->cat == EC_CAT_FILE && !A->settings) {
                 const int n = ec_browse_count();
                 if (n > 0)
                     A->cursor = ((A->cursor + d) % n + n) % n;
@@ -1191,6 +1210,8 @@ static void leds(void)
     ec_plat_led_button(EC_B_REC, A->dirty ? EC_LED_DIM : EC_LED_FAINT);
     ec_plat_led_button(EC_B_OCTDN, A->keymode == EC_KM_LOOP ? EC_LED_LIT : EC_LED_FAINT);
     ec_plat_led_button(EC_B_OCTUP, A->keymode == EC_KM_KEYS ? EC_LED_LIT : EC_LED_FAINT);
+    if (ec_rzui_active(A))   /* E3: the RAZOR page's keys and OCT buttons */
+        ec_rzui_leds(A);
 }
 
 static void meters(void)

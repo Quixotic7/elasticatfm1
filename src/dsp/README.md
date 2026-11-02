@@ -14,6 +14,8 @@ event list are documented at the top of **`ec_dsp.h`**.
 | `ec_reader.c` | `ElasticatReader` (tape, tempo_varispeed): two heads, one queued equal-power crossfade |
 | `ec_grains.c` | `ElasticatGrains` (granular warp) |
 | `ec_chop.c` | warp mode `chopped` (`\elasticatChopSync`) |
+| `ec_warp3.c/.h` | E3: domino (ElasticatSlicer), random_ola (TGrains), pitch_corrected / gstretch / gstretch2 (PitchShift), harmonizer, wavetable (ElasticatWavetable), spectral_freeze / formant (FFT + PV_*) |
+| `ec_fft.c/.h` | E3: fixed 2048-point real FFT (N/2 complex radix-2 + split) |
 | `ec_voices.c` | slice voices (raw + Warp1-like grain cloud), voice budget, stealing, choke |
 | `ec_filter.c` | filter machines + AMP/PAN stage |
 | `ec_env.c` | SC EnvGen segments, ADSR / AHR / gated voice envelopes |
@@ -38,12 +40,21 @@ Tests, demo renders and the benchmark: `tests/dsp` (`make -C tests/dsp`, `render
 - Amp: ADSR / AHR with the Elektron time curve (xform helpers), portamento legato, noteOff for held notes,
   amp ×2.63 makeup + Balance2 pan as in the SC filter stage.
 
-## Not yet (hooks in place)
+## E3
 
-- Warp modes domino, random_ola, pitch_corrected, harmonizer, wavetable, spectral_freeze, formant,
-  gstretch, gstretch2: they **fall back to the tempo_varispeed reader** (`ec_track_status_t.mode_implemented
-  = 0`). Add a family in `warp_family()` + a render case in `fam_render()`.
-- `neighbor` (E3): marked "E3 hook" in `track_chunk()`; silent today.
+- Every warp mode: reader family + post stage (pitch_corrected, harmonizer, random_ola, gstretch, gstretch2 on
+  the click-free reader; one 64k delay line per track written by every reader mode so a stage switch has history;
+  stages crossfade over mode_switch_fade), and the families domino, wavetable, spectral (`ec_warp3.c`).
+- `neighbor`: the left track's `track_chunk` output (post filter / amp / pan / mute; E4's insert must run inside
+  `track_chunk`, see the "E3 neighbor tap" comment in `ec_dsp_process`) is this track's source; the left track then
+  skips the master.
+- Slice events: `ev.mode` 1..6 = a per-slice play mode (razor editor), the seq fills razor ranges + choke + pitch.
+- Memory: `ec_dsp_mem_size()` is now ~3.6 MB (6 x 512 KB delay lines + FFT state); the app's arena is 4 MiB.
+- CPU (`make -C tests/dsp bench`, M-series, native): the 6-track scene in the heaviest E3 modes (harmonizer x3,
+  random_ola density 16, spectral_freeze, formant, wavetable LFO 300 Hz, gstretch2) 1.18 % of a core; the E2 busy
+  scene with four of its loop tracks in harmonizer / random_ola / freeze / formant 1.30 %; six spectral tracks
+  0.75 %; worst-case random_ola on all six tracks (density 64, 0.6 s grains) 1.7 % with the grain budget. wasm3
+  ~22x: 26-37 %, i.e. >= 2.7x real time for the DSP.
 - Insert FX, sends S1/S2, master insert (E4): marked "E4 hook" in `track_chunk()` / `ec_dsp_process()`;
   `send_tap` / `send1_level` / `send2_level` are stored, unused.
 - MOD (LFOs, mod env, macros, velocity mod): the cutoff / res / pitch / amp / pan mod buses are zero.
@@ -80,6 +91,27 @@ Tests, demo renders and the benchmark: `tests/dsp` (`make -C tests/dsp`, `render
     its last value (the new sample cannot read the old memory). The reader restarts at the same relative
     position with a fade-in.
 14. Per-track `slice_sync` / `slice_rate` (the SC engine had them engine-global).
+
+E3:
+
+15. **Spectral budget**: the original ran the FFT chain on track 1 only (tape elsewhere). The FFT here is cheap
+    (one 2048 real FFT + IFFT per 1024 samples, magnitudes / phases kept as unit vectors, no trig per bin): measured
+    0.06 % of a core per track, so `EC_W3_SPECTRAL_TRACKS` = 6 (every track). The hook stays (tracks past it fall
+    back to tape and report `mode_implemented = 0`; the WARP page then marks TAPE).
+16. **PitchShift window** is live (SC's windowSize is init-rate: the original's PWIN / PCWN only took effect at the
+    next mode spawn); it is capped at 0.74 s (pitch_corrected's PCWN x (1 + SMEAR) could ask for 4 s). Both
+    channels share one grain schedule (SC ran two independent PitchShift UGens; identical with dispersion 0).
+17. **random_ola grain budget**: at most 80 TGrains grains sounding across all tracks (each track's cap stays 64,
+    TGrains' own); six dense OLA tracks would otherwise cost ~7 % native (150 % in wasm3).
+18. **Loop reverse** also reverses random_ola / pitch_corrected / harmonizer / spectral reads (their SynthDefs read
+    forward only); domino's slicer phase follows the region verbs (phase 0 = the window edge, as the original).
+19. **Mode switches inside the reader family** (e.g. tape -> harmonizer) crossfade the post stages; the SC engine
+    respawned the synth with a modeAmp fade.
+20. Slice voices in random_ola / pitch_corrected play the raw voice (the original had \\ola / \\pc voice defs:
+    per-voice TGrains / PitchShift would need 24 delay lines).
+21. Domino's playhead window follows the resolved region (loop keys / step locks included); the original sent the
+    raw loop_start / loop_end.
+
 
 ## For the sequencer (src/seq)
 

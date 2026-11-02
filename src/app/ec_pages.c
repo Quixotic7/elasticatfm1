@@ -48,6 +48,17 @@ static void S(ec_page_t *o, int id, const char *label)
     }
 }
 static void stopped_only(ec_page_t *o) { o->it[o->n - 1].flags |= EC_IF_STOPPED; }
+static void Z(ec_page_t *o, int id)   /* E3: a razor editor cell */
+{
+    static const char *const LB[EC_NRZ] = {"STRT", "END", "PLAY", "ZOOM", "SNAP", "CHOK", "P/T", "SENS"};
+    if (o->n < EC_PAGE_ITEMS) {
+        o->it[o->n].kind = EC_IT_RAZOR;
+        o->it[o->n].id = (uint8_t)id;
+        o->it[o->n].flags = 0;
+        o->it[o->n].label = LB[id];
+        o->n++;
+    }
+}
 
 int ec_cat_pages(int cat, const float *v)
 {
@@ -59,6 +70,7 @@ int ec_cat_pages(int cat, const float *v)
     case EC_CAT_FX: return 2;
     case EC_CAT_MOD: return 2;
     case EC_CAT_MASTER: return 2;
+    case EC_CAT_FILE: return 2;   /* E3: SAMPLE, RAZOR */
     default: return 1;
     }
 }
@@ -88,7 +100,41 @@ static void warp_items(const float *v, ec_page_t *o)
         P(o, EC_P_CHOP_ATTACK, 0);
         P(o, EC_P_CHOP_RELEASE, 0);
         break;
-    default:                                   /* the modes not ported yet play the tempo_varispeed reader */
+    /* E3: lib/warp_modes (.lua) through mode_param_layout (top row first; RATE after the mode's own top-row params,
+     * envelope ATK / REL leading the second row) */
+    case EC_WARP_DOMINO:
+        P(o, EC_P_CHOP_STEPS, "SLCS"), P(o, EC_P_CHOP_SLICE_LEN, 0), P(o, EC_P_CHOP_LOOP_MODE, 0);
+        P(o, EC_P_WARP_RATE, 0);
+        P(o, EC_P_CHOP_ATTACK, 0), P(o, EC_P_CHOP_RELEASE, 0), P(o, EC_P_CHOP_HOLD, 0);
+        break;
+    case EC_WARP_RANDOM_OLA:
+        P(o, EC_P_MODE_MACRO, "CHAOS"), P(o, EC_P_WSOLA_WINDOW, 0), P(o, EC_P_WSOLA_SEARCH, 0);
+        P(o, EC_P_WARP_RATE, 0);
+        break;
+    case EC_WARP_PITCH_CORRECTED:
+        P(o, EC_P_MODE_MACRO, "SMEAR"), P(o, EC_P_PV_WINDOW, 0), P(o, EC_P_PV_DISPERSION, 0);
+        P(o, EC_P_WARP_RATE, 0);
+        break;
+    case EC_WARP_HARMONIZER:
+        P(o, EC_P_MODE_MACRO, "MIX"), P(o, EC_P_HARM_INTERVAL, 0), P(o, EC_P_HARM_INTERVAL2, 0);
+        P(o, EC_P_HARM_INTERVAL3, 0), P(o, EC_P_WARP_RATE, 0);
+        break;
+    case EC_WARP_WAVETABLE:
+        P(o, EC_P_MODE_MACRO, "MORF"), P(o, EC_P_WT_WINDOW, 0), P(o, EC_P_WT_CYCLE, 0), P(o, EC_P_WT_LFO_RATE, 0);
+        P(o, EC_P_WT_LFO_DEPTH, 0), P(o, EC_P_WT_LFO_SHAPE, 0), P(o, EC_P_XFADE, 0), P(o, EC_P_WARP_RATE, 0);
+        break;
+    case EC_WARP_SPECTRAL_FREEZE:
+        P(o, EC_P_FREEZE_AMOUNT, 0), P(o, EC_P_SPECTRAL_BLUR, 0), P(o, EC_P_WARP_RATE, 0);
+        break;
+    case EC_WARP_FORMANT:
+        P(o, EC_P_FORMANT_SHIFT, 0), P(o, EC_P_FREEZE_AMOUNT, 0), P(o, EC_P_WARP_RATE, 0);
+        break;
+    case EC_WARP_GSTRETCH:
+    case EC_WARP_GSTRETCH2:
+        P(o, EC_P_GRAIN_SPEED, "STRCH"), P(o, EC_P_GRAIN_SIZE, "PWIN"), P(o, EC_P_GRAIN_DENSITY, "SMTH");
+        P(o, EC_P_WARP_RATE, 0);
+        break;
+    default:
         P(o, EC_P_MODE_MACRO, 0);
         P(o, EC_P_WARP_RATE, 0);
         break;
@@ -154,6 +200,11 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
         }
         break;
     case EC_CAT_SRC:
+        if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR) {   /* E3: no source params (lib/machines/neighbor.lua) */
+            static const char *const NT[4] = {"SOURCE", "MACHINE", "WARP", "RANGE"};
+            o->title = NT[page & 3];
+            break;
+        }
         if (page == 0) {
             o->title = "SOURCE";
             if (is_slice(v)) {
@@ -239,6 +290,12 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
         }
         break;
     case EC_CAT_FILE:
+        if (page == 1) {   /* E3: the razor editor (Display.dc.html mode "razor", Razor.dc.html) */
+            o->title = "RAZOR";
+            Z(o, EC_RZ_START), Z(o, EC_RZ_END), Z(o, EC_RZ_PLAY), Z(o, EC_RZ_ZOOM);
+            Z(o, EC_RZ_SNAP), Z(o, EC_RZ_CHOKE), Z(o, EC_RZ_PITCH), Z(o, EC_RZ_SENS);
+            break;
+        }
         o->title = "SAMPLE";
         S(o, EC_S_BPM, "BPM"), S(o, EC_S_STEPS, "STEP"), S(o, EC_S_GAIN, "GAIN"), P(o, EC_P_SLOT, 0);
         S(o, EC_S_TRIM_START, "T-ST"), S(o, EC_S_TRIM_END, "T-EN");

@@ -10,4 +10,10 @@
 
 void ec_screens_draw(const ec_app_t *a);   /* the whole screen (ec_gfx_begin first) */
 
+/* E3: ec_scr_e3.c (the RAZOR page, the neighbor routing view) + the pieces of ec_screens.c it shares */
+void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg);
+void ec_scr_neighbor(const ec_app_t *a, int top, int bot);
+void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right);
+void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
+
 #endif

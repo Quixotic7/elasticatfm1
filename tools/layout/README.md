@@ -17,11 +17,11 @@ Two things make the designer more than a drawing:
 
 ```sh
 sh tools/layout/build_layout.sh            # build/layout-web (Emscripten from PATH, /opt/homebrew/bin/emcc or ~/emsdk)
-python3 -m http.server 8765 --directory build/layout-web     # then http://127.0.0.1:8765/
+python3 -m http.server 8768 --directory build/layout-web     # then http://127.0.0.1:8768/
 ```
 
 In the Claude app: the launch configuration **`elasticat-layout`** (`.claude/launch.json`) serves the same folder at
-http://127.0.0.1:8765/ in the browser pane (build it first). The design is kept in the browser as you work (local
+http://127.0.0.1:8768/ in the browser pane (build it first). The design is kept in the browser as you work (local
 storage); **Export** is what counts.
 
 ## The page

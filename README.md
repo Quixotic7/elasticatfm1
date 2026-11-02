@@ -108,7 +108,7 @@ Which parameter is on which knob, lane, page and category is data: `design/layou
 `src/app/ec_layout_gen.c` by `tools/layout/gen_layout.py` (CMake re-runs it; the generated file is committed). The
 designer, a web page whose preview is the firmware compiled to WebAssembly, rearranges it and exports the file:
 `sh tools/layout/build_layout.sh`, then serve `build/layout-web` (`.claude/launch.json`: `elasticat-layout`,
-http://127.0.0.1:8765/). How to hand a design back, what is fixed, the checks: [tools/layout/README.md](tools/layout/README.md).
+http://127.0.0.1:8768/). How to hand a design back, what is fixed, the checks: [tools/layout/README.md](tools/layout/README.md).
 The tests and demo scripts walk the pages by panel input, so they run on a fixed copy of 0.4.0's layout
 (`host/fixtures/layout-0.4.0.json`, `ec_run --layout test`); `host/test_layout.c` (ctest `layout_walk`) checks the
 shipped layout whatever its arrangement, finding every param by id through SELECT and the category buttons.

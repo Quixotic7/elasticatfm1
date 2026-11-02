@@ -3,7 +3,7 @@
 # The layout designer: Elasticat's UI + engine to WebAssembly (tools/layout/ec_layout_wasm.c over every unit of src/)
 # with the demo project, and the page, into one folder to serve.
 #   sh tools/layout/build_layout.sh [out dir]      (default build/layout-web; ~20 s)
-#   python3 -m http.server 8765 --directory build/layout-web   ->  http://127.0.0.1:8765/
+#   python3 -m http.server 8768 --directory build/layout-web   ->  http://127.0.0.1:8768/
 # Needs: the native build (build/, for ec_run: the demo project is built through panel input, host/demo_v020.txt),
 # Python 3, Emscripten (emcc on PATH, /opt/homebrew/bin/emcc, or ~/emsdk).
 set -e
@@ -56,4 +56,4 @@ FUNCS=_lw_boot,_lw_run,_lw_ms,_lw_rgba,_lw_load,_lw_error,_lw_use_shipped,_lw_pa
     -o "$OUT/ec_layout.js"
 
 for f in index.html designer.js layout_compile.js designer.css; do cp "$R/tools/layout/$f" "$OUT/$f"; done
-echo "build_layout: $OUT (serve it: python3 -m http.server 8765 --directory $OUT)"
+echo "build_layout: $OUT (serve it: python3 -m http.server 8768 --directory $OUT)"

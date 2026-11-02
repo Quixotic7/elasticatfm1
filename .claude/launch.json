@@ -4,8 +4,8 @@
     {
       "name": "elasticat-layout",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "build/layout-web"],
-      "port": 8765
+      "runtimeArgs": ["-m", "http.server", "8768", "--bind", "127.0.0.1", "--directory", "build/layout-web"],
+      "port": 8768
     }
   ]
 }

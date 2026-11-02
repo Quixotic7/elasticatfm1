@@ -188,16 +188,16 @@ static void takeover(const ec_app_t *a)
     int i;
     R(EC_C_BG, 0, 10, W, H - 10);
     if (u->to_label[0])
-        T2(EC_C_L8, u->to_label, W / 2, 18, EC_AL_CENTER);
+        T2(EC_C_L8, u->to_label, W / 2, 14, EC_AL_CENTER);   /* above the value, never under it */
     if (u->to_kind == EC_TO_SAMPLE) {              /* a file name: no extension, on two lines when it must */
         char b[40], *dot;
         snprintf(b, sizeof b, "%s", v);
         dot = strrchr(b, '.');
         if (dot && dot != b)
             *dot = 0;
-        big_text(b, 34, 22);
+        big_text(b, 42, 22);
     } else
-        big_text(v, 34, 22);
+        big_text(v, 42, 22);
     for (i = 0; i < 24; i++) {                     /* the stripes */
         const int on = (float)i < u->to_frac * 24.0f + 0.01f || (i == 0 && u->to_frac > 0);
         R(on ? EC_C_L15 : EC_C_L3, 4 + i * 4 + 4, 74, 3, 12);

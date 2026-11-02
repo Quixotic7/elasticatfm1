@@ -167,7 +167,17 @@ static void test_chunk(void)
     CHECK(!memcmp(&P.razor, &Q.razor, sizeof P.razor), "razor tables differ after the round trip");
     CHECK(Q.pat[0].tr[2].v[EC_P_HARM_INTERVAL2] == 12, "E3 param lost");
     /* the same record cut before the chunk (= a 0.1.0 record): header length + checksum fixed */
-    n2 = n - (int32_t)(8 + 2 + EC_NTRACK * (3 + EC_RZ_SLICES * 15));
+    /* the first tagged chunk (RZR1) starts where a 0.1.0 record ended; later chunks (EC4B, E5) follow it */
+    {
+        const uint32_t tag = EC_RAZOR_TAG;
+        n2 = 0;
+        for (int32_t at = 16; at + 4 <= n; at++)
+            if (!memcmp(buf + at, &tag, 4)) {
+                n2 = at;
+                break;
+            }
+        CHECK(n2 > 16, "RZR1 chunk not found");
+    }
     len = (uint32_t)n2 - 16;
     memcpy(buf + 8, &len, 4);
     {
@@ -250,7 +260,7 @@ static void test_seq_events(void)
 
 static void test_voicing(void)
 {
-    static uint8_t mem[4u << 20] __attribute__((aligned(16)));
+    static uint8_t mem[EC_DSP_MEM_MAX] __attribute__((aligned(16)));
     static int16_t smp[2 * 44100];
     ec_dsp_t *d;
     ec_track_params_t p;

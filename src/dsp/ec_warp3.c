@@ -40,9 +40,15 @@ static inline float sinpi(double ph)
     return x <= 1.f ? ec_sin_hp(x) : ec_sin_hp(2.f - x);
 }
 
+/* the E4 PITCH mod bus, +-12 st (SC: In.kr(pitchModBus).clip(-1, 1) * 12 in every mode's pitchRatio) */
+static inline float pitch_mod_st(const ec_track_t *t)
+{
+    return ec_clampf(t->mods[EC_MOD_PITCH], -1.f, 1.f) * 12.f;
+}
+
 static double pitch_ratio(const ec_track_t *t)
 {
-    return ec_clampd(ec_midiratio(t->pitch_lag), 1.0 / 32.0, 32.0);
+    return ec_clampd(ec_midiratio(t->pitch_lag + pitch_mod_st(t)), 1.0 / 32.0, 32.0);
 }
 
 /* ------------------------------------------------------------ init */
@@ -228,7 +234,7 @@ static void stage_harm(ec_dsp_t *d, ec_track_t *t, uint32_t wr0, const float *in
     for (int v = 0; v < 3; ++v) {
         float g = w->h_gate[v];
         if (g < 1e-4f) { memset(&w->harm[v], 0, sizeof w->harm[v]); continue; }
-        float ratio = ec_clampf(ec_midiratio(w->h_iv[v]), 0.25f, 4.f);
+        float ratio = ec_clampf(ec_midiratio(w->h_iv[v] + pitch_mod_st(t)), 0.25f, 4.f);   /* + pitch mod (SC) */
         ps_run(&w->harm[v], w, wr0, n, ratio, fsz, 0.f, 0.004f * d->fs, tl, tr);
         for (int i = 0; i < n; ++i) { wl[i] += tl[i] * g; wrr[i] += tr[i] * g; }
     }
@@ -644,7 +650,7 @@ static void spectral_frame(ec_dsp_t *d, ec_track_t *t)
     }
     for (int k = 1; k < H; ++k) { S->cr[k] = S->mag[k] * S->ur[k]; S->ci[k] = S->mag[k] * S->ui[k]; }
     /* PV_BinShift(stretch): whole bins (mag + phase) move */
-    float pit = ec_clampf(ec_midiratio(w->pit_lag), 0.25f, 4.f);
+    float pit = ec_clampf(ec_midiratio(w->pit_lag + pitch_mod_st(t)), 0.25f, 4.f);   /* + pitch mod (SC) */
     if (fabsf(pit - 1.f) > 1e-4f) {
         for (int k = 1; k < H; ++k) { x[2 * k] = 0.f; x[2 * k + 1] = 0.f; }
         float fpos = 0.f;

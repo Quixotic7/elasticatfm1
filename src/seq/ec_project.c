@@ -32,6 +32,14 @@ void ec_project_init(ec_project_t *p)
         p->pat[0].tr[t].v[EC_P_SLOT] = (float)(t + 1);   /* (each track starts on its own pool slot) */
         ec_razor_init(&p->razor[t]);                     /* E3 */
     }
+    for (i = 0; i < 3; i++)                /* E4 */
+        ec_bus_default(p->bus[i]);
+}
+
+void ec_bus_default(float *v)
+{
+    ec_params_default(v);
+    v[EC_P_LIMIT_CEIL] = 121.0f;           /* (the generated send / master limit_ceil default) */
 }
 
 /* ------------------------------------------------------------------------------------------- steps --- */
@@ -323,14 +331,38 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
             }
         }
     }
-    /* Tagged chunks after the patterns (E3+): tag u32, length u32, payload. An old record ends after the
-     * patterns; a loader skips tags it does not know. */
-    if (!o.bad) {   /* E3: the razor tables */
+    /* Tagged chunks after the patterns: tag u32, length u32, payload. An old (0.1.0) record ends after the
+     * patterns; the loader dispatches every tag it knows and skips the others. */
+    if (!o.bad) {   /* E3 "RZR1": the razor tables */
         const int32_t k = ec_razor_save_chunk(p, buf + o.n, cap > o.n ? cap - o.n : 0);
         if (k < 0)
             o.bad = 1;
         else
             o.n += (uint32_t)k;
+    }
+    {   /* E4 "EC4B": the bus FX chunk: per bus: count, (id, value) pairs */
+        uint32_t at, b;
+        w32(&o, 0x42344345u);
+        at = o.n;
+        w32(&o, 0);
+        w8(&o, 3);
+        for (b = 0; b < 3; b++) {
+            int cnt = 0;
+            for (k = 0; k < EC_NP; k++)
+                cnt += (EC_PARAMS[k].flags & EC_PF_FX) != 0;
+            w8(&o, (uint32_t)cnt);
+            for (k = 0; k < EC_NP; k++)
+                if (EC_PARAMS[k].flags & EC_PF_FX) {
+                    w8(&o, (uint32_t)k);
+                    wf(&o, p->bus[b][k]);
+                }
+        }
+        if (!o.bad) {
+            const uint32_t len = o.n - at - 4, end = o.n;
+            o.n = at;
+            w32(&o, len);
+            o.n = end;
+        }
     }
     if (o.bad)
         return -1;
@@ -434,15 +466,29 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
             }
         }
     }
-    while (!o.bad && o.n + 8 <= o.cap) {   /* tagged chunks (E3+) */
-        const uint32_t tag = r32(&o), clen = r32(&o);
-        if (clen > o.cap - o.n) {
+    /* tagged chunks after the patterns: one loop, every known tag dispatched, unknown ones skipped */
+    while (!o.bad && o.n + 8 <= o.cap) {
+        const uint32_t tag = r32(&o), clen = r32(&o), end = o.n + clen;
+        if (o.bad || clen > o.cap - o.n) {
             o.bad = 1;
             break;
         }
-        if (tag == EC_RAZOR_TAG)   /* E3 */
+        if (tag == EC_RAZOR_TAG) {          /* E3 "RZR1": the razor tables */
             ec_razor_load_chunk(p, o.r + o.n, clen);
-        o.n += clen;
+        } else if (tag == 0x42344345u) {    /* E4 "EC4B": the buses */
+            const uint32_t cap0 = o.cap, nb = (o.cap = end, r8(&o));
+            for (i = 0; i < nb && !o.bad; i++) {
+                const uint32_t cnt = r8(&o);
+                for (k = 0; k < cnt && !o.bad; k++) {
+                    const uint32_t id = r8(&o);
+                    const float v = rf(&o);
+                    if (i < 3 && id < EC_NP && (EC_PARAMS[id].flags & EC_PF_FX))
+                        p->bus[i][id] = ec_param_clamp((int)id, v);
+                }
+            }
+            o.cap = cap0;
+        }
+        o.n = end;
     }
     if (o.bad)
         return -1;

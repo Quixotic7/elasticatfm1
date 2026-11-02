@@ -60,11 +60,16 @@ typedef struct ec_project {
     ec_slot_t slot[EC_NSLOT];
     ec_pattern_t pat[EC_NPAT];
     ec_razor_t razor[EC_NTRACK];  /* E3: each track's razor slices + per-slice settings (chunk "RZR1") */
+    /* E4: the send buses S1 / S2 and the master insert (global, as the original's send1_* / send2_* / master_*
+     * params): their FX machine + params, in the same SPEC units and ids as a track's (only the EC_PF_FX ids and
+     * fx_insert1_machine / fx_mix / fx_drive are used). Saved as the record's "EC4B" chunk. */
+    float bus[3][EC_NP];
 } ec_project_t;
 
 void ec_project_init(ec_project_t *p);                       /* a new project */
 static inline ec_ptrack_t *ec_project_track(ec_project_t *p, int t) { return &p->pat[p->current].tr[t]; }
 void ec_slot_clear(ec_slot_t *s);
+void ec_bus_default(float *v);           /* E4: a bus record's defaults (NONE) */
 
 /* steps */
 int ec_step_has_content(const ec_step_t *s);

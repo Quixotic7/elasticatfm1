@@ -23,9 +23,13 @@
  *   FILTER machine (stereo / mid-side, balance-spread cutoffs, drive, env)
  *     classic, morphing, ladder, comb, formant, svf
  *   AMP/PAN stage (Balance2, x2.63 makeup as the SC filter stage)
- *   [E4 hook: insert FX]  [E4 hook: send taps S1/S2]
+ *   (MOD: LFOs / mod env / velocity / macros -> pitch, cutoff, res, amp, pan)
+ *   insert FX (ec_fx.h)  -> send taps S1 / S2 (pre or post insert, Lag 0.02)
  *   track mix (mute, centre Balance2)  -> master sum
- *   master: [E4 hook: master insert] -> master volume -> soft limiter -> out
+ *   S1 / S2 returns (their FX machines, DUCK keyed by the tracks' sum) -> master
+ *   master: master insert -> master volume -> soft limiter -> out
+ *   Idle CPU saver: a stopped track whose output stayed below -60 dB for 4 s
+ *   is skipped until an event, a param change or the transport wakes it.
  *
  * ---------------------------------------------------------------------------
  * Units.  The parameter struct holds ENGINE units, i.e. what the Lua param
@@ -106,7 +110,9 @@
  *   mode_switch_fade   -> mode_switch_fade  s 0.001..0.25
  *   loop_division      -> loop_division     2..32 (even)
  *   (global playhead return option) -> playhead_return  1 return / 2 boomerang / 3 reset
- *   send1_level/send2_level/send_tap -> reserved (E4)
+ *   send_tap / send1_level / send2_level -> option 1..2 / 0..1 / 0..1
+ *   fx_insert1_machine + the FX params -> fx (ec_fx_params_t, see ec_fx.h)
+ *   lfo* / menv_* / mvel_* / macroN_* -> mod (ec_mod_params_t, see ec_mod.h)
  *   (engine \trFilterSlew)           -> filter_slew  s (default 0.09)
  *   env_range          -> (Lua only: feeds ec_xf_env_seconds)
  *   trig_* / slice_ratchet / slice_hold* / pattern_steps / default_* ->
@@ -117,15 +123,16 @@
  *                      -> same names, spec units (none)
  *   (E3) wt_lfo_depth  -> wt_lfo_depth  -1..1 ec_xf_bipolar(0..128)
  *   (E3) wt_lfo_shape  -> wt_lfo_shape  option 1..5
- *
- * Not ported yet (E4): insert FX, sends, master insert, MOD (LFOs / mod
- * env / macros / velocity mod). Hooks are marked "E4 hook" in ec_dsp.c.
+ *   (E4) insert FX, sends S1/S2, master insert, MOD: see ec_fx.h / ec_mod.h.
  */
 #ifndef EC_DSP_H
 #define EC_DSP_H
 
 #include <stddef.h>
 #include <stdint.h>
+
+#include "ec_fx.h"    /* E4 */
+#include "ec_mod.h"   /* E4 */
 
 #ifdef __cplusplus
 extern "C" {
@@ -251,9 +258,6 @@ typedef struct ec_track_params {
     /* loop keys */
     int   loop_division;      /* 2..32 */
     int   playhead_return;    /* EC_RETURN_* (release of the last loop key) */
-    /* E4 hooks (stored, unused) */
-    int   send_tap;
-    float send1_level, send2_level;
     /* E3: the other warp modes (params_spec units are already engine units) */
     float harm_interval[3];   /* harmonizer IN1..IN3, st; 0 = that voice off */
     float wsola_window;       /* random_ola grain length, s 0.005..0.5 */
@@ -268,6 +272,11 @@ typedef struct ec_track_params {
     float freeze_amount;      /* 0..1 (> 0 freezes) */
     float spectral_blur;      /* 0..1 */
     float formant_shift;      /* st -24..24 */
+    /* E4: sends, the insert FX, the MOD sources */
+    int   send_tap;               /* 1 pre insert, 2 post insert */
+    float send1_level, send2_level;   /* 0..1, Lag 0.02 */
+    ec_fx_params_t fx;            /* the track's insert (fx_insert1_machine + its params) */
+    ec_mod_params_t mod;          /* LFO 1/2, mod env, velocity, macros */
 } ec_track_params_t;
 
 /* Fills p with the params_spec.lua defaults (already xformed; env_range = 8 s). */
@@ -315,7 +324,10 @@ enum {
     EC_EV_LOOP_KEY = 17,  /* loop key `slice` = 1..32, value 1 press / 0 release.
                              EC_TF_AUDITION on a press while stopped: the reader
                              plays the key region until the last key is released. */
-    EC_EV_RELEASE_ALL = 18 /* release every slice voice of the track (gate off) */
+    EC_EV_RELEASE_ALL = 18, /* release every slice voice of the track (gate off) */
+    EC_EV_MOD_TRIG = 19   /* E4 (\trModTrig): EC_TF_LFO retriggers the LFOs (TRIG / ONE /
+                             HOLD modes), EC_TF_MENV the mod envelope with gate `length`
+                             samples (<= 0: held until EC_EV_NOTE_OFF) */
 };
 
 /* event flags */
@@ -323,6 +335,8 @@ enum {
 #define EC_TF_JUMP     2
 #define EC_TF_GHOST    4
 #define EC_TF_AUDITION 8
+#define EC_TF_LFO      16   /* E4: EC_EV_MOD_TRIG */
+#define EC_TF_MENV     32
 
 /* region modes for EC_EV_REGION */
 enum {
@@ -363,11 +377,29 @@ typedef struct ec_track_status {
     float peak_l, peak_r;   /* post-track peak, decaying */
     float filter_env;       /* filter env cutoff contribution, semitones */
     int   mode_implemented; /* 0 when the warp mode falls back (spectral budget: tape) */
+    /* E4 */
+    int   fx_running;       /* the insert machine audible now (EC_FX_*) */
+    ec_fx_meter_t fx_meter; /* COMP / DUCK / LIMIT gain reduction */
+    float mod[EC_MOD_NDEST];/* the live mod sums (pitch cutoff res amp pan, -1..1) */
+    float macro[4];         /* the macros' effective values */
+    int   idle;             /* paused by the idle CPU saver */
 } ec_track_status_t;
+
+/* E4: the send buses and the master insert (bus 0 = S1, 1 = S2, 2 = master) */
+typedef struct ec_bus_status {
+    float peak_l, peak_r;   /* the return (S1/S2) or the master insert's output, decaying */
+    int   fx_running;
+    ec_fx_meter_t fx_meter;
+} ec_bus_status_t;
 
 typedef struct ec_dsp ec_dsp_t;
 
-/* Bytes of memory the engine needs (one block, 16-byte aligned). */
+/* Bytes of memory the engine needs (one block, 16-byte aligned): the state
+ * (E3: 6 x 512 KB post-stage delay lines + FFT state) plus 9 FX slots' delay
+ * memory (6 inserts, S1, S2, master): 17 523 904 bytes = 16.7 MiB in 0.2.0.
+ * EC_DSP_MEM_MAX bounds it for static arenas; ec_dsp.c fails to compile when
+ * ec_dsp_mem_size() > EC_DSP_MEM_MAX. */
+#define EC_DSP_MEM_MAX ((size_t)18u << 20)
 size_t ec_dsp_mem_size(void);
 /* Initialise in mem (ec_dsp_mem_size() bytes, 16-byte aligned) at rate fs.
  * Every track starts with ec_track_params_default(), no sample, 120 BPM,
@@ -387,6 +419,9 @@ int  ec_dsp_event(ec_dsp_t *dsp, const ec_event_t *ev);
 void ec_dsp_process(ec_dsp_t *dsp, float *out_lr, int frames);
 
 void  ec_dsp_track_status(const ec_dsp_t *dsp, int track, ec_track_status_t *st);
+/* E4: bus 0 S1, 1 S2, 2 master insert */
+void  ec_dsp_bus_params(ec_dsp_t *dsp, int bus, const ec_fx_params_t *p);
+void  ec_dsp_bus_status(const ec_dsp_t *dsp, int bus, ec_bus_status_t *st);
 void  ec_dsp_master_peak(const ec_dsp_t *dsp, float *l, float *r);
 int   ec_dsp_total_voices(const ec_dsp_t *dsp);
 int   ec_dsp_playing(const ec_dsp_t *dsp);

@@ -10,6 +10,7 @@
 #include "ec_gfx.h"
 #include "ec_loader.h"
 #include "ec_screens.h"
+#include "ec_scr_e4.h"
 
 #define W EC_GW
 #define H EC_GH
@@ -108,8 +109,6 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         vc = locked ? EC_C_ACC : EC_C_L15;
         if ((it->flags & EC_IF_STOPPED) && a->seq.playing)
             vc = EC_C_L5;
-        if (pg->e4)
-            vc = locked ? EC_C_ACC : EC_C_L8;
         T(EC_C_L8, ec_app_item_label(it), x, y, EC_AL_LEFT);
         T(locked ? EC_C_ACC : EC_C_L5, locked ? "LCK" : tag, x + 54, y, EC_AL_RIGHT);
         if (TW(val) * 2 <= 56)
@@ -484,6 +483,11 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
     header(a, t, a->settings ? 1 : a->page[a->cat] + 1, r);
+    if (pg->kind != EC_PV_NONE) {               /* E4: FX / SENDS / MOD visuals */
+        ec_scr_e4(a, pg);
+        cells(a, pg);
+        return;
+    }
     left[0] = 0;
     switch (a->cat) {
     case EC_CAT_TRIG: {
@@ -504,10 +508,7 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     T(EC_C_L15, left, 2, 13, EC_AL_LEFT);
     snprintf(r, sizeof r, "%d", (int)floorf(a->proj.bpm + 0.5f));
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
-    if (pg->e4) {
-        T2(EC_C_L5, "E4", W / 2, 34, EC_AL_CENTER);
-        step_strip(a, 56, 66);
-    } else if (a->cat == EC_CAT_FILT && a->page[EC_CAT_FILT] == 0)
+    if (a->cat == EC_CAT_FILT && a->page[EC_CAT_FILT] == 0)
         filter_curve(a, 22, 68);
     else if (a->cat == EC_CAT_FILT && a->page[EC_CAT_FILT] == 1)
         env_shape(a, iv(v, EC_P_FENV_MODE), EC_P_FENV_ATTACK, EC_P_FENV_DECAY, EC_P_FENV_SUSTAIN, EC_P_FENV_RELEASE,
@@ -579,7 +580,7 @@ static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
         lev = lev > 1 ? 1 : lev;
         R(EC_C_L3, x0, top, 4, mh);
         h = (int)(mh * lev + 0.5f);
-        R(muted || i == 6 || i == 7 ? EC_C_L5 : EC_C_L12, x0, top + mh - h, 4, h);
+        R(muted ? EC_C_L5 : EC_C_L12, x0, top + mh - h, 4, h);
         if (lev > 0.78f)
             R(EC_C_ACC, x0, top + mh - h, 4, 3);
         R(EC_C_L5, cx + 2, top, 1, mh);

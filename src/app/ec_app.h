@@ -87,5 +87,6 @@ int ec_app_held_step(const ec_app_t *a);                      /* the first held 
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int track);
 int ec_app_track_slot(const ec_app_t *a, int track);         /* 0-based pool slot */
 int ec_app_stopped(const ec_app_t *a);
+float *ec_app_bus_params(ec_app_t *a, int id);              /* E4: the bus record holding param id, or NULL */
 
 #endif

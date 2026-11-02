@@ -25,8 +25,8 @@ their p-locks (the trig stays).
 | SEL | SRC: SOURCE / MACHINE / WARP / RANGE (acts on release) | next page | setup: machine, warp, loop division, poly |
 | EDIT | FILT: FILTER (curve) / F.ENV / F.MIX | next page | setup: filter machine, filter env mode, mix mode |
 | ENV | AMP: envelope, VOL, PAN, sends | - | setup: env mode, env range, portamento, slice hold |
-| FX | FX, SENDS (stored; heard from E4) | next page | - |
-| LFO | MOD: LFO 1, LFO 2 (stored; heard from E4) | next page | - |
+| FX | FX: the insert machine's params (a visual per machine) / SENDS: S1, S2 levels, TAP. On S1 / S2 / MST: that bus's FX machine | next page | setup: **the FX machine** (insert, or the selected bus's), send tap |
+| LFO | MOD: LFO 1 / LFO 2 / MOD ENV / VELOCITY / MACROS / MACRO 1-4 (value + depth to PTCH CUT RES AMP PAN) | next page | - |
 | GLO | MASTER: MIX (meters + faders) / MASTER (BPM, swing, global length, playhead return) | next page | setup |
 | SAVE | FILE: the sample browser | **loads the file under the cursor into the track's slot** (on RAZOR: back to the browser) | **RAZOR** page (E3) |
 | ARP | PAT: length, rate, global length, change mode | - | setup |
@@ -42,8 +42,8 @@ Warp mode, filter machine and filter mix mode change only while stopped (the lis
 | Key | Does | FN + key |
 |---|---|---|
 | T1-T6 | Select the track (steps, pages and knobs follow) | Mute / unmute |
-| S1, S2 | Select the send bus (placeholder until E4) | |
-| MST | Select the master bus (SRC shows the MIX) | |
+| S1, S2 | Select the send bus: its FX page (any category but MST / FILE / PAT) | |
+| MST | Select the master bus: SRC shows the MIX, the other categories the master insert | |
 | FILL | Hold = fill (FILL / !FILL trig conditions) | Latch fill on / off |
 | PATN | Hold = pattern overlay; tap = latch it open. Lower keys 1-16 pick the pattern | |
 
@@ -124,3 +124,30 @@ track (the original shared one global table); the plain STRT / END turn is the Z
 the original's plain detent at 1X) and the other snaps act on every turn instead of FN + turn; split / delete /
 per-slice play mode + pitch are added (the original had per-slice locks, choke and mute); the onset envelope reads
 32 frames per window (the Lua 8).
+## E4: FX, sends, MOD
+
+- **18 FX machines** (NONE, DELAY, REVERB, LOFI, COMP, DESTROY, ECHO, BLACKHOLE, CHORUS, FLANGER, PHASER, DJ EQ, DUCK,
+  TAPE ECHO, CASSETTE, MOTION, RINGS, LIMIT) on four kinds of slot: each track's insert, the S1 and S2 send returns,
+  the master insert. The machine is chosen in the setup (**FN + FX**, KN1) so a knob turn never swaps it by
+  accident; it can change while playing (a short fade, no click). On a send, NONE returns nothing.
+- The FX page shows the machine's cells (FN for cells 5-8) over a picture: the delay taps, the reverb's decay, the
+  compressor / limiter curve with the live IN and GR meters, the crushed wave, the sweep, the EQ bands; the bar at
+  the right is the slot's output level.
+- **SENDS** (FX, second page): S1 / S2 levels and TAP (PRE = after the filter, POST = after the insert). A muted
+  track still feeds its sends (as the original). The MIX page meters the S1 / S2 returns.
+- **DUCK** listens to the dry program: on a send return, the six tracks; on an insert, the tracks before it; on the
+  master, the master.
+- **MOD**: two LFOs (DEST, WAVE, SPD synced, DEP bipolar, MODE free / trig / one / hold), the mod envelope (ADSR,
+  DEST, DEPTH; retriggered where the step's ERST is on, the LFOs where LRST is on), velocity (slice trigs) and four
+  macros. DEST: PITCH (+-12 st), CUTOFF, RES, AMP, PAN, or a macro (M1-M4). The bar at the right of the LFO / env /
+  velocity pages is the live value at the destination. Depths, speeds, the env times and macro values p-lock; DEST,
+  WAVE and MODE do not (as the original).
+- A stopped track that has gone quiet for 4 s stops using CPU until it plays again (the original's idle saver).
+
+Where E4 differs from the original:
+- The bus FX (S1, S2, MST) are global and **not p-lockable**: the original's bus *lanes* (three extra step lanes
+  that lock bus params) are not ported yet.
+- The macro depth matrix is edited on the MACRO 1-4 pages (the original used a grid gesture: hold a macro key and
+  turn a destination).
+- The FX machine list is the original's 18 (DRIVE removed): a 0.1.0 project's stored insert machine index lands on
+  a different machine (none of them was audible in 0.1.0).

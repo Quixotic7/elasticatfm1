@@ -160,7 +160,10 @@ void ec_filter_process(ec_dsp_t *d, ec_track_t *t, float *L, float *R, int n)
 
     /* ---- kr controls ---- */
     float cut = ec_clampf(p->filter_cutoff, 20.f, 20000.f);
-    float rq_t = ec_clampf(1.f - ec_clampf(p->filter_res, 0.f, 1.f) * 0.98f, 0.02f, 1.f);
+    /* E4: RES mod adds +-0.5 to the 0..1 resonance (before the Lag, as filterPrep) */
+    float res_m = ec_clampf(ec_clampf(p->filter_res, 0.f, 1.f) + ec_clampf(t->mods[EC_MOD_RES], -1.f, 1.f) * 0.5f,
+                            0.f, 1.f);
+    float rq_t = ec_clampf(1.f - res_m * 0.98f, 0.02f, 1.f);
     float amp_t = (p->amp > 0.f ? p->amp : 0.f) * 2.63f;
     float pan_t = ec_clampf(p->pan, -1.f, 1.f);
     float morph_t = ec_clampf(p->filter_morph, 0.f, 1.f);
@@ -181,8 +184,8 @@ void ec_filter_process(ec_dsp_t *d, ec_track_t *t, float *L, float *R, int n)
         if (i == 0) fe = v;
     }
     float semis = ec_clampf(p->filter_env_depth, -1.f, 1.f) * fe * 72.f;
-    /* E4 hook: + cutoff mod bus * 120 semitones */
     f->env_semis = semis;
+    semis += ec_clampf(t->mods[EC_MOD_CUTOFF], -1.f, 1.f) * 120.f;   /* E4: the CUTOFF mod bus */
     float fc = f->cut_lag;
     if (semis != 0.f) fc *= ec_midiratio(semis);
     fc = ec_clampf(fc, 20.f, 20000.f);
@@ -283,9 +286,10 @@ void ec_filter_process(ec_dsp_t *d, ec_track_t *t, float *L, float *R, int n)
         xfade2_gains(ec_clampf((f->morph_lag - 0.5f) * 4.f - 1.f, -1.f, 1.f), &m_hi_a, &m_hi_b);
     }
 
-    /* output gains: Balance2(pan, amp*2.63) then TrackMix Balance2(0, mute) */
-    float th = (f->pan_lag + 1.f) * 0.5f;
-    float tm = t->mute_gain * 0.70710678f;
+    /* output gains: Balance2(pan + PAN mod, amp * (1 + AMP mod) * 2.63) (filterModOut). The TrackMix
+     * stage (centre Balance2 x mute) runs after the insert and the send taps (E4, ec_dsp.c). */
+    float th = (ec_clampf(f->pan_lag + ec_clampf(t->mods[EC_MOD_PAN], -1.f, 1.f), -1.f, 1.f) + 1.f) * 0.5f;
+    float tm = 1.f + ec_clampf(t->mods[EC_MOD_AMP], -1.f, 1.f);
     float gl1 = ec_sin_hp(1.f - th) * f->amp_lag * tm;
     float gr1 = ec_sin_hp(th) * f->amp_lag * tm;
     if (f->first) { f->gl = gl1; f->gr = gr1; }

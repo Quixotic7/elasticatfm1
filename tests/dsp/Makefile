@@ -14,7 +14,7 @@ HDR    := $(wildcard $(ROOT)/src/dsp/*.h) $(wildcard $(ROOT)/tests/dsp/*.h)
 OUT    := $(ROOT)/build-dsp
 EMCC   ?= $(HOME)/emsdk/upstream/emscripten/emcc
 
-.PHONY: all test render bench wasm clean e3wav
+.PHONY: all test testfx render bench wasm clean e3wav
 
 all: test
 
@@ -36,9 +36,11 @@ $(OUT)/render_demo: $(ROOT)/tests/dsp/render_demo.c $(SRC) $(HDR) | $(OUT)
 $(OUT)/bench: $(ROOT)/tests/dsp/bench.c $(SRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/bench.c $(SRC) -lm
 
-test: $(OUT)/test_dsp $(OUT)/test_e3
+test: $(OUT)/test_dsp $(OUT)/test_e3 $(OUT)/test_fx $(OUT)/test_e4
 	cd $(ROOT) && $(OUT)/test_dsp
 	cd $(ROOT) && $(OUT)/test_e3
+	cd $(ROOT) && $(OUT)/test_fx nobench
+	cd $(ROOT) && $(OUT)/test_e4
 
 render: $(OUT)/render_demo
 	cd $(ROOT) && $(OUT)/render_demo
@@ -53,5 +55,15 @@ wasm: | $(OUT)
 e3wav: $(OUT)/test_e3
 	mkdir -p $(ROOT)/results/e3/wav && cd $(ROOT) && $(OUT)/test_e3 $(ROOT)/results/e3/wav
 
+# E4 FX machines: bounds, tails, swaps, dynamics, unity + per-machine benchmark
+$(OUT)/test_fx: $(ROOT)/tests/dsp/test_fx.c $(SRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/test_fx.c $(SRC) -lm
+
+$(OUT)/test_e4: $(ROOT)/tests/dsp/test_e4.c $(SRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/test_e4.c $(SRC) -lm
+
+testfx: $(OUT)/test_fx
+	cd $(ROOT) && $(OUT)/test_fx
+
 clean:
-	rm -f $(OUT)/test_dsp $(OUT)/render_demo $(OUT)/bench $(OUT)/test_e3 $(OUT)/bench_e3
+	rm -f $(OUT)/test_dsp $(OUT)/render_demo $(OUT)/bench $(OUT)/test_e3 $(OUT)/bench_e3 $(OUT)/test_fx $(OUT)/test_e4

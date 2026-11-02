@@ -22,7 +22,18 @@ static const char *const O_FTYPE[] = {"LP", "HP", "BP", "NOTCH"};
 static const char *const O_MIXMODE[] = {"STEREO", "M/S"};
 static const char *const O_ENVMODE[] = {"ADSR", "AHR"};
 static const char *const O_ENVRANGE[] = {"1S", "4S", "8S", "16S", "32S", "64S", "128S", "256S", "512S", "1024S"};
-static const char *const O_FX[] = {"NONE", "DRIVE", "DELAY", "REVERB", "LOFI"};
+/* E4: lib/fx_modes/registry.lua (DRIVE was removed there 2026-08-01: the 0.1.0 list is replaced) */
+static const char *const O_FX[] = {"NONE",  "DELAY",  "REVERB", "LOFI",   "COMP",   "DESTRY",
+                                   "ECHO",  "B.HOLE", "CHORUS", "FLANGR", "PHASER", "DJ EQ",
+                                   "DUCK",  "T.ECHO", "CASSET", "MOTION", "RINGS",  "LIMIT"};
+static const char *const O_DTIME[] = {"1/32", "1/16T", "1/16", "1/8T", "1/16D", "1/8", "1/4T", "1/8D",
+                                      "1/4",  "1/2T",  "1/4D", "1/2",  "1/2D",  "1BAR", "2BAR"};
+static const char *const O_MRATE[] = {"1/32", "1/16T", "1/16", "1/8T", "1/16D", "1/8",  "1/4T", "1/8D",
+                                      "1/4",  "1/2T",  "1/4D", "1/2",  "1/2D",  "1BAR", "2BAR", "4BAR"};
+static const char *const O_STAGES[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
+static const char *const O_ECHOMODE[] = {"STEREO", "PING"};
+static const char *const O_MSHAPE[] = {"SINE", "TRI", "SQR"};
+static const char *const O_RMODE[] = {"RING", "SHIFT"};
 static const char *const O_TAP[] = {"PRE", "POST"};
 static const char *const O_DEST[] = {"OFF", "PITCH", "CUT", "RES", "AMP", "PAN", "M1", "M2", "M3", "M4"};
 static const char *const O_WAVE[] = {"SINE", "TRI", "SAW", "RSAW", "SQR", "RAND"};
@@ -36,6 +47,11 @@ static const char *const O_WTSHAPE[] = {"SINE", "TRI", "SAW", "S&H", "RAND"};   
 #define OPT(n, lb, df, fl, o) {n, lb, 1, (float)(sizeof o / sizeof o[0]), 1, df, EC_PK_OPT, EC_PF_OPT, fl, \
                                (uint8_t)(sizeof o / sizeof o[0]), o}
 #define BIN(n, lb, df, fl) {n, lb, 0, 1, 1, df, EC_PK_BIN, EC_PF_BIN, fl, 0, 0}
+/* E4: an FX amount 0..127 / bipolar 0..128 / real-unit param (all p-lockable) */
+#define FXA(n, lb, df) NUM(n, lb, 0, 127, 1, df, EC_PF_INT, L | EC_PF_FX)
+#define FXB(n, lb, df) NUM(n, lb, 0, 128, 1, df, EC_PF_BIP, L | EC_PF_FX)
+#define FXU(n, lb, df) NUM(n, lb, 0, 127, 1, df, EC_PF_UNIT, L | EC_PF_FX)
+#define FXO(n, lb, df, o) OPT(n, lb, df, L | EC_PF_FX, o)
 
 const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MUTE] = BIN("mute", "MUTE", 0, 0),
@@ -104,24 +120,24 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_ENV_RELEASE] = NUM("env_release", "REL", 0, 128, 1, 128, EC_PF_ENV, L),
     [EC_P_ENV_HOLD] = NUM("env_hold", "HOLD", 0, 128, 1, 128, EC_PF_ENV, L),
     [EC_P_ENV_RANGE] = OPT("env_range", "RANGE", 3, 0, O_ENVRANGE),
-    [EC_P_FX_MACHINE] = OPT("fx_insert1_machine", "MACH", 1, EC_PF_E4, O_FX),
-    [EC_P_FX_DRIVE] = NUM("fx_drive", "DRIV", 0, 127, 1, 0, EC_PF_INT, L | EC_PF_E4),
-    [EC_P_FX_MIX] = NUM("fx_mix", "MIX", 0, 127, 1, 64, EC_PF_INT, L | EC_PF_E4),
-    [EC_P_SEND_TAP] = OPT("send_tap", "TAP", 1, EC_PF_E4, O_TAP),
-    [EC_P_SEND1] = NUM("send1_level", "SND1", 0, 127, 1, 0, EC_PF_INT, L | EC_PF_E4),
-    [EC_P_SEND2] = NUM("send2_level", "SND2", 0, 127, 1, 0, EC_PF_INT, L | EC_PF_E4),
+    [EC_P_FX_MACHINE] = OPT("fx_insert1_machine", "MACH", 1, EC_PF_FX, O_FX),
+    [EC_P_FX_DRIVE] = NUM("fx_drive", "DRIV", 0, 127, 1, 0, EC_PF_INT, L | EC_PF_FX),
+    [EC_P_FX_MIX] = NUM("fx_mix", "MIX", 0, 127, 1, 64, EC_PF_INT, L | EC_PF_FX),
+    [EC_P_SEND_TAP] = OPT("send_tap", "TAP", 1, 0, O_TAP),
+    [EC_P_SEND1] = NUM("send1_level", "SND1", 0, 127, 1, 0, EC_PF_INT, L),
+    [EC_P_SEND2] = NUM("send2_level", "SND2", 0, 127, 1, 0, EC_PF_INT, L),
     [EC_P_AMP] = NUM("amp", "VOL", 0, 127, 1, 100, EC_PF_INT, L),
     [EC_P_PAN] = NUM("pan", "PAN", 0, 128, 1, 64, EC_PF_PAN, L),
-    [EC_P_LFO1_DEST] = OPT("lfo1_dest", "DEST", 1, EC_PF_E4, O_DEST),
-    [EC_P_LFO1_WAVE] = OPT("lfo1_wave", "WAVE", 1, EC_PF_E4, O_WAVE),
-    [EC_P_LFO1_SPEED] = OPT("lfo1_speed", "SPD", 4, L | EC_PF_E4, O_SPEED),
-    [EC_P_LFO1_DEPTH] = NUM("lfo1_depth", "DEP", 0, 128, 1, 64, EC_PF_BIP, L | EC_PF_E4),
-    [EC_P_LFO1_MODE] = OPT("lfo1_mode", "MODE", 1, EC_PF_E4, O_LFOMODE),
-    [EC_P_LFO2_DEST] = OPT("lfo2_dest", "DEST", 1, EC_PF_E4, O_DEST),
-    [EC_P_LFO2_WAVE] = OPT("lfo2_wave", "WAVE", 1, EC_PF_E4, O_WAVE),
-    [EC_P_LFO2_SPEED] = OPT("lfo2_speed", "SPD", 4, L | EC_PF_E4, O_SPEED),
-    [EC_P_LFO2_DEPTH] = NUM("lfo2_depth", "DEP", 0, 128, 1, 64, EC_PF_BIP, L | EC_PF_E4),
-    [EC_P_LFO2_MODE] = OPT("lfo2_mode", "MODE", 1, EC_PF_E4, O_LFOMODE),
+    [EC_P_LFO1_DEST] = OPT("lfo1_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_LFO1_WAVE] = OPT("lfo1_wave", "WAVE", 1, 0, O_WAVE),
+    [EC_P_LFO1_SPEED] = OPT("lfo1_speed", "SPD", 4, L, O_SPEED),
+    [EC_P_LFO1_DEPTH] = NUM("lfo1_depth", "DEP", 0, 128, 1, 64, EC_PF_BIP, L),
+    [EC_P_LFO1_MODE] = OPT("lfo1_mode", "MODE", 1, 0, O_LFOMODE),
+    [EC_P_LFO2_DEST] = OPT("lfo2_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_LFO2_WAVE] = OPT("lfo2_wave", "WAVE", 1, 0, O_WAVE),
+    [EC_P_LFO2_SPEED] = OPT("lfo2_speed", "SPD", 4, L, O_SPEED),
+    [EC_P_LFO2_DEPTH] = NUM("lfo2_depth", "DEP", 0, 128, 1, 64, EC_PF_BIP, L),
+    [EC_P_LFO2_MODE] = OPT("lfo2_mode", "MODE", 1, 0, O_LFOMODE),
     [EC_P_PORTAMENTO] = BIN("portamento", "PORT", 0, 0),
     [EC_P_MODE_SWITCH_FADE] = NUM("mode_switch_fade", "MFAD", 0.001f, 0.25f, 0.001f, 0.05f, EC_PF_MS, 0),
     [EC_P_LOOP_DIVISION] = NUM("loop_division", "LDIV", 2, 32, 2, 16, EC_PF_INT, 0),
@@ -145,6 +161,94 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_FREEZE_AMOUNT] = NUM("freeze_amount", "FRZE", 0, 1, 0.01f, 0, EC_PF_PCT01, L),
     [EC_P_SPECTRAL_BLUR] = NUM("spectral_blur", "BLUR", 0, 1, 0.01f, 0, EC_PF_PCT01, L),
     [EC_P_FORMANT_SHIFT] = NUM("formant_shift", "FORM", -24, 24, 1, 0, EC_PF_PITCH, L),
+    /* E4: FX */
+    [EC_P_DELAY_TIME] = FXO("delay_time", "TIME", 9, O_DTIME),
+    [EC_P_DELAY_FEEDBACK] = FXA("delay_feedback", "FBK", 38),
+    [EC_P_DELAY_TONE] = FXA("delay_tone", "TONE", 127),
+    [EC_P_REVERB_SIZE] = FXA("reverb_size", "SIZE", 64),
+    [EC_P_REVERB_DAMP] = FXA("reverb_damp", "DAMP", 64),
+    [EC_P_LOFI_BITS] = FXU("lofi_bits", "BITS", 127),
+    [EC_P_LOFI_RATE] = FXU("lofi_rate", "RATE", 127),
+    [EC_P_COMP_THRESH] = FXU("comp_thresh", "THRS", 38),
+    [EC_P_COMP_RATIO] = FXU("comp_ratio", "RATO", 25),
+    [EC_P_COMP_ATTACK] = FXU("comp_attack", "ATK", 13),
+    [EC_P_COMP_RELEASE] = FXU("comp_release", "REL", 38),
+    [EC_P_COMP_MAKEUP] = FXU("comp_makeup", "MKUP", 0),
+    [EC_P_DESTROY_WARBLE] = FXA("destroy_warble", "WARB", 0),
+    [EC_P_DESTROY_FOLD] = FXA("destroy_fold", "FOLD", 0),
+    [EC_P_DESTROY_SAT] = FXA("destroy_sat", "SAT", 0),
+    [EC_P_DESTROY_CRUSH] = FXA("destroy_crush", "CRSH", 0),
+    [EC_P_DESTROY_SRR] = FXA("destroy_srr", "SRR", 0),
+    [EC_P_DESTROY_TONE] = FXA("destroy_tone", "TONE", 127),
+    [EC_P_DESTROY_LEVEL] = FXA("destroy_level", "LEVL", 70),
+    [EC_P_ECHO_TIME] = FXO("echo_time", "TIME", 9, O_DTIME),
+    [EC_P_ECHO_OFFSET] = FXB("echo_offset", "OFST", 64),
+    [EC_P_ECHO_MODE] = FXO("echo_mode", "MODE", 1, O_ECHOMODE),
+    [EC_P_ECHO_TONE] = FXA("echo_tone", "TONE", 127),
+    [EC_P_ECHO_WOBBLE] = FXA("echo_wobble", "WOBL", 0),
+    [EC_P_BH_GRAVITY] = FXA("bh_gravity", "GRAV", 64),
+    [EC_P_BH_MOD] = FXA("bh_mod", "MOD", 25),
+    [EC_P_BH_LOW] = FXA("bh_low", "LOW", 13),
+    [EC_P_BH_PREDELAY] = FXA("bh_predelay", "PRE", 13),
+    [EC_P_MODFX_RATE] = FXA("modfx_rate", "RATE", 38),
+    [EC_P_MODFX_DEPTH] = FXA("modfx_depth", "DPTH", 38),
+    [EC_P_MODFX_TONE] = FXA("modfx_tone", "TONE", 102),
+    [EC_P_CHORUS_WIDTH] = FXA("chorus_width", "WDTH", 64),
+    [EC_P_FLANGER_FEEDBACK] = FXB("flanger_feedback", "FBK", 64),
+    [EC_P_PHASER_CENTER] = FXA("phaser_center", "CNTR", 64),
+    [EC_P_PHASER_STAGES] = FXO("phaser_stages", "STGS", 4, O_STAGES),
+    [EC_P_PHASER_FEEDBACK] = FXA("phaser_feedback", "FBK", 25),
+    [EC_P_EQ_LOW] = FXB("eq_low", "LOW", 64),
+    [EC_P_EQ_MID] = FXB("eq_mid", "MID", 64),
+    [EC_P_EQ_HIGH] = FXB("eq_high", "HIGH", 64),
+    [EC_P_EQ_XLOW] = FXU("eq_xlow", "XLOW", 38),
+    [EC_P_EQ_XHI] = FXU("eq_xhi", "XHI", 89),
+    [EC_P_DUCK_AMOUNT] = FXU("duck_amount", "AMNT", 76),
+    [EC_P_DUCK_SENS] = FXA("duck_sens", "SENS", 64),
+    [EC_P_DUCK_ATTACK] = FXU("duck_attack", "ATK", 25),
+    [EC_P_DUCK_RELEASE] = FXU("duck_release", "REL", 51),
+    [EC_P_TAPE_WOW] = FXA("tape_wow", "WOW", 25),
+    [EC_P_TAPE_FLUTTER] = FXA("tape_flutter", "FLUT", 15),
+    [EC_P_TAPE_SAT] = FXA("tape_sat", "SAT", 30),
+    [EC_P_CASS_NOISE] = FXA("cass_noise", "NOIS", 10),
+    [EC_P_CASS_CRACKLE] = FXA("cass_crackle", "CRKL", 0),
+    [EC_P_CASS_DROP] = FXA("cass_drop", "DROP", 0),
+    [EC_P_CASS_TONE] = FXA("cass_tone", "TONE", 80),
+    [EC_P_MOTION_WIDTH] = FXB("motion_width", "WDTH", 64),
+    [EC_P_MOTION_RATE] = FXO("motion_rate", "RATE", 9, O_MRATE),
+    [EC_P_MOTION_TREM] = FXA("motion_trem", "TREM", 0),
+    [EC_P_MOTION_PAN] = FXA("motion_pan", "PAN", 0),
+    [EC_P_MOTION_SHAPE] = FXO("motion_shape", "SHPE", 1, O_MSHAPE),
+    [EC_P_RINGS_MODE] = FXO("rings_mode", "MODE", 1, O_RMODE),
+    [EC_P_RINGS_FREQ] = FXB("rings_freq", "FREQ", 96),
+    [EC_P_RINGS_FINE] = FXB("rings_fine", "FINE", 64),
+    [EC_P_RINGS_FEEDBACK] = FXA("rings_feedback", "FBK", 0),
+    [EC_P_LIMIT_GAIN] = FXU("limit_gain", "GAIN", 0),
+    [EC_P_LIMIT_CEIL] = FXU("limit_ceil", "CEIL", 124),
+    [EC_P_LIMIT_RELEASE] = FXU("limit_release", "REL", 38),
+    /* E4: MOD (lib/pages/model.lua: DEST not lockable; times / depths / macro values are) */
+    [EC_P_MENV_DEST] = OPT("menv_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_MENV_ATTACK] = NUM("menv_attack", "ATCK", 0, 127, 1, 0, EC_PF_ENV, L),
+    [EC_P_MENV_DECAY] = NUM("menv_decay", "DECAY", 0, 127, 1, 64, EC_PF_ENV, L),
+    [EC_P_MENV_SUSTAIN] = NUM("menv_sustain", "SUST", 0, 127, 1, 100, EC_PF_INT, L),
+    [EC_P_MENV_RELEASE] = NUM("menv_release", "REL", 0, 127, 1, 48, EC_PF_ENV, L),
+    [EC_P_MENV_DEPTH] = NUM("menv_depth", "DEPTH", 0, 128, 1, 64, EC_PF_BIP, L),
+    [EC_P_MVEL_DEST] = OPT("mvel_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_MVEL_DEPTH] = NUM("mvel_depth", "DEPTH", 0, 128, 1, 64, EC_PF_BIP, L),
+    [EC_P_MACRO1] = NUM("macro1_value", "M1", 0, 127, 1, 0, EC_PF_INT, L),
+    [EC_P_MACRO2] = NUM("macro2_value", "M2", 0, 127, 1, 0, EC_PF_INT, L),
+    [EC_P_MACRO3] = NUM("macro3_value", "M3", 0, 127, 1, 0, EC_PF_INT, L),
+    [EC_P_MACRO4] = NUM("macro4_value", "M4", 0, 127, 1, 0, EC_PF_INT, L),
+#define MD(m, d, nm, lb) [EC_P_MACRO_DEPTH + (m)*5 + (d)] = NUM(nm, lb, 0, 128, 1, 64, EC_PF_BIP, 0)
+    MD(0, 0, "macro1_pitch_depth", "PTCH"), MD(0, 1, "macro1_cutoff_depth", "CUT"), MD(0, 2, "macro1_res_depth", "RES"),
+    MD(0, 3, "macro1_amp_depth", "AMP"), MD(0, 4, "macro1_pan_depth", "PAN"),
+    MD(1, 0, "macro2_pitch_depth", "PTCH"), MD(1, 1, "macro2_cutoff_depth", "CUT"), MD(1, 2, "macro2_res_depth", "RES"),
+    MD(1, 3, "macro2_amp_depth", "AMP"), MD(1, 4, "macro2_pan_depth", "PAN"),
+    MD(2, 0, "macro3_pitch_depth", "PTCH"), MD(2, 1, "macro3_cutoff_depth", "CUT"), MD(2, 2, "macro3_res_depth", "RES"),
+    MD(2, 3, "macro3_amp_depth", "AMP"), MD(2, 4, "macro3_pan_depth", "PAN"),
+    MD(3, 0, "macro4_pitch_depth", "PTCH"), MD(3, 1, "macro4_cutoff_depth", "CUT"), MD(3, 2, "macro4_res_depth", "RES"),
+    MD(3, 3, "macro4_amp_depth", "AMP"), MD(3, 4, "macro4_pan_depth", "PAN"),
+#undef MD
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
@@ -322,6 +426,7 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
         snprintf(out, (size_t)cap, "%s", b);
         break;
     case EC_PF_RATE: snprintf(out, (size_t)cap, "%s", ec_rate_label((int)(x + 0.5f))); break;
+    case EC_PF_UNIT: ec_param_format_unit(id, x, out, cap); break;   /* E4 */
     default: snprintf(out, (size_t)cap, "%d", (int)floorf(x + 0.5f)); break;
     }
 }
@@ -415,4 +520,6 @@ void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_re
     p->freeze_amount = v[EC_P_FREEZE_AMOUNT];
     p->spectral_blur = v[EC_P_SPECTRAL_BLUR];
     p->formant_shift = v[EC_P_FORMANT_SHIFT];
+    ec_params_fx(v, &p->fx);     /* E4 (ec_params_e4.c) */
+    ec_params_mod(v, &p->mod);
 }

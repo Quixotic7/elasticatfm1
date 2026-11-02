@@ -41,6 +41,9 @@ add_executable(ec_test_e3 host/test_e3.c)   # E3: razor, slice events, voicing, 
 target_link_libraries(ec_test_e3 PRIVATE elasticat)
 target_include_directories(ec_test_e3 PRIVATE src/dsp)
 target_compile_options(ec_test_e3 PRIVATE -Wall -Wextra)
+add_executable(ec_test_seq_e4 host/test_seq_e4.c)                  # E4
+target_link_libraries(ec_test_seq_e4 PRIVATE elasticat)
+target_compile_options(ec_test_seq_e4 PRIVATE -Wall -Wextra)
 
 enable_testing()
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)
@@ -65,3 +68,6 @@ add_test(NAME e1_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e1.sh $
 add_test(NAME e0_nofolder
          COMMAND ec_run --ms 3000 --press PLAY@500 --rms-from 800 --min-rms 0.02 --expect-ui scan:nofolder
                  --expect-ui "file:BUILTIN LOOP")
+# E4: FX on every slot, the sends, the master insert and MOD through panel input (results/e4); the model side
+add_test(NAME seq_e4 COMMAND ec_test_seq_e4)
+add_test(NAME e4_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e4.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e4)

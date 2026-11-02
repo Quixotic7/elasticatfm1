@@ -267,6 +267,8 @@ typedef struct {
     float    gsize, goverlap, grandom;
     double   grate;
     uint32_t rng;
+    int      pitched;     /* E4: pitch mod applies (raw tape/chopped, grain clouds) */
+    double   pmod;        /* E4: this chunk's pitch-mod ratio */
 } ec_voice_t;
 
 /* ---------------------------------------------------------- filter */
@@ -307,6 +309,22 @@ typedef struct {
     float dc_x1[2], dc_y1[2];
     int   first;
 } ec_filter_t;
+
+/* ---------------------------------------------------------- E4: mod */
+typedef struct {
+    int      alive;          /* the SC mod synth exists (some depth != 0) */
+    float    phase[2], sweep[2], held[2], rnd[2], rnd_ph[2];
+    float    vel, vel_lag;   /* the latched last trigger velocity */
+    float    macro_val[4];   /* the macros' effective values (UI) */
+    ec_env_t env;
+    uint32_t rng;
+} ec_mod_t;
+
+void ec_mod_init(ec_mod_t *m, uint32_t seed);
+void ec_mod_trig(ec_mod_t *m, const ec_mod_params_t *p, int lfo, int env, int32_t gate, float fs);
+void ec_mod_note_off(ec_mod_t *m, const ec_mod_params_t *p, float fs);
+void ec_mod_tick(ec_mod_t *m, const ec_mod_params_t *p, float bpm, float fs, const float *lag01, int n,
+                 float *out);
 
 /* ---------------------------------------------------------- tracks */
 typedef struct {
@@ -384,6 +402,14 @@ typedef struct {
     /* E3: the other warp modes (ec_warp3.c) */
     int    w3_fallback;    /* the mode fell back (spectral budget) */
     ec_w3_t w3;
+    /* E4: insert FX, sends, mod, the idle CPU saver */
+    ec_fx_t fx;
+    ec_mod_t mod;
+    float  mods[EC_MOD_NDEST];   /* this chunk's mod sums (pitch cutoff res amp pan) */
+    float  snd1, snd2;           /* send levels, Lag 0.02 */
+    float  mix_l, mix_r;         /* post-mix peak follower (idle detector, Amplitude 0.01/0.3) */
+    int32_t quiet;               /* samples the track has been silent and stopped */
+    int    idle;                 /* paused by the idle scan: the chain is skipped */
 } ec_track_t;
 
 typedef struct {
@@ -413,6 +439,12 @@ struct ec_dsp {
     /* E3: the neighbor tap (the left track's output for this chunk), spectral scratch */
     float  nbl[EC_KR], nbr[EC_KR];
     ec_w3_shared_t w3s;
+    /* E4: send buses S1 / S2 and the master insert (slots 0, 1, 2) */
+    ec_fx_t bus[3];
+    ec_fx_params_t busp[3];
+    float  s1l[EC_KR], s1r[EC_KR], s2l[EC_KR], s2r[EC_KR], kl[EC_KR], kr[EC_KR];
+    float  bus_peak[3][2];       /* S1 / S2 returns, the master insert's output */
+    float  idle_grace;           /* s */
 };
 
 /* lag tables */

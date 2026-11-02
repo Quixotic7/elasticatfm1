@@ -73,6 +73,18 @@ void ec_plat_lcd_commit(void);
 
 uint32_t ec_plat_ms(void);             /* the device clock (ms since power-on) */
 
+/* ---- live panel labels (fm1core.h fm1core_label: FIZZ's 49 slots) ----
+ * One table the app fills from ec_app_labels(), which ec_core.c calls once per frame (after ec_app_frame). Slots:
+ * EC_LBL_KNOB0 + role (FM1P_E_* order), EC_LBL_BTN0 + EC_B_x, EC_LBL_WHITE0 + lower key 0..15, EC_LBL_BLACK0 +
+ * upper key 0..10. s: up to 10 chars (upper case ASCII, longer is cut); "" = no job here; NULL = not given (the
+ * host's own name). Set every slot each call: the table keeps what it was given, and the host's epoch moves only
+ * when its contents change. ec_core.c has a weak default ec_app_labels (the FN-held button layer); the app may
+ * define its own. */
+enum { EC_LBL_KNOB0 = 0, EC_LBL_BTN0 = 8, EC_LBL_WHITE0 = 22, EC_LBL_BLACK0 = 38, EC_LBL_N = 49 };
+void ec_plat_label(int which, const char *s);
+void ec_plat_labels_clear(void);       /* every slot NULL */
+void ec_app_labels(void);              /* weak default in ec_core.c */
+
 /* ---- the flash record: the part of the flash image after the plat's versioned header (project data, later) ---- */
 uint8_t *ec_plat_record(uint32_t *size);   /* the record's bytes and their size */
 void ec_plat_record_changed(void);         /* the record was written: the host persists the image */

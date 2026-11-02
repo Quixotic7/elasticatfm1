@@ -53,10 +53,14 @@ target_compile_options(ec_test_v020 PRIVATE -Wall -Wextra)
 add_executable(ec_test_e5 host/test_e5.c)        # E5
 target_link_libraries(ec_test_e5 PRIVATE elasticat)
 target_compile_options(ec_test_e5 PRIVATE -Wall -Wextra)
+add_executable(ec_test_labels host/test_labels.c)   # live panel labels (fm1core_label)
+target_link_libraries(ec_test_labels PRIVATE elasticat)
+target_compile_options(ec_test_labels PRIVATE -Wall -Wextra)
 
 enable_testing()
 add_test(NAME e5 COMMAND ec_test_e5 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/e2_flash.bin)   # E5
 add_test(NAME v020 COMMAND ec_test_v020)
+add_test(NAME labels COMMAND ec_test_labels)
 # 0.2.0: the seams demo through panel input + a reboot from its flash (host/render_v020.sh)
 add_test(NAME v020_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_v020.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/v020)
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)

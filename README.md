@@ -6,7 +6,7 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
 **Status: E1 + E2, the playable instrument (0.1.0).** Six tracks, each with a sample from `/audio`, a machine (loop,
-loop_trig, grid_slice, slice_poly), a warp mode (tape, tempo_varispeed, granular, chopped; the other nine fall back),
+loop_trig, grid_slice, slice_poly; E3: razor_slice, razor_poly, neighbor), a warp mode (all thirteen since E3),
 a filter machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan; 16 patterns of up to 256
 steps per track with trigs, ghost trigs, p-locks of any param, trig conditions, chance, ratchets and FILL; the live
 loop-key scrub and slice pads; sample-accurate clock; the MIX page; the project saved in the flash image. The panel:

@@ -85,6 +85,14 @@ void ec_track_params_default(ec_track_params_t *p)
     p->mode_switch_fade = 0.05f;
     p->loop_division = 16;
     p->playhead_return = EC_RETURN_BOOMERANG;
+    /* E3 */
+    p->harm_interval[0] = 7.f;
+    p->wsola_window = 0.08f;
+    p->wsola_search = 0.015f;
+    p->pv_window = 0.2f;
+    p->wt_window = 8;
+    p->wt_cycle = 600.f;
+    p->wt_lfo_shape = 1;
 }
 
 /* ------------------------------------------------------------ lag tables */
@@ -112,20 +120,7 @@ double ec_track_map(const ec_track_t *t, double x)
 
 static int is_loop_machine(int m) { return m == EC_MACH_LOOP || m == EC_MACH_LOOP_TRIG; }
 
-static int warp_family(int mode)
-{
-    switch (mode) {
-    case EC_WARP_GRANULAR: return FAM_GRAINS;
-    case EC_WARP_CHOPPED: return FAM_CHOP;
-    default: return FAM_READER;   /* tape, tempo_varispeed + not-yet-ported modes */
-    }
-}
-
-static int warp_implemented(int mode)
-{
-    return mode == EC_WARP_TAPE || mode == EC_WARP_TEMPO_VARISPEED ||
-           mode == EC_WARP_GRANULAR || mode == EC_WARP_CHOPPED;
-}
+static int warp_family(int mode) { return ec_w3_family(mode); }   /* E3: every mode has its family */
 
 /* derived per-block values */
 static void track_derive(ec_dsp_t *d, ec_track_t *t)
@@ -160,12 +155,14 @@ static double pitch_ratio(const ec_track_t *t)
 /* loop cycles per sample (natural_phase_from's loop_rate), for [s,e] */
 static double track_cycles_per_sample(const ec_dsp_t *d, const ec_track_t *t, double s, double e)
 {
-    if (t->fam == FAM_READER && t->mode == EC_WARP_TAPE) {
+    if (t->fam == FAM_READER && (t->w3.rd_mode == EC_WARP_TAPE || t->w3.rd_mode == EC_WARP_GSTRETCH)) {
         double w = (e - s) * t->frames;
         if (w < 1.0) w = 1.0;
-        return fabs(t->brs * pitch_ratio(t) * t->rate_lag) / w;
+        return fabs(t->w3.rd_mode == EC_WARP_TAPE ? t->brs * pitch_ratio(t) * t->rate_lag
+                                                  : t->brs * t->w3.strch_lag * t->rate_lag) / w;
     }
     double c = track_cps(d, t, s, e) / d->fs;
+    if (t->fam == FAM_READER && t->w3.rd_mode == EC_WARP_GSTRETCH2) c *= t->w3.strch_lag;   /* E3 */
     if (t->fam == FAM_GRAINS) c *= ec_clampd(t->gspeed_lag, 0.0, 4.0);
     return c;
 }
@@ -177,6 +174,7 @@ static double track_pos(const ec_track_t *t)   /* engine fraction */
     switch (t->fam) {
     case FAM_GRAINS: return t->lo + t->emit_ph * (t->hi - t->lo);
     case FAM_CHOP: return t->lo + t->ch.ramp * (t->hi - t->lo);
+    case FAM_DOMINO: case FAM_WT: case FAM_SPEC: return ec_w3_pos(t, t->fam);   /* E3 */
     default:
         if (ec_reader_idle(&t->rd)) return t->restart_frame / F;
         return t->rd.phase[t->rd.active] / F;
@@ -199,6 +197,7 @@ static void fam_reset(ec_track_t *t, int fam, double phase)
         if (t->rd.state[a] == RH_PLAY && !t->rd.queued && fabs(target - t->rd.phase[a]) < 0.5) break;
         ec_reader_cut(&t->rd, target);
     } break;
+    case FAM_DOMINO: case FAM_WT: case FAM_SPEC: ec_w3_fam_reset(t, fam, phase); break;   /* E3 */
     default: break;
     }
 }
@@ -512,6 +511,7 @@ static void track_init(ec_track_t *t, int i)
     ec_reader_init(&t->rd);
     t->gr.rng = 0x2545F491u ^ (uint32_t)(i * 7919 + 1);
     ec_chop_reset(&t->ch, 0.0);
+    ec_w3_reset(&t->w3, 0x85EBCA6Bu ^ (uint32_t)(i * 2246822519u + 7u));   /* E3 */
     t->rate_lag = 1.f;
     t->gsize_lag = 0.08f;
     t->gspread_lag = 0.02f;
@@ -540,6 +540,7 @@ ec_dsp_t *ec_dsp_init(void *mem, float fs)
     ec_lag_table(d->lag02, 0.02f, d->fs);
     ec_lag_table(d->lag03, 0.03f, d->fs);
     ec_lag_table(d->lag05, 0.05f, d->fs);
+    ec_w3_init(d);   /* E3 */
     for (int i = 0; i < EC_TRACKS; ++i) track_init(&d->tr[i], i);
     return d;
 }
@@ -580,6 +581,9 @@ void ec_dsp_set_sample(ec_dsp_t *d, int track, const ec_sample_t *s)
     ec_reader_init(&t->rd);
     t->gr.n = 0;
     t->ch.h[0].stage = t->ch.h[1].stage = 0;
+    t->w3.ong = 0;                                    /* E3: grains / slicer heads read the old memory */
+    t->w3.sv[0].state = t->w3.sv[1].state = 3;
+    t->w3.sv_prev = -1;
     if (s && s->data && s->frames >= 4 && s->rate > 0.f) {
         t->smp = *s;
         if (t->smp.channels != 1) t->smp.channels = 2;
@@ -645,6 +649,14 @@ static void block_prep(ec_dsp_t *d, ec_track_t *t)
     set_region(t, s, e);   /* follows live edits of the base region (fences only) */
 
     int mode = ec_clampi(p->mode, 1, EC_WARP_COUNT);
+    /* E3: the FFT budget (the original ran the spectral chain on track 1 only, tape elsewhere) */
+    t->w3_fallback = 0;
+    if ((mode == EC_WARP_SPECTRAL_FREEZE || mode == EC_WARP_FORMANT) && (t - d->tr) >= EC_W3_SPECTRAL_TRACKS) {
+        mode = EC_WARP_TAPE;
+        t->w3_fallback = 1;
+    }
+    if (warp_family(mode) == FAM_READER && mode != t->w3.rd_mode)
+        ec_w3_set_reader_mode(&t->w3, mode, p->mode_switch_fade, d->fs);
     if (mode != t->mode) {
         int nf = warp_family(mode);
         if (nf != t->fam) {
@@ -659,6 +671,10 @@ static void block_prep(ec_dsp_t *d, ec_track_t *t)
             if (nf == FAM_READER) ec_reader_init(&t->rd);
             if (nf == FAM_GRAINS) t->gr.n = 0;
             if (nf == FAM_CHOP) { t->ch.h[0].stage = t->ch.h[1].stage = 0; t->ch.primed = 1; }
+            if (nf == FAM_DOMINO) { t->w3.sv[0].state = t->w3.sv[1].state = 3; t->w3.sv_prev = -1; }   /* E3 */
+            if (nf == FAM_WT) { t->w3.wcommitted = 0; t->w3.wst[0] = t->w3.wst[1] = 0; t->w3.wqueued = 0; }
+            if (nf == FAM_SPEC) { memset(t->w3.sp_in, 0, sizeof t->w3.sp_in);
+                                  memset(t->w3.sp_out, 0, sizeof t->w3.sp_out); t->w3.sp_hop = 0; }
             t->mode = mode;
             fam_reset(t, nf, ph);
         }
@@ -674,14 +690,15 @@ static void fam_render(ec_dsp_t *d, ec_track_t *t, int fam, double run, float *L
     double cps = track_cps(d, t, t->lo, t->hi);
     switch (fam) {
     case FAM_READER: {
-        double lo = t->lo * F, hi = t->hi * F, rate;
-        if (t->mode == EC_WARP_TAPE)
-            rate = t->brs * pitch_ratio(t) * t->rate_lag * dir * run;
-        else
-            rate = (hi - lo) * cps / d->fs * dir * run;
+        double lo = t->lo * F, hi = t->hi * F;
+        double rate = ec_w3_reader_rate(d, t, cps) * dir * run;   /* E3: per reader-family mode */
         float fi = 1.f / (ec_clampf(p->xfade, 0.0005f, 0.25f) * d->fs);
         ec_reader_process(&t->rd, &t->smp, lo, hi, rate, t->restart_frame, fi, L, R, n);
+        ec_w3_post(d, t, cps, L, R, n);   /* E3: pitch_corrected / harmonizer / random_ola / gstretch(2) */
     } break;
+    case FAM_DOMINO: ec_w3_domino(d, t, cps, run, dir, L, R, n); break;    /* E3 */
+    case FAM_WT: ec_w3_wavetable(d, t, L, R, n); break;
+    case FAM_SPEC: ec_w3_spectral(d, t, cps, run, dir, L, R, n); break;
     case FAM_GRAINS: {
         double inc = cps * ec_clampd(t->gspeed_lag, 0.0, 4.0) * run * dir / d->fs;
         double rp = ec_clampd(t->lo + t->emit_ph * (t->hi - t->lo), 0.0, 0.999999);
@@ -777,7 +794,12 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     /* slice voices of this track (pre-filter, like the SC sourceGroup) */
     ec_voices_process(d, ti, L, R, n);
 
-    /* E3 hook: neighbor machine (track ti-1's output as the source) goes here. */
+    /* E3: neighbor -- the source is the LEFT track's whole output for this chunk (d->nbl / nbr, filled by
+     * ec_dsp_process; that track then skips the master). A pass-through like \elasticatNeighborReader:
+     * independent of this track's transport, no envelope, warp or pitch -- this track's filter / amp / pan
+     * (and E4 insert) shape it. */
+    if (p->machine == EC_MACH_NEIGHBOR && ti > 0)
+        for (int i = 0; i < n; ++i) { L[i] += d->nbl[i]; R[i] += d->nbr[i]; }
 
     if (t->dk_left > 0) {
         for (int i = 0; i < n && t->dk_left > 0; ++i) {
@@ -843,6 +865,15 @@ void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
         for (int i = 0; i < n; ++i) d->ml[i] = d->mr[i] = 0.f;
         for (int ti = 0; ti < EC_TRACKS; ++ti) {
             track_chunk(d, ti, d->bl, d->br, n);
+            /* E3 neighbor tap: when the track to the right is a neighbor machine, this track's output goes
+             * to it instead of the master. The tap is track_chunk's output = after the filter, amp/pan and
+             * mute. E4 HOOK: the insert FX run inside track_chunk before this point, so the neighbor
+             * receives the post-insert signal (as the SC mix bus did); the E4 send taps stay in
+             * track_chunk and are not affected by this rerouting. */
+            if (ti + 1 < EC_TRACKS && d->tr[ti + 1].p.machine == EC_MACH_NEIGHBOR) {
+                for (int i = 0; i < n; ++i) { d->nbl[i] = d->bl[i]; d->nbr[i] = d->br[i]; }
+                continue;
+            }
             for (int i = 0; i < n; ++i) { d->ml[i] += d->bl[i]; d->mr[i] += d->br[i]; }
         }
         /* E4 hooks: send buses S1/S2 return here, then the master insert. */
@@ -884,7 +915,7 @@ void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
     st->peak_l = t->peak_l;
     st->peak_r = t->peak_r;
     st->filter_env = t->f.env_semis;
-    st->mode_implemented = warp_implemented(t->mode);
+    st->mode_implemented = !t->w3_fallback;
     double F = t->frames > 1.0 ? t->frames : 1.0;
     for (int i = 0; i < EC_VOICE_POOL; ++i) {
         const ec_voice_t *v = &d->v[i];

@@ -10,11 +10,15 @@
  * Signal flow (one chain per track, 6 tracks, as in the original):
  *
  *   machine source ---------------------------+
- *     loop / loop_trig : warp reader (tape, tempo_varispeed, granular,
- *                        chopped; other modes fall back to the tempo_varispeed reader)
+ *     loop / loop_trig : warp mode: the reader (tape, tempo_varispeed, + E3 post
+ *                        stages pitch_corrected / harmonizer / random_ola /
+ *                        gstretch / gstretch2), granular, chopped, domino,
+ *                        wavetable, spectral_freeze / formant (ec_warp3.c)
  *                        x amp envelope x play gate x mode-switch gain
  *     grid_slice / slice_poly : slice voices (<= 8 per track, <= 24 total)
- *     neighbor (E3)    : hook -- track N-1's output (not wired yet: silent)
+ *     neighbor (E3)    : track N-1's whole output (post filter / amp / pan /
+ *                        mute; E4: post insert) -- N-1 then no longer reaches
+ *                        the master, it is heard only through this track
  *                                             |
  *   FILTER machine (stereo / mid-side, balance-spread cutoffs, drive, env)
  *     classic, morphing, ladder, comb, formant, svf
@@ -108,9 +112,14 @@
  *   trig_* / slice_ratchet / slice_hold* / pattern_steps / default_* ->
  *                         sequencer-side, not engine params.
  *
- * Not ported yet (E3/E4): insert FX, sends, master insert, MOD (LFOs / mod
- * env / macros / velocity mod), neighbor and razor machines, the other ten
- * warp modes. Hooks are marked "E3 hook" / "E4 hook" in ec_dsp.c.
+ *   (E3) harm_interval[3], wsola_window, wsola_search, pv_window, pv_dispersion,
+ *   wt_window, wt_cycle, wt_lfo_rate, freeze_amount, spectral_blur, formant_shift
+ *                      -> same names, spec units (none)
+ *   (E3) wt_lfo_depth  -> wt_lfo_depth  -1..1 ec_xf_bipolar(0..128)
+ *   (E3) wt_lfo_shape  -> wt_lfo_shape  option 1..5
+ *
+ * Not ported yet (E4): insert FX, sends, master insert, MOD (LFOs / mod
+ * env / macros / velocity mod). Hooks are marked "E4 hook" in ec_dsp.c.
  */
 #ifndef EC_DSP_H
 #define EC_DSP_H
@@ -131,10 +140,10 @@ extern "C" {
 /* machine (params_spec "machine" option index) */
 enum {
     EC_MACH_LOOP = 1, EC_MACH_LOOP_TRIG = 2, EC_MACH_GRID_SLICE = 3,
-    EC_MACH_RAZOR_SLICE = 4,   /* E3: plays like grid_slice with explicit ranges */
+    EC_MACH_RAZOR_SLICE = 4,   /* grid_slice voicing, explicit per-slice ranges (seq/ec_razor) */
     EC_MACH_SLICE_POLY = 5,
-    EC_MACH_RAZOR_POLY = 6,    /* E3: plays like slice_poly with explicit ranges */
-    EC_MACH_NEIGHBOR = 7,      /* E3 hook: silent for now */
+    EC_MACH_RAZOR_POLY = 6,    /* slice_poly voicing, explicit per-slice ranges */
+    EC_MACH_NEIGHBOR = 7,      /* the left track's output as the source (tracks 2-6) */
     EC_MACH_INPUT = 8          /* E6: silent */
 };
 
@@ -245,6 +254,20 @@ typedef struct ec_track_params {
     /* E4 hooks (stored, unused) */
     int   send_tap;
     float send1_level, send2_level;
+    /* E3: the other warp modes (params_spec units are already engine units) */
+    float harm_interval[3];   /* harmonizer IN1..IN3, st; 0 = that voice off */
+    float wsola_window;       /* random_ola grain length, s 0.005..0.5 */
+    float wsola_search;       /* random_ola wander, s 0..0.1 */
+    float pv_window;          /* pitch_corrected window, s 0.005..2 */
+    float pv_dispersion;      /* pitch_corrected pitch dispersion 0..1 */
+    int   wt_window;          /* wavetable slices 2..64 */
+    float wt_cycle;           /* wavetable cycle width, samples 16..8192 */
+    float wt_lfo_rate;        /* Hz 0..8000 */
+    float wt_lfo_depth;       /* -1..1 (params_spec 0..128, 64 = off) */
+    int   wt_lfo_shape;       /* option 1..5: sine tri saw s&h rand */
+    float freeze_amount;      /* 0..1 (> 0 freezes) */
+    float spectral_blur;      /* 0..1 */
+    float formant_shift;      /* st -24..24 */
 } ec_track_params_t;
 
 /* Fills p with the params_spec.lua defaults (already xformed; env_range = 8 s). */
@@ -285,8 +308,9 @@ enum {
     EC_EV_SLICE_ON = 15,  /* slice = 1..32; start/end = slice range 0..128 (track
                              space) or < 0 for the grid division of slice_count;
                              velocity, pitch (st, absolute), length (gate samples,
-                             0 = one-shot / natural length), choke 0..8.
-                             Play mode / reverse / sync / rate come from the params. */
+                             0 = one-shot / natural length), choke 0..8; mode 1..6 =
+                             a per-slice play mode (E3), 0 = the track's.
+                             Reverse / sync / rate come from the params. */
     EC_EV_SLICE_OFF = 16, /* release slice `slice` (live key up) */
     EC_EV_LOOP_KEY = 17,  /* loop key `slice` = 1..32, value 1 press / 0 release.
                              EC_TF_AUDITION on a press while stopped: the reader
@@ -338,7 +362,7 @@ typedef struct ec_track_status {
     uint32_t keys_held;     /* loop keys bitmask (bit k-1) */
     float peak_l, peak_r;   /* post-track peak, decaying */
     float filter_env;       /* filter env cutoff contribution, semitones */
-    int   mode_implemented; /* 0 when the warp mode falls back (tempo_varispeed) */
+    int   mode_implemented; /* 0 when the warp mode falls back (spectral budget: tape) */
 } ec_track_status_t;
 
 typedef struct ec_dsp ec_dsp_t;

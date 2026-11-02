@@ -10,9 +10,11 @@ enum { EC_CAT_TRIG, EC_CAT_SRC, EC_CAT_FILT, EC_CAT_AMP, EC_CAT_FX, EC_CAT_MOD, 
        EC_CAT_PAT, EC_NCAT };
 
 /* item kinds */
-enum { EC_IT_BLANK, EC_IT_PARAM, EC_IT_GLOBAL, EC_IT_SLOT };
+enum { EC_IT_BLANK, EC_IT_PARAM, EC_IT_GLOBAL, EC_IT_SLOT, EC_IT_RAZOR /* E3: ec_razor_ui.h */ };
 /* globals (the project) */
 enum { EC_G_BPM, EC_G_SWING, EC_G_GLEN, EC_G_QUANT, EC_G_RTN, EC_NG };
+/* E3: razor editor cells (FILE / RAZOR): the selected slice's points + settings, the view */
+enum { EC_RZ_START, EC_RZ_END, EC_RZ_PLAY, EC_RZ_ZOOM, EC_RZ_SNAP, EC_RZ_CHOKE, EC_RZ_PITCH, EC_RZ_SENS, EC_NRZ };
 /* slot fields (the current track's pool slot) */
 enum { EC_S_BPM, EC_S_STEPS, EC_S_GAIN, EC_S_TRIM_START, EC_S_TRIM_END, EC_NS };
 

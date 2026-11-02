@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "ec_dsp.h"
+#include "ec_warp3.h"   /* E3 */
 
 #define EC_KR          16      /* control period (samples): smoothers, filter coefs */
 #define EC_HANN_SIZE   2048    /* shared Hann window LUT (+1 guard point) */
@@ -315,7 +316,8 @@ typedef struct {
     double time;          /* sample clock */
 } ec_anchor_t;
 
-enum { FAM_NONE = 0, FAM_READER = 1, FAM_GRAINS = 2, FAM_CHOP = 3 };
+enum { FAM_NONE = 0, FAM_READER = 1, FAM_GRAINS = 2, FAM_CHOP = 3,
+       FAM_DOMINO = 4, FAM_WT = 5, FAM_SPEC = 6 /* E3 */ };
 
 typedef struct {
     ec_track_params_t p;
@@ -378,6 +380,10 @@ typedef struct {
     float  peak_l, peak_r;
     double ui_pos;         /* engine fraction */
     int    reader_on;
+
+    /* E3: the other warp modes (ec_warp3.c) */
+    int    w3_fallback;    /* the mode fell back (spectral budget) */
+    ec_w3_t w3;
 } ec_track_t;
 
 typedef struct {
@@ -404,6 +410,9 @@ struct ec_dsp {
     /* scratch */
     float  bl[EC_KR], br[EC_KR], tl[EC_KR], tr2[EC_KR], ol[EC_KR], orr[EC_KR];
     float  ml[EC_KR], mr[EC_KR];
+    /* E3: the neighbor tap (the left track's output for this chunk), spectral scratch */
+    float  nbl[EC_KR], nbr[EC_KR];
+    ec_w3_shared_t w3s;
 };
 
 /* lag tables */
@@ -435,5 +444,20 @@ void ec_chop_process(ec_dsp_t *dsp, ec_track_t *t, double cps, double pitch_rate
 
 /* ec_dsp.c helpers shared with voices */
 double ec_track_map(const ec_track_t *t, double x128);  /* track space -> 0..1 */
+
+/* E3: ec_warp3.c -- the other warp modes */
+void   ec_w3_init(ec_dsp_t *dsp);                        /* shared tables */
+void   ec_w3_reset(ec_w3_t *w, uint32_t seed);
+int    ec_w3_family(int mode);                           /* FAM_* of a warp mode */
+int    ec_w3_stage(int mode);                            /* reader post stage (W3_ST_*) */
+void   ec_w3_set_reader_mode(ec_w3_t *w, int mode, float fade_s, float fs);
+/* reader rate (frames / sample, unsigned) of the reader-family mode in effect */
+double ec_w3_reader_rate(const ec_dsp_t *d, const ec_track_t *t, double cps);
+void   ec_w3_post(ec_dsp_t *d, ec_track_t *t, double cps, float *L, float *R, int n);
+void   ec_w3_domino(ec_dsp_t *d, ec_track_t *t, double cps, double run, double dir, float *L, float *R, int n);
+void   ec_w3_wavetable(ec_dsp_t *d, ec_track_t *t, float *L, float *R, int n);
+void   ec_w3_spectral(ec_dsp_t *d, ec_track_t *t, double cps, double run, double dir, float *L, float *R, int n);
+double ec_w3_pos(const ec_track_t *t, int fam);          /* playhead (engine fraction) of an E3 family */
+void   ec_w3_fam_reset(ec_track_t *t, int fam, double phase);
 
 #endif

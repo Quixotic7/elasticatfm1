@@ -29,6 +29,7 @@ static const char *const O_WAVE[] = {"SINE", "TRI", "SAW", "RSAW", "SQR", "RAND"
 static const char *const O_SPEED[] = {"8BAR", "4BAR", "2BAR", "1BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64"};
 static const char *const O_LFOMODE[] = {"FREE", "TRIG", "ONE", "HOLD"};
 static const char *const O_POLY[] = {"MONO", "POLY"};
+static const char *const O_WTSHAPE[] = {"SINE", "TRI", "SAW", "S&H", "RAND"};   /* E3 */
 
 #define L EC_PF_LOCKABLE
 #define NUM(n, lb, mn, mx, st, df, fm, fl) {n, lb, mn, mx, st, df, EC_PK_NUM, fm, fl, 0, 0}
@@ -128,6 +129,22 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_LENGTH] = NUM("default_length", "LEN", 0.25f, 16, 0.25f, 1, EC_PF_DEC2, L | EC_PF_MOMENT),
     [EC_P_VELOCITY] = NUM("default_velocity", "VEL", 0, 1, 0.01f, 1, EC_PF_PCT01, L | EC_PF_MOMENT),
     [EC_P_RATE] = NUM("pattern_rate", "RATE", 1, EC_RATES, 1, EC_RATE_UNITY, EC_PF_RATE, 0),
+    /* E3 (params_spec.lua specs; labels from lib/warp_modes) */
+    [EC_P_HARM_INTERVAL] = NUM("harm_interval", "IN1", -24, 24, 1, 7, EC_PF_PITCH, L),
+    [EC_P_HARM_INTERVAL2] = NUM("harm_interval2", "IN2", -24, 24, 1, 0, EC_PF_PITCH, L),
+    [EC_P_HARM_INTERVAL3] = NUM("harm_interval3", "IN3", -24, 24, 1, 0, EC_PF_PITCH, L),
+    [EC_P_WSOLA_WINDOW] = NUM("wsola_window", "OWIN", 0.005f, 0.5f, 0.001f, 0.08f, EC_PF_MS, L),
+    [EC_P_WSOLA_SEARCH] = NUM("wsola_search", "OWAN", 0, 0.1f, 0.001f, 0.015f, EC_PF_MS, L),
+    [EC_P_PV_WINDOW] = NUM("pv_window", "PCWN", 0.005f, 2, 0.005f, 0.2f, EC_PF_MS, L),
+    [EC_P_PV_DISPERSION] = NUM("pv_dispersion", "PCDS", 0, 1, 0.01f, 0, EC_PF_PCT01, L),
+    [EC_P_WT_WINDOW] = NUM("wt_window", "WSIZ", 2, 64, 1, 8, EC_PF_INT, L),
+    [EC_P_WT_CYCLE] = NUM("wt_cycle", "CYCW", 16, 8192, 1, 600, EC_PF_INT, L | EC_PF_EXPSTEP),
+    [EC_P_WT_LFO_RATE] = NUM("wt_lfo_rate", "LRAT", 0, 8000, 0.01f, 0, EC_PF_DEC2, L | EC_PF_EXPSTEP),
+    [EC_P_WT_LFO_DEPTH] = NUM("wt_lfo_depth", "LDEP", 0, 128, 1, 64, EC_PF_BIP, L),
+    [EC_P_WT_LFO_SHAPE] = OPT("wt_lfo_shape", "LSHP", 1, L, O_WTSHAPE),
+    [EC_P_FREEZE_AMOUNT] = NUM("freeze_amount", "FRZE", 0, 1, 0.01f, 0, EC_PF_PCT01, L),
+    [EC_P_SPECTRAL_BLUR] = NUM("spectral_blur", "BLUR", 0, 1, 0.01f, 0, EC_PF_PCT01, L),
+    [EC_P_FORMANT_SHIFT] = NUM("formant_shift", "FORM", -24, 24, 1, 0, EC_PF_PITCH, L),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
@@ -179,6 +196,21 @@ float ec_param_nudge(int id, float x, int det)
 {
     const ec_param_def_t *d = &EC_PARAMS[id];
     float y = x + (float)det * d->step;
+    if (d->flags & EC_PF_EXPSTEP) {   /* E3: semitone ratios per detent; from 0 the first detent is one step */
+        const float lo = d->min > 0 ? d->min : d->step;
+        if (x < lo)
+            y = det > 0 ? lo * powf(2.0f, (float)(det - 1) / 12.0f) : d->min;
+        else {
+            y = x * powf(2.0f, (float)det / 12.0f);
+            if (y < lo)
+                y = d->min;
+        }
+        if (d->fmt != EC_PF_INT)   /* (2 significant decimals for the readout) */
+            y = y < 10 ? floorf(y * 100.0f + 0.5f) / 100.0f : y < 100 ? floorf(y * 10.0f + 0.5f) / 10.0f : floorf(y + 0.5f);
+        else if ((int)floorf(y + 0.5f) == (int)floorf(x + 0.5f) && det)
+            y = x + (det > 0 ? 1.0f : -1.0f);
+        return ec_param_clamp(id, y);
+    }
     if (d->kind == EC_PK_NUM && d->step < 1.0f) {   /* (snap to the step grid: no float crumbs) */
         const float n = floorf((y - d->min) / d->step + 0.5f);
         y = d->min + n * d->step;
@@ -367,4 +399,20 @@ void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_re
     p->send_tap = opt(v, EC_P_SEND_TAP);
     p->send1_level = ec_xf_amount(v[EC_P_SEND1]);
     p->send2_level = ec_xf_amount(v[EC_P_SEND2]);
+    /* E3 */
+    p->harm_interval[0] = v[EC_P_HARM_INTERVAL];
+    p->harm_interval[1] = v[EC_P_HARM_INTERVAL2];
+    p->harm_interval[2] = v[EC_P_HARM_INTERVAL3];
+    p->wsola_window = v[EC_P_WSOLA_WINDOW];
+    p->wsola_search = v[EC_P_WSOLA_SEARCH];
+    p->pv_window = v[EC_P_PV_WINDOW];
+    p->pv_dispersion = v[EC_P_PV_DISPERSION];
+    p->wt_window = opt(v, EC_P_WT_WINDOW);
+    p->wt_cycle = v[EC_P_WT_CYCLE];
+    p->wt_lfo_rate = v[EC_P_WT_LFO_RATE];
+    p->wt_lfo_depth = ec_xf_bipolar(v[EC_P_WT_LFO_DEPTH]);
+    p->wt_lfo_shape = opt(v, EC_P_WT_LFO_SHAPE);
+    p->freeze_amount = v[EC_P_FREEZE_AMOUNT];
+    p->spectral_blur = v[EC_P_SPECTRAL_BLUR];
+    p->formant_shift = v[EC_P_FORMANT_SHIFT];
 }

@@ -148,6 +148,16 @@ static void wave(const ec_ss_sample_t *s, int top, int bot, int x0, int x1, int 
     }
 }
 
+/* E3: slice k's columns (razor machines: their own points; grid: the even division) */
+static void slice_cols(const ec_app_t *a, int k, int cnt, float lo, float hi, int x0, int cols, int *sx, int *ex)
+{
+    float s0 = 128.0f * (float)k / (float)cnt, e0 = 128.0f * (float)(k + 1) / (float)cnt;
+    if (ec_razor_is_razor(iv(tv(a), EC_P_MACHINE)))
+        ec_razor_range(&a->proj, a->track, k + 1, &s0, &e0);
+    *sx = x0 + (int)((lo + (hi - lo) * s0 / 128.0f) * cols);
+    *ex = x0 + (int)((lo + (hi - lo) * e0 / 128.0f) * cols);
+}
+
 /* the track's sample area: waveform with region / slices / playhead, or why there is none */
 static void sample_area(const ec_app_t *a, int top, int bot)
 {
@@ -157,6 +167,10 @@ static void sample_area(const ec_app_t *a, int top, int bot)
     const float *v = tv(a);
     const int x0 = 2, x1 = W - 2, cols = x1 - x0;
     char buf[64];
+    if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR) {   /* E3: the routing, not a sample */
+        ec_scr_neighbor(a, top, bot);
+        return;
+    }
     if (rt->state == EC_SL_LOADING || rt->state == EC_SL_QUEUED) {
         const int pm = rt->state == EC_SL_LOADING ? (int)ec_load_permille() : 0;
         snprintf(buf, sizeof buf, "LOADING %d%%", pm / 10);
@@ -199,14 +213,16 @@ static void sample_area(const ec_app_t *a, int top, int bot)
                     on |= 1u << (st.voice_slice[k] - 1);
             for (k = 0; k < cnt; k++)
                 if (on >> k & 1u) {
-                    const int sx = x0 + (int)((lo + (hi - lo) * k / cnt) * cols);
-                    const int ex = x0 + (int)((lo + (hi - lo) * (k + 1) / cnt) * cols);
+                    int sx, ex;
+                    slice_cols(a, k, cnt, lo, hi, x0, cols, &sx, &ex);
                     R(EC_C_L3, sx, top - 2, ex - sx, bot - top + 4);
                 }
             wave(smp, top, bot, x0, x1, rs, re);
-            for (k = 1; k < cnt; k++) {
-                const int cx = x0 + (int)((lo + (hi - lo) * k / cnt) * cols);
-                ec_gfx_dots_v(EC_U * cx, EC_U * (top - 2), EC_U * (bot + 3), 2 * EC_U, EC_U, EC_C_L8);
+            for (k = 0; k < cnt; k++) {
+                int sx, ex;
+                slice_cols(a, k, cnt, lo, hi, x0, cols, &sx, &ex);
+                if (k > 0 || ec_razor_is_razor(iv(v, EC_P_MACHINE)))
+                    ec_gfx_dots_v(EC_U * sx, EC_U * (top - 2), EC_U * (bot + 3), 2 * EC_U, EC_U, EC_C_L8);
             }
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++) {
                 const int px = EC_U * x0 + (int)(st.voice_pos[k] * (float)(EC_U * cols));
@@ -289,14 +305,20 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     }
     if (a->page[EC_CAT_SRC] == 1)
         snprintf(left, sizeof left, "%s", ec_machine_name(iv(v, EC_P_MACHINE)));
+    if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR)   /* E3 */
+        snprintf(left, sizeof left, "FROM T%d", a->track);
     T(EC_C_L15, left, 2, 13, EC_AL_LEFT);
-    if (a->page[EC_CAT_SRC] == 2 && iv(v, EC_P_MODE) != EC_WARP_TAPE && iv(v, EC_P_MODE) != EC_WARP_TEMPO_VARISPEED &&
-        iv(v, EC_P_MODE) != EC_WARP_GRANULAR && iv(v, EC_P_MODE) != EC_WARP_CHOPPED)
-        T(EC_C_ACC, "VARI", 2 + TW(left) + 4, 13, EC_AL_LEFT);   /* (falls back to tempo_varispeed) */
+    if (a->page[EC_CAT_SRC] == 2) {   /* E3: only the spectral budget falls back (to tape) */
+        ec_track_status_t st;
+        ec_dsp_track_status(a->dsp, a->track, &st);
+        if (!st.mode_implemented)
+            T(EC_C_ACC, "TAPE", 2 + TW(left) + 4, 13, EC_AL_LEFT);
+    }
     snprintf(r, sizeof r, "%d", (int)floorf(sl->bpm + 0.5f));
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     sample_area(a, 22, 66);
-    key_ruler(a, 71);
+    if (iv(v, EC_P_MACHINE) != EC_MACH_NEIGHBOR)   /* E3 */
+        key_ruler(a, 71);
     cells(a, pg);
 }
 
@@ -696,8 +718,17 @@ void ec_screens_draw(const ec_app_t *a)
         else
             src_screen(a, &pg);
         break;
-    case EC_CAT_FILE: file_screen(a, &pg); break;
+    case EC_CAT_FILE:
+        if (a->page[EC_CAT_FILE] == 1)   /* E3 */
+            ec_scr_razor(a, &pg);
+        else
+            file_screen(a, &pg);
+        break;
     case EC_CAT_PAT: pat_screen(a, &pg); break;
     default: generic_screen(a, &pg); break;
     }
 }
+
+/* E3: the shared pieces for src/ui/ec_scr_e3.c */
+void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right) { header(a, title, page, right); }
+void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg) { cells(a, pg); }

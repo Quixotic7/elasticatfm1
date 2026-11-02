@@ -37,9 +37,17 @@ add_executable(ec_test_seq host/test_seq.c)
 target_link_libraries(ec_test_seq PRIVATE elasticat)
 target_compile_options(ec_test_seq PRIVATE -Wall -Wextra)
 
+add_executable(ec_test_e3 host/test_e3.c)   # E3: razor, slice events, voicing, the RZR1 chunk
+target_link_libraries(ec_test_e3 PRIVATE elasticat)
+target_include_directories(ec_test_e3 PRIVATE src/dsp)
+target_compile_options(ec_test_e3 PRIVATE -Wall -Wextra)
+
 enable_testing()
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)
 add_test(NAME seq COMMAND ec_test_seq)
+add_test(NAME e3 COMMAND ec_test_e3)
+# E3: the demo through panel input (razor, warp pages, neighbor) + a reboot from its flash
+add_test(NAME e3_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e3.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e3)
 # the E0 smoke run: the test loop generated into a folder, booted, played, the screen and audio written
 if(Python3_FOUND)
     set(_tf ${CMAKE_BINARY_DIR}/test_folder)

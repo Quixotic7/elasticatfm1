@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The category / page / cell model (lib/pages/model.lua + the coordinator's page_items_for): which parameters a page
- * shows in its cells, per machine, warp mode, filter machine and envelope mode. KN1-KN4 edit cells 1-4, with FN
- * held cells 5-8. Settings layers (FN + category) are the same structure, drawn as a list. */
+ * shows in its cells, per machine, warp mode, filter machine and envelope mode. KN1-KN4 edit the active lane's four
+ * cells (0.3.0: lanes of four, SELECT steps them). Settings layers (FN + category) are the same structure, drawn as a list. */
 #ifndef EC_PAGES_H
 #define EC_PAGES_H
 #include <stdint.h>
@@ -47,6 +47,8 @@ int ec_cat_pages(int cat, const float *v);    /* pages of the category for a tra
 void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *out);
 void ec_page_items_bus(int cat, int page, const float *v, int bus, const float *bv, ec_page_t *out);   /* E4 */
 int ec_settings_items_bus(int cat, int bus, ec_page_t *out);                                          /* E4 */
+/* 0.3.0: F3's cells: the track's pattern LEN and RATE, the global length, the quantize */
+void ec_page_f3(ec_page_t *out);
 /* the settings layer (FN + category); returns 0 when the category has none */
 int ec_settings_items(int cat, const float *v, ec_page_t *out);
 

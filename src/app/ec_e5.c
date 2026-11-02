@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "ec_app.h"
+#include "ec_snap.h"
 
 #define A (&ec_app)
 #define E (&ec_app.e5)
@@ -24,6 +25,7 @@ enum { R5_SWALLOW = 100, R5_ANCHOR_A, R5_ANCHOR_B, R5_GLIDE = 110 /* + 0..5 */ }
 enum { OP_COPY, OP_CLEAR, OP_PASTE };
 
 static void preview_stop(void);
+static float global_get(int id);
 
 /* PAGE > RATE: the 16 keys over the 21 pattern rates, 1x on key 9 */
 static const uint8_t RATE_KEYS[16] = {1, 2, 4, 5, 7, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 21};
@@ -87,12 +89,12 @@ static void xf_apply(float pos)
 
 int ec_e5_scene_layer(void)
 {
-    if (E->naming || A->patn_open || A->sel_held || E->page_down)
+    if (E->naming || A->patn_open || A->sel_held || A->ux.f3)
         return 0;
     return A->keymode == EC_KM_SCENE || (A->cat == EC_CAT_MASTER && !A->settings && A->page[EC_CAT_MASTER] == 2);
 }
 
-int ec_e5_page_visible(void) { return E->page_down && (E->page_used || A->ms - E->page_ms >= 200); }
+int ec_e5_page_visible(void) { return A->ux.f3; }   /* 0.3.0: the pages are F3's */
 
 const char *ec_e5_pattern_name(int idx) { return idx >= 0 && idx < EC_NPAT ? A->proj.pe5[idx].name : ""; }
 float ec_e5_rate_of_key(int i) { return (float)RATE_KEYS[clampi(i, 0, 15)]; }
@@ -102,6 +104,7 @@ void ec_e5_init(void)
 {
     E->rng = 0x51E5C0DEu;
     ec_undo_clear(&E->undo);
+    E->undo.gget = global_get;                   /* 0.3.0: redo of a global needs its current value */
     xf_apply(A->proj.e5.sc.pos);                 /* a loaded project's scenes land at their saved position */
 }
 
@@ -118,17 +121,10 @@ void ec_e5_tick(void)
     }
     if (E->preview && A->seq.playing)
         preview_stop();                          /* the transport owns playback now */
-    if (E->confirm && A->ms - E->confirm_ms > 3000) {
-        E->confirm = 0;
-        E->toast_ms = 0;
-        A->redraw = 1;
-    }
     if (E->toast_ms && !E->toast_keep && A->ms - E->toast_ms > 900) {
         E->toast_ms = 0;
         A->redraw = 1;
     }
-    if (E->page_down && !E->page_used && A->ms - E->page_ms == 200)
-        A->redraw = 1;
 }
 
 /* ------------------------------------------------------------------------------------------- undo --- */
@@ -153,14 +149,28 @@ void ec_e5_steps_edit(uint16_t mask, const char *label, uint32_t key)
     ec_undo_steps(&E->undo, &A->proj, A->track, A->step_page, mask, label, key, A->ms);
 }
 
-static void undo(void)
+static float global_get(int id)
+{
+    const ec_project_t *p = &A->proj;
+    switch (id) {
+    case EC_G_BPM: return p->bpm;
+    case EC_G_SWING: return p->swing;
+    case EC_G_GLEN: return (float)p->glen;
+    case EC_G_QUANT: return (float)p->quant;
+    default: return (float)p->rtn;
+    }
+}
+
+/* 0.3.0: SHIFT + OCT- undo, SHIFT + OCT+ redo */
+void ec_e5_undo(int redo)
 {
     int t = -1, gid = -1, kind;
     float gv = 0;
     char label[16], b[28];
-    kind = ec_undo_pop(&E->undo, &A->proj, &t, &gid, &gv, label, sizeof label);
+    kind = redo ? ec_undo_redo(&E->undo, &A->proj, &t, &gid, &gv, label, sizeof label)
+                : ec_undo_pop(&E->undo, &A->proj, &t, &gid, &gv, label, sizeof label);
     if (!kind) {
-        toast("NOTHING TO UNDO");
+        toast(redo ? "NOTHING TO REDO" : "NOTHING TO UNDO");
         return;
     }
     switch (kind) {
@@ -183,20 +193,20 @@ static void undo(void)
         xf_apply(A->proj.e5.sc.pos);           /* one-sided morphs follow the restored base */
         break;
     }
-    snprintf(b, sizeof b, "UNDO %s", label);
+    snprintf(b, sizeof b, "%s %s", redo ? "REDO" : "UNDO", label);
     toast(b);
     dirty();
 }
 
 /* ------------------------------------------------------------------------------------------- memorize --- */
-static void memorize(void)
+void ec_e5_memorize(void)
 {
     g_memo = A->proj;
     E->memo_ok = 1;
     toast("MEMORIZED");
 }
 
-static void recall(void)
+void ec_e5_recall_memo(void)
 {
     int s;
     if (!E->memo_ok) {
@@ -233,14 +243,15 @@ static void name_open(int kind, int pat)
     n = (int)strlen(src);
     memcpy(E->name, src, (size_t)(n > EC_NAME - 1 ? EC_NAME - 1 : n));
     E->name_cur = clampi(n, 0, EC_NAME - 2);
-    E->home_clean = 0;
     A->patn_open = A->patn_latched = 0;
     A->patn_ms = 0;
     E->rng ^= A->ms * 2654435761u;
     A->redraw = 1;
 }
 
-static void name_close(int accept)
+void ec_e5_name_pattern(void) { name_open(EC_NM_PATTERN, A->proj.current); }
+
+void ec_e5_name_close(int accept)
 {
     if (accept) {
         char b[EC_NAME];
@@ -386,7 +397,6 @@ static void page_scope(int op)
 {
     char b[28];
     const int pg = A->step_page;
-    E->page_used = 1;
     switch (op) {
     case OP_COPY:
         ec_clip_copy_page(&E->clip_page, tr(), pg);
@@ -424,10 +434,10 @@ static void pattern_scope(int op)
         toast(b);
         break;
     case OP_CLEAR:
-        if (!E->confirm) {                     /* the reference box's YES prompt: PLAY again */
+        if (!E->confirm) {                     /* 0.3.0: a question, it stays: OCT+ yes, OCT- / HOME no */
             E->confirm = 1;
             E->confirm_ms = A->ms;
-            snprintf(b, sizeof b, "CLEAR P%02d? PLAY", cur + 1);
+            snprintf(b, sizeof b, "CLEAR P%02d?", cur + 1);
             toast(b);
             E->toast_keep = 1;
             return;
@@ -455,14 +465,29 @@ static void pattern_scope(int op)
     }
 }
 
-static int scope_op(int b)
+/* 0.3.0: the question's answer (OCT+ yes; OCT-, HOME, any other button no) */
+void ec_e5_answer(int yes)
+{
+    if (!E->confirm)
+        return;
+    if (yes)
+        pattern_scope(OP_CLEAR);
+    else {
+        E->confirm = 0;
+        E->toast_ms = 0;
+        E->toast_keep = 0;
+        msg("CANCELLED");
+    }
+    A->redraw = 1;
+}
+
+/* 0.3.0: SHIFT + S1 / S2: copy / paste the pattern */
+void ec_e5_pattern_copy(int paste) { pattern_scope(paste ? OP_PASTE : OP_COPY); }
+
+int ec_e5_scope_op(int b)
 {
     const int op = b == EC_B_REC ? OP_COPY : A->fn ? OP_PASTE : OP_CLEAR;
     const uint32_t pads = pads_held();
-    if (E->confirm && !(E->patn_down && b == EC_B_PLAY && !A->fn)) {
-        E->confirm = 0;                         /* anything else cancels the clear prompt */
-        E->toast_ms = 0;
-    }
     if (A->step_held && !A->bus) {
         steps_scope(op);
         return 1;
@@ -490,101 +515,26 @@ static int scope_op(int b)
 }
 
 /* ------------------------------------------------------------------------------------------- buttons --- */
-int ec_e5_button_down(int b)
-{
-    if (b != EC_B_FN)
-        E->home_clean = 0;
-    if (E->naming) {
-        if (b == EC_B_FN) {
-            E->home_clean = 1;
-            return 0;
-        }
-        if (b == EC_B_SAVE) {
-            name_close(1);
-            return 1;
-        }
-        return b == EC_B_PLAY ? 0 : 1;          /* the transport stays live, the rest waits */
-    }
-    switch (b) {
-    case EC_B_REC:
-    case EC_B_PLAY: return scope_op(b);
-    case EC_B_OCTDN:
-    case EC_B_OCTUP:
-        if (A->fn) {                            /* FN + OCT+ memorize, FN + OCT- recall */
-            E->oct_fn = 1;
-            if (b == EC_B_OCTUP)
-                memorize();
-            else
-                recall();
-        } else {
-            E->oct_fn = 0;
-            E->page_down = 1;
-            E->page_btn = b;
-            E->page_used = 0;
-            E->page_ms = A->ms;
-        }
-        A->redraw = 1;
-        return 1;
-    case EC_B_SAVE:
-        if (A->fn) {
-            undo();
-            return 1;
-        }
-        if (A->patn_open) {
-            name_open(EC_NM_PATTERN, A->proj.current);
-            return 1;
-        }
-        return 0;
-    default: return 0;
-    }
-}
-
-int ec_e5_button_up(int b)
-{
-    if (b == EC_B_FN && E->naming && E->home_clean) {
-        E->home_clean = 0;
-        name_close(0);
-        return 0;
-    }
-    if (b == EC_B_OCTDN || b == EC_B_OCTUP) {
-        if (E->page_down && E->page_btn == b) {
-            const int quick = A->ms - E->page_ms < 400;
-            E->page_down = 0;
-            if (!E->page_used && quick && !E->oct_fn) {
-                const int d = b == EC_B_OCTUP ? 1 : -1;
-                A->keymode = (A->keymode + d + EC_NKM) % EC_NKM;
-                E->anchor = 0;
-                E->glide_held = 0;
-                E->gliding = 0;
-            }
-        }
-        A->redraw = 1;
-        return 1;
-    }
-    return 0;
-}
+/* 0.3.0: the OCT keys, naming's OK / cancel, undo and memorize moved to ec_app.c (pop-ups, SHIFT's keys); a held OCT
+ * key is still the PAGE scope (E->page_down, set by ec_app.c) */
+int ec_e5_scope_held(void) { return (A->step_held && !A->bus) || pads_held() || E->page_down || E->patn_down || E->anchor; }
 
 int ec_e5_upper(int i, int down)
 {
-    if (i == 10) {
+    if (i == 10)
         E->patn_down = down;
-        if (!down && E->confirm) {
-            E->confirm = 0;
-            E->toast_ms = 0;
-        }
-    }
     if (E->naming)
         return 1;
     return 0;
 }
 
 /* ------------------------------------------------------------------------------------------- lower keys --- */
-static void page_key(int i)
+/* 0.3.0: F3's lower keys: a tap edits the page (EC_PM_SELECT), a hold puts it in / out of the loop (EC_PM_LOOP) */
+void ec_e5_page_key(int i, int mode)
 {
     const int pages = pages_of(A->track);
     char b[28];
-    E->page_used = 1;
-    switch (E->page_mode) {
+    switch (mode) {
     case EC_PM_SELECT:
         if (i < pages) {
             A->step_page = i;
@@ -650,12 +600,6 @@ int ec_e5_lower_down(int k, int i, int vel)
     (void)vel;
     if (E->naming) {
         A->key_role[k] = R5_SWALLOW;
-        return 1;
-    }
-    if (E->page_down) {
-        page_key(i);
-        A->key_role[k] = R5_SWALLOW;
-        A->redraw = 1;
         return 1;
     }
     if (A->patn_open)
@@ -779,12 +723,6 @@ int ec_e5_knob(int role, int det)
         name_knob(role, det);
         return 1;
     }
-    if (E->page_down && role == EC_E_SELECT) {
-        E->page_mode = ((E->page_mode + det) % EC_NPM + EC_NPM) % EC_NPM;
-        E->page_used = 1;
-        A->redraw = 1;
-        return 1;
-    }
     return 0;
 }
 
@@ -808,7 +746,8 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
         switch (it->id) {
         case EC_X_XFD: {
             const float pos = A->proj.e5.sc.pos;
-            float q = floorf(pos * 128.0f + 0.5f) + (float)(det * mult);
+            float q = A->fn ? ec_global_snap(EC_SNAP_XFD, floorf(pos * 128.0f + 0.5f), det)
+                            : floorf(pos * 128.0f + 0.5f) + (float)(det * mult);
             ec_undo_xfade(&E->undo, &A->proj, A->ms);
             q = q < 0 ? 0 : q > 128 ? 128 : q;
             E->gliding = 0;
@@ -859,7 +798,7 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
         }
         if (!ec_scene_get(&A->proj, sc, A->track, id, &x))
             x = tv()[id];
-        x = ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det);
+        x = ec_app_move_param(id, x, det, mult);
         ec_scene_set(&A->proj, sc, A->track, id, x);
         ec_param_format(id, x, iv(tv(), EC_P_ENV_RANGE), val, sizeof val);
         snprintf(b, sizeof b, "%s %s %s", sc ? "B" : "A", EC_PARAMS[id].label, val);
@@ -878,8 +817,7 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
                     float x;
                     if (!ec_slice_lock_get(m, s, id, &x))
                         x = tv()[id];
-                    if (ec_slice_lock_set(m, s, id, ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult
-                                                                                                      : det)) < 0)
+                    if (ec_slice_lock_set(m, s, id, ec_app_move_param(id, x, det, mult)) < 0)
                         msg("LOCKS FULL");
                 }
             if (A->sel_held)
@@ -976,13 +914,9 @@ int ec_e5_leds_lower(void)
         const int ppage = play >= 0 ? play / 16 : -1;
         for (i = 0; i < EC_NLOWER; i++) {
             uint8_t l = EC_LED_OFF;
-            if (E->page_mode == EC_PM_RATE) {
-                l = RATE_KEYS[i] == iv(tv(), EC_P_RATE) ? EC_LED_LIT : i == 8 ? EC_LED_DIM : EC_LED_FAINT;
-            } else if (i < pages) {
-                if (E->page_mode == EC_PM_SELECT)
-                    l = i == A->step_page ? EC_LED_LIT : EC_LED_DIM;
-                else
-                    l = ec_e5_page_in_loop(&A->proj, A->track, i, pages) ? EC_LED_MID : EC_LED_FAINT;
+            if (i < pages) {   /* F3: the page you edit lit, the loop's pages mid, the others faint */
+                l = i == A->step_page ? EC_LED_LIT
+                    : ec_e5_page_in_loop(&A->proj, A->track, i, pages) ? EC_LED_MID : EC_LED_FAINT;
                 if (i == ppage && A->seq.playing && blink(125))
                     l = EC_LED_LIT;
             }
@@ -1031,23 +965,6 @@ int ec_e5_leds_lower(void)
 
 void ec_e5_leds(void)
 {
-    uint8_t dn, up;
-    if (A->fn) {
-        dn = E->memo_ok ? EC_LED_MID : EC_LED_FAINT;     /* recall lights once something is memorized */
-        up = EC_LED_DIM;
-    } else {
-        dn = A->keymode == EC_KM_LOOP || A->keymode == EC_KM_SCENE ? EC_LED_LIT : EC_LED_FAINT;
-        up = A->keymode == EC_KM_KEYS || A->keymode == EC_KM_SCENE ? EC_LED_LIT : EC_LED_FAINT;
-    }
-    if (E->page_down) {
-        const uint8_t l = blink(150) ? EC_LED_LIT : EC_LED_MID;
-        if (E->page_btn == EC_B_OCTUP)
-            up = l;
-        else
-            dn = l;
-    }
-    ec_plat_led_button(EC_B_OCTDN, dn);
-    ec_plat_led_button(EC_B_OCTUP, up);
     if (loop_layer() && !A->patn_open && !A->bus && !A->fn && !ec_e5_page_visible() && !E->naming &&
         is_slice_m(iv(tv(), EC_P_MACHINE))) {     /* a muted pad shows faint */
         const uint32_t mute = ec_e5_slices(&A->proj, A->track)->mute;
@@ -1057,14 +974,13 @@ void ec_e5_leds(void)
             if ((mute >> i & 1u) && !(held >> i & 1u) && i < iv(tv(), EC_P_SLICE_COUNT))
                 ec_plat_led_lower(i, EC_LED_FAINT);
     }
-    if (A->step_held || pads_held() || E->page_down || E->patn_down)
+    if (!A->fn && (A->step_held || pads_held() || E->page_down || E->patn_down))
         ec_plat_led_button(EC_B_REC, EC_LED_MID);      /* a scope is held: REC copies */
 }
 
 /* ------------------------------------------------------------------------------------------- ui_info --- */
 void ec_e5_ui_info(char *buf, uint32_t n)
 {
-    static const char *const PM[] = {"select", "loop", "rate"};
     const int pages = pages_of(A->track);
     char pn[EC_NAME], jn[EC_NAME];
     int i;
@@ -1078,10 +994,10 @@ void ec_e5_ui_info(char *buf, uint32_t n)
     for (i = 0; i < pages && i < 16; i++)
         loop |= (uint32_t)ec_e5_page_in_loop(&A->proj, A->track, i, pages) << i;
     snprintf(buf, n,
-             " xf:%.3f sa:%d sb:%d targets:%d anchor:%d memo:%d undo:%d pmode:%s spage:%d ploop:%04x rate:%s "
+             " xf:%.3f sa:%d sb:%d targets:%d anchor:%d memo:%d undo:%d redo:%d spage:%d ploop:%04x rate:%s "
              "gbpm:%d pname:%s proj:%s naming:%d clip:%d/%d/%d/%d",
              (double)A->proj.e5.sc.pos, ec_scene_count(&A->proj.e5.sc, 0), ec_scene_count(&A->proj.e5.sc, 1),
-             ec_scene_targets(&A->proj), E->anchor, E->memo_ok, E->undo.n, PM[E->page_mode], A->step_page + 1,
+             ec_scene_targets(&A->proj), E->anchor, E->memo_ok, E->undo.n, E->undo.nr, A->step_page + 1,
              (unsigned)loop, ec_rate_label(iv(tv(), EC_P_RATE)), A->proj.e5.gbpm,
              pn, jn, E->naming, E->clip_steps.n, E->clip_page.ok,
              E->clip_pat.ok, E->clip_slice.ok);

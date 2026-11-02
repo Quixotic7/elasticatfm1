@@ -21,13 +21,11 @@ typedef struct {
     int gliding;
     float glide_target;
     uint32_t glide_ms;
-    /* PAGE: an OCT key held */
-    int page_down, page_btn, page_used, page_mode;
-    uint32_t page_ms;
-    int oct_fn;                  /* the OCT press was FN + OCT (memorize / recall): no key mode change */
+    /* the PAGE scope: an OCT key held (ec_app.c sets it) */
+    int page_down;
     /* PATN held (pattern scope) */
     int patn_down;
-    int confirm;                 /* the pattern clear waits for a second PLAY */
+    int confirm;                 /* the pattern clear's question is open (0.3.0: OCT+ yes, OCT- no) */
     uint32_t confirm_ms;
     /* clipboards: each scope its own */
     ec_clip_steps_t clip_steps;
@@ -42,7 +40,6 @@ typedef struct {
     int name_pat;
     char name[EC_NAME];          /* 16 characters, space padded while editing */
     int name_cur;
-    int home_clean;              /* HOME pressed with nothing else since: its release cancels */
     uint32_t rng;
     /* step preview (stopped) */
     int preview;                 /* 0 none, 1 slices, 2 loop keys */
@@ -58,8 +55,16 @@ typedef struct {
 /* the hooks (ec_app.c) */
 void ec_e5_init(void);
 void ec_e5_tick(void);
-int ec_e5_button_down(int b);
-int ec_e5_button_up(int b);
+int ec_e5_scope_op(int b);                              /* REC / PLAY (SHIFT + PLAY) with a scope held: 1 = done */
+int ec_e5_scope_held(void);
+void ec_e5_answer(int yes);                              /* 0.3.0: the open question (CLEAR P01?) */
+void ec_e5_undo(int redo);                               /* 0.3.0: SHIFT + OCT- / OCT+ */
+void ec_e5_memorize(void);                               /* 0.3.0: SHIFT + T1 */
+void ec_e5_recall_memo(void);                            /* 0.3.0: SHIFT + T2 */
+void ec_e5_pattern_copy(int paste);                      /* 0.3.0: SHIFT + S1 / S2 */
+void ec_e5_name_pattern(void);                           /* 0.3.0: SHIFT + PATN */
+void ec_e5_name_close(int accept);                       /* 0.3.0: naming: OCT+ keeps, OCT- / HOME cancel */
+void ec_e5_page_key(int i, int mode);                    /* 0.3.0: F3's lower keys (EC_PM_SELECT / EC_PM_LOOP) */
 int ec_e5_lower_down(int k, int i, int vel);
 int ec_e5_lower_up(int k, int i);
 int ec_e5_upper(int i, int down);

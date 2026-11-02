@@ -12,6 +12,7 @@
 #include "ec_scr_e5.h"
 #include "ec_screens.h"
 #include "ec_scr_e4.h"
+#include "ec_scr_ux.h"
 
 #define W EC_GW
 #define H EC_GH
@@ -45,9 +46,14 @@ static const char *target_name(const ec_app_t *a)
 }
 
 /* ------------------------------------------------------------------------------------------- header --- */
+/* the header: the target, the title (or a message), the right-hand info and, in the box at the right: a pop-up's
+ * arrows (OCT- back, OCT+ OK), the count of held steps (the lock colour: the knobs lock), else the page */
 static void header(const ec_app_t *a, const char *title, int page, const char *right)
 {
     char pg[8], buf[40];
+    const int popup = ec_app_popup(a);
+    const int held = a->step_held && !a->bus && !popup ? __builtin_popcount(a->step_held) : 0;
+    const int box = popup ? 21 : 11;
     R(EC_C_L12, 0, 0, W, 10);
     R(EC_C_BG, 0, 0, 14, 10);
     T(EC_C_L12, target_name(a), 7, 3, EC_AL_CENTER);
@@ -56,11 +62,15 @@ static void header(const ec_app_t *a, const char *title, int page, const char *r
     else
         snprintf(buf, sizeof buf, "%s", title);
     T(EC_C_BG, buf, 17, 3, EC_AL_LEFT);
-    R(EC_C_BG, W - 11, 0, 11, 10);
-    snprintf(pg, sizeof pg, "%d", page);
-    T(EC_C_L12, pg, W - 6, 3, EC_AL_CENTER);
+    R(held ? EC_C_ACC : EC_C_BG, W - box, 0, box, 10);
+    if (popup)
+        ec_scr_arrows(W - 19, 1, EC_C_L15);
+    else {
+        snprintf(pg, sizeof pg, "%d", held ? held : page);
+        T(held ? EC_C_BG : EC_C_L12, pg, W - 6, 3, EC_AL_CENTER);
+    }
     if (right && right[0])
-        T(EC_C_BG, right, W - 14, 3, EC_AL_RIGHT);
+        T(EC_C_BG, right, W - box - 3, 3, EC_AL_RIGHT);
 }
 
 /* the default right-hand info: the held step, else the pattern (and the queued one) */
@@ -83,20 +93,19 @@ static void title_of(const ec_app_t *a, const ec_page_t *pg, char *out, size_t c
 /* ------------------------------------------------------------------------------------------- cells --- */
 static void cells(const ec_app_t *a, const ec_page_t *pg)
 {
-    const int bank = a->fn ? 4 : 0;
+    const int lane = a->ux.f3 ? 0 : ec_app_lane(a, pg);
+    const int nl = a->ux.f3 ? 1 : ec_ux_lanes(pg->n);
     int i;
     R(EC_C_L3, 0, 76, W, 1);
     R(EC_C_L3, 60, 76, 1, 44);
     R(EC_C_L3, 0, 98, W, 1);
-    if (pg->n > 4) {                                  /* the second bank exists: FN shows it */
-        R(bank ? EC_C_ACC : EC_C_L8, W - 3, 76, 3, 1);
-        R(bank ? EC_C_L8 : EC_C_ACC, W - 3, 98, 3, 1);
-    }
+    for (i = 0; i < nl && nl > 1; i++)                /* the lanes: SELECT steps them, the active one bright */
+        R(i == lane ? EC_C_L15 : EC_C_L5, W - 1 - (nl - i) * 10, 72, 8, 3);
     for (i = 0; i < 4; i++) {
-        const int x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101, c = bank + i;
+        const int x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101, c = lane * 4 + i;
         char tag[8], val[24];
         const ec_item_t *it;
-        int locked = 0;
+        int locked = 0, some = 0, big;
         float v, f;
         uint16_t vc;
         snprintf(tag, sizeof tag, "K%d", i + 1);
@@ -107,12 +116,21 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         it = &pg->it[c];
         v = ec_app_item_value(a, it, &locked);
         ec_app_item_format(a, it, v, val, sizeof val);
-        vc = locked ? EC_C_ACC : EC_C_L15;
+        /* the lock chips: filled = locked on the held step (or held scene / pad), outlined = locked on some step */
+        if (!locked && it->kind == EC_IT_PARAM && !a->bus && !a->settings && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE))
+            some = ec_ux_locked_somewhere(it->id);
+        vc = locked ? EC_C_BG : EC_C_L15;
         if ((it->flags & EC_IF_STOPPED) && a->seq.playing)
             vc = EC_C_L5;
         T(EC_C_L8, ec_app_item_label(it), x, y, EC_AL_LEFT);
-        T(locked ? EC_C_ACC : EC_C_L5, locked ? "LCK" : tag, x + 54, y, EC_AL_RIGHT);
-        if (TW(val) * 2 <= 56)
+        T(EC_C_L5, tag, x + 54, y, EC_AL_RIGHT);
+        big = TW(val) * 2 <= 54;
+        if (locked)
+            R(EC_C_ACC, x - 1, y + (big ? 6 : 8), (big ? TW(val) * 2 : TW(val)) + 3, big ? 12 : 7);
+        else if (some)
+            ec_gfx_frame(EC_U * (x - 1), EC_U * (y + (big ? 6 : 8)), EC_U * ((big ? TW(val) * 2 : TW(val)) + 3),
+                         EC_U * (big ? 12 : 7), EC_C_ACC);
+        if (big)
             T2(vc, val, x, y + 7, EC_AL_LEFT);
         else
             T(vc, val, x, y + 9, EC_AL_LEFT);
@@ -534,7 +552,7 @@ static void settings_screen(const ec_app_t *a, const ec_page_t *pg)
         const ec_item_t *it = &pg->it[i];
         const int y = 14 + i * 13;
         const int blocked = (it->flags & EC_IF_STOPPED) && a->seq.playing;
-        const int act = (i < 4) != (a->fn != 0);
+        const int act = i / 4 == ec_app_lane(a, pg);     /* the active lane bright, the others grey */
         char val[24], tag[8];
         const float x = ec_app_item_value(a, it, 0);
         ec_app_item_format(a, it, x, val, sizeof val);
@@ -743,7 +761,8 @@ void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg) { cells(a, pg); }
 void ec_screens_draw(const ec_app_t *a)
 {
     ec_gfx_fill(EC_C_BG);
-    if (!ec_scr_e5_full(a))                       /* E5: naming, the PAGE overlay, the SCENE page */
+    if (!ec_scr_ux_full(a) && !ec_scr_e5_full(a))   /* 0.3.0: F3; E5: naming, the SCENE page */
         draw_main(a);
     ec_scr_e5_overlay(a);                         /* E5: the scene strip, toasts */
+    ec_scr_ux_overlay(a);                         /* 0.3.0: the held-step frame, the takeover, SHIFT's map */
 }

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* E5's screens (ec_scr_e5.h), in the mockup's 120x120 grid at scale EC_U, palette as ec_screens.c. */
+/* E5's screens (ec_scr_e5.h; 0.3.0: the PAGE overlay became F3, src/ui/ec_scr_ux.c), in the mockup's 120x120 grid at scale EC_U, palette as ec_screens.c. */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +17,6 @@
 #define TW(s) (ec_gfx_text_w((s), 1))
 
 static int iv(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
-static const float *tv(const ec_app_t *a) { return a->proj.pat[a->proj.current].tr[a->track].v; }
 static const char *const TN[EC_NTRACK] = {"T1", "T2", "T3", "T4", "T5", "T6"};
 
 static int scene_page(const ec_app_t *a)
@@ -126,102 +125,6 @@ static void scene_screen(const ec_app_t *a)
     ec_screens_cells(a, &pg);
 }
 
-/* ------------------------------------------------------------------------------------------- PAGE --- */
-static void page_screen(const ec_app_t *a)
-{
-    static const char *const MODE[EC_NPM] = {"SEL", "LOOP", "RATE"};
-    static const char *const TITLE[EC_NPM] = {"PAGE/SELECT", "PAGE/LOOP", "PAGE/RATE"};
-    const int steps = ec_seq_pattern_steps(&a->seq, a->track);
-    const int pages = (steps + 15) / 16;
-    const int mode = a->e5.page_mode;
-    const int play = ec_seq_step(&a->seq, a->track);
-    const int ppage = play >= 0 && (a->seq.playing || a->seq.paused) ? play / 16 : -1;
-    const int rate = iv(tv(a), EC_P_RATE);
-    const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
-    char r[16], b[16];
-    int i;
-    snprintf(r, sizeof r, "%d/%d", a->step_page + 1, pages);
-    ec_screens_header(a, TITLE[mode], 1, r);
-    for (i = 0; i < EC_NPM; i++) {                               /* the mode tabs (SELECT turns them) */
-        const int x = 2 + i * 39;
-        if (i == mode) {
-            R(EC_C_L15, x, 13, 37, 9);
-            T(EC_C_BG, MODE[i], x + 18, 15, EC_AL_CENTER);
-        } else {
-            F(EC_C_L3, x, 13, 37, 9);
-            T(EC_C_L8, MODE[i], x + 18, 15, EC_AL_CENTER);
-        }
-    }
-    for (i = 0; i < 16; i++) {
-        const int c = i % 4, row = i / 4, x = 2 + c * 29, y = 25 + row * 12, w = 27, h = 10;
-        uint16_t fill = 0, frame = EC_C_L3, txt = EC_C_L3;
-        if (mode == EC_PM_RATE) {
-            const int ri = (int)ec_e5_rate_of_key(i);
-            snprintf(b, sizeof b, "%s", ec_rate_label(ri));
-            if (ri == rate)
-                fill = EC_C_L15, txt = EC_C_BG;
-            else
-                frame = i == 8 ? EC_C_L8 : EC_C_L5, txt = EC_C_L8;
-        } else {
-            snprintf(b, sizeof b, "%d", i + 1);
-            if (i < pages) {
-                if (mode == EC_PM_SELECT) {
-                    if (i == a->step_page)
-                        fill = EC_C_L15, txt = EC_C_BG;
-                    else
-                        frame = EC_C_L8, txt = EC_C_L12;
-                } else if (ec_e5_page_in_loop(&a->proj, a->track, i, pages))
-                    fill = EC_C_L12, txt = EC_C_BG;
-                else
-                    frame = EC_C_L5, txt = EC_C_L5;
-            }
-        }
-        if (fill)
-            R(fill, x, y, w, h);
-        else
-            F(frame, x, y, w, h);
-        T(txt, b, x + w / 2, y + 3, EC_AL_CENTER);
-        if (mode != EC_PM_RATE && i == ppage)
-            R(EC_C_ACC, x, y + h - 1, w, 1);
-    }
-    /* below: the selected page's steps, the loop as played, or the rate */
-    R(EC_C_L3, 0, 76, W, 1);
-    if (mode == EC_PM_SELECT) {
-        const int pg = a->step_page;
-        snprintf(b, sizeof b, "PAGE %d", pg + 1);
-        T2(EC_C_L15, b, 2, 80, EC_AL_LEFT);
-        for (i = 0; i < 16; i++) {
-            const int idx = pg * 16 + i, x = 2 + i * 7, y = 100;
-            const ec_step_t *s = &tr->steps[idx];
-            if (idx >= steps)
-                R(EC_C_L3, x, y + 7, 6, 1);
-            else if (s->trig || s->slices)
-                R(idx == play && a->seq.playing ? EC_C_ACC : EC_C_L15, x, y, 6, 8);
-            else
-                F(idx == play && a->seq.playing ? EC_C_ACC : EC_C_L5, x, y, 6, 8);
-        }
-    } else if (mode == EC_PM_LOOP) {
-        int total = 0, x = 2;
-        for (i = 0; i < pages; i++)
-            if (ec_e5_page_in_loop(&a->proj, a->track, i, pages))
-                total += steps - i * 16 < 16 ? steps - i * 16 : 16;
-        snprintf(b, sizeof b, "%d STEPS", total);
-        T2(EC_C_L15, b, 2, 80, EC_AL_LEFT);
-        for (i = 0; i < pages; i++) {                             /* the pages in play order, the loop bright */
-            const int len = steps - i * 16 < 16 ? steps - i * 16 : 16;
-            const int w = len * (W - 4) / (pages * 16) - 1;
-            const int in = ec_e5_page_in_loop(&a->proj, a->track, i, pages);
-            R(in ? EC_C_L12 : EC_C_L3, x, 102, w > 1 ? w : 1, 6);
-            if (i == ppage && play >= 0)
-                R(EC_C_ACC, x + (play - i * 16) * w / (len > 0 ? len : 1), 100, 1, 10);
-            x += w + 1;
-        }
-    } else {
-        snprintf(b, sizeof b, "%sX", ec_rate_label(rate));
-        T2(EC_C_L15, b, 2, 80, EC_AL_LEFT);
-    }
-}
-
 /* ------------------------------------------------------------------------------------------- naming --- */
 static void name_screen(const ec_app_t *a)
 {
@@ -300,6 +203,8 @@ static void toast(const ec_app_t *a)
         T2(EC_C_BG, s, W / 2, y + 3, EC_AL_CENTER);
     else
         T(EC_C_BG, s, W / 2, y + 3, EC_AL_CENTER);
+    if (a->e5.toast_keep)                         /* 0.3.0: a question: OCT- no / OCT+ yes, as every pop-up */
+        ec_scr_arrows(W / 2 - 10, y + h + 3, EC_C_ACC);
 }
 
 /* ------------------------------------------------------------------------------------------- dispatch --- */
@@ -307,10 +212,6 @@ int ec_scr_e5_full(const ec_app_t *a)
 {
     if (a->e5.naming) {
         name_screen(a);
-        return 1;
-    }
-    if (ec_e5_page_visible()) {
-        page_screen(a);
         return 1;
     }
     if (scene_page(a)) {
@@ -322,7 +223,7 @@ int ec_scr_e5_full(const ec_app_t *a)
 
 void ec_scr_e5_overlay(const ec_app_t *a)
 {
-    const int full = a->e5.naming || ec_e5_page_visible() || scene_page(a);
+    const int full = a->e5.naming || a->ux.f3 || scene_page(a);
     if (!full && !a->settings && ec_e5_scene_layer()) {           /* the scene strip over any page */
         R(EC_C_BG, 0, 10, W, 31);
         fader(a, 12);

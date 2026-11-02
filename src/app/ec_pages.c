@@ -376,6 +376,13 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
     }
 }
 
+void ec_page_f3(ec_page_t *o)
+{
+    memset(o, 0, sizeof *o);
+    o->title = "F3";
+    P(o, EC_P_PATTERN_STEPS, 0), P(o, EC_P_RATE, 0), G(o, EC_G_GLEN, "GLEN"), G(o, EC_G_QUANT, "QUANT");
+}
+
 int ec_settings_items(int cat, const float *v, ec_page_t *o)
 {
     (void)v;

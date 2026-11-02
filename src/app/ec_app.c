@@ -15,13 +15,13 @@
 #include "ec_razor_ui.h"   /* E3 */
 #include "ec_scene.h"        /* E5 (bus rows: the knob takes over) */
 #include "ec_screens.h"
+#include "ec_snap.h"
 #include "ec_version.h"
 
 ec_app_t ec_app;
 #define A (&ec_app)
 
 #define TAP_MS 250            /* STEP_HOLD_SECONDS / PATTERN_TAP_SECONDS */
-#define SEL_TAP_MS 400
 #define AUTOSAVE_MS 2000
 
 static uint8_t g_dsp_mem[EC_DSP_MEM_MAX] __attribute__((aligned(16)));   /* the engine (ec_dsp.c asserts it fits) */
@@ -249,6 +249,12 @@ static void sink_event(void *ctx, const ec_event_t *e)
 static void sink_params(void *ctx, int t, const ec_track_params_t *p)
 {
     (void)ctx;
+    if (A->ux.solo && !(A->ux.solo >> t & 1u)) {   /* 0.3.0: a solo silences the others (runtime, not saved) */
+        ec_track_params_t q = *p;
+        q.mute = 1;
+        ec_dsp_track_params(A->dsp, t, &q);
+        return;
+    }
     ec_dsp_track_params(A->dsp, t, p);
 }
 static void sink_process(void *ctx, float *out, int n)
@@ -512,12 +518,7 @@ static void save_project(int quiet)
 }
 
 /* ------------------------------------------------------------------------------------------- edits --- */
-static int accel(int r)
-{
-    const uint32_t gap = A->ms - A->knob_ms[r];
-    A->knob_ms[r] = A->ms;
-    return gap < 30 ? 4 : 1;
-}
+#define UX (&ec_app.ux)
 
 static float nudge_machine(float m, int det)
 {
@@ -526,15 +527,31 @@ static float nudge_machine(float m, int det)
     return (float)clampi((int)(m + 0.5f) + det, EC_MACH_LOOP, top);
 }
 
+/* 0.3.0: a knob turn on a param: SHIFT snaps, else det clicks of mult finest steps (lists: one item a click) */
+float ec_app_move_param(int id, float x, int det, int mult)
+{
+    if (A->fn)
+        return ec_param_snap(id, x, det);
+    return ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det);
+}
+
+/* the finest steps over a param's range (the knob speed: lists never speed up) */
+static int param_steps(int id)
+{
+    const ec_param_def_t *d = &EC_PARAMS[id];
+    if (d->kind != EC_PK_NUM || (d->flags & EC_PF_EXPSTEP))
+        return 1;
+    return (int)((d->max - d->min) / (d->step > 0 ? d->step : 1) + 0.5f);
+}
+
 static void edit_param(int id, int det, int mult, int flags)
 {
     float *v = ec_app_params(A);
     const ec_param_def_t *d = &EC_PARAMS[id];
     const int hs = ec_app_held_step(A);
-    const int n = d->kind == EC_PK_NUM ? det * mult : det;
     float *bv = ec_app_bus_params(A, id);
     if (bv) {                                       /* E4: a bus FX param (global; no p-locks: no bus lanes) */
-        bv[id] = ec_param_nudge(id, bv[id], n);
+        bv[id] = ec_app_move_param(id, bv[id], det, mult);
         ec_scene_knob(&A->proj, EC_NTRACK + A->bus - 1, id);   /* the knob takes the bus param back from the fader */
         mark_dirty();
         return;
@@ -550,7 +567,7 @@ static void edit_param(int id, int det, int mult, int flags)
                 float x;
                 if (!ec_step_lock_get(s, id, &x))
                     x = v[id];
-                if (ec_step_lock_set(s, id, ec_param_nudge(id, x, n)) < 0)
+                if (ec_step_lock_set(s, id, ec_app_move_param(id, x, det, mult)) < 0)
                     message("LOCKS FULL");
                 s->trig = 1;
             }
@@ -567,26 +584,73 @@ static void edit_param(int id, int det, int mult, int flags)
     if (id == EC_P_MACHINE)
         v[id] = nudge_machine(v[id], det);
     else
-        v[id] = ec_param_nudge(id, v[id], n);
+        v[id] = ec_app_move_param(id, v[id], det, mult);
     if (id == EC_P_RATE)
         ec_seq_timing_changed(&A->seq);
     ec_seq_touch(&A->seq, A->track);
     mark_dirty();
 }
 
+/* 0.3.0: OCT+ held + a knob: clear that param's lock on the held steps (nothing held: on every step of the track) */
+static void clear_lock(int id)
+{
+    ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+    const int len = ec_seq_pattern_steps(&A->seq, A->track);
+    int i, n = 0;
+    UX->oct_used |= 2;
+    if (A->bus || !(EC_PARAMS[id].flags & EC_PF_LOCKABLE))
+        return;
+    if (A->step_held) {
+        ec_e5_steps_edit(A->step_held, "UNLOCK", 0xA00u + (uint32_t)id);
+        for (i = 0; i < EC_NLOWER; i++)
+            if (A->step_held >> i & 1u)
+                n += ec_step_lock_clear(step_at(A->step_page * 16 + i), id);
+        A->step_edited |= A->step_held;
+    } else {
+        int pg;
+        for (pg = 0; pg * 16 < len; pg++) {
+            uint16_t mask = 0;
+            for (i = 0; i < 16; i++) {
+                float x;
+                if (ec_step_lock_get(&tr->steps[pg * 16 + i], id, &x))
+                    mask |= (uint16_t)(1u << i);
+            }
+            if (!mask)
+                continue;
+            ec_undo_steps(&A->e5.undo, &A->proj, A->track, pg, mask, "UNLOCK", 0xB0000u + ((uint32_t)pg << 8) + (uint32_t)id,
+                          A->ms);
+            for (i = 0; i < 16; i++)
+                if (mask >> i & 1u)
+                    n += ec_step_lock_clear(&tr->steps[pg * 16 + i], id);
+        }
+    }
+    message(n ? "LOCK CLEARED" : "NO LOCK");
+    ec_seq_touch(&A->seq, A->track);
+    mark_dirty();
+}
+
+static float global_value(int id)
+{
+    const ec_project_t *p = &A->proj;
+    return id == EC_G_BPM ? p->bpm : id == EC_G_SWING ? p->swing : id == EC_G_GLEN ? (float)p->glen
+         : id == EC_G_QUANT ? (float)p->quant : (float)p->rtn;
+}
+
 static void edit_global(int id, int det, int mult)
 {
     ec_project_t *p = &A->proj;
-    ec_e5_edit_global(id, id == EC_G_BPM ? p->bpm : id == EC_G_SWING ? p->swing : id == EC_G_GLEN ? (float)p->glen
-                          : id == EC_G_QUANT ? (float)p->quant : (float)p->rtn);   /* E5: undo */
+    ec_e5_edit_global(id, global_value(id));     /* E5: undo */
     switch (id) {
-    case EC_G_BPM: ec_seq_set_bpm(&A->seq, floorf(p->bpm + 0.5f) + (float)(det * mult)); break;
+    case EC_G_BPM:
+        ec_seq_set_bpm(&A->seq, A->fn ? ec_global_snap(EC_SNAP_BPM, p->bpm, det)
+                                      : floorf(p->bpm + 0.5f) + (float)(det * mult));
+        break;
     case EC_G_SWING:
-        p->swing = (float)clampi((int)p->swing + det, 50, 75);
+        p->swing = A->fn ? ec_global_snap(EC_SNAP_SWING, p->swing, det) : (float)clampi((int)p->swing + det, 50, 75);
         ec_seq_timing_changed(&A->seq);
         break;
     case EC_G_GLEN:
-        p->glen = clampi(p->glen + det * mult, 1, 256);
+        p->glen = A->fn ? (int)ec_global_snap(EC_SNAP_GLEN, (float)p->glen, det) : clampi(p->glen + det * mult, 1, 256);
         ec_seq_timing_changed(&A->seq);
         break;
     case EC_G_QUANT: p->quant = clampi(p->quant + det, 1, 4); break;
@@ -606,25 +670,28 @@ static void edit_slot(int id, int det, int mult)
     switch (id) {
     case EC_S_BPM: {
         float st;
-        sl->bpm = floorf(sl->bpm + 0.5f) + (float)(det * mult);
+        sl->bpm = A->fn ? ec_global_snap(EC_SNAP_BPM, sl->bpm, det) : floorf(sl->bpm + 0.5f) + (float)(det * mult);
         sl->bpm = sl->bpm < 20 ? 20 : sl->bpm > 300 ? 300 : sl->bpm;
         if (dur > 0) {                          /* (RECALC: the trim's steps at this BPM) */
             st = floorf(dur * (sl->trim_end - sl->trim_start) * sl->bpm / 60.0f * 4.0f + 0.5f);
             sl->steps = st < 1 ? 1 : st > 512 ? 512 : st;
         }
     } break;
-    case EC_S_STEPS: sl->steps = (float)clampi((int)(sl->steps + 0.5f) + det * mult, 1, 512); break;
+    case EC_S_STEPS:
+        sl->steps = A->fn ? ec_global_snap(EC_SNAP_STEPS, sl->steps, det)
+                          : (float)clampi((int)(sl->steps + 0.5f) + det * mult, 1, 512);
+        break;
     case EC_S_GAIN:
-        sl->gain += 0.05f * (float)det;
+        sl->gain = A->fn ? ec_global_snap(EC_SNAP_GAIN, sl->gain, det) : sl->gain + 0.05f * (float)(det * mult);
         sl->gain = sl->gain < 0 ? 0 : sl->gain > 4 ? 4 : sl->gain;
         break;
-    case EC_S_TRIM_START:
-        sl->trim_start += 0.005f * (float)(det * mult);
+    case EC_S_TRIM_START:   /* (SHIFT: the finest step, the original's trim scan) */
+        sl->trim_start += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_start = sl->trim_start < 0 ? 0 : sl->trim_start > sl->trim_end - 0.005f ? sl->trim_end - 0.005f
                                                                                            : sl->trim_start;
         break;
     default:
-        sl->trim_end += 0.005f * (float)(det * mult);
+        sl->trim_end += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_end = sl->trim_end > 1 ? 1 : sl->trim_end < sl->trim_start + 0.005f ? sl->trim_start + 0.005f
                                                                                        : sl->trim_end;
         break;
@@ -633,24 +700,76 @@ static void edit_slot(int id, int det, int mult)
     mark_dirty();
 }
 
+static int item_steps(const ec_item_t *it)
+{
+    switch (it->kind) {
+    case EC_IT_PARAM: return param_steps(it->id);
+    case EC_IT_GLOBAL: return it->id == EC_G_BPM ? 280 : it->id == EC_G_GLEN ? 255 : 1;
+    case EC_IT_SLOT: return it->id == EC_S_BPM ? 280 : it->id == EC_S_STEPS ? 511 : it->id == EC_S_GAIN ? 80 : 200;
+    case EC_IT_RAZOR: return it->id == EC_RZ_START || it->id == EC_RZ_END ? 256 : 1;
+    case EC_IT_E5: return it->id == EC_X_XFD ? 128 : 1;
+    default: return 1;
+    }
+}
+
+int ec_app_lane(const ec_app_t *a, const ec_page_t *pg)
+{
+    const int n = ec_ux_lanes(pg->n);
+    const int l = a->settings ? a->ux.set_lane : a->ux.lane[a->cat];
+    return clampi(l, 0, n - 1);
+}
+
+int ec_app_cells_visible(const ec_app_t *a)
+{
+    ec_page_t pg;
+    if (a->patn_open || a->e5.naming || ec_app_shift_map(a))
+        return 0;
+    ec_app_page(a, &pg);
+    return a->settings || strcmp(pg.title, "MIX") != 0;
+}
+
+/* a cell turned (the page's, or F3's): its lane, the knob's speed, OCT+ held clears a lock, the takeover */
+static void turn_cell(const ec_page_t *pg, int cell, int role, int det)
+{
+    const ec_item_t *it;
+    int mult;
+    if (cell >= pg->n || pg->it[cell].kind == EC_IT_BLANK)
+        return;
+    it = &pg->it[cell];
+    if ((UX->oct_held & 2) && it->kind == EC_IT_PARAM && !A->settings) {
+        clear_lock(it->id);
+        A->redraw = 1;
+        return;
+    }
+    mult = ec_ux_accel(role, item_steps(it), det);
+    if (!ec_e5_knob_cell(it, det, mult)) {        /* E5: scene / slice edits, E5 cells */
+        switch (it->kind) {
+        case EC_IT_PARAM: edit_param(it->id, det, mult, it->flags); break;
+        case EC_IT_GLOBAL: edit_global(it->id, det, mult); break;
+        case EC_IT_SLOT: edit_slot(it->id, det, mult); break;
+        case EC_IT_RAZOR: ec_rzui_edit(A, it->id, det, A->fn ? 1 : mult); break;   /* E3 (SHIFT: the finest) */
+        default: break;
+        }
+    }
+    if (!UX->f3 && !ec_app_cells_visible(A) && !A->e5.naming) {   /* the value isn't on screen: take it over */
+        char val[24];
+        const float x = ec_app_item_value(A, it, 0);
+        ec_app_item_format(A, it, x, val, sizeof val);
+        ec_ux_takeover(ec_app_item_label(it), val, ec_app_item_frac(A, it, x));
+    }
+    A->redraw = 1;
+}
+
 static void knob_cell(int k, int det)
 {
     ec_page_t pg;
-    const int cell = (A->fn ? 4 : 0) + k;
-    const int mult = accel(EC_E_K1 + k);
-    ec_app_page(A, &pg);
-    if (cell >= pg.n)
+    if (UX->f3) {
+        ec_page_f3(&pg);
+        turn_cell(&pg, k, EC_E_K1 + k, det);
         return;
-    if (ec_e5_knob_cell(&pg.it[cell], det, mult))     /* E5: scene / slice edits, E5 cells */
-        return;
-    switch (pg.it[cell].kind) {
-    case EC_IT_PARAM: edit_param(pg.it[cell].id, det, mult, pg.it[cell].flags); break;
-    case EC_IT_GLOBAL: edit_global(pg.it[cell].id, det, mult); break;
-    case EC_IT_SLOT: edit_slot(pg.it[cell].id, det, mult); break;
-    case EC_IT_RAZOR: ec_rzui_edit(A, pg.it[cell].id, det, mult); break;   /* E3 */
-    default: break;
     }
-    A->redraw = 1;
+    ec_app_page(A, &pg);
+    turn_cell(&pg, ec_app_lane(A, &pg) * 4 + k, EC_E_K1 + k, det);
 }
 
 /* ------------------------------------------------------------------------------------------- categories --- */
@@ -673,28 +792,83 @@ static void load_cursor_file(void)
     mark_dirty();
 }
 
-static void category(int c)
+static int page_lanes(void)
+{
+    ec_page_t pg;
+    ec_app_page(A, &pg);
+    return ec_ux_lanes(pg.n);
+}
+
+static void set_page(int c, int page)
+{
+    A->page[c] = page;
+    UX->lane[c] = 0;
+}
+
+/* SELECT: the next lane, on past the last into the next page (and back: the previous page's last lane) */
+static void lane_step(int d)
+{
+    const int c = A->cat;
+    const int np = ec_cat_pages(c, ec_app_params(A));
+    for (; d > 0; d--) {
+        if (UX->lane[c] + 1 < page_lanes())
+            UX->lane[c]++;
+        else
+            set_page(c, (A->page[c] + 1) % np);
+    }
+    for (; d < 0; d++) {
+        if (UX->lane[c] > 0)
+            UX->lane[c]--;
+        else {
+            set_page(c, (A->page[c] + np - 1) % np);
+            UX->lane[c] = page_lanes() - 1;
+        }
+    }
+}
+
+/* FILE: SAVE loads the file under the cursor; on the track's own file it steps the lanes, then the next page (SELECT
+ * is the page's picker there: the file cursor, RAZOR's slice) */
+static void file_tap(void)
+{
+    if (A->page[EC_CAT_FILE] == 0 && ec_browse_count() > 0 &&
+        strcmp(A->proj.slot[ec_app_track_slot(A, A->track)].path, ec_browse_path(A->cursor)) != 0) {
+        load_cursor_file();
+        return;
+    }
+    if (UX->lane[EC_CAT_FILE] + 1 < page_lanes())
+        UX->lane[EC_CAT_FILE]++;
+    else
+        set_page(EC_CAT_FILE, (A->page[EC_CAT_FILE] + 1) % ec_cat_pages(EC_CAT_FILE, ec_app_params(A)));
+}
+
+/* a category button tapped: its page; again: its next page; in a setup: back to the pages */
+static void cat_tap(int c)
 {
     if (A->settings) {
-        if (A->fn) {                                   /* FN + category in settings: back to its main page */
-            A->settings = 0;
-            A->cat = c;
-        } else {
-            A->cat = c;
-            A->settings = has_settings(c);
-        }
-    } else if (A->fn && has_settings(c)) {
-        A->settings = 1;
+        A->settings = 0;
         A->cat = c;
-    } else if (c == EC_CAT_FILE && A->cat == EC_CAT_FILE && A->page[c] == 0 && ec_browse_count() > 0 &&
-               strcmp(A->proj.slot[ec_app_track_slot(A, A->track)].path, ec_browse_path(A->cursor)) != 0)
-        load_cursor_file();                            /* SAVE on SAMPLE: load the file under the cursor ... */
-    else if (c == EC_CAT_FILE && A->cat == EC_CAT_FILE)
-        A->page[c] ^= 1;                               /* ... already the track's file: next page, RAZOR (E3); back */
+    } else if (c == EC_CAT_FILE && A->cat == EC_CAT_FILE)
+        file_tap();
     else if (c == A->cat)
-        A->page[c] = (A->page[c] + 1) % ec_cat_pages(c, ec_app_params(A));
+        set_page(c, (A->page[c] + 1) % ec_cat_pages(c, ec_app_params(A)));
     else
         A->cat = c;
+    A->redraw = 1;
+}
+
+/* SHIFT + the button, or a hold: the category's setup (SHIFT + the same in its setup: back to the pages) */
+static void cat_setup(int c, int toggle)
+{
+    if (toggle && A->settings && A->cat == c)
+        A->settings = 0;
+    else if (has_settings(c)) {
+        A->cat = c;
+        A->settings = 1;
+        UX->set_lane = 0;
+    } else {
+        A->settings = 0;
+        A->cat = c;
+    }
     A->redraw = 1;
 }
 
@@ -708,8 +882,25 @@ static void select_target(int i)      /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
     A->redraw = 1;
 }
 
+/* HOME: the main view (SRC with the waveform) from anywhere, every pop-up closed; each category keeps its place */
+static void go_home(void)
+{
+    if (A->e5.naming)
+        ec_e5_name_close(0);
+    if (A->e5.confirm)
+        ec_e5_answer(0);
+    UX->f3 = 0;
+    UX->to_ms = 0;
+    A->patn_open = A->patn_latched = 0;
+    A->patn_ms = 0;
+    A->settings = 0;
+    A->cat = EC_CAT_SRC;
+    A->redraw = 1;
+}
+
 /* ------------------------------------------------------------------------------------------- keys --- */
-enum { R_NONE, R_STEP, R_LOOP_LIVE, R_LOOP_PROG, R_PAD, R_SLICE_PROG, R_KEY, R_KEY_PROG, R_PAT, R_RAZOR /* E3 */ };
+enum { R_NONE, R_STEP, R_LOOP_LIVE, R_LOOP_PROG, R_PAD, R_SLICE_PROG, R_KEY, R_KEY_PROG, R_PAT, R_RAZOR /* E3 */,
+       R_F3 /* 0.3.0 */ };
 
 static int loop_mode(void) { return A->sel_held || A->keymode == EC_KM_LOOP; }
 
@@ -774,24 +965,32 @@ static void lower_down(int k, int i, int vel)
     const float *v = ec_app_params(A);
     const int m = iv(v, EC_P_MACHINE);
     const float fv = (float)vel / 127.0f;
+    if (UX->f3 && !A->e5.naming) {                 /* 0.3.0: F3's pages: tap = edit the page, hold = the loop */
+        UX->f3_keys |= (uint16_t)(1u << i);
+        UX->f3_used &= (uint16_t)~(1u << i);
+        UX->f3_ms[i] = A->ms;
+        A->key_role[k] = R_F3;
+        A->redraw = 1;
+        return;
+    }
     if (ec_rzui_active(A) && !A->sel_held) {         /* E3: the RAZOR page (page-local): the keys are its slices */
         ec_rzui_key(A, i, 1, vel);
         A->key_role[k] = R_RAZOR;
         return;
     }
-    if (ec_e5_lower_down(k, i, vel))               /* E5: naming, PAGE, the scene row, FN + pad = slice mute */
+    if (ec_e5_lower_down(k, i, vel))               /* E5: naming, the scene row */
         return;
     if (A->patn_open) {
         ec_seq_request_pattern(&A->seq, i);
         A->patn_used = 1;
-        if (A->patn_latched)
+        if (A->patn_latched && !A->e5.patn_down)
             A->patn_open = A->patn_latched = 0;
         A->key_role[k] = R_PAT;
         mark_dirty();
         return;
     }
     if (loop_mode()) {
-        const int lk = ec_e5_loop_key(k, i, 1);    /* E5: 1..32 (FN = keys / pads 17-32 when the track has them) */
+        const int lk = ec_e5_loop_key(k, i, 1);    /* E5: 1..32 (SHIFT = keys / pads 17-32 when the track has them) */
         if (A->sel_held)
             A->sel_used = 1;
         if (is_slice_m(m)) {
@@ -850,6 +1049,14 @@ static void lower_down(int k, int i, int vel)
 
 static void lower_up(int k, int i, int vel)
 {
+    if (A->key_role[k] == R_F3) {                  /* 0.3.0: a tap edits the page (a hold already looped it) */
+        if (!(UX->f3_used >> i & 1u))
+            ec_e5_page_key(i, EC_PM_SELECT);
+        UX->f3_keys &= (uint16_t)~(1u << i);
+        A->key_role[k] = R_NONE;
+        A->redraw = 1;
+        return;
+    }
     if (ec_e5_lower_up(k, i))                      /* E5 roles */
         return;
     switch (A->key_role[k]) {
@@ -885,28 +1092,127 @@ static void lower_up(int k, int i, int vel)
     A->redraw = 1;
 }
 
+/* ------------------------------------------------------------------------------------------- mute / solo --- */
+
+int ec_app_track_audible(const ec_app_t *a, int t)
+{
+    if (ec_project_track((ec_project_t *)&a->proj, t)->v[EC_P_MUTE] > 0.5f)
+        return 0;
+    return !a->ux.solo || (a->ux.solo >> t & 1u);
+}
+
+static void toggle_mute(int t)
+{
+    float *v = ec_project_track(&A->proj, t)->v;
+    char b[16];
+    v[EC_P_MUTE] = v[EC_P_MUTE] > 0.5f ? 0.0f : 1.0f;
+    ec_seq_touch(&A->seq, t);
+    snprintf(b, sizeof b, "T%d %s", t + 1, v[EC_P_MUTE] > 0.5f ? "MUTED" : "ON");
+    message(b);
+    mark_dirty();
+}
+
+static void toggle_solo(int t)
+{
+    char b[16];
+    UX->solo ^= (uint8_t)(1u << t);
+    ec_seq_touch_all(&A->seq);
+    snprintf(b, sizeof b, "T%d %s", t + 1, UX->solo >> t & 1u ? "SOLO" : "UNSOLO");
+    message(b);
+}
+
+static void clear_mutes(void)
+{
+    int t;
+    for (t = 0; t < EC_NTRACK; t++)
+        ec_project_track(&A->proj, t)->v[EC_P_MUTE] = 0;
+    UX->solo = 0;
+    ec_seq_touch_all(&A->seq);
+    message("ALL TRACKS ON");
+    mark_dirty();
+}
+
+/* ------------------------------------------------------------------------------------------- SHIFT --- */
+static void tap_tempo(void)
+{
+    char b[16];
+    int n;
+    if (UX->ntap && A->ms - UX->tap_ms[UX->ntap - 1] > 2000)
+        UX->ntap = 0;
+    if (UX->ntap == 5) {
+        memmove(&UX->tap_ms[0], &UX->tap_ms[1], 4 * sizeof UX->tap_ms[0]);
+        UX->ntap = 4;
+    }
+    UX->tap_ms[UX->ntap++] = A->ms ? A->ms : 1;
+    n = UX->ntap - 1;
+    if (n >= 1) {   /* the average of the last (up to four) intervals */
+        const float avg = (float)(UX->tap_ms[UX->ntap - 1] - UX->tap_ms[0]) / (float)n;
+        if (avg > 0) {
+            float bpm = 60000.0f / avg;
+            bpm = bpm < 20 ? 20 : bpm > 300 ? 300 : bpm;
+            ec_e5_edit_global(EC_G_BPM, A->proj.bpm);
+            ec_seq_set_bpm(&A->seq, floorf(bpm * 10.0f + 0.5f) / 10.0f);
+            mark_dirty();
+        }
+    }
+    snprintf(b, sizeof b, "%d", (int)floorf(A->proj.bpm + 0.5f));
+    ec_ux_takeover("TAP", b, (A->proj.bpm - 20.0f) / 280.0f);
+}
+
+static void shift_upper(int i)
+{
+    switch (i) {
+    case 0: ec_e5_memorize(); break;
+    case 1: ec_e5_recall_memo(); break;
+    case 6: ec_e5_pattern_copy(0); break;
+    case 7: ec_e5_pattern_copy(1); break;
+    case 8: tap_tempo(); break;
+    case 9:
+        A->fill_latched = !A->fill_latched;
+        ec_seq_set_fill(&A->seq, A->fill_held, A->fill_latched);
+        break;
+    case 10: ec_e5_name_pattern(); break;
+    default: break;
+    }
+    A->redraw = 1;
+}
+
+/* ------------------------------------------------------------------------------------------- upper keys --- */
 static void upper_down(int i)
 {
     if (ec_e5_upper(i, 1))                         /* E5: PATN held (pattern scope), naming */
         return;
+    if (A->fn) {                                   /* SHIFT's keys */
+        UX->shift_used = 1;
+        shift_upper(i);
+        return;
+    }
     if (i < EC_NTRACK) {
-        if (A->fn) {                                  /* FN + track: mute */
-            float *v = ec_project_track(&A->proj, i)->v;
-            v[EC_P_MUTE] = v[EC_P_MUTE] > 0.5f ? 0.0f : 1.0f;
-            ec_seq_touch(&A->seq, i);
-            message(v[EC_P_MUTE] > 0.5f ? "MUTED" : "UNMUTED");
-            mark_dirty();
+        const uint8_t bit = (uint8_t)(1u << i);
+        if (A->fill_held) {                        /* FILL held + a track key: every mute and solo off */
+            UX->fill_used = 1;
+            ec_seq_set_fill(&A->seq, 0, A->fill_latched);
+            clear_mutes();
+            UX->trk_used |= bit;
+        } else if (UX->trk_up[i] && A->ms - UX->trk_up[i] < EC_DTAP_MS) {   /* a double-tap: solo */
+            toggle_solo(i);
+            UX->trk_used |= bit;
         } else
-            select_target(i);
-    } else if (i < 9)
+            UX->trk_used &= (uint8_t)~bit;
+        UX->trk_down |= bit;
+        UX->trk_ms[i] = A->ms;
+        UX->trk_up[i] = 0;
+    } else if (i < 8)
         select_target(i);
-    else if (i == 9) {                                /* FILL: hold, FN + tap latches */
-        if (A->fn)
-            A->fill_latched = !A->fill_latched;
-        else
-            A->fill_held = 1;
+    else if (i == 8) {                             /* MST: tap = the MST category, hold = its setup */
+        UX->mst_down = 1;
+        UX->mst_used = 0;
+        UX->mst_ms = A->ms;
+    } else if (i == 9) {                           /* FILL: held */
+        A->fill_held = 1;
+        UX->fill_used = 0;
         ec_seq_set_fill(&A->seq, A->fill_held, A->fill_latched);
-    } else {                                          /* PATN: tap latches the overlay, hold = momentary */
+    } else {                                       /* PATN: the overlay; it stays open on release unless used */
         if (A->patn_latched) {
             A->patn_open = A->patn_latched = 0;
             A->patn_ms = 0;
@@ -923,13 +1229,26 @@ static void upper_up(int i)
 {
     if (ec_e5_upper(i, 0))                         /* E5 */
         return;
-    if (i == 9) {
+    if (i < EC_NTRACK) {
+        const uint8_t bit = (uint8_t)(1u << i);
+        if (UX->trk_down & bit) {
+            UX->trk_down &= (uint8_t)~bit;
+            if (!(UX->trk_used & bit)) {           /* a tap: select (and arm the double-tap) */
+                select_target(i);
+                UX->trk_up[i] = A->ms ? A->ms : 1;
+            }
+            UX->trk_used &= (uint8_t)~bit;
+        }
+    } else if (i == 8) {
+        if (UX->mst_down && !UX->mst_used)
+            cat_tap(EC_CAT_MASTER);
+        UX->mst_down = 0;
+    } else if (i == 9) {
         A->fill_held = 0;
         ec_seq_set_fill(&A->seq, 0, A->fill_latched);
     } else if (i == 10 && A->patn_ms) {
-        const int quick = A->ms - A->patn_ms < TAP_MS;
         A->patn_ms = 0;
-        if (!A->patn_used && quick && A->patn_open)
+        if (!A->patn_used && A->patn_open)
             A->patn_latched = 1;
         else
             A->patn_open = 0;
@@ -938,63 +1257,146 @@ static void upper_up(int i)
 }
 
 /* ------------------------------------------------------------------------------------------- buttons --- */
-static const int CAT_OF[EC_NB] = {EC_CAT_FX, EC_CAT_SRC, EC_CAT_AMP, EC_CAT_MOD, EC_CAT_FILT, -1, EC_CAT_MASTER,
+static const int CAT_OF[EC_NB] = {EC_CAT_FX, EC_CAT_SRC, EC_CAT_AMP, EC_CAT_MOD, EC_CAT_FILT, -1, -1,
                                   EC_CAT_FILE, EC_CAT_PAT, EC_CAT_TRIG, -1, -1, -1, -1};
+
+int ec_app_popup(const ec_app_t *a)
+{
+    return a->e5.naming || a->e5.confirm || a->ux.f3 || a->patn_open || a->settings;
+}
+
+/* a pop-up takes OCT- (back / cancel), OCT+ (OK / confirm) and HOME first; 1 = the press is used */
+static int popup_button(int b)
+{
+    const int oct = b == EC_B_OCTDN || b == EC_B_OCTUP;
+    if (A->e5.naming) {
+        if (oct || b == EC_B_HOME)
+            ec_e5_name_close(b == EC_B_OCTUP);
+        return b != EC_B_PLAY && b != EC_B_FN;     /* the transport stays live, the rest waits */
+    }
+    if (A->e5.confirm) {
+        if (oct || b == EC_B_HOME) {
+            ec_e5_answer(b == EC_B_OCTUP);
+            return 1;
+        }
+        if (b != EC_B_FN)
+            ec_e5_answer(0);                       /* any other button: no */
+        return 0;
+    }
+    if (UX->f3 && (oct || b == EC_B_HOME)) {
+        UX->f3 = 0;
+        return 1;
+    }
+    if (A->patn_open && (oct || b == EC_B_HOME)) {
+        A->patn_open = A->patn_latched = 0;
+        A->patn_ms = 0;
+        return 1;
+    }
+    if (A->settings && oct) {
+        A->settings = 0;
+        return 1;
+    }
+    return 0;
+}
+
+static void shift_button(int b)
+{
+    UX->shift_used = 1;
+    switch (b) {
+    case EC_B_PLAY:
+        if (ec_e5_scope_op(b)) {                   /* a scope held: PASTE */
+            UX->oct_used |= UX->oct_held;
+            break;
+        }
+        ec_seq_stop(&A->seq);
+        message("STOP");
+        if (A->dirty)
+            A->dirty_ms = A->ms;
+        break;
+    case EC_B_REC:
+        if (ec_e5_scope_op(b))
+            UX->oct_used |= UX->oct_held;
+        else
+            save_project(0);
+        break;
+    case EC_B_OCTDN:
+    case EC_B_OCTUP: ec_e5_undo(b == EC_B_OCTUP); break;
+    case EC_B_SEL:
+        A->sel_held = 1;                           /* (SEL keeps the loop keys under SHIFT: pads 17-32) */
+        A->sel_used = 1;
+        A->sel_ms = A->ms;
+        cat_setup(EC_CAT_SRC, 1);
+        break;
+    default:
+        if (CAT_OF[b] >= 0)
+            cat_setup(CAT_OF[b], 1);
+        break;
+    }
+}
 
 static void button_down(int b)
 {
+    if (b != EC_B_FN)
+        UX->shift_used = 1;
+    if (popup_button(b)) {
+        A->redraw = 1;
+        return;
+    }
+    if (b == EC_B_HOME) {
+        go_home();
+        return;
+    }
+    if (b == EC_B_FN) {
+        A->fn = 1;
+        UX->shift_ms = A->ms;
+        UX->shift_used = 0;
+        A->redraw = 1;
+        return;
+    }
     if ((b == EC_B_OCTDN || b == EC_B_OCTUP) && ec_rzui_active(A)) {
-        /* E3, page-local: OCT+ split / OCT- delete; FN: Auto-Chop / Redistribute. E5 never sees the press, so a
-         * held OCT here opens no PAGE overlay and its release changes no key mode. */
+        /* E3, page-local: OCT+ split / OCT- delete; SHIFT: Auto-Chop / Redistribute (not undo / redo here) */
         ec_rzui_oct(A, b == EC_B_OCTUP);
         A->redraw = 1;
         return;
     }
-    if (ec_e5_button_down(b)) {                    /* E5: copy / clear / paste, PAGE, memorize, undo, naming */
+    if (A->fn) {
+        shift_button(b);
+        A->redraw = 1;
+        return;
+    }
+    if ((b == EC_B_REC || b == EC_B_PLAY) && ec_e5_scope_op(b)) {   /* a scope held: COPY / CLEAR */
+        UX->oct_used |= UX->oct_held;              /* (the PAGE scope: no key-mode change on its release) */
         A->redraw = 1;
         return;
     }
     switch (b) {
-    case EC_B_FN: A->fn = 1; break;
+    case EC_B_PLAY:                                /* tap (on release) = play / pause, hold = F3 */
+        UX->play_down = 1;
+        UX->play_used = 0;
+        UX->play_ms = A->ms;
+        break;
+    case EC_B_OCTDN:
+    case EC_B_OCTUP: {
+        const int bit = b == EC_B_OCTDN ? 1 : 2;
+        UX->oct_held |= bit;
+        UX->oct_used &= ~bit;
+        if (UX->oct_held == 3) {                   /* both: F3 */
+            UX->f3 = 1;
+            UX->oct_used = 3;
+        }
+        A->e5.page_down = 1;                       /* an OCT key held: the PAGE scope */
+    } break;
     case EC_B_SEL:
         A->sel_held = 1;
         A->sel_used = 0;
-        A->sel_fn = A->fn;                           /* (its tap acts on release: FN counts from the press) */
         A->sel_ms = A->ms;
         break;
-    case EC_B_PLAY:
-        if (A->step_held) {                          /* hold step(s) + PLAY: clear their p-locks (keep the trig) */
-            int i;
-            for (i = 0; i < EC_NLOWER; i++)
-                if (A->step_held >> i & 1u) {
-                    ec_step_t *s = step_at(A->step_page * 16 + i);
-                    const uint8_t trig = s->trig;
-                    const uint32_t sl = s->slices;
-                    ec_step_clear(s);
-                    s->trig = trig;
-                    s->slices = sl;
-                }
-            A->step_edited |= A->step_held;
-            message("LOCKS CLEARED");
-            ec_seq_touch(&A->seq, A->track);
-            mark_dirty();
-        } else if (A->fn) {
-            ec_seq_stop(&A->seq);
-            message("STOP");
-            if (A->dirty)
-                A->dirty_ms = A->ms;
-        } else
-            ec_seq_toggle(&A->seq);
-        break;
-    case EC_B_REC:
-        if (A->fn)
-            save_project(0);
-        break;
-    /* OCT- / OCT+: E5 (ec_e5.c) -- a tap changes the key mode on release, a hold is PAGE, FN + OCT memorize / recall;
-     * on the RAZOR page they are E3's (button_down, before E5) */
     default:
-        if (CAT_OF[b] >= 0)
-            category(CAT_OF[b]);
+        if (CAT_OF[b] >= 0) {                      /* tap on release, hold = the setup */
+            UX->cat_btn = b;
+            UX->cat_ms = A->ms;
+            UX->cat_used = 0;
+        }
         break;
     }
     A->redraw = 1;
@@ -1002,22 +1404,188 @@ static void button_down(int b)
 
 static void button_up(int b)
 {
-    if (ec_e5_button_up(b)) {                      /* E5: OCT taps (key mode), FN tap cancels naming */
-        A->redraw = 1;
-        return;
-    }
-    if (b == EC_B_FN)
-        A->fn = 0;
-    else if (b == EC_B_SEL) {
-        A->sel_held = 0;
-        if (!A->sel_used && A->ms - A->sel_ms < SEL_TAP_MS) {
-            const int fn = A->fn;
-            A->fn = A->sel_fn;
-            category(EC_CAT_SRC);
-            A->fn = fn;
+    switch (b) {
+    case EC_B_FN: A->fn = 0; break;
+    case EC_B_PLAY:
+        if (UX->play_down && !UX->play_used)
+            ec_seq_toggle(&A->seq);
+        UX->play_down = 0;
+        break;
+    case EC_B_OCTDN:
+    case EC_B_OCTUP: {
+        const int bit = b == EC_B_OCTDN ? 1 : 2;
+        if (UX->oct_held & bit) {
+            UX->oct_held &= ~bit;
+            if (!(UX->oct_used & bit)) {   /* a tap: the lower keys' mode */
+                A->keymode ^= bit;                 /* OCT-: STEPS <-> LOOP KEYS, OCT+: STEPS <-> KEYS, both: SCENE */
+                A->e5.anchor = 0;
+                A->e5.glide_held = 0;
+                A->e5.gliding = 0;
+            }
+            UX->oct_used &= ~bit;
         }
+        A->e5.page_down = UX->oct_held != 0;
+    } break;
+    case EC_B_SEL:
+        if (A->sel_held) {
+            A->sel_held = 0;
+            if (!A->sel_used) {                    /* no lower key used: a tap = SRC, a hold = SRC setup */
+                if (A->ms - A->sel_ms >= EC_HOLD_MS)
+                    cat_setup(EC_CAT_SRC, 0);
+                else
+                    cat_tap(EC_CAT_SRC);
+            }
+        }
+        break;
+    default:
+        if (UX->cat_btn == b) {
+            if (!UX->cat_used)
+                cat_tap(CAT_OF[b]);
+            UX->cat_btn = -1;
+        }
+        break;
     }
     A->redraw = 1;
+}
+
+/* ------------------------------------------------------------------------------------------- knobs --- */
+/* PRESETS: the track's sample, the next / previous file of the folder; the load waits for the knob to rest */
+static int sample_index(void)
+{
+    if (UX->pre_idx >= 0)
+        return UX->pre_idx;
+    {
+        const int f = ec_browse_find(A->proj.slot[ec_app_track_slot(A, A->track)].path);
+        return f >= 0 ? f : -1;
+    }
+}
+
+static void sample_step(int d)
+{
+    const int n = ec_browse_count();
+    int cur;
+    char b[16];
+    if (n <= 0) {
+        message(A->no_folder ? "NO FOLDER" : "NO FILES");
+        return;
+    }
+    cur = sample_index();
+    cur = cur < 0 ? (d > 0 ? 0 : n - 1) : ((cur + d) % n + n) % n;
+    UX->pre_idx = cur;
+    UX->pre_ms = A->ms;
+    A->cursor = cur;
+    snprintf(b, sizeof b, "%d/%d", cur + 1, n);
+    ec_ux_takeover("", ec_browse_name(cur), n > 1 ? (float)cur / (float)(n - 1) : 1.0f);
+    UX->to_kind = EC_TO_SAMPLE;
+    snprintf(UX->to_sub, sizeof UX->to_sub, "%s", b);
+}
+
+static void sample_tick(void)
+{
+    if (UX->pre_idx >= 0 && A->ms - UX->pre_ms >= EC_SAMPLE_DEBOUNCE_MS) {
+        const int s = ec_app_track_slot(A, A->track);
+        const int i = UX->pre_idx;
+        UX->pre_idx = -1;
+        if (i < ec_browse_count() && strcmp(A->proj.slot[s].path, ec_browse_path(i)) != 0) {
+            queue_slot(s, ec_browse_path(i), 1);
+            mark_dirty();
+        }
+    }
+}
+
+static void knob(int r, int d)
+{
+    if (A->fn && r != EC_E_SELECT && r != EC_E_ALGO)
+        UX->shift_used = 1;
+    if (ec_e5_knob(r, d))                          /* E5: naming */
+        return;
+    if (UX->f3) {                                  /* F3: SELECT tempo, ALGORITHM swing, KN1-KN4 its cells */
+        if (r == EC_E_SELECT || r == EC_E_ALGO) {
+            const int id = r == EC_E_SELECT ? EC_G_BPM : EC_G_SWING;
+            edit_global(id, d, ec_ux_accel(r, id == EC_G_BPM ? 280 : 1, d));
+            return;
+        }
+        if (r >= EC_E_K1) {
+            knob_cell(r - EC_E_K1, d);
+            return;
+        }
+    }
+    switch (r) {
+    case EC_E_SELECT:
+        if (ec_rzui_active(A))
+            ec_rzui_select(A, d);                  /* E3: SELECT picks the slice on the RAZOR page */
+        else if (A->settings) {
+            ec_page_t pg;
+            ec_app_page(A, &pg);
+            UX->set_lane = clampi(ec_app_lane(A, &pg) + d, 0, ec_ux_lanes(pg.n) - 1);
+        } else if (A->cat == EC_CAT_FILE && A->page[EC_CAT_FILE] == 0) {
+            const int n = ec_browse_count();       /* SAMPLE: the file cursor */
+            if (n > 0)
+                A->cursor = ((A->cursor + d) % n + n) % n;
+        } else
+            lane_step(d);
+        break;
+    case EC_E_ALGO: {
+        const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
+        select_target(clampi(cur + d, 0, EC_NTRACK + 2));
+    } break;
+    case EC_E_PRESETS:
+        if (A->fn) {                               /* SHIFT + PRESETS: the pattern (queued) */
+            const int base = A->seq.pending >= 0 ? A->seq.pending : A->proj.current;
+            const int p = clampi(base + d, 0, EC_NPAT - 1);
+            char b[8];
+            ec_seq_request_pattern(&A->seq, p);
+            snprintf(b, sizeof b, "P%02d", p + 1);
+            ec_ux_takeover("PATTERN", b, (float)p / (EC_NPAT - 1));
+            mark_dirty();
+        } else
+            sample_step(d);
+        break;
+    default: knob_cell(r - EC_E_K1, d); break;
+    }
+}
+
+/* ------------------------------------------------------------------------------------------- holds --- */
+static void holds_tick(void)
+{
+    int i;
+    if (UX->cat_btn >= 0 && !UX->cat_used && A->ms - UX->cat_ms >= EC_HOLD_MS && has_settings(CAT_OF[UX->cat_btn])) {
+        UX->cat_used = 1;                          /* a category held 400 ms: its setup (it stays open) */
+        cat_setup(CAT_OF[UX->cat_btn], 0);
+    }
+    if (UX->mst_down && !UX->mst_used && A->ms - UX->mst_ms >= EC_HOLD_MS) {
+        UX->mst_used = 1;
+        cat_setup(EC_CAT_MASTER, 0);
+    }
+    if (UX->play_down && !UX->play_used && A->ms - UX->play_ms >= EC_HOLD_MS) {
+        UX->play_used = 1;                         /* PLAY held: F3 */
+        UX->f3 = 1;
+        A->redraw = 1;
+    }
+    for (i = 0; i < EC_NTRACK; i++) {              /* a track key held: mute / unmute */
+        const uint8_t bit = (uint8_t)(1u << i);
+        if ((UX->trk_down & bit) && !(UX->trk_used & bit) && A->ms - UX->trk_ms[i] >= EC_HOLD_MS) {
+            UX->trk_used |= bit;
+            toggle_mute(i);
+        }
+    }
+    for (i = 0; i < EC_NLOWER; i++)                /* F3: a page key held: the page in / out of the loop */
+        if ((UX->f3_keys >> i & 1u) && !(UX->f3_used >> i & 1u) && A->ms - UX->f3_ms[i] >= EC_HOLD_MS) {
+            UX->f3_used |= (uint16_t)(1u << i);
+            ec_e5_page_key(i, EC_PM_LOOP);
+            A->redraw = 1;
+        }
+    if (UX->to_ms && A->ms - UX->to_ms >= EC_TAKEOVER_MS) {
+        UX->to_ms = 0;
+        A->redraw = 1;
+    }
+    if (A->fn && !UX->shift_used && A->ms - UX->shift_ms == EC_SHIFTMAP_MS)
+        A->redraw = 1;
+}
+
+int ec_app_shift_map(const ec_app_t *a)
+{
+    return a->fn && !a->ux.shift_used && a->ms - a->ux.shift_ms >= EC_SHIFTMAP_MS && !a->e5.naming;
 }
 
 /* ------------------------------------------------------------------------------------------- ec_app_* --- */
@@ -1035,6 +1603,8 @@ void ec_app_init(void)
     A->tap_key = -1;
     A->master = 820;
     A->redraw = 1;
+    UX->cat_btn = -1;
+    UX->pre_idx = -1;
     for (i = 0; i < EC_NSLOT; i++)
         A->slot[i].handle = A->slot[i].old_handle = -1;
     for (i = 0; i < EC_NTRACK; i++)
@@ -1080,6 +1650,8 @@ void ec_app_tick(const ec_input_t *in)
     for (k = 0; k < EC_NKEY; k++) {
         if (in->key_down >> k & 1u) {
             const int lo = ec_key_lower(k), up = ec_key_upper(k);
+            if (A->fn && lo >= 0)
+                UX->shift_used = 1;
             if (lo >= 0)
                 lower_down(k, lo, in->key_vel[k]);
             else if (up >= 0)
@@ -1097,36 +1669,15 @@ void ec_app_tick(const ec_input_t *in)
         const int d = in->enc[r];
         if (!d)
             continue;
-        if (ec_e5_knob(r, d)) {                    /* E5: naming, PAGE mode */
-            A->redraw = 1;
-            continue;
-        }
-        if (r == EC_E_SELECT) {
-            if (ec_rzui_active(A))
-                ec_rzui_select(A, d);                 /* E3: SELECT picks the slice on the RAZOR page */
-            else if (A->cat == EC_CAT_FILE && !A->settings) {
-                const int n = ec_browse_count();
-                if (n > 0)
-                    A->cursor = ((A->cursor + d) % n + n) % n;
-            } else if (!A->settings) {
-                const int n = ec_cat_pages(A->cat, ec_app_params(A));
-                A->page[A->cat] = ((A->page[A->cat] + d) % n + n) % n;
-            }
-        } else if (r == EC_E_ALGO) {
-            const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-            select_target(clampi(cur + d, 0, EC_NTRACK + 2));
-        } else if (r == EC_E_PRESETS) {
-            const int base = A->seq.pending >= 0 ? A->seq.pending : A->proj.current;
-            ec_seq_request_pattern(&A->seq, clampi(base + d, 0, EC_NPAT - 1));
-            mark_dirty();
-        } else
-            knob_cell(r - EC_E_K1, d);
+        knob(r, d);
         A->redraw = 1;
     }
     for (b = 0; b < EC_NB; b++)
         if (in->btn_up >> b & 1u)
             button_up(b);
 
+    holds_tick();                                  /* 0.3.0: holds, the takeover's end */
+    sample_tick();                                 /* 0.3.0: PRESETS' debounced load */
     ec_e5_tick();                                  /* E5: the glide, prompts */
     /* autosave: stopped, dirty, quiet for a moment */
     if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
@@ -1251,23 +1802,64 @@ static void leds_lower(void)
     }
 }
 
+/* SHIFT held: only its keys light (FIZZ); the lower keys keep their layer (SHIFT + a lower key still works there) */
+static void leds_shift(void)
+{
+    int i, b;
+    for (i = 0; i < EC_NUPPER; i++) {
+        uint8_t l = EC_LED_OFF;
+        switch (i) {
+        case 0: l = EC_LED_LIT; break;                                       /* memorize */
+        case 1: l = A->e5.memo_ok ? EC_LED_LIT : EC_LED_DIM; break;          /* recall */
+        case 6: l = EC_LED_LIT; break;                                       /* copy the pattern */
+        case 7: l = A->e5.clip_pat.ok ? EC_LED_LIT : EC_LED_DIM; break;      /* paste it */
+        case 8: l = blink(250) ? EC_LED_LIT : EC_LED_MID; break;             /* tap tempo */
+        case 9: l = A->fill_latched ? EC_LED_LIT : EC_LED_MID; break;        /* latch fill */
+        case 10: l = EC_LED_LIT; break;                                      /* name the pattern */
+        default: break;
+        }
+        ec_plat_led_upper(i, l);
+    }
+    for (b = 0; b < EC_NB; b++)
+        ec_plat_led_button(b, CAT_OF[b] >= 0 && has_settings(CAT_OF[b]) ? EC_LED_MID : EC_LED_OFF);
+    ec_plat_led_button(EC_B_FN, EC_LED_LIT);
+    ec_plat_led_button(EC_B_PLAY, EC_LED_LIT);
+    ec_plat_led_button(EC_B_REC, EC_LED_LIT);
+    if (ec_rzui_active(A)) {
+        ec_plat_led_button(EC_B_OCTDN, EC_LED_LIT);
+        ec_plat_led_button(EC_B_OCTUP, EC_LED_LIT);
+    } else {
+        ec_plat_led_button(EC_B_OCTDN, A->e5.undo.n ? EC_LED_LIT : EC_LED_DIM);
+        ec_plat_led_button(EC_B_OCTUP, A->e5.undo.nr ? EC_LED_LIT : EC_LED_DIM);
+    }
+}
+
 static void leds(void)
 {
     int i, b;
     leds_lower();
+    if (A->fn && !A->e5.naming) {
+        ec_e5_leds();
+        leds_shift();
+        return;
+    }
     for (i = 0; i < 9; i++) {
         uint8_t l;
         const int sel = i < EC_NTRACK ? (!A->bus && A->track == i) : A->bus == i - EC_NTRACK + 1;
-        if (sel)
+        if (i < EC_NTRACK && (UX->solo >> i & 1u))
+            l = blink(200) ? EC_LED_LIT : EC_LED_DIM;               /* soloed: blinking */
+        else if (sel)
             l = EC_LED_LIT;
-        else if (i < EC_NTRACK && ec_project_track(&A->proj, i)->v[EC_P_MUTE] > 0.5f)
-            l = EC_LED_OFF;
+        else if (i < EC_NTRACK && !ec_app_track_audible(A, i))
+            l = EC_LED_OFF;                                         /* muted, or silenced by a solo */
         else {
             const float m = A->meter[i];
             l = m > 0.5f ? EC_LED_MID : m > 0.05f ? EC_LED_DIM : EC_LED_FAINT;
         }
         ec_plat_led_upper(i, l);
     }
+    if (A->cat == EC_CAT_MASTER && !A->bus)
+        ec_plat_led_upper(8, A->settings && blink(250) ? EC_LED_MID : EC_LED_LIT);   /* MST: its category */
     ec_plat_led_upper(9, ec_seq_fill_active(&A->seq) ? EC_LED_LIT : EC_LED_FAINT);
     ec_plat_led_upper(10, A->patn_open ? EC_LED_LIT : A->seq.pending >= 0 ? (blink(120) ? EC_LED_LIT : EC_LED_DIM)
                                                                           : EC_LED_FAINT);
@@ -1275,15 +1867,21 @@ static void leds(void)
         if (CAT_OF[b] >= 0)
             ec_plat_led_button(b, CAT_OF[b] == A->cat ? (A->settings && blink(250) ? EC_LED_MID : EC_LED_LIT)
                                                       : EC_LED_FAINT);
-    ec_plat_led_button(EC_B_FN, A->fn ? EC_LED_LIT : EC_LED_FAINT);
+    ec_plat_led_button(EC_B_HOME, A->cat == EC_CAT_SRC && !ec_app_popup(A) ? EC_LED_FAINT : EC_LED_DIM);
+    ec_plat_led_button(EC_B_FN, EC_LED_FAINT);
     ec_plat_led_button(EC_B_PLAY, A->seq.playing ? EC_LED_LIT : A->seq.paused ? (blink(400) ? EC_LED_MID : EC_LED_DIM)
                                                                               : EC_LED_DIM);
     ec_plat_led_play_green(A->seq.playing ? EC_LED_LIT : EC_LED_OFF);
     ec_plat_led_button(EC_B_REC, A->dirty ? EC_LED_DIM : EC_LED_FAINT);
-    ec_plat_led_button(EC_B_OCTDN, A->keymode == EC_KM_LOOP ? EC_LED_LIT : EC_LED_FAINT);
-    ec_plat_led_button(EC_B_OCTUP, A->keymode == EC_KM_KEYS ? EC_LED_LIT : EC_LED_FAINT);
+    if (ec_app_popup(A)) {                         /* a pop-up: OCT- back lit, OCT+ OK blinking (ChoralRoot) */
+        ec_plat_led_button(EC_B_OCTDN, EC_LED_LIT);
+        ec_plat_led_button(EC_B_OCTUP, blink(300) ? EC_LED_LIT : EC_LED_DIM);
+    } else {                                       /* the lower keys' mode: OCT- loop keys, OCT+ keys, both scene */
+        ec_plat_led_button(EC_B_OCTDN, A->keymode & 1 ? EC_LED_LIT : EC_LED_FAINT);
+        ec_plat_led_button(EC_B_OCTUP, A->keymode & 2 ? EC_LED_LIT : EC_LED_FAINT);
+    }
     ec_e5_leds();                                  /* E5 */
-    if (ec_rzui_active(A))                         /* E3: the RAZOR page's keys and OCT buttons (page-local) */
+    if (ec_rzui_active(A) && !ec_app_popup(A))     /* E3: the RAZOR page's keys and OCT buttons (page-local) */
         ec_rzui_leds(A);
 }
 
@@ -1361,8 +1959,18 @@ void ec_app_ui_info(char *buf, uint32_t n)
              LD[ec_load_state()], sl + 1, SL[A->slot[sl].state], ready, missing, trigs ? "on" : "off", trigs, hs, used,
              A->saves, A->dirty,
              ec_dsp_total_voices(A->dsp), ec_seq_step(&A->seq, A->track) + 1);
-    {
-        const uint32_t l = (uint32_t)strlen(buf);   /* E5 */
+    {   /* 0.3.0: the lane, F3, mutes and solos, the takeover, SHIFT's map, the sample PRESETS points at */
+        ec_page_t pg;
+        uint32_t l = (uint32_t)strlen(buf);
+        int mutes = 0;
+        for (t = 0; t < EC_NTRACK; t++)
+            mutes |= (ec_project_track(&A->proj, t)->v[EC_P_MUTE] > 0.5f) << t;
+        ec_app_page(A, &pg);
+        if (l < n)
+            snprintf(buf + l, n - l, " lane:%d/%d f3:%d solo:%02x mutes:%02x tko:%d smap:%d popup:%d cursor:%d",
+                     ec_app_lane(A, &pg) + 1, ec_ux_lanes(pg.n), UX->f3, UX->solo, mutes, UX->to_ms ? UX->to_kind : 0,
+                     ec_app_shift_map(A), ec_app_popup(A), A->cursor + 1);
+        l = (uint32_t)strlen(buf);   /* E5 */
         if (l < n)
             ec_e5_ui_info(buf + l, n - l);
     }

@@ -437,7 +437,7 @@ static fm1core_t CORE = {
     .gated = EC_GATED,
     .flash_size = EC_FLASH_SIZE,
     /* Elasticat's own names (hosts draw them on the panel, the printed name beside a renamed button) */
-    .button_names = {"FX", "SRC", "AMP", "MOD", "FILT", "FN", "MST", "FILE", "PAT", "TRIG", "PLAY", "REC", "OCT-",
+    .button_names = {"FX", "SRC", "AMP", "MOD", "FILT", "SHIFT", "HOME", "FILE", "PAT", "TRIG", "PLAY", "REC", "OCT-",
                      "OCT+"},
     .params = NULL,
     .nparams = 0,

@@ -12,6 +12,7 @@
 #include "ec_project.h"
 #include "ec_samplestore.h"
 #include "ec_seq.h"
+#include "ec_ux.h"
 
 enum { EC_KM_STEPS, EC_KM_LOOP, EC_KM_KEYS, EC_KM_SCENE, EC_NKM };   /* what the lower keys are (OCT-/OCT+);
                                                                         * E5: SCENE */
@@ -36,11 +37,11 @@ typedef struct {
     int bus;                     /* 0 a track, 1 S1, 2 S2, 3 MST selected */
     int cat;                     /* EC_CAT_* */
     int page[EC_NCAT];
-    int settings;                /* the FN + category layer is open */
-    int fn;                      /* HOME held */
+    int settings;                /* the category's setup is open (SHIFT + the button, or a hold) */
+    int fn;                      /* SHIFT (GLO) held */
     int keymode;                 /* EC_KM_* */
     int step_page;               /* the step page the lower keys edit (0..15) */
-    int sel_held, sel_used, sel_fn;   /* SEL (SRC) held: the loop keys; FN at its press */
+    int sel_held, sel_used;      /* SEL (SRC) held: the loop keys; a lower key used since its press */
     uint32_t sel_ms;
     uint16_t step_held;          /* lower keys held as steps (bit i) */
     uint16_t step_edited;
@@ -74,6 +75,7 @@ typedef struct {
     uint32_t frames_out;
     uint32_t ms;
     ec_e5app_t e5;               /* E5 */
+    ec_ux_t ux;                  /* 0.3.0 */
 } ec_app_t;
 
 extern ec_app_t ec_app;
@@ -91,5 +93,12 @@ const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int track);
 int ec_app_track_slot(const ec_app_t *a, int track);         /* 0-based pool slot */
 int ec_app_stopped(const ec_app_t *a);
 float *ec_app_bus_params(ec_app_t *a, int id);              /* E4: the bus record holding param id, or NULL */
+/* 0.3.0 */
+int ec_app_lane(const ec_app_t *a, const ec_page_t *pg);     /* the active lane of the page shown (clamped) */
+float ec_app_move_param(int id, float x, int det, int mult); /* a knob turn: snap with SHIFT, else det x mult steps */
+int ec_app_cells_visible(const ec_app_t *a);                 /* the active lane's cells are on screen */
+int ec_app_popup(const ec_app_t *a);                         /* a pop-up is open (OCT- back / OCT+ OK) */
+int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held alone: its map shows */
+int ec_app_track_audible(const ec_app_t *a, int t);          /* not muted, not silenced by a solo */
 
 #endif

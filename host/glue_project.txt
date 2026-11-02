@@ -1,0 +1,67 @@
+# The FM1VST glue test's project (core-glue/elasticat/test_project.flash), built through panel input only from the
+# glue's test folder (one loop, testloop_bpm120.wav): four tracks on that one sample, each a different engine path.
+#   ec_run --folder <test_folder> --flash out.bin --script host/glue_project.txt   (then host/trim_flash.py)
+# T1 loop: trigs 1 5 9 13, step 13 locks loop key 5's region, step 5 locks the cutoff
+upper 0@1500+60
+press SEQ@1600
+lower 0@1700+60
+lower 4@1800+60
+lower 8@1900+60
+lower 12@2000+600
+press SEL@2100+400
+lower 4@2200+80
+press EDIT@2800
+lower 4@2900+500
+turn K1@3100:-50
+# T2: slot 1, the granular warp, droning (no trigs)
+upper 1@3600+60
+press SEL@3700+60
+turn K4@3800:-1
+press HOME@3900+150
+press SEL@3950+60
+turn K2@4100:3
+press HOME@4300+150
+press SEL@4350+60
+# T3: slot 1, slice poly, slices on every other step
+upper 2@4800+60
+turn K4@4900:-2
+press HOME@5000+150
+press SEL@5050+60
+turn K1@5200:3
+press HOME@5400+150
+press SEL@5450+60
+lower 0@5600+60
+lower 2@5700+60
+lower 4@5800+60
+lower 6@5900+60
+lower 8@6000+60
+lower 10@6100+60
+lower 12@6200+60
+lower 14@6300+60
+lower 2@6500+400
+press SEL@6550+300
+lower 5@6650+80
+lower 10@7000+400
+press SEL@7050+300
+lower 9@7150+80
+press ENV@7500
+turn K4@7600:-40
+# T4: slot 1, the chopped warp, a trig on 1 and 9 with a ratchet on 9
+upper 3@8000+60
+press SEL@8100+60
+turn K4@8200:-3
+press HOME@8300+150
+press SEL@8350+60
+turn K2@8500:12
+press HOME@8700+150
+press SEL@8750+60
+press SEQ@8900
+lower 0@9000+60
+lower 8@9100+60
+press SEQ@9200
+lower 8@9300+500
+turn K3@9500:2
+# save
+press HOME@10000+300
+press REC@10100+60
+ms 11000

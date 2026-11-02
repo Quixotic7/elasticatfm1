@@ -1,0 +1,184 @@
+# The E1/E2 demo, built through panel input only (ec_run --out DIR --script ...; host/render_e1.sh runs it).
+# A fresh project with build/demo_folder (host/make_demo_folder.py): four loops at 120 BPM.
+# Times are device ms. lower I = step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN (0..10).
+
+png-scale 2
+master 640@0
+
+# ---- power on: the scan finds the loops, T1 (a new project) loads the first one
+png 1200:01_boot_src.png
+
+# ---- FILE: the bass into T2, the chords into T3, the percussion into T4 (SELECT = cursor, FILE again = load)
+press SAVE@1500
+upper 1@1600+80
+turn SELECT@1700:1
+png 1750:02_file_browser.png
+press SAVE@1800
+upper 2@2300+80
+turn SELECT@2400:1
+press SAVE@2500
+upper 3@3000+80
+turn SELECT@3100:1
+press SAVE@3200
+png 3212:03_file_loading.png
+
+# ---- T4: the SLICE machine (FN + SRC = the SRC setup list)
+press HOME@3700+150
+press SEL@3750+60
+turn K1@3950:2
+png 4000:04_src_setup.png
+press HOME@4200+300
+press SEL@4300+60
+# slice pads while stopped: hold SEL, play pads 3 and 7
+press SEL@4700+600
+lower 2@4800+150:110
+lower 6@5000+150:70
+png 4850:05_src_slices.png
+
+# ---- T3: the granular warp (changes only while stopped), its WARP page
+upper 2@5400+80
+press HOME@5500+150
+press SEL@5550+60
+turn K2@5700:3
+press HOME@5900+150
+press SEL@6000+60
+turn SELECT@6100:2
+turn K1@6200:8
+turn K2@6300:20
+png 6400:06_warp_granular.png
+turn SELECT@6500:-2
+
+# ---- T1: trigs on 1 and 9, step 13 locks the region of loop key 5 (hold step + hold SEL + key), step 15 a ghost,
+#      step 16 a FILL trig (TRIG page 2, hold step + KN2)
+upper 0@6800+80
+press SEQ@6900
+lower 0@7000+80
+lower 8@7150+80
+lower 12@7300+900
+press SEL@7400+500
+lower 4@7500+100
+png 7550:07_step_region_lock.png
+press HOME@8400+300
+lower 14@8500+80
+press SEQ@8800
+lower 15@8900+500
+turn K2@9100:10
+png 9200:08_trig_cond_lock.png
+
+# ---- T2: the bass on 1 7 9 12; step 9 pitch-locked +5 (TRIG page, hold step + KN1); step 12 on 1:2
+upper 1@9600+80
+press SEQ@9700
+press SEQ@9800
+lower 0@9900+80
+lower 6@10050+80
+lower 8@10200+80
+lower 11@10350+80
+lower 8@10600+600
+turn K1@10800:5
+png 10900:09_trig_pitch_lock.png
+press SEQ@11300
+lower 11@11400+500
+turn K2@11600:1
+
+# ---- T3: the chords on 1 and 9; FILT: cutoff down, resonance up, step 9 locks the cutoff lower; F.ENV depth; AMP
+upper 2@12000+80
+lower 0@12100+80
+lower 8@12250+80
+press EDIT@12400
+turn K1@12500:-40
+turn K2@12600:70
+lower 8@12800+600
+turn K1@13000:-30
+png 13100:10_filter_lock.png
+press EDIT@13500
+turn K4@13600:30
+png 13700:11_filter_env.png
+press ENV@13900
+turn K2@14000:-60
+turn K3@14100:-90
+png 14200:12_amp_env.png
+
+# ---- T4: percussion on every other step; steps 3 7 11 15 get slices 5 9 13 16 (hold step + hold SEL + pad);
+#      step 15 ratchets (SLICE page RTCH, hold step + KN3)
+upper 3@14500+80
+press SEQ@14600
+lower 0@14700+60
+lower 2@14800+60
+lower 4@14900+60
+lower 6@15000+60
+lower 8@15100+60
+lower 10@15200+60
+lower 12@15300+60
+lower 14@15400+60
+lower 2@15600+400
+press SEL@15650+300
+lower 4@15750+80
+lower 6@16100+400
+press SEL@16150+300
+lower 8@16250+80
+lower 10@16600+400
+press SEL@16650+300
+lower 12@16750+80
+lower 14@17100+400
+press SEL@17150+300
+lower 15@17250+80
+lower 14@17600+500
+turn K3@17800:2
+
+# ---- PLAY
+press PLAY@18200
+upper 0@18300+80
+press SEL@18400+60
+png 19000:13_src_playing.png
+# the live loop-key scrub on T1: hold SEL, hold key 9, then 9 + 10, let go (the playhead boomerangs back)
+press SEL@20000+1400
+lower 8@20200+1000
+lower 9@20600+400
+png 20500:14_loop_key_scrub.png
+upper 3@21800+80
+png 22300:15_slices_playing.png
+
+# ---- pattern 2 at the next bar (PATN tap latches the overlay, a step key picks the pattern)
+upper 10@22600+80
+png 22700:16_pattern_overlay.png
+lower 1@22900+80
+png 23000:17_pattern_pending.png
+upper 0@24300+80
+lower 0@24500+60
+lower 4@24600+60
+lower 8@24700+60
+lower 12@24800+60
+png 25000:18_pattern2.png
+turn PRESETS@25500:-1
+
+# ---- back on pattern 1: hold FILL for a bar (T1's step 16 plays)
+upper 9@26100+2000
+
+# ---- MASTER / MIX: T3's level down, T2 muted for a bar
+press GLO@28200
+upper 2@28300+80
+turn K1@28400:-30
+press HOME@28600+200
+upper 1@28650+80
+png 29000:19_mix.png
+press HOME@30000+200
+upper 1@30050+80
+
+# ---- the other pages
+press ARP@30300
+png 30400:20_pat.png
+press LFO@30600
+png 30700:21_mod_e4.png
+press HOME@30900+300
+press EDIT@31000+60
+png 31100:22_filt_setup.png
+press HOME@31300+300
+press EDIT@31400+60
+
+# ---- save (FN + REC), then stop (FN + PLAY)
+press HOME@31800+300
+press REC@31900+60
+png 32000:23_saved.png
+press HOME@33000+300
+press PLAY@33100+60
+ms 34000

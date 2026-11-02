@@ -5,25 +5,35 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (the remotefm1.com web player first), with the FM-1 as its panel and samples from the shared RemoteFM1 folder
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
-**Status: E0, "the pipe".** At power-on the cart lists `/audio` (recursively), loads the first WAV / AIFF it finds,
-and PLAY loops it at its own speed. MASTER sets the volume. SELECT moves the file cursor and FILE (the SAVE button)
-loads the file under it. The lower keys chase the playhead in 16 steps, and the screen echoes every key, button and
-knob. With no folder (or no audio files) a built-in synthesized loop plays.
+**Status: E1 + E2, the playable instrument (0.1.0).** Six tracks, each with a sample from `/audio`, a machine (loop,
+loop_trig, grid_slice, slice_poly), a warp mode (tape, tempo_varispeed, granular, chopped; the other nine fall back),
+a filter machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan; 16 patterns of up to 256
+steps per track with trigs, ghost trigs, p-locks of any param, trig conditions, chance, ratchets and FILL; the live
+loop-key scrub and slice pads; sample-accurate clock; the MIX page; the project saved in the flash image. The panel:
+[docs/FM1-CONTROLS.md](docs/FM1-CONTROLS.md). With no folder (or no audio files) a built-in loop plays on T1.
 
 ## Layout
 
 ```
 src/plat/   fm1core ABI glue (ec_core.c: fm1core_get, the panel, LEDs, LCD, the 1 MiB flash image with its versioned
-            header), ec_plat.h (what the rest of the code sees), ec_e0.c (the E0 app, temporary), abi/ (copies of
-            FM1VST's fm1core.h and rfm1_host.h for the native build)
+            header), ec_plat.h (what the rest of the code sees), abi/ (copies of FM1VST's fm1core.h and rfm1_host.h
+            for the native build)
+src/seq/    the model and the sequencer, platform free: ec_params (params_spec.lua: ids, ranges, labels, the xforms to
+            ec_track_params_t), ec_project (16 patterns x 6 tracks of params + steps + p-locks, the slot pool, the
+            versioned project record), ec_seq (transport, sample clock, trig conditions, holds = the base-value
+            resolver, region locks, ratchets, pattern switching, live loop keys / pads / keyboard)
+src/app/    ec_app (the panel mapping, sample loading, save / autosave, LEDs, ui_info), ec_pages (categories,
+            pages, cells, setup lists)
 src/io/     ec_fs (async file API over rfm1_host_1), ec_fs_native (a native stand-in serving a real folder, one tick
             late), ec_browse (recursive /audio scan), ec_audiofile (WAV / AIFF / AIFC parse + decode), ec_loader
             (chunked loading), ec_samplestore (int16 stereo arena + handles, bpm from file names)
-src/ui/     ec_gfx (RGB565, palette, rects / lines / dots, the mockup's 3x5 pixel font), ec_leds, ec_screen_e0
+src/ui/     ec_gfx (RGB565, palette, rects / lines / dots, the mockup's 3x5 pixel font), ec_leds, ec_screens (SRC,
+            generic pages with the step strip / filter curve / envelope, FILE, MIX, PAT, setup lists)
 src/dsp/    the sound engine (written separately; ec_dsp.h)
-host/       ec_run (headless native harness: scripted input, WAV + PNG out), test_io (the file layer's test),
-            make_testloop.py (the 4 s test loop)
-results/e0/ E0's proof files
+host/       ec_run (headless native harness: scripted input, WAV + PNG out), test_io (the file layer's test), test_seq
+            (the sequencer's), make_testloop.py (the 4 s test loop), make_demo_folder.py + demo_e1.txt + render_e1.sh
+            (the E1 demo built through panel input only)
+results/    proof files: e0/, e1/ (the screens; WAVs stay untracked)
 ```
 
 ## The APIs, briefly
@@ -39,18 +49,24 @@ results/e0/ E0's proof files
   store. `ec_ss_alloc / get / ready / reset`: int16 stereo (mono doubled) in a 96 MiB static arena, with rate,
   channels, bpm (`ec_bpm_from_name`, Elasticat's rule) and a 128-column overview.
 - **ui:** `ec_gfx_begin(lcd)`, `ec_gfx_rect / line / dots_h / text_al` in physical pixels; the mockup's 120x120 grid
-  is scale `EC_U` = 2. Palette `EC_C_BG, L3, L5, L8, L12, L15, ACC`. `ec_leds_steps(trigs, playhead)`,
-  `ec_leds_upper(sel, active)`.
+  is scale `EC_U` = 2. Palette `EC_C_BG, L3, L5, L8, L12, L15, ACC`. `ec_screens_draw(app)`.
+- **seq:** `ec_seq_init(seq, project, sink, fs)`; `ec_seq_render(seq, out, frames)` splits the frames at every due
+  moment and drives the engine through the sink (`event` / `params` / `process`); `ec_seq_start / pause / stop /
+  set_bpm / request_pattern / set_fill / loop_key / slice_pad / keyboard / touch`; `ec_seq_value(seq, t, id)` = the
+  resolved value. Steps: `ec_step_toggle / toggle_ghost / toggle_slice / lock_set / lock_get`.
 
 ## Building and testing natively
 
 ```sh
 cmake -S . -B build && cmake --build build -j8 && ctest --test-dir build --output-on-failure
 build/ec_run --folder <RemoteFM1 root> --press PLAY@1000 --wav out.wav --png screen.png --png-scale 2
+host/render_e1.sh build results/e1     # the E1 demo: screens + WAVs, reboot from the saved flash, a missing sample
 ```
 
-`ec_run` options are listed at the top of `host/ec_run.c`: `--press PLAY@MS`, `--turn SELECT@MS:+1`, `--key 9@MS`,
-`--master 512@MS`, `--png-at MS:file`, `--info-at MS`, `--expect-ui`, `--min-rms`.
+`ec_run` options are listed at the top of `host/ec_run.c`: `--press PLAY@MS[+D]`, `--turn SELECT@MS:+1`,
+`--key 9@MS[+D][:VEL]`, `--lower I@MS[+D][:VEL]` / `--upper I@MS[+D]` (the step keys / the track row), `--master
+512@MS`, `--png-at MS:file`, `--info-at MS`, `--expect-ui`, `--min-rms`, `--flash FILE` (the flash image across runs),
+`--script FILE` (the same options one per line, see `host/demo_e1.txt`).
 
 ## The .rfm1
 
@@ -72,16 +88,16 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    `testloop_bpm120.wav` from FM1VST's `core-glue/elasticat/test_folder/audio/`).
 2. Open https://remotefm1.com in Chrome or Edge (they can keep a picked folder; Safari and Firefox copy the files
    into the site's own storage instead).
-3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.0.1.rfm1` (or drop the file
+3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.1.0.rfm1` (or drop the file
    on the page). It goes into "Your firmware" with the Fantasy CFW badge.
 4. When the page asks **Pick your RemoteFM1 folder**, pick the `RemoteFM1/` folder. On a later visit, click
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
 5. Click the page to start the audio. When the screen shows the file, press PLAY (on the FM-1 or on the on-screen
-   panel). Turn MASTER for the volume. Turn SELECT, then press SAVE (FILE) to load another file.
+   panel). Turn MASTER for the volume. The rest: [docs/FM1-CONTROLS.md](docs/FM1-CONTROLS.md).
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open
-`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.0.1.rfm1&rfm1id=elasticat`. That is what its
+`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.1.0.rfm1&rfm1id=elasticat`. That is what its
 **Test in RemoteFM1** link does, but the link only lists firmwares in its catalog.
 
 ## Licence

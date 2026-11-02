@@ -77,7 +77,7 @@ uint8_t *ec_plat_record(uint32_t *size);   /* the record's bytes and their size 
 void ec_plat_record_changed(void);         /* the record was written: the host persists the image */
 int ec_plat_record_fresh(void);            /* 1: the image had no valid header at power-on (a fresh unit) */
 
-/* ---- what the app implements (src/plat/ec_e0.c in E0; the sequencer's app later). Called by ec_core.c ---- */
+/* ---- what the app implements (src/app/ec_app.c). Called by ec_core.c ---- */
 void ec_app_init(void);
 void ec_app_tick(const ec_input_t *in);    /* once per device ms: input, the loader, the clock */
 void ec_app_frame(void);                   /* every 15 ms: draw (if needed) and set the LEDs */

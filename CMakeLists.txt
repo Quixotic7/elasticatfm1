@@ -17,10 +17,10 @@ find_package(Python3 COMPONENTS Interpreter)
 file(GLOB EC_SOURCES CONFIGURE_DEPENDS
      ${CMAKE_CURRENT_SOURCE_DIR}/src/plat/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/io/*.c
      ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/dsp/*.c
-     ${CMAKE_CURRENT_SOURCE_DIR}/src/seq/*.c)
+     ${CMAKE_CURRENT_SOURCE_DIR}/src/seq/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/app/*.c)
 add_library(elasticat STATIC ${EC_SOURCES})
 # src/plat/abi: copies of FM1VST's core-api/fm1core.h and core-glue/common/rfm1_host.h (FM1VST's own are used there)
-target_include_directories(elasticat PUBLIC src/plat src/plat/abi src/io src/ui src/dsp src/seq)
+target_include_directories(elasticat PUBLIC src/plat src/plat/abi src/io src/ui src/dsp src/seq src/app)
 target_compile_definitions(elasticat PUBLIC EC_FS_NATIVE)
 target_compile_options(elasticat PRIVATE -Wall -Wextra -ffp-contract=off)
 target_link_libraries(elasticat PUBLIC m)
@@ -33,8 +33,13 @@ add_executable(ec_test_io host/test_io.c)
 target_link_libraries(ec_test_io PRIVATE elasticat)
 target_compile_options(ec_test_io PRIVATE -Wall -Wextra)
 
+add_executable(ec_test_seq host/test_seq.c)
+target_link_libraries(ec_test_seq PRIVATE elasticat)
+target_compile_options(ec_test_seq PRIVATE -Wall -Wextra)
+
 enable_testing()
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)
+add_test(NAME seq COMMAND ec_test_seq)
 # the E0 smoke run: the test loop generated into a folder, booted, played, the screen and audio written
 if(Python3_FOUND)
     set(_tf ${CMAKE_BINARY_DIR}/test_folder)
@@ -47,6 +52,8 @@ if(Python3_FOUND)
                      --expect-ui play:1 --wav ${CMAKE_BINARY_DIR}/e0_run.wav --png ${CMAKE_BINARY_DIR}/e0_run.png)
     set_tests_properties(e0_run PROPERTIES DEPENDS e0_testloop)
 endif()
+# E1/E2: the demo built through panel input only, the reboot from its saved flash, a missing sample
+add_test(NAME e1_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e1.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e1)
 add_test(NAME e0_nofolder
          COMMAND ec_run --ms 3000 --press PLAY@500 --rms-from 800 --min-rms 0.02 --expect-ui scan:nofolder
                  --expect-ui "file:BUILTIN LOOP")

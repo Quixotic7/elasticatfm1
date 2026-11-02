@@ -9,8 +9,14 @@
  *     --press B@MS[+D]    button B by label (FX SEL ENV LFO EDIT GLO HOME SAVE ARP SEQ PLAY REC OCT- OCT+) held from
  *                         MS for D ms (default 60); repeat
  *     --turn R@MS:N       knob role R (SELECT ALGO PRESETS K1 K2 K3 K4) turned N detents at MS; repeat
- *     --key K@MS[+D]      note key K (0..26) held from MS for D ms (default 100); repeat
+ *     --key K@MS[+D][:V]  note key K (0..26) held from MS for D ms (default 100), velocity V (default 100); repeat
+ *     --lower I@MS[+D][:V] lower key I (0..15, the steps) held from MS; --upper I@MS[+D] upper key I (0..10:
+ *                         T1..T6 S1 S2 MST FILL PATN); repeat
  *     --master V@MS       the MASTER pot set to V (0..1023) at MS; repeat
+ *     --script FILE       more options, one per line, without the dashes ("press PLAY@1000", "lower 4@2000+80",
+ *                         "png 3000:out.png", "info 3000"); # starts a comment
+ *     --flash FILE        the flash image: read at power-on (when it exists), written at the end
+ *     --out DIR           relative --png-at files go into DIR (give it before them)
  *     --wav FILE          the whole run's audio (44.1 kHz 16-bit stereo)
  *     --png FILE          the screen at the end (240x240; --png-scale 2 for 480x480)
  *     --png-at MS:FILE    the screen at device ms MS; repeat
@@ -29,10 +35,11 @@
 #include "ec_png.h"
 #include "fm1core.h"
 
-#define MAXEV 256
+#define MAXEV 4096
+#define MAXPNG 128
 
 typedef struct {
-    int kind;          /* 0 button, 1 turn, 2 key, 3 master */
+    int kind;          /* 0 button, 1 turn, 2 key, 3 master, 4 lower, 5 upper */
     int what;
     uint32_t at, dur;
     int32_t n;
@@ -84,75 +91,147 @@ static int usage(const char *why)
     return 2;
 }
 
+static const char *folder, *wav_path, *png_path, *flash_path, *out_dir, *expect[32];
+static struct { uint32_t at; char path[512]; } png_at[MAXPNG];
+static uint32_t info_at[64], run_ms = 6000, rms_from;
+static int npng, ninfo, nexpect, nev, png_scale = 1;
+static double min_rms = -1;
+static ev_t ev[MAXEV];
+
+static int parse_script(const char *path);
+
+/* one option (a = "--press" or "press"), its argument v; returns 0 ok, 2 usage */
+static int option(const char *a, const char *v)
+{
+    while (*a == '-')
+        a++;
+    if (!v)
+        return usage(a);
+    if (!strcmp(a, "folder")) folder = strdup(v);
+    else if (!strcmp(a, "ms")) run_ms = (uint32_t)strtoul(v, NULL, 10);
+    else if (!strcmp(a, "wav")) wav_path = strdup(v);
+    else if (!strcmp(a, "png") && !(v[0] >= '0' && v[0] <= '9' && strchr(v, ':'))) png_path = strdup(v);
+    else if (!strcmp(a, "flash")) flash_path = strdup(v);
+    else if (!strcmp(a, "out")) out_dir = strdup(v);
+    else if (!strcmp(a, "png-scale")) png_scale = atoi(v);
+    else if (!strcmp(a, "rms-from")) rms_from = (uint32_t)strtoul(v, NULL, 10);
+    else if (!strcmp(a, "min-rms")) min_rms = atof(v);
+    else if (!strcmp(a, "expect-ui") && nexpect < 32) expect[nexpect++] = strdup(v);
+    else if ((!strcmp(a, "info-at") || !strcmp(a, "info")) && ninfo < 64) info_at[ninfo++] = (uint32_t)strtoul(v, NULL, 10);
+    else if (!strcmp(a, "script")) return parse_script(v);
+    else if ((!strcmp(a, "png-at") || !strcmp(a, "png")) && npng < MAXPNG) {
+        const char *colon = strchr(v, ':');
+        if (!colon)
+            return usage("png-at MS:FILE");
+        png_at[npng].at = (uint32_t)strtoul(v, NULL, 10);
+        if (out_dir && colon[1] != '/')
+            snprintf(png_at[npng].path, sizeof png_at[npng].path, "%s/%s", out_dir, colon + 1);
+        else
+            snprintf(png_at[npng].path, sizeof png_at[npng].path, "%s", colon + 1);
+        npng++;
+    } else if ((!strcmp(a, "press") || !strcmp(a, "turn") || !strcmp(a, "key") || !strcmp(a, "master") ||
+                !strcmp(a, "lower") || !strcmp(a, "upper")) && nev < MAXEV) {
+        const char *at = strchr(v, '@');
+        char *e;
+        ev_t *x = &ev[nev];
+        if (!at)
+            return usage("event without @MS");
+        memset(x, 0, sizeof *x);
+        x->n = 100;
+        if (!strcmp(a, "press")) {
+            x->kind = 0;
+            x->what = find(BTN, FM1P_NB, v, (size_t)(at - v));
+            x->dur = 60;
+        } else if (!strcmp(a, "turn")) {
+            x->kind = 1;
+            x->what = find(ROLE, FM1P_NE - 1, v, (size_t)(at - v));
+            x->n = 0;
+        } else if (!strcmp(a, "key") || !strcmp(a, "lower") || !strcmp(a, "upper")) {
+            const int lim = !strcmp(a, "key") ? FM1P_NKEY : !strcmp(a, "lower") ? 16 : 11;
+            x->kind = !strcmp(a, "key") ? 2 : !strcmp(a, "lower") ? 4 : 5;
+            x->what = atoi(v);
+            x->dur = 100;
+            if (x->what < 0 || x->what >= lim)
+                x->what = -1;
+        } else {
+            x->kind = 3;
+            x->n = atoi(v);
+            x->what = 0;
+        }
+        if (x->what < 0)
+            return usage("unknown button, role or key");
+        x->at = (uint32_t)strtoul(at + 1, &e, 10);
+        if (*e == '+')
+            x->dur = (uint32_t)strtoul(e + 1, &e, 10);
+        if (*e == ':')
+            x->n = atoi(e + 1);
+        nev++;
+    } else
+        return usage(a);
+    return 0;
+}
+
+static int parse_script(const char *path)
+{
+    char line[1024];
+    FILE *f = fopen(path, "r");
+    int r = 0;
+    if (!f)
+        return usage("cannot read the script");
+    while (!r && fgets(line, sizeof line, f)) {
+        char *s = line, *sp, *hash = strchr(line, '#');
+        if (hash)
+            *hash = 0;
+        while (*s == ' ' || *s == '\t')
+            s++;
+        s[strcspn(s, "\r\n")] = 0;
+        if (!*s)
+            continue;
+        sp = strchr(s, ' ');
+        if (!sp) {
+            r = usage(s);
+            break;
+        }
+        *sp++ = 0;
+        while (*sp == ' ')
+            sp++;
+        sp[strcspn(sp, " \t")] = 0;
+        r = option(s, sp);
+    }
+    fclose(f);
+    return r;
+}
+
+/* lower / upper key index -> the note key (the FM-1's rows: naturals below, sharps above, from F) */
+static int key_of(int kind, int i)
+{
+    int k, nl = 0, nu = 0;
+    for (k = 0; k < FM1P_NKEY; k++) {
+        const int s = k % 12;
+        const int natural = s == 0 || s == 2 || s == 4 || s == 6 || s == 7 || s == 9 || s == 11;
+        if (natural && kind == 4 && nl++ == i)
+            return k;
+        if (!natural && kind == 5 && nu++ == i)
+            return k;
+    }
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
-    const char *folder = NULL, *wav_path = NULL, *png_path = NULL, *expect[16];
-    struct { uint32_t at; const char *path; } png_at[32];
-    uint32_t info_at[32], run_ms = 6000, rms_from = 0;
-    int npng = 0, ninfo = 0, nexpect = 0, nev = 0, png_scale = 1, i, bad = 0;
-    double min_rms = -1;
-    static ev_t ev[MAXEV];
+    int i, bad = 0;
     const fm1core_t *c;
     fm1panel_t *p;
     FILE *wav = NULL;
     uint64_t frames_done = 0, rms_frames = 0;
     double sumsq = 0, peak = 0, t0, wall;
     uint32_t ms, last_frame = 0, lcd0;
-    char info[1024];
+    char info[2048];
 
-    for (i = 1; i < argc; i++) {
-        const char *a = argv[i];
-        const int more = i + 1 < argc;
-        if (!strcmp(a, "--folder") && more) folder = argv[++i];
-        else if (!strcmp(a, "--ms") && more) run_ms = (uint32_t)strtoul(argv[++i], NULL, 10);
-        else if (!strcmp(a, "--wav") && more) wav_path = argv[++i];
-        else if (!strcmp(a, "--png") && more) png_path = argv[++i];
-        else if (!strcmp(a, "--png-scale") && more) png_scale = atoi(argv[++i]);
-        else if (!strcmp(a, "--rms-from") && more) rms_from = (uint32_t)strtoul(argv[++i], NULL, 10);
-        else if (!strcmp(a, "--min-rms") && more) min_rms = atof(argv[++i]);
-        else if (!strcmp(a, "--expect-ui") && more && nexpect < 16) expect[nexpect++] = argv[++i];
-        else if (!strcmp(a, "--info-at") && more && ninfo < 32) info_at[ninfo++] = (uint32_t)strtoul(argv[++i], NULL, 10);
-        else if (!strcmp(a, "--png-at") && more && npng < 32) {
-            char *s = argv[++i], *colon = strchr(s, ':');
-            if (!colon)
-                return usage("--png-at MS:FILE");
-            png_at[npng].at = (uint32_t)strtoul(s, NULL, 10);
-            png_at[npng++].path = colon + 1;
-        } else if ((!strcmp(a, "--press") || !strcmp(a, "--turn") || !strcmp(a, "--key") || !strcmp(a, "--master")) &&
-                   more && nev < MAXEV) {
-            char *s = argv[++i], *at = strchr(s, '@'), *e;
-            ev_t *v = &ev[nev];
-            if (!at)
-                return usage("event without @MS");
-            memset(v, 0, sizeof *v);
-            if (!strcmp(a, "--press")) {
-                v->kind = 0;
-                v->what = find(BTN, FM1P_NB, s, (size_t)(at - s));
-                v->dur = 60;
-            } else if (!strcmp(a, "--turn")) {
-                v->kind = 1;
-                v->what = find(ROLE, FM1P_NE - 1, s, (size_t)(at - s));
-            } else if (!strcmp(a, "--key")) {
-                v->kind = 2;
-                v->what = atoi(s);
-                v->dur = 100;
-                if (v->what < 0 || v->what >= FM1P_NKEY)
-                    v->what = -1;
-            } else {
-                v->kind = 3;
-                v->n = atoi(s);
-                v->what = 0;
-            }
-            if (v->what < 0)
-                return usage("unknown button, role or key");
-            v->at = (uint32_t)strtoul(at + 1, &e, 10);
-            if (*e == '+')
-                v->dur = (uint32_t)strtoul(e + 1, NULL, 10);
-            else if (*e == ':')
-                v->n = atoi(e + 1);
-            nev++;
-        } else
-            return usage(a);
+    for (i = 1; i < argc; i += 2) {
+        const int r = option(argv[i], i + 1 < argc ? argv[i + 1] : NULL);
+        if (r)
+            return r;
     }
 
     ec_fs_native_root(folder, "elasticat");
@@ -160,9 +239,13 @@ int main(int argc, char **argv)
     if (!c)
         return usage("fm1core_get refused the ABI");
     p = c->panel;
-    if (c->flash_stage)
-        c->flash_stage(NULL, 0);
-    c->options(FM1CORE_FLASH_STAGED, 0, 0, 1);
+    if (flash_path)
+        c->options(flash_path, 0, 1, 1);
+    else {
+        if (c->flash_stage)
+            c->flash_stage(NULL, 0);
+        c->options(FM1CORE_FLASH_STAGED, 0, 0, 1);
+    }
     p->ready = 2;
     lcd0 = p->lcd_writes;
     c->init(0);
@@ -189,13 +272,22 @@ int main(int argc, char **argv)
                 p->enc[p->enc_id[v->what]] += v->n * p->enc_dir[v->what];
             else if (v->kind == 2) {
                 if (ms == v->at) {
-                    p->key_vel[v->what] = 100;
+                    p->key_vel[v->what] = (uint8_t)v->n;
                     p->keys |= 1u << v->what;
                     p->keys_tap |= 1u << v->what;
                 } else if (ms == v->at + v->dur)
                     p->keys &= ~(1u << v->what);
             } else if (v->kind == 3 && ms == v->at)
                 p->master = v->n;
+            else if (v->kind == 4 || v->kind == 5) {
+                const int key = key_of(v->kind, v->what);
+                if (ms == v->at) {
+                    p->key_vel[key] = (uint8_t)v->n;
+                    p->keys |= 1u << key;
+                    p->keys_tap |= 1u << key;
+                } else if (ms == v->at + v->dur)
+                    p->keys &= ~(1u << key);
+            }
         }
         for (k = 0; k < ninfo; k++)
             if (ms == info_at[k]) {

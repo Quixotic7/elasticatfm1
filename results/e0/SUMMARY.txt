@@ -1,0 +1,6 @@
+E0 proof (2026-11-02, M-series Mac)
+- native ctest: io (10 formats: WAV 8/16/24/32-bit int, float32, extensible, AIFF 16/24, AIFC sowt / fl32; recursive scan; bpm from names), e0_testloop, e0_run, e0_nofolder: 4/4 passed
+- native ec_run (e0_native.wav, e0_boot.png at 50 ms loading, e0_playing.png at 3 s, e0_end.png): rms 0.1068 from 1.2 s, 441x real time
+- rfm1_check (rfm1_check.txt): ok, virtual, needs fs1, imports rfm1_host_1, 88797 bytes, 128 MiB, 3 licence texts
+- rfm1_run --folder core-glue/elasticat/test_folder (rfm1_run.txt, rfm1_run.wav, rfm1_run_screen.png): 5 requests, loaded at < 1 s, chord rms 0.1098 (peak 0.642), 138x real time in wasm3 (chord 130x)
+- load stress in wasm3: a 60 s 48 kHz 24-bit stereo WAV (17 MB, 21 requests) loads in ~0.7 s device time; the whole 6 s run including the load 36x real time

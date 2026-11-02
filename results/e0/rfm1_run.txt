@@ -1,0 +1,6 @@
+rfm1_run: folder /Volumes/Q7Media-2025/Projects/Github/ChoralRootFM1/FM1VST/.claude/worktrees/elasticat/core-glue/elasticat/test_folder for elasticat: audio "r", code "", data "rw"
+rfm1_run: folder: 5 requests served, 0 refused
+ui@2: e0 files:1 scan:busy file:- load:idle play:0 vol:80 pos:0.000 frames:0 rate:0 bpm:0.0 last:POWER ON
+ui@20: e0 files:1 scan:done file:- load:data play:0 vol:80 pos:0.000 frames:0 rate:0 bpm:0.0 last:POWER ON
+ui@1000: e0 files:1 scan:done file:testloop_bpm120.wav load:done play:0 vol:80 pos:0.000 frames:176400 rate:44100 bpm:120.0 last:POWER ON
+elasticat 0.0.1: chord rms 0.1098 (peak 0.642), 330 LCD writes, 138.2x real time (chord 130.3x), load 8.0 ms, boot 0.2 ms, 131072 KiB memory, flash 1024 KiB, 86 KiB file; ui_info: e0 files:1 scan:done file:testloop_bpm120.wav load:done play:1 vol:80 pos:0.425 frames:176400 rate:44100 bpm:120.0 last:KEY STEP 10 V100

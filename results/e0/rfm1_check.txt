@@ -1,0 +1,1 @@
+build-rfm1/rfm1/elasticat-0.0.1.rfm1: ok: elasticat 0.0.1 (GPL-3.0-only), virtual (Fantasy CFW, needs fs1, imports rfm1_host_1), 88797 bytes, 128 MiB memory, 28 exports, 3 licence texts

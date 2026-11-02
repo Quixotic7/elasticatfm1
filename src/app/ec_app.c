@@ -442,11 +442,14 @@ static void scan_tick(void)
             A->no_folder = st == EC_BR_ERROR;
             if (A->cursor >= ec_browse_count())
                 A->cursor = 0;
-            if (A->fresh) {                       /* a new project: the first file on T1, else the built-in loop */
+            /* a new project: the first file on T1, else the built-in loop. The built-in loop is a stand-in: a folder
+             * picked after the boot (the web player's first visit) replaces it with the first file. */
+            if (A->fresh || (A->slot[0].builtin && !A->proj.slot[0].path[0] && ec_browse_count() > 0)) {
+                const int fresh = A->fresh;
                 A->fresh = 0;
                 if (ec_browse_count() > 0)
                     queue_slot(0, ec_browse_path(0), 1);
-                else {
+                else if (fresh) {
                     const int h = make_builtin();
                     if (h >= 0) {
                         A->slot[0].handle = h;

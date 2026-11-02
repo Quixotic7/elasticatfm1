@@ -32,8 +32,8 @@ src/ui/     ec_gfx (RGB565, palette, rects / lines / dots, the mockup's 3x5 pixe
 src/dsp/    the sound engine (written separately; ec_dsp.h)
 host/       ec_run (headless native harness: scripted input, WAV + PNG out), test_io (the file layer's test), test_seq
             (the sequencer's), make_testloop.py (the 4 s test loop), make_demo_folder.py + demo_e1.txt + render_e1.sh
-            (the E1 demo built through panel input only)
-results/    proof files: e0/, e1/ (the screens; WAVs stay untracked)
+            (the E1 demo built through panel input only), web_e2e.mjs (the .rfm1 in the real RemoteFM1 web player)
+results/    proof files: e0/, e1/ (the screens; WAVs stay untracked), web/ (the web player test's screenshots + SUMMARY.txt)
 ```
 
 ## The APIs, briefly
@@ -94,6 +94,10 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
 5. Click the page to start the audio. When the screen shows the file, press PLAY (on the FM-1 or on the on-screen
    panel). Turn MASTER for the volume. The rest: [docs/FM1-CONTROLS.md](docs/FM1-CONTROLS.md).
+
+Headless, end to end (a RemoteFM1 `main` export, `git -C <RemoteFM1> archive origin/main | tar -x -C <dir>`;
+Chromium in `/Applications`): `node host/web_e2e.mjs --site=<dir> --rfm1=<the .rfm1>` opens the file, answers the
+folder prompt with the demo loops, plays, programs steps, loads a file on T2, reloads; `results/web/`.
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open

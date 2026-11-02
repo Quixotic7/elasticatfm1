@@ -189,8 +189,11 @@ static void flash_load(void)
 }
 static void flash_save(void)
 {
-#ifndef __wasm__
-    if (g_flash_path[0] && !g_no_flash && !g_use_staged && g_save_on_exit) {
+    const int save = g_flash_path[0] && !g_no_flash && !g_use_staged && g_save_on_exit;
+#ifdef __wasm__
+    (void)save;                            /* (no files in a module: the host persists the image) */
+#else
+    if (save) {
         FILE *f = fopen(g_flash_path, "wb");
         if (f) {
             fwrite(g_flash, 1, sizeof g_flash, f);

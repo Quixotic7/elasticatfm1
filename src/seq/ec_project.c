@@ -2,6 +2,7 @@
 /* The project model and its record (ec_project.h) */
 #include <string.h>
 
+#include "ec_e5.h"
 #include "ec_project.h"
 
 void ec_slot_clear(ec_slot_t *s)
@@ -31,6 +32,7 @@ void ec_project_init(ec_project_t *p)
         ec_params_default(p->pat[0].tr[t].v);
         p->pat[0].tr[t].v[EC_P_SLOT] = (float)(t + 1);   /* (each track starts on its own pool slot) */
     }
+    ec_e5_project_init(p);                 /* E5 */
 }
 
 /* ------------------------------------------------------------------------------------------- steps --- */
@@ -195,6 +197,7 @@ void ec_pattern_prepare(ec_project_t *p, int idx)
         memcpy(p->pat[idx].tr[t].v, p->pat[p->current].tr[t].v, sizeof p->pat[idx].tr[t].v);
     ec_pattern_clear_steps(&p->pat[idx]);
     p->pat[idx].used = 1;
+    ec_e5_pattern_prepared(p, idx);        /* E5 */
 }
 
 /* ------------------------------------------------------------------------------------------- the record --- */
@@ -322,6 +325,20 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
             }
         }
     }
+    /* tagged chunks after the patterns (tag, length, payload): an older build stops reading before them, a newer
+     * one skips the tags it does not know. E5: the scenes, names, per-pattern BPM, page loops, slice programs */
+    if (!o.bad && o.n + 8 <= o.cap) {
+        const uint32_t at = o.n;
+        const int32_t k = ec_e5_chunk_save(p, buf + at + 8, o.cap - at - 8);
+        if (k < 0)
+            o.bad = 1;
+        else {
+            w32(&o, EC_CHUNK_E5);
+            w32(&o, (uint32_t)k);
+            o.n += (uint32_t)k;
+        }
+    } else
+        o.bad = 1;
     if (o.bad)
         return -1;
     {
@@ -372,6 +389,7 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
         p->rtn = 2;
     if (p->current < 0 || p->current >= EC_NPAT)
         p->current = 0;
+    ec_e5_load_begin(p);                   /* E5: the defaults an older record implies (pattern BPM = the BPM) */
     nslot = r8(&o);
     for (i = 0; i < nslot && !o.bad; i++) {
         ec_slot_t tmp, *sl = i < EC_NSLOT ? &p->slot[i] : &tmp;
@@ -423,6 +441,15 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
                 }
             }
         }
+    }
+    /* the tagged chunks (unknown ones skipped) */
+    while (!o.bad && o.n + 8 <= o.cap) {
+        const uint32_t tag = r32(&o), clen = r32(&o);
+        if (clen > o.cap - o.n)
+            break;
+        if (tag == EC_CHUNK_E5)                        /* E5 */
+            ec_e5_chunk_load(p, buf + o.n, clen);
+        o.n += clen;
     }
     if (o.bad)
         return -1;

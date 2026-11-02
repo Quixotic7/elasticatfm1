@@ -1,0 +1,85 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* E5 on the panel (src/app/ec_e5.c): the scene row and the glide, copy / clear / paste with their scopes, the PAGE
+ * overlay (page select / page loop / pattern rate), memorize / recall, quick undo, pattern and project naming, the
+ * slice programs' gestures, step preview. docs/FM1-CONTROLS.md "E5" is the player's reference. ec_app.c calls the
+ * hooks below; each returns 1 when it consumed the input. */
+#ifndef EC_E5APP_H
+#define EC_E5APP_H
+#include <stdint.h>
+
+#include "ec_e5.h"
+#include "ec_pages.h"
+#include "ec_scene.h"
+
+enum { EC_PM_SELECT, EC_PM_LOOP, EC_PM_RATE, EC_NPM };       /* the PAGE overlay's modes */
+enum { EC_NM_NONE, EC_NM_PATTERN, EC_NM_PROJECT };           /* what the naming screen names */
+
+typedef struct {
+    /* scenes */
+    int anchor;                  /* the scene anchor held: 0 none, 1 A, 2 B */
+    uint8_t glide_held;          /* glide keys held (bit 0..5) */
+    int gliding;
+    float glide_target;
+    uint32_t glide_ms;
+    /* PAGE: an OCT key held */
+    int page_down, page_btn, page_used, page_mode;
+    uint32_t page_ms;
+    int oct_fn;                  /* the OCT press was FN + OCT (memorize / recall): no key mode change */
+    /* PATN held (pattern scope) */
+    int patn_down;
+    int confirm;                 /* the pattern clear waits for a second PLAY */
+    uint32_t confirm_ms;
+    /* clipboards: each scope its own */
+    ec_clip_steps_t clip_steps;
+    ec_clip_page_t clip_page;
+    ec_clip_pattern_t clip_pat;
+    ec_clip_slice_t clip_slice;
+    /* undo, memorize */
+    ec_undo_t undo;
+    int memo_ok;
+    /* naming */
+    int naming;                  /* EC_NM_* */
+    int name_pat;
+    char name[EC_NAME];          /* 16 characters, space padded while editing */
+    int name_cur;
+    int home_clean;              /* HOME pressed with nothing else since: its release cancels */
+    uint32_t rng;
+    /* step preview (stopped) */
+    int preview;                 /* 0 none, 1 slices, 2 loop keys */
+    uint32_t preview_bits;
+    int preview_track;
+    uint32_t key_hi;             /* lower keys (bit k) pressed as loop keys / pads 17-32 */
+    /* toast */
+    char toast[28];
+    uint32_t toast_ms;
+    int toast_keep;              /* stays until cleared (the clear prompt) */
+} ec_e5app_t;
+
+/* the hooks (ec_app.c) */
+void ec_e5_init(void);
+void ec_e5_tick(void);
+int ec_e5_button_down(int b);
+int ec_e5_button_up(int b);
+int ec_e5_lower_down(int k, int i, int vel);
+int ec_e5_lower_up(int k, int i);
+int ec_e5_upper(int i, int down);
+int ec_e5_knob(int role, int det);                       /* SELECT / ALGO / PRESETS / K1..K4 before the page */
+int ec_e5_knob_cell(const ec_item_t *it, int det, int mult);   /* a cell turn: scene / slice edits, E5 items */
+void ec_e5_step_down(int i);                             /* a step key went down (preview while stopped) */
+void ec_e5_step_up(void);
+void ec_e5_edit_param(int track, int id, int plock);    /* before an edit: undo, the knob takes over */
+void ec_e5_edit_global(int id, float old);
+void ec_e5_steps_edit(uint16_t mask, const char *label, uint32_t key);   /* before a step edit on the step page */
+int ec_e5_item_value(const ec_item_t *it, float *x, int *locked);       /* a cell's value under a held anchor / pad */
+void ec_e5_item_format(const ec_item_t *it, float x, char *out, int cap);
+float ec_e5_item_frac(const ec_item_t *it, float x);
+int ec_e5_leds_lower(void);
+void ec_e5_leds(void);
+void ec_e5_ui_info(char *buf, uint32_t n);
+int ec_e5_loop_key(int k, int i, int down);             /* the loop key / pad number 1..32 of lower key i */
+int ec_e5_scene_layer(void);                             /* the lower keys are the scene row now */
+int ec_e5_page_visible(void);
+const char *ec_e5_pattern_name(int idx);                 /* "" when unnamed */
+float ec_e5_rate_of_key(int i);                          /* PAGE > RATE: key i -> the rate index */
+
+#endif

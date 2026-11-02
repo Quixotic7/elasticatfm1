@@ -37,7 +37,12 @@ add_executable(ec_test_seq host/test_seq.c)
 target_link_libraries(ec_test_seq PRIVATE elasticat)
 target_compile_options(ec_test_seq PRIVATE -Wall -Wextra)
 
+add_executable(ec_test_e5 host/test_e5.c)        # E5
+target_link_libraries(ec_test_e5 PRIVATE elasticat)
+target_compile_options(ec_test_e5 PRIVATE -Wall -Wextra)
+
 enable_testing()
+add_test(NAME e5 COMMAND ec_test_e5 ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/e2_flash.bin)   # E5
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)
 add_test(NAME seq COMMAND ec_test_seq)
 # the E0 smoke run: the test loop generated into a folder, booted, played, the screen and audio written
@@ -54,6 +59,9 @@ if(Python3_FOUND)
 endif()
 # E1/E2: the demo built through panel input only, the reboot from its saved flash, a missing sample
 add_test(NAME e1_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e1.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e1)
+# E5: scenes, copy / paste, PAGE, naming, memorize / recall, undo, slice programs through panel input; the reboot;
+# an E2 save
+add_test(NAME e5_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e5.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e5)
 add_test(NAME e0_nofolder
          COMMAND ec_run --ms 3000 --press PLAY@500 --rms-from 800 --min-rms 0.02 --expect-ui scan:nofolder
                  --expect-ui "file:BUILTIN LOOP")

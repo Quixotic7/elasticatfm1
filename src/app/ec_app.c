@@ -107,6 +107,11 @@ float ec_app_item_value(const ec_app_t *a, const ec_item_t *it, int *locked)
     const ec_project_t *p = &a->proj;
     if (locked)
         *locked = 0;
+    {
+        float x;                                   /* E5: a held scene anchor / slice pad shows its value */
+        if (ec_e5_item_value(it, &x, locked))
+            return x;
+    }
     switch (it->kind) {
     case EC_IT_PARAM: {
         const ec_ptrack_t *tr = &p->pat[p->current].tr[a->track];
@@ -152,6 +157,10 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
         out[0] = 0;
         return;
     }
+    if (it->kind == EC_IT_E5) {                    /* E5 */
+        ec_e5_item_format(it, x, out, cap);
+        return;
+    }
     if (it->kind == EC_IT_PARAM) {
         ec_param_format(it->id, x, iv(ec_project_track((ec_project_t *)&a->proj, a->track)->v, EC_P_ENV_RANGE), out,
                         cap);
@@ -191,6 +200,7 @@ float ec_app_item_frac(const ec_app_t *a, const ec_item_t *it, float x)
 {
     (void)a;
     switch (it->kind) {
+    case EC_IT_E5: return ec_e5_item_frac(it, x);  /* E5 */
     case EC_IT_PARAM: return ec_param_frac(it->id, x);
     case EC_IT_GLOBAL:
         switch (it->id) {
@@ -512,6 +522,7 @@ static void edit_param(int id, int det, int mult, int flags)
     }
     if (hs >= 0 && !A->settings && (d->flags & EC_PF_LOCKABLE)) {   /* hold a step + turn = p-lock it */
         int i;
+        ec_e5_edit_param(A->track, id, 1);                           /* E5: undo */
         for (i = 0; i < EC_NLOWER; i++)
             if (A->step_held >> i & 1u) {
                 ec_step_t *s = step_at(A->step_page * 16 + i);
@@ -531,6 +542,7 @@ static void edit_param(int id, int det, int mult, int flags)
         message("STOP FIRST");
         return;
     }
+    ec_e5_edit_param(A->track, id, 0);           /* E5: undo; the knob takes the param back from the fader */
     if (id == EC_P_MACHINE)
         v[id] = nudge_machine(v[id], det);
     else
@@ -544,6 +556,8 @@ static void edit_param(int id, int det, int mult, int flags)
 static void edit_global(int id, int det, int mult)
 {
     ec_project_t *p = &A->proj;
+    ec_e5_edit_global(id, id == EC_G_BPM ? p->bpm : id == EC_G_SWING ? p->swing : id == EC_G_GLEN ? (float)p->glen
+                          : id == EC_G_QUANT ? (float)p->quant : (float)p->rtn);   /* E5: undo */
     switch (id) {
     case EC_G_BPM: ec_seq_set_bpm(&A->seq, floorf(p->bpm + 0.5f) + (float)(det * mult)); break;
     case EC_G_SWING:
@@ -610,6 +624,8 @@ static void knob_cell(int k, int det)
         return;
     }
     if (cell >= pg.n)
+        return;
+    if (ec_e5_knob_cell(&pg.it[cell], det, mult))     /* E5: scene / slice edits, E5 cells */
         return;
     switch (pg.it[cell].kind) {
     case EC_IT_PARAM: edit_param(pg.it[cell].id, det, mult, pg.it[cell].flags); break;
@@ -715,6 +731,7 @@ static void program_region(void)
     }
     if (iv(v, EC_P_MACHINE) != EC_MACH_LOOP)
         start_only = 0;
+    ec_e5_steps_edit(A->step_held, "REGION", 0x600u);  /* E5: undo */
     for (i = 0; i < EC_NLOWER; i++)
         if (A->step_held >> i & 1u) {
             ec_step_t *st = step_at(A->step_page * 16 + i);
@@ -735,6 +752,8 @@ static void lower_down(int k, int i, int vel)
     const float *v = ec_app_params(A);
     const int m = iv(v, EC_P_MACHINE);
     const float fv = (float)vel / 127.0f;
+    if (ec_e5_lower_down(k, i, vel))               /* E5: naming, PAGE, the scene row, FN + pad = slice mute */
+        return;
     if (A->patn_open) {
         ec_seq_request_pattern(&A->seq, i);
         A->patn_used = 1;
@@ -745,27 +764,29 @@ static void lower_down(int k, int i, int vel)
         return;
     }
     if (loop_mode()) {
+        const int lk = ec_e5_loop_key(k, i, 1);    /* E5: 1..32 (FN = keys / pads 17-32 when the track has them) */
         if (A->sel_held)
             A->sel_used = 1;
         if (is_slice_m(m)) {
             if (A->step_held) {
                 int j;
+                ec_e5_steps_edit(A->step_held, "SLICE", 0x700u);   /* E5: undo */
                 for (j = 0; j < EC_NLOWER; j++)
                     if (A->step_held >> j & 1u)
-                        ec_step_toggle_slice(ec_project_track(&A->proj, A->track), A->step_page * 16 + j, i + 1);
+                        ec_step_toggle_slice(ec_project_track(&A->proj, A->track), A->step_page * 16 + j, lk);
                 A->step_edited |= A->step_held;
                 A->key_role[k] = R_SLICE_PROG;
                 mark_dirty();
             } else {
-                ec_seq_slice_pad(&A->seq, A->track, i + 1, 1, fv);
+                ec_seq_slice_pad(&A->seq, A->track, lk, 1, fv);
                 A->key_role[k] = R_PAD;
             }
         } else if (A->step_held) {
-            A->prog_keys |= 1u << i;
+            A->prog_keys |= 1u << (lk - 1);
             A->key_role[k] = R_LOOP_PROG;
             program_region();
         } else {
-            ec_seq_loop_key(&A->seq, A->track, i + 1, 1);
+            ec_seq_loop_key(&A->seq, A->track, lk, 1);
             A->key_role[k] = R_LOOP_LIVE;
         }
         A->redraw = 1;
@@ -774,6 +795,7 @@ static void lower_down(int k, int i, int vel)
     if (A->keymode == EC_KM_KEYS) {
         if (A->step_held) {
             int j;
+            ec_e5_steps_edit(A->step_held, "PITCH", 0x800u);       /* E5: undo */
             for (j = 0; j < EC_NLOWER; j++)
                 if (A->step_held >> j & 1u) {
                     ec_step_t *st = step_at(A->step_page * 16 + j);
@@ -796,10 +818,13 @@ static void lower_down(int k, int i, int vel)
     A->step_ms[i] = A->ms;
     A->tap_key = -1;
     A->redraw = 1;
+    ec_e5_step_down(i);                            /* E5: step preview while stopped */
 }
 
 static void lower_up(int k, int i, int vel)
 {
+    if (ec_e5_lower_up(k, i))                      /* E5 roles */
+        return;
     switch (A->key_role[k]) {
     case R_STEP: {
         const int quick = A->ms - A->step_ms[i] < TAP_MS;
@@ -809,9 +834,11 @@ static void lower_up(int k, int i, int vel)
         A->tap_key = -1;
         if (!A->step_held)
             A->prog_keys = 0;
+        ec_e5_step_up();                           /* E5: the preview ends with the last step */
         if (quick && !edited) {
             ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
             const int idx = A->step_page * 16 + i;
+            ec_e5_steps_edit((uint16_t)(1u << i), "STEP", 0x900u + (uint32_t)idx);   /* E5: undo */
             if (A->fn)
                 ec_step_toggle_ghost(tr, idx);
             else if (ec_step_toggle(tr, idx) && vel != 100)      /* (100: a host without key velocity) */
@@ -820,9 +847,9 @@ static void lower_up(int k, int i, int vel)
             mark_dirty();
         }
     } break;
-    case R_LOOP_LIVE: ec_seq_loop_key(&A->seq, A->track, i + 1, 0); break;
-    case R_LOOP_PROG: A->prog_keys &= ~(1u << i); break;
-    case R_PAD: ec_seq_slice_pad(&A->seq, A->track, i + 1, 0, 0); break;
+    case R_LOOP_LIVE: ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0); break;
+    case R_LOOP_PROG: A->prog_keys &= ~(1u << (ec_e5_loop_key(k, i, 0) - 1)); break;
+    case R_PAD: ec_seq_slice_pad(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0, 0); break;
     case R_KEY: ec_seq_keyboard(&A->seq, A->track, key_semis(i), 0, 0); break;
     default: break;
     }
@@ -832,6 +859,8 @@ static void lower_up(int k, int i, int vel)
 
 static void upper_down(int i)
 {
+    if (ec_e5_upper(i, 1))                         /* E5: PATN held (pattern scope), naming */
+        return;
     if (i < EC_NTRACK) {
         if (A->fn) {                                  /* FN + track: mute */
             float *v = ec_project_track(&A->proj, i)->v;
@@ -864,6 +893,8 @@ static void upper_down(int i)
 
 static void upper_up(int i)
 {
+    if (ec_e5_upper(i, 0))                         /* E5 */
+        return;
     if (i == 9) {
         A->fill_held = 0;
         ec_seq_set_fill(&A->seq, 0, A->fill_latched);
@@ -884,6 +915,10 @@ static const int CAT_OF[EC_NB] = {EC_CAT_FX, EC_CAT_SRC, EC_CAT_AMP, EC_CAT_MOD,
 
 static void button_down(int b)
 {
+    if (ec_e5_button_down(b)) {                    /* E5: copy / clear / paste, PAGE, memorize, undo, naming */
+        A->redraw = 1;
+        return;
+    }
     switch (b) {
     case EC_B_HOME: A->fn = 1; break;
     case EC_B_SEL:
@@ -920,15 +955,7 @@ static void button_down(int b)
         if (A->fn)
             save_project(0);
         break;
-    case EC_B_OCTDN:
-    case EC_B_OCTUP: {
-        const int d = b == EC_B_OCTUP ? 1 : -1;
-        if (A->fn) {
-            const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
-            A->step_page = clampi(A->step_page + d, 0, pages - 1);
-        } else
-            A->keymode = (A->keymode + d + EC_NKM) % EC_NKM;
-    } break;
+    /* OCT- / OCT+: E5 (ec_e5.c) -- a tap changes the key mode on release, a hold is PAGE, FN + OCT memorize / recall */
     default:
         if (CAT_OF[b] >= 0)
             category(CAT_OF[b]);
@@ -939,6 +966,10 @@ static void button_down(int b)
 
 static void button_up(int b)
 {
+    if (ec_e5_button_up(b)) {                      /* E5: OCT taps (key mode), FN tap cancels naming */
+        A->redraw = 1;
+        return;
+    }
     if (b == EC_B_HOME)
         A->fn = 0;
     else if (b == EC_B_SEL) {
@@ -987,6 +1018,7 @@ void ec_app_init(void)
     sink.process = sink_process;
     ec_seq_init(&A->seq, &A->proj, &sink, EC_FS);
     ec_dsp_set_tempo(A->dsp, A->proj.bpm);
+    ec_e5_init();                                  /* E5 */
     A->cat = EC_CAT_SRC;
     A->page[EC_CAT_SRC] = 0;
     scan();
@@ -1027,6 +1059,10 @@ void ec_app_tick(const ec_input_t *in)
         const int d = in->enc[r];
         if (!d)
             continue;
+        if (ec_e5_knob(r, d)) {                    /* E5: naming, PAGE mode */
+            A->redraw = 1;
+            continue;
+        }
         if (r == EC_E_SELECT) {
             if (A->cat == EC_CAT_FILE && !A->settings) {
                 const int n = ec_browse_count();
@@ -1051,6 +1087,7 @@ void ec_app_tick(const ec_input_t *in)
         if (in->btn_up >> b & 1u)
             button_up(b);
 
+    ec_e5_tick();                                  /* E5: the glide, prompts */
     /* autosave: stopped, dirty, quiet for a moment */
     if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
         save_project(1);
@@ -1083,6 +1120,8 @@ static void leds_lower(void)
     const float *v = tr->v;
     const int m = iv(v, EC_P_MACHINE);
     int i;
+    if (ec_e5_leds_lower())                        /* E5: naming, PAGE, the scene row */
+        return;
     if (A->patn_open) {
         for (i = 0; i < EC_NLOWER; i++)
             ec_plat_led_lower(i, i == A->proj.current ? EC_LED_LIT
@@ -1188,6 +1227,7 @@ static void leds(void)
     ec_plat_led_button(EC_B_REC, A->dirty ? EC_LED_DIM : EC_LED_FAINT);
     ec_plat_led_button(EC_B_OCTDN, A->keymode == EC_KM_LOOP ? EC_LED_LIT : EC_LED_FAINT);
     ec_plat_led_button(EC_B_OCTUP, A->keymode == EC_KM_KEYS ? EC_LED_LIT : EC_LED_FAINT);
+    ec_e5_leds();                                  /* E5 */
 }
 
 static void meters(void)
@@ -1229,7 +1269,7 @@ void ec_app_frame(void)
 void ec_app_ui_info(char *buf, uint32_t n)
 {
     static const char *const LD[] = {"idle", "stat", "header", "data", "done", "error"};
-    static const char *const KM[] = {"steps", "loop", "keys"};
+    static const char *const KM[] = {"steps", "loop", "keys", "scene"};
     static const char *const SL[] = {"empty", "queued", "loading", "ready", "missing", "error"};
     const ec_ss_sample_t *s = ec_app_track_sample(A, A->track);
     const int sl = ec_app_track_slot(A, A->track);
@@ -1260,6 +1300,11 @@ void ec_app_ui_info(char *buf, uint32_t n)
              LD[ec_load_state()], sl + 1, SL[A->slot[sl].state], ready, missing, trigs ? "on" : "off", trigs, hs, used,
              A->saves, A->dirty,
              ec_dsp_total_voices(A->dsp), ec_seq_step(&A->seq, A->track) + 1);
+    {
+        const uint32_t l = (uint32_t)strlen(buf);   /* E5 */
+        if (l < n)
+            ec_e5_ui_info(buf + l, n - l);
+    }
 }
 
 void ec_app_shutdown(void) { ec_load_cancel(); }

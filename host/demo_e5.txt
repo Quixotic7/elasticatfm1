@@ -1,0 +1,143 @@
+# The E5 demo, through panel input only (ec_run --out DIR --script ...; host/render_e5.sh runs it): scenes + the
+# glide, the scene strip, copy / paste, the PAGE overlay, naming, memorize / recall, undo, the pattern clear prompt,
+# slice programs. A fresh project with build/demo_folder (host/make_demo_folder.py). Times are device ms; lower I =
+# step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN (0..10).
+
+png-scale 2
+master 640@0
+press PLAY@1200
+
+# ---- a sound for scene A: FILT cutoff 100, res 30; GLO x3 = MST > SCENE; FN + key 1 = capture A
+press EDIT@1500
+turn K1@1600:-27
+turn K2@1650:30
+press GLO@1900
+press GLO@2000
+press GLO@2100
+press HOME@2300+400
+lower 0@2400+80
+png 2450:01_scene_capture_a.png
+
+# ---- another for B: cutoff 40, res 90; FN + key 8 = capture B
+press EDIT@2800
+turn K1@2900:-60
+turn K2@2950:60
+press GLO@3200
+press HOME@3300+300
+lower 7@3400+80
+png 3700:02_scene_page.png
+
+# ---- hold glide key 7 (= B): ~0.3 s ease; release freezes; tap key 4 (0.4) for a nudge
+lower 6@3800+700
+png 3950:03_scene_glide.png
+png 4600:04_scene_at_b.png
+lower 3@4700+120
+png 5000:05_scene_nudge.png
+
+# ---- the scene row on another page (OCT- from STEPS = SCENE): the strip over FILT; hold A + KN4 = DPTH into A only
+press EDIT@5200
+press OCT-@5300+60
+png 5550:06_scene_strip.png
+lower 0@5600+600
+turn K4@5800:30
+png 5900:07_scene_anchor_edit.png
+press OCT+@6400+60
+
+# ---- PAT: T1 32 steps; trigs on 1, 5, 9
+press ARP@6500
+turn K1@6600:16
+lower 0@6800+80
+lower 4@6950+80
+lower 8@7100+80
+
+# ---- copy steps 1 + 5 (hold + REC), paste on 11 (hold + FN + PLAY): 11 and 15, the spacing kept
+lower 0@7600+500
+lower 4@7650+450
+press REC@7800
+png 7850:08_copy_steps.png
+lower 10@8300+500
+press HOME@8350+300
+press PLAY@8450
+png 8500:09_paste_steps.png
+
+# ---- PAGE: hold OCT+; key 2 selects page 2; SELECT -> LOOP, key 1 drops page 1; SELECT -> RATE; REC copies the page
+press OCT+@9000+1600
+lower 1@9300+80
+png 9450:10_page_select.png
+turn SELECT@9600:1
+lower 0@9700+80
+png 9850:11_page_loop.png
+turn SELECT@10000:1
+png 10100:12_page_rate.png
+press REC@10300
+png 10350:13_page_copy.png
+
+# ---- name the pattern: PATN tap (overlay) + SAVE; KN3 = a random name, KN1 / KN2 edit; SAVE keeps it
+upper 10@10800+80
+press SAVE@11000
+turn K3@11200:1
+png 11300:14_name_random.png
+turn K1@11400:-3
+turn K2@11500:5
+png 11600:15_name_edit.png
+press SAVE@11800
+png 12000:16_pattern_named.png
+
+# ---- memorize (FN + OCT+), change the cutoff, recall (FN + OCT-) while playing, then undo (FN + SAVE)
+press HOME@12300+300
+press OCT+@12400+60
+png 12450:17_memorize.png
+press EDIT@12800
+turn K1@12900:50
+press HOME@13200+300
+press OCT-@13300+60
+png 13350:18_recall.png
+turn K2@13500:20
+press HOME@13700+300
+press SAVE@13800
+png 13850:19_undo.png
+
+# ---- the pattern scope: hold PATN + PLAY = clear (asks), PLAY again = cleared
+upper 10@14200+900
+press PLAY@14400
+png 14450:20_clear_prompt.png
+press PLAY@14700
+png 14750:21_cleared.png
+
+# ---- slice programs on T2: load the bass, SLICE machine (FN + SEL setup), OCT+ = loop keys (the slice pads)
+upper 1@15400+80
+press SAVE@15500
+turn SELECT@15600:1
+press SAVE@15700
+press HOME@16300+300
+press SEL@16400+60
+turn K1@16650:2
+press HOME@16750+250
+press SEL@16800+60
+press OCT+@17100+60
+# hold pad 3 + KN1 (pitch) = that slice's lock; + FN, KN2 = CHOK (its choke group)
+lower 2@17300+900
+turn K1@17500:5
+png 17600:22_slice_lock.png
+press HOME@17700+400
+turn K2@17900:2
+png 18000:23_slice_choke.png
+# hold pad 5 + FN + KN3 (SMUT) = mute the slice (its pad goes faint, the steps skip it)
+lower 4@18350+400
+press HOME@18400+300
+turn K3@18500:1
+png 18600:24_slice_mute.png
+# hold pad 3 + REC = copy its program; hold pad 7 + FN + PLAY = paste
+lower 2@19000+400
+press REC@19200
+lower 6@19600+500
+press HOME@19700+300
+press PLAY@19800
+png 19850:25_slice_paste.png
+
+# ---- 32 slices (FN + KN1 = CNT): FN + pad 1 = slice 17
+press HOME@20500+300
+turn K1@20600:16
+press HOME@20950+400
+lower 0@21000+300
+png 21100:26_pad_17.png

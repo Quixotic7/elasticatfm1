@@ -47,6 +47,16 @@ static void S(ec_page_t *o, int id, const char *label)
         o->n++;
     }
 }
+static void X(ec_page_t *o, int id, const char *label)      /* E5 items */
+{
+    if (o->n < EC_PAGE_ITEMS) {
+        o->it[o->n].kind = EC_IT_E5;
+        o->it[o->n].id = (uint8_t)id;
+        o->it[o->n].flags = 0;
+        o->it[o->n].label = label;
+        o->n++;
+    }
+}
 static void stopped_only(ec_page_t *o) { o->it[o->n - 1].flags |= EC_IF_STOPPED; }
 
 int ec_cat_pages(int cat, const float *v)
@@ -58,7 +68,7 @@ int ec_cat_pages(int cat, const float *v)
     case EC_CAT_FILT: return 3;
     case EC_CAT_FX: return 2;
     case EC_CAT_MOD: return 2;
-    case EC_CAT_MASTER: return 2;
+    case EC_CAT_MASTER: return 3;          /* E5: + SCENE */
     default: return 1;
     }
 }
@@ -158,7 +168,8 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
             o->title = "SOURCE";
             if (is_slice(v)) {
                 P(o, EC_P_PITCH, 0), P(o, EC_P_SLICE_PLAY_MODE, 0), P(o, EC_P_SLICE_INDEX, 0), P(o, EC_P_SLOT, 0);
-                P(o, EC_P_SLICE_COUNT, 0), P(o, -1, 0), P(o, -1, 0), P(o, EC_P_SLICE_REVERSE, 0);
+                P(o, EC_P_SLICE_COUNT, 0), X(o, EC_X_CHOKE, "CHOK"), X(o, EC_X_MUTE, "SMUT");
+                P(o, EC_P_SLICE_REVERSE, 0);
             } else {
                 P(o, EC_P_PITCH, 0), P(o, EC_P_LOOP_START, 0), P(o, EC_P_LOOP_END, 0), P(o, EC_P_SLOT, 0);
                 P(o, EC_P_XFADE, 0), P(o, EC_P_LOOP_REVERSE, 0);
@@ -233,9 +244,12 @@ void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *o)
         if (page == 0) {
             o->title = "MIX";
             P(o, EC_P_AMP, 0), P(o, EC_P_PAN, 0), P(o, EC_P_MUTE, 0), G(o, EC_G_BPM, "BPM");
-        } else {
+        } else if (page == 1) {
             o->title = "MASTER";
             G(o, EC_G_BPM, "BPM"), G(o, EC_G_SWING, "SWNG"), G(o, EC_G_GLEN, "GLEN"), G(o, EC_G_RTN, "RTN");
+        } else {
+            o->title = "SCENE";                /* E5: the A/B crossfader */
+            X(o, EC_X_XFD, "XFD");
         }
         break;
     case EC_CAT_FILE:
@@ -273,7 +287,9 @@ int ec_settings_items(int cat, const float *v, ec_page_t *o)
         break;
     case EC_CAT_TRIG: G(o, EC_G_SWING, "SWING"); break;
     case EC_CAT_PAT: G(o, EC_G_QUANT, "QUANT"), G(o, EC_G_GLEN, "GLEN"); break;
-    case EC_CAT_MASTER: G(o, EC_G_RTN, "RTN"), G(o, EC_G_BPM, "BPM"); break;
+    case EC_CAT_MASTER:
+        G(o, EC_G_RTN, "RTN"), G(o, EC_G_BPM, "BPM"), X(o, EC_X_GBPM, "GBPM"), X(o, EC_X_NAME, "NAME");   /* E5 */
+        break;
     default: return 0;
     }
     return 1;

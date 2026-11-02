@@ -4,6 +4,8 @@
 #include <math.h>
 #include <string.h>
 
+#include "ec_e5.h"
+#include "ec_scene.h"
 #include "ec_seq.h"
 
 #define NEVER UINT64_MAX
@@ -183,16 +185,25 @@ static void fire_slices(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note)
     const float *v = ptr(s, t)->v;
     const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
     const int mode = iv(v, EC_P_SLICE_PLAY_MODE);
+    const ec_slicemap_t *sm = ec_e5_slices(s->proj, t);    /* E5: the slice programs */
     uint32_t slices = rec->slices;
     int k;
     if (!slices && rec->trig)
         slices = 1u << (clampi(iv(v, EC_P_SLICE_INDEX), 1, cnt) - 1);
+    slices &= ~sm->mute;                                    /* a muted slice is skipped entirely */
     for (k = 1; k <= cnt; k++)
         if (slices >> (k - 1) & 1u) {
             ec_event_t e = ev0(EC_EV_TRIG, t);
+            float x;
             e.slice = k;
-            e.velocity = field(rec, v, EC_P_VELOCITY);
-            e.pitch = field(rec, v, EC_P_PITCH);
+            /* per voice: the step's lock > the slice's lock > the track */
+            e.velocity = ec_step_lock_get(rec, EC_P_VELOCITY, &x) || ec_slice_lock_get(sm, k, EC_P_VELOCITY, &x)
+                             ? x : v[EC_P_VELOCITY];
+            if (!ec_step_lock_get(rec, EC_P_PITCH, &x) && !ec_slice_lock_get(sm, k, EC_P_PITCH, &x) &&
+                !ec_scene_value(s->proj, t, EC_P_PITCH, &x))
+                x = v[EC_P_PITCH];
+            e.pitch = x;
+            e.choke = sm->choke[k - 1];
             e.length = mode == EC_SLICE_ONESHOT ? 0 : (int)(note > 0x7FFFFFFF ? 0x7FFFFFFF : note);
             emit(s, &e);
         }
@@ -244,6 +255,21 @@ static void enter_step(ec_seq_t *s, int t, int reset)
         holds_clear(st);
     }
     note = note_samples(s, t, fires ? rec : 0);
+    if (fires && is_slice(m) && rec->slices) {    /* E5: the primary slice's program, under the step's own locks */
+        const ec_slicemap_t *sm = ec_e5_slices(s->proj, t);
+        int sl = 0;
+        while (sl < 32 && !(rec->slices >> sl & 1u))
+            sl++;
+        for (k = 0; sl < 32 && k < sm->nlock[sl]; k++) {
+            const int id = sm->lock_id[sl][k];
+            if (id >= EC_NP || id == EC_P_PITCH || id == EC_P_VELOCITY ||
+                (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)))
+                continue;
+            st->hold_on[id] = 1;
+            st->hold_val[id] = sm->lock_val[sl][k];
+            st->hold_exp[id] = s->now + note;
+        }
+    }
     if (fires) {
         for (k = 0; k < rec->nlock; k++) {
             const int id = rec->lock_id[k];
@@ -289,8 +315,16 @@ static void enter_step(ec_seq_t *s, int t, int reset)
 
     if (fires) {
         int hits = clampi((int)floorf(field(rec, v, EC_P_TRIG_RATCHET) + 0.5f), 1, 8);
-        if (is_slice(m))
-            hits = clampi(hits * clampi((int)floorf(field(rec, v, EC_P_SLICE_RATCHET) + 0.5f), 1, 4), 1, 16);
+        if (is_slice(m)) {
+            float sr = field(rec, v, EC_P_SLICE_RATCHET), x;
+            int sl = 0;                                    /* E5: step lock > slice lock > track */
+            while (sl < 32 && !(rec->slices >> sl & 1u))
+                sl++;
+            if (!ec_step_lock_get(rec, EC_P_SLICE_RATCHET, 0) && sl < 32 &&
+                ec_slice_lock_get(ec_e5_slices(s->proj, t), sl + 1, EC_P_SLICE_RATCHET, &x))
+                sr = x;
+            hits = clampi(hits * clampi((int)floorf(sr + 0.5f), 1, 4), 1, 16);
+        }
         st->fired++;
         st->last_fire = s->now;
         if (hits > 1) {
@@ -358,8 +392,7 @@ static void anchor(ec_seq_t *s, int t, int64_t pos)
     ec_seq_track_t *st = &s->tr[t];
     const int steps = ec_seq_pattern_steps(s, t);
     st->position = pos;
-    st->play_index = pos >= 0 ? (int)(pos % steps) : 0;
-    st->pass = pos >= 0 ? (int)(pos / steps) + 1 : 1;
+    st->play_index = ec_e5_play_index(s->proj, t, steps, pos, &st->pass);   /* E5: PAGE > LOOP */
 }
 
 static void enter_position(ec_seq_t *s, int t, int64_t pos)
@@ -436,6 +469,7 @@ static void load_pattern(ec_seq_t *s, int idx, int restart)
     s->proj->current = idx;
     s->switches++;
     ec_seq_touch_all(s);
+    ec_e5_pattern_loaded(s);                       /* E5: the pattern's BPM, the scenes re-applied */
     if (s->playing && restart)
         restart_clock(s);
     else if (s->playing)
@@ -488,6 +522,13 @@ void ec_seq_request_pattern(ec_seq_t *s, int idx)
     } break;
     default: s->pending = idx == s->proj->current ? -1 : idx; break;   /* (asking for the live one cancels) */
     }
+}
+
+/* E5: the project was replaced under the sequencer (recall): reload the live pattern, from step 1 when playing */
+void ec_seq_reload(ec_seq_t *s)
+{
+    s->pending = s->temp_return = -1;
+    load_pattern(s, s->proj->current, 1);
 }
 
 void ec_seq_set_fill(ec_seq_t *s, int held, int latched)
@@ -725,6 +766,7 @@ void ec_seq_set_bpm(ec_seq_t *s, float bpm)
     }
     s->bpm = bpm;
     s->proj->bpm = bpm;
+    ec_e5_bpm_changed(s->proj, bpm);               /* E5: per-pattern BPM */
     e = ev0(EC_EV_TEMPO, -1);
     e.value = bpm;
     emit(s, &e);
@@ -773,12 +815,16 @@ void ec_seq_loop_key(ec_seq_t *s, int t, int key, int pressed)
 static void pad(ec_seq_t *s, int t, int slice, int pressed, float vel, float pitch)
 {
     const int mode = iv(ptr(s, t)->v, EC_P_SLICE_PLAY_MODE);
+    const ec_slicemap_t *sm = ec_e5_slices(s->proj, t);     /* E5: the slice's program */
     ec_event_t e;
     if (pressed) {
+        if (sm->mute >> (slice - 1) & 1u)
+            return;
         e = ev0(EC_EV_SLICE_ON, t);
         e.slice = slice;
         e.velocity = vel;
         e.pitch = pitch;
+        e.choke = sm->choke[slice - 1];
         e.length = mode == EC_SLICE_ONESHOT ? 0 : (int)(60.0 * s->fs);   /* held until the key comes up */
         s->tr[t].pads |= 1u << (slice - 1);
         s->tr[t].last_fire = s->now;
@@ -797,7 +843,11 @@ void ec_seq_slice_pad(ec_seq_t *s, int t, int slice, int pressed, float vel)
 {
     if (t < 0 || t >= EC_NTRACK || slice < 1 || slice > 32)
         return;
-    pad(s, t, slice, pressed, vel, ec_seq_value(s, t, EC_P_PITCH));
+    float x;
+    if (pressed && ec_slice_lock_get(ec_e5_slices(s->proj, t), slice, EC_P_PITCH, &x))   /* E5 */
+        pad(s, t, slice, pressed, vel, x);
+    else
+        pad(s, t, slice, pressed, vel, ec_seq_value(s, t, EC_P_PITCH));
 }
 
 void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
@@ -832,6 +882,11 @@ float ec_seq_value(const ec_seq_t *s, int t, int id)
         return st->live_pitch;
     if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END)
         return st->hold_val[id];
+    {
+        float x;                                   /* E5: the crossfader, source 2 (BASE_VALUE_RESOLVER.md) */
+        if (ec_scene_value(s->proj, t, id, &x))
+            return x;
+    }
     return ptr(s, t)->v[id];
 }
 

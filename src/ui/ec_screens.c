@@ -9,6 +9,7 @@
 #include "ec_browse.h"
 #include "ec_gfx.h"
 #include "ec_loader.h"
+#include "ec_scr_e5.h"
 #include "ec_screens.h"
 
 #define W EC_GW
@@ -670,10 +671,16 @@ static void pat_screen(const ec_app_t *a, const ec_page_t *pg)
 }
 
 /* ------------------------------------------------------------------------------------------- dispatch --- */
-void ec_screens_draw(const ec_app_t *a)
+/* E5's screens share the header and the cells */
+void ec_screens_header(const ec_app_t *a, const char *title, int page, const char *right)
+{
+    header(a, title, page, right);
+}
+void ec_screens_cells(const ec_app_t *a, const ec_page_t *pg) { cells(a, pg); }
+
+static void draw_main(const ec_app_t *a)
 {
     ec_page_t pg;
-    ec_gfx_fill(EC_C_BG);
     ec_app_page(a, &pg);
     if (a->patn_open) {
         ec_page_t pp;
@@ -700,4 +707,12 @@ void ec_screens_draw(const ec_app_t *a)
     case EC_CAT_PAT: pat_screen(a, &pg); break;
     default: generic_screen(a, &pg); break;
     }
+}
+
+void ec_screens_draw(const ec_app_t *a)
+{
+    ec_gfx_fill(EC_C_BG);
+    if (!ec_scr_e5_full(a))                       /* E5: naming, the PAGE overlay, the SCENE page */
+        draw_main(a);
+    ec_scr_e5_overlay(a);                         /* E5: the scene strip, toasts */
 }

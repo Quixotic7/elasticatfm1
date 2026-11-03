@@ -57,6 +57,19 @@ int ec_pn_page(void *vout)
     case EC_MODE_SAMPLER: return 0;
     default: break;
     }
+    if (!A->scr && A->cat == EC_CAT_XFD && A->e5.anchor && !A->bus) {   /* A / B held: the page it came from */
+        const int c = P->xf_from >= 0 && P->xf_from < EC_NCAT ? P->xf_from : EC_CAT_FILT;
+        ec_page_items(c, A->page[c], ec_app_params(A), 0, o);
+        if (ec_ux_lanes(o->n) > 1)                 /* (its active lane's four) */
+            {
+                const int l = A->ux.lane[c] < ec_ux_lanes(o->n) ? A->ux.lane[c] : 0;
+                int i;
+                for (i = 0; i < 4 && l * 4 + i < o->n; i++)
+                    o->it[i] = o->it[l * 4 + i];
+                o->n = i;
+            }
+        return 1;
+    }
     if (!A->scr && A->cat == EC_CAT_XFD) {         /* the layout's fader cell, then the scene counts */
         int has_glide = 0, i;
         ec_page_items(EC_CAT_XFD, A->page[EC_CAT_XFD], ec_app_params(A), 0, o);

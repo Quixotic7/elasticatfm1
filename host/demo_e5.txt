@@ -1,70 +1,71 @@
-# The E5 demo, through panel input only (ec_run --out DIR --script ...; host/render_e5.sh runs it): scenes + the
-# glide, the scene strip, copy / paste, F3's pages, naming, memorize / recall, undo / redo, the pattern clear
-# question, slice programs (0.3.0's gestures: docs/FM1-CONTROLS.md). A fresh project with build/demo_folder (host/make_demo_folder.py). Times are device ms; lower I =
-# step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN (0..10).
+# The E5 demo, through panel input only (ec_run --out DIR --script ...; host/render_e5.sh runs it): scenes (captured
+# in CROSSFADER) + the pressure glide, copy / paste (§2's one-step buffer), F3's pages, PAGES' page copy, naming,
+# memorize / recall, undo, a pattern cut, slice programs. 0.6.0's gestures (docs/UX-V2.md). A fresh project with
+# build/demo_folder (host/make_demo_folder.py). Times are device ms; lower I = W(I+1), upper I = B(I+1).
+#   0.6.0 dropped (no gesture any more): the scene strip over another mode, a scene anchor's edit of another mode's
+#   knob (CROSSFADER's knobs are its own cells: scene content comes from B11 + A / B = capture), the pattern clear
+#   question, the slice program's copy / paste.
 
 png-scale 2
 master 640@0
 press PLAY@1200
 
-# ---- a sound for scene A: FILT cutoff 100, res 30; the MST key x3 = MST > SCENE; SHIFT + key 1 = capture A
-press EDIT@1500
+# ---- a sound for scene A: FILTER (SEL) cutoff 100, res 30; ARP = CROSSFADER; B11 held + B1 = capture A
+press SEL@1500
 turn K1@1600:-27
 turn K2@1650:30
-upper 8@1900+60
-upper 8@2000+60
-upper 8@2100+60
-press GLO@2300+400
-lower 0@2400+80
+press ARP@1900
+upper 10@2300+300
+upper 0@2400+80
 png 2450:01_scene_capture_a.png
 
-# ---- another for B: cutoff 40, res 90; SHIFT + key 8 = capture B
-press EDIT@2800
+# ---- another for B: cutoff 40, res 90, DPTH 30 (FILTER's K4); B11 + B2 = capture B
+press SEL@2800
 turn K1@2900:-60
 turn K2@2950:60
-upper 8@3200+60
-press GLO@3300+300
-lower 7@3400+80
+turn K4@3000:30
+press ARP@3200
+upper 10@3300+300
+upper 1@3400+80
 png 3700:02_scene_page.png
 
-# ---- hold glide key 7 (= B): ~0.3 s ease; release freezes; tap key 4 (0.4) for a nudge
-lower 6@3800+700
+# ---- hold W12 (= B, 127): the glide (MED: 0.6 s across); let go = it stays; W5 held a moment nudges back
+lower 11@3800+700
 png 3950:03_scene_glide.png
 png 4600:04_scene_at_b.png
-lower 3@4700+120
+lower 4@4700+120
 png 5000:05_scene_nudge.png
 
-# ---- the scene row on another page (OCT- and OCT+ tapped: both lit = SCENE): the strip over FILT; hold A + KN4 =
-#      DPTH into A only
-press EDIT@5200
-press OCT-@5300+60
-press OCT+@5400+60
-png 5550:06_scene_strip.png
-lower 0@5600+600
-turn K4@5800:30
-png 5900:07_scene_anchor_edit.png
-press OCT-@6300+60
-press OCT+@6400+60
+# ---- scene A again with the depth: back on FILTER, K4 into the sound, then B11 + B1 re-captures A
+press SEL@5200
+turn K4@5400:30
+png 5550:06_filter.png
+press ARP@5700
+upper 10@5800+400
+upper 0@5900+80
+png 5950:07_scene_anchor_held.png
 
-# ---- PAT: T1 32 steps; trigs on 1, 5, 9
-press ARP@6500
+# ---- PATTERN LAUNCH: K1 = the pattern length 32; HOME twice = TRIG: trigs on 1, 5, 9
+press SEQ@6400
 turn K1@6600:16
-lower 0@6800+80
-lower 4@6950+80
-lower 8@7100+80
+press HOME@6700
+press HOME@6800
+lower 0@6950+80
+lower 4@7100+80
+lower 8@7250+80
 
-# ---- copy steps 1 + 5 (hold + REC), paste on 11 (hold + SHIFT + PLAY): 11 and 15, the spacing kept
-lower 0@7600+500
-lower 4@7650+450
-press REC@7800
-png 7850:08_copy_steps.png
-lower 10@8300+500
-press GLO@8350+300
-press PLAY@8450
-png 8500:09_paste_steps.png
+# ---- F1 tapped (sticky copy): W1 copied, W11 pasted; W5 (not empty) copied, W15 (empty) pasted; F1 off
+press OCT-@7500
+lower 0@7600+80
+png 7700:08_copy_steps.png
+lower 10@7800+80
+lower 4@7900+80
+lower 14@8000+80
+press OCT-@8200
+png 8300:09_paste_steps.png
 
-# ---- F3 (OCT- + OCT+): key 2 tapped edits page 2; key 1 held drops page 1 from the loop; KN2 the pattern rate;
-#      OCT- closes; an OCT key held + REC copies the page
+# ---- F3 (F1 + F2 held): key 2 tapped edits page 2; key 1 held drops page 1 from the loop; KN2 the pattern rate;
+#      F1 closes it
 press OCT-@9000+120
 press OCT+@9050+100
 lower 1@9300+80
@@ -75,13 +76,10 @@ turn K2@10200:-4
 png 10300:12_f3_rate.png
 turn K2@10350:4
 press OCT-@10400+60
-press OCT+@10500+400
-press REC@10700
-png 10750:13_page_copy.png
 
-# ---- name the pattern: SHIFT + PATN; KN3 = a random name, KN1 / KN2 edit; OCT+ keeps it
-press GLO@10950+150
-upper 10@11000+60
+# ---- name the pattern: SEQ held = F3, PRESETS = the name; KN3 = a random name, KN1 / KN2 edit; F2 keeps it
+press SEQ@10450+500
+turn PRESETS@11000:1
 turn K3@11200:1
 png 11300:14_name_random.png
 turn K1@11400:-3
@@ -90,38 +88,49 @@ png 11600:15_name_edit.png
 press OCT+@11800+60
 png 12000:16_pattern_named.png
 
-# ---- memorize (SHIFT + T1), change the cutoff, recall (SHIFT + T2) while playing, then undo (SHIFT + OCT-)
+# ---- memorize (SHIFT + B3), change the cutoff, recall (SHIFT + B4) while playing, then undo (SHIFT + F1)
 press GLO@12300+300
-upper 0@12400+60
+upper 2@12400+60
 png 12450:17_memorize.png
-press EDIT@12800
+press SEL@12800
 turn K1@12900:50
 press GLO@13200+300
-upper 1@13300+60
+upper 3@13300+60
 png 13350:18_recall.png
 turn K2@13500:20
 press GLO@13700+300
 press OCT-@13800+60
 png 13850:19_undo.png
 
-# ---- the pattern scope: hold PATN + PLAY = clear: the question stays open; OCT+ = yes
-upper 10@14200+400
-press PLAY@14400
-png 14650:20_clear_question.png
-press OCT+@14700+60
-png 14800:21_cleared.png
+# ---- PAGES (EDIT twice): F1 + B1, B2 = page 1 copied onto page 2; F1 off
+press EDIT@14050
+press EDIT@14150
+press OCT-@14250
+upper 0@14350+80
+upper 1@14450+80
+png 14550:13_page_copy.png
+press OCT-@14600
 
-# ---- slice programs on T2: load the bass, SLICE machine (SHIFT + SEL setup), OCT- = loop keys (the slice pads)
-upper 1@15400+80
-press SAVE@15500
-turn SELECT@15600:1
-press SAVE@15700
-press GLO@16300+300
-press SEL@16400+60
-turn K1@16650:2
-press GLO@16750+250
-press SEL@16800+60
-press OCT-@17100+60
+# ---- PATTERN LAUNCH: F2 + W1 = cut A1 (its trigs gone: the pattern clear); F2 off
+press SEQ@14700
+press OCT+@14800
+lower 0@14900+80
+png 15000:21_cleared.png
+press OCT+@15100
+
+# ---- slice programs on T2: SHIFT + W2; FILE: SELECT the bass, B10 loads it into the next slot; HOME held = the
+#      machine settings, K1 + 2 = SLICE; HOME tapped closes them onto HOME's last mode (TRIG); HOME, HOME =
+#      KEYBOARD, LOOP ENGINE: the white keys are the slice pads
+press GLO@15300+200
+lower 1@15350+60
+press SAVE@15600
+turn SELECT@15700:1
+upper 9@15800+60
+press HOME@16300+500
+turn K1@16850:2
+press HOME@16950
+press HOME@17050
+press HOME@17150
 # hold pad 3 + KN1 (pitch) = that slice's lock; SELECT = SOURCE's lane 2, KN2 = CHOK (its choke group)
 lower 2@17300+900
 turn K1@17500:5
@@ -133,16 +142,10 @@ png 18000:23_slice_choke.png
 lower 4@18350+400
 turn K3@18500:1
 png 18600:24_slice_mute.png
-# hold pad 3 + REC = copy its program; hold pad 7 + SHIFT + PLAY = paste
-lower 2@19000+400
-press REC@19200
-lower 6@19600+500
-press GLO@19700+300
-press PLAY@19800
-png 19850:25_slice_paste.png
 
-# ---- 32 slices (lane 2's KN1 = CNT): SHIFT + pad 1 = slice 17
+# ---- 32 slices (lane 2's KN1 = CNT): B11 twice = the zoom's second half: pad 1 = slice 17
 turn K1@20600:16
-press GLO@20950+400
+upper 10@20800+60
+upper 10@20900+60
 lower 0@21000+300
 png 21100:26_pad_17.png

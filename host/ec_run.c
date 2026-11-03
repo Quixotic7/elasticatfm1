@@ -10,8 +10,8 @@
  *                         MS for D ms (default 60); repeat
  *     --turn R@MS:N       knob role R (SELECT ALGO PRESETS K1 K2 K3 K4) turned N detents at MS; repeat
  *     --key K@MS[+D][:V]  note key K (0..26) held from MS for D ms (default 100), velocity V (default 100); repeat
- *     --lower I@MS[+D][:V] lower key I (0..15, the steps) held from MS; --upper I@MS[+D] upper key I (0..10:
- *                         T1..T6 S1 S2 MST FILL PATN); repeat
+ *     --lower I@MS[+D][:V] white key I (0..15: W1..W16) held from MS; --upper I@MS[+D] black key I (0..10:
+ *                         B1..B11, docs/UX-V2.md); repeat
  *     --master V@MS       the MASTER pot set to V (0..1023) at MS; repeat
  *     --script FILE       more options, one per line, without the dashes ("press PLAY@1000", "lower 4@2000+80",
  *                         "png 3000:out.png", "info 3000"); # starts a comment

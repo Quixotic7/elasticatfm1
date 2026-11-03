@@ -986,21 +986,37 @@ static void test_xfd(void)
     run(20);
 }
 
-/* the scene lock: B1 held in CROSSFADER, a FILTER knob can't be reached; the anchor path is the cells' (POSITION is
- * not morphable), so it is tested with ec_e5_knob_cell's anchor directly */
+/* the scene lock: B1 held, the knobs are the page CROSSFADER was entered from (FILTER here) */
 static void test_xfd_lock(void)
 {
-    ec_item_t it = {EC_IT_PARAM, EC_P_FILTER_CUTOFF, 0, 0};
     float x;
-    to(EC_CAT_XFD);
+    const float c0 = ec_app_params(A)[EC_P_FILTER_CUTOFF];
+    to(EC_CAT_FILT);
+    ec_app_set_page(EC_CAT_FILT, 0);
+    press(FM1P_B_ARP, 40);
+    run(900);
     key(1, bkey(1), 1);
     run(20);
-    ec_e5_knob_cell(&it, 5, 1);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CUTOFF"), "B1 held: K1 is FILTER's CUTOFF (%s)",
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    turn(FM1P_E_K1, -5);
+    run(20);
     key(1, bkey(1), 0);
     run(20);
-    CHECK(ec_scene_get(&A->proj, 0, A->track, EC_P_FILTER_CUTOFF, &x) && A->e5.anchor == 0,
-          "B1 held + a knob: the param locked to scene A");
+    CHECK(ec_scene_get(&A->proj, 0, A->track, EC_P_FILTER_CUTOFF, &x) && x < c0 &&
+              ec_app_params(A)[EC_P_FILTER_CUTOFF] == c0 && A->e5.anchor == 0,
+          "B1 held + K1: the cutoff locked to scene A (%g), the track's stays", x);
     ec_scene_clear(&A->proj, 0);
+}
+
+/* FILE (the stand-in until part 2): B3 the browser, B4 RAZOR */
+static void test_file_keys(void)
+{
+    to(EC_CAT_FILE);
+    tapkey(1, bkey(4), 40);
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_RAZOR, "FILE B4: RAZOR");
+    tapkey(1, bkey(3), 40);
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "FILE B3: the browser");
 }
 
 /* ------------------------------------------------------------------------------------------- PATTERN LAUNCH --- */
@@ -1093,6 +1109,7 @@ int main(int argc, char **argv)
     test_keyboard();
     test_xfd();
     test_xfd_lock();
+    test_file_keys();
     test_patterns();
     test_labels();
     C->shutdown();

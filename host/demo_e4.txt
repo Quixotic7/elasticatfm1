@@ -1,20 +1,27 @@
-# The E4 demo (host/render_e4.sh): FX machines on every slot, the sends, the master insert, MOD, through panel input.
-# A fresh project with build/demo_folder (host/make_demo_folder.py). lower I = steps, upper I = T1..T6 S1 S2 MST FILL PATN.
+# The E4 demo (host/render_e4.sh): FX machines on every slot, the sends, the master insert, MOD, through panel input
+# (0.6.0's modes, docs/UX-V2.md). A fresh project with build/demo_folder (host/make_demo_folder.py). lower I = the
+# white keys W1..W16 (steps, or SHIFT + W1..W9 = T1..T6 S1 S2 MST), upper I = the black keys B1..B11.
 png-scale 2
 master 640@0
-# ---- load the bass into T2, the chords into T3, the percussion into T4 (as demo_e1)
+# ---- FILE (the SAVE button; it also skips the intro): SELECT the file, B10 loads it into the next free pool slot for
+# the selected track (SHIFT + W2 / W3 / W4): the bass on T2, the chords on T3, the percussion on T4 (as demo_e1)
 press SAVE@1500
-upper 1@1600+80
-turn SELECT@1700:1
-press SAVE@1800
-upper 2@2300+80
-turn SELECT@2400:1
-press SAVE@2500
-upper 3@3000+80
-turn SELECT@3100:1
-press SAVE@3200
-# ---- T1: drums on the beats; PLAY
-upper 0@3600+80
+press GLO@1600+150
+lower 1@1650+60
+turn SELECT@1800:1
+upper 9@1900+60
+press GLO@2300+150
+lower 2@2350+60
+turn SELECT@2500:1
+upper 9@2600+60
+press GLO@3000+150
+lower 3@3050+60
+turn SELECT@3200:1
+upper 9@3300+60
+# ---- T1 (SHIFT + W1): drums on the beats in FX; PLAY
+press GLO@3500+150
+lower 0@3550+60
+press FX@3650
 lower 0@3700+60
 lower 4@3800+60
 lower 8@3900+60
@@ -22,7 +29,7 @@ lower 12@4000+60
 press PLAY@4200
 press FX@4400
 png 4600:01_fx_insert_none.png
-# ---- every FX machine on T1's insert: SHIFT + FX = the setup (KN1 = the insert machine), SHIFT + FX back
+# ---- every FX machine on T1's insert: SHIFT + FX = FX's settings (KN1 = the insert machine), SHIFT + FX back
 press GLO@5000+200
 press FX@5050+60
 png 5150:02_fx_setup.png
@@ -132,16 +139,18 @@ press FX@22050+60
 turn K1@22300:-4
 press GLO@22400+200
 press FX@22450+60
-# ---- T2 + T3 send to S1 (reverb) and S2 (delay): FX twice = SENDS
-upper 1@23000+80
+# ---- T2 + T3 send to S1 (reverb) and S2 (delay): FX again = SENDS (SHIFT + W2 = T2)
+press GLO@22850+100
+lower 1@22880+40
 press FX@23100
 turn K1@23200:70
 turn K2@23300:40
 png 23800:20_sends.png
-upper 2@24000+80
+press GLO@23950+150
+lower 2@24000+60
 turn K1@24200:50
-# ---- S1: REVERB, size up
-upper 6@24600+80
+# ---- S1 (FX's B3): REVERB, size up
+upper 2@24600+80
 press GLO@24700+200
 press FX@24750+60
 turn K1@25000:2
@@ -149,8 +158,8 @@ press GLO@25100+200
 press FX@25150+60
 turn K1@25400:40
 png 25800:21_s1_reverb.png
-# ---- S2: DELAY
-upper 7@26100+80
+# ---- S2 (FX's B4): DELAY
+upper 3@26100+80
 press GLO@26200+200
 press FX@26250+60
 png 26350:22_s2_setup.png
@@ -158,9 +167,8 @@ turn K1@26500:1
 press GLO@26600+200
 press FX@26650+60
 png 27300:23_s2_delay.png
-# ---- MST: COMP, threshold down (the gain reduction meter)
-turn ALGO@27600:1
-press FX@27700
+# ---- MST (FX's B5): COMP, threshold down (the gain reduction meter)
+upper 4@27600+80
 press GLO@27800+200
 press FX@27850+60
 turn K1@28100:4
@@ -169,15 +177,18 @@ press FX@28250+60
 turn K1@28500:-25
 turn K2@28600:40
 png 29100:24_mst_comp.png
-# ---- MIX: the S1 / S2 returns metered
-upper 8@29400+60
-png 29800:25_mix.png
-# ---- MOD on T3: LFO 1 -> CUTOFF, LFO 2 -> PAN (tri), the mod env -> RES, velocity, macros
-upper 2@30100+80
-press LFO@30200
-turn K1@30300:2
-turn K3@30400:2
-turn K4@30500:-40
+# ---- MIX (EDIT; T1 first: the mixer page): the S1 / S2 returns metered
+press GLO@29300+150
+lower 0@29350+60
+press EDIT@29400
+png 30300:25_mix.png
+# ---- MOD (LFO) on T3 (SHIFT + W3): LFO 1 -> CUTOFF, LFO 2 -> PAN (tri), the mod env -> RES, velocity, macros
+press LFO@30350
+press GLO@30450+100
+lower 2@30480+40
+turn K1@30600:2
+turn K3@30700:2
+turn K4@30800:-40
 png 31000:26_mod_lfo1.png
 turn SELECT@31300:2
 turn K1@31400:5
@@ -210,12 +221,11 @@ turn K3@36200:50
 turn SELECT@36300:1
 turn K1@36400:-40
 png 36900:31_mod_macro1.png
-# ---- a held step locks LFO 1's depth on T3 (p-lock), then stop
+# ---- a held step locks LFO 1's depth on T3 (p-lock), then stop (PLAY)
 turn SELECT@37200:-9
 lower 0@37400+600
 turn K4@37600:60
 png 37750:32_mod_lfo_lock.png
-press GLO@38700+300
 press PLAY@38800+60
 png 41700:33_stopped_tails.png
 ms 42200

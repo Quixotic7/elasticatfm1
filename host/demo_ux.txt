@@ -1,11 +1,13 @@
-# The 0.3.0 screens (host/render_ux.sh -> results/ux): lanes, a setup opened by a hold, F3, SHIFT's map, a held step's
-# frame and lock chips, the takeover, PRESETS = the sample, the question pop-up. A fresh project with build/demo_folder
-# (host/make_demo_folder.py). Times are device ms; lower I = step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN.
+# The panel's screens (host/render_ux.sh -> results/ux), 0.6.0's gestures (docs/UX-V2.md): lanes, a setup opened by a
+# hold, F3 (F1 + F2), SHIFT's screen, a held step's frame and lock chips, MIX, PRESETS = the pool slot (FILE's B10
+# loads), MIX's track keys (hold = mute, SHIFT + key = solo, SHIFT + B11 (FILL) + a key = all on), PATTERN LAUNCH,
+# undo / redo (SHIFT + F1 / F2). A fresh project with build/demo_folder (host/make_demo_folder.py). Times are device ms;
+# lower I = white key W(I+1) (0..15), upper I = black key B(I+1) (0..10). The first input (PLAY) skips the intro.
 png-scale 2
 master 640@0
 press PLAY@1200
 
-# ---- lanes: MOD (LFO 1 has five values: two lanes); SELECT = lane 2 (MODE), again runs on into LFO 2
+# ---- lanes: MODULATION (LFO 1 has five values: two lanes); SELECT = lane 2 (MODE), again runs on into LFO 2
 press LFO@1500
 turn K1@1600:2
 png 1700:01_lanes_lane1.png
@@ -14,17 +16,17 @@ png 1900:02_lanes_lane2.png
 turn SELECT@2000:1
 png 2100:03_lanes_next_page.png
 
-# ---- a setup by a hold: FX held 0.4 s (it stays open on release; the arrows: OCT- back, OCT+ OK)
+# ---- a setup by a hold: FX held 0.4 s (it stays open on release; the arrows: F1 back, F2 OK)
 press FX@2400+500
 png 3000:04_setup_by_hold.png
 press OCT-@3100+60
 
-# ---- AMP: two lanes (ATK DEC SUS REL / VOL PAN SND1 SND2)
+# ---- AMP (ENV): two lanes (ATK DEC SUS REL / VOL PAN SND1 SND2)
 press ENV@3300
 turn SELECT@3400:1
 png 3500:05_amp_lane2.png
 
-# ---- F3: OCT- + OCT+ (tempo, swing, the pages, LEN RATE GLEN QUANT); KN1 = 32 steps, key 2 tapped = page 2
+# ---- F3: F1 + F2 held (tempo, swing, the pages, LEN RATE GLEN QUANT); K1 = 32 steps, W2 tapped = page 2
 press OCT-@3800+150
 press OCT+@3850+100
 turn K1@4000:16
@@ -32,12 +34,12 @@ lower 1@4100+60
 png 4300:06_f3.png
 press OCT-@4400+60
 
-# ---- SHIFT held alone: its map
+# ---- SHIFT held alone: its screen
 press GLO@4600+600
 png 5100:07_shift_map.png
 
-# ---- FILT: hold steps 1 and 5, turn CUT + RES: the lock frame, the held count, the chips
-press EDIT@5400
+# ---- FILTER (SEL): hold steps 1 and 5, turn CUT + RES: the lock frame, the held count, the chips
+press SEL@5400
 lower 0@5600+700
 lower 4@5650+650
 turn K1@5800:-40
@@ -46,36 +48,40 @@ png 6100:08_held_step_locks.png
 # let go: the locked values outlined (locked on some step)
 png 6500:09_locks_outlined.png
 
-# ---- the MST key = MIX: KN2 (PAN) is not on the screen: the takeover
-upper 8@6800+60
+# ---- MIX (EDIT): K2 = PAN of the selected track
+press EDIT@6800+60
 turn K2@7000:-20
-png 7100:10_takeover_pan.png
+png 7100:10_mix_pan.png
 
-# ---- PRESETS = the track's sample: the next file, big, while it loads; HOME: SRC shows it
-turn PRESETS@7700:1
-png 7720:11_presets_sample.png
+# ---- PRESETS = the track's pool slot: FILE (SAVE), the cursor +1, B10 loads b_bass into slot 2 (T1 plays it);
+# PRESETS walks the used slots (slot 1, then 2 again), big; HOME: LOOP ENGINE shows it (ALGO: the pop-up goes)
+press SAVE@7300+60
+turn SELECT@7500:1
+upper 9@7600+60
+turn PRESETS@8200:1
+png 8220:11_presets_sample.png
+turn PRESETS@8300:1
 press HOME@8700+60
-png 8900:12_presets_loaded_src.png
+turn ALGO@8800:1
+png 9350:12_presets_loaded_src.png
 
-# ---- tracks on the MIX page (the MST key): T2 held = muted, T3 double-tapped = solo; FILL + T1 = all on again
-upper 8@9100+60
-upper 1@9300+500
-upper 2@10000+60
-upper 2@10120+60
-png 10400:13_mute_solo.png
-upper 9@10600+300
-upper 0@10700+60
+# ---- MIX's track keys: W2 held = T2 muted, SHIFT + W3 = solo; SHIFT + B11 (FILL) held + W1 = all on
+press EDIT@9400+60
+lower 1@9500+500
+press GLO@10100+250
+lower 2@10150+60
+png 10450:13_mute_solo.png
+press GLO@10600+400
+upper 10@10650+300
+lower 0@10700+60
 
-# ---- the question: hold PATN + PLAY = CLEAR P01? (it stays open: OCT+ yes, OCT- no)
-upper 10@11100+300
-press PLAY@11200+60
-png 11600:14_question.png
-press OCT-@11800+60
+# ---- PATTERN LAUNCH (SEQ): bank A's 16, the playing one
+press SEQ@11100+60
+png 12000:14_patterns.png
 
-# ---- SHIFT + OCT- = undo (the last gesture: T3's pan), SHIFT + OCT+ = redo
+# ---- SHIFT + F1 = undo (the last gesture: PRESETS' slot), SHIFT + F2 = redo
 press GLO@12100+400
 press OCT-@12200+60
 png 12300:15_undo.png
 press OCT+@12400+60
-upper 0@12600+60
 ms 13000

@@ -1,67 +1,90 @@
-# The FM1VST glue test's project (core-glue/elasticat/test_project.flash), built through panel input only from the
-# glue's test folder (one loop, testloop_bpm120.wav): four tracks on that one sample, each a different engine path.
+# The FM1VST glue test's project (core-glue/elasticat/test_project.flash), built through panel input only (the 0.6.0
+# modes, docs/UX-V2.md) from the glue's test folder (one loop, testloop_bpm120.wav): four tracks on that one sample
+# (pool slot 1, every track's default), each a different engine path.
 #   ec_run --folder <test_folder> --flash out.bin --script host/glue_project.txt   (then host/trim_flash.py)
-# T1 loop: trigs 1 5 9 13, step 13 locks loop key 5's region, step 5 locks the cutoff
-upper 0@1500+60
-press SEQ@1600
+# lower I = white key W(I+1), upper I = black key B(I+1); SHIFT (GLO) held + W1..W4 selects T1..T4.
+# T1 loop (TRIG = HOME tapped in LOOP ENGINE): trigs 1 5 9 13, step 13 locks the pitch (+5), step 5 the cutoff
+# (FILTER). (0.5's region lock of step 13 by a loop key has no panel gesture in 0.6.0: LOOP ENGINE's keys play.)
+press HOME@1500
 lower 0@1700+60
 lower 4@1800+60
 lower 8@1900+60
-lower 12@2000+600
-press SEL@2100+400
-lower 4@2200+80
-press EDIT@2800
+lower 12@2000+60
+lower 12@2100+600
+turn K1@2300:5
+press SEL@2800
 lower 4@2900+500
 turn K1@3100:-50
-# T2: slot 1, the granular warp, droning (no trigs)
-upper 1@3600+60
-press SEL@3700+60
-turn K4@3800:-1
-press GLO@3900+150
-press SEL@3950+60
-turn K2@4100:3
-press GLO@4300+150
-press SEL@4350+60
-# T3: slot 1, slice poly, slices on every other step
-upper 2@4800+60
-turn K4@4900:-2
-press GLO@5000+150
-press SEL@5050+60
-turn K1@5200:3
-press GLO@5400+150
-press SEL@5450+60
-lower 0@5600+60
-lower 2@5700+60
-lower 4@5800+60
-lower 6@5900+60
-lower 8@6000+60
-lower 10@6100+60
-lower 12@6200+60
-lower 14@6300+60
-lower 2@6500+400
-press SEL@6550+300
-lower 5@6650+80
-lower 10@7000+400
-press SEL@7050+300
-lower 9@7150+80
+# T2: the granular warp, droning (no trigs): HOME held = LOOP ENGINE's settings, K2 = WARP MODE; F1 back
+press GLO@3600+150
+lower 1@3650+60
+press HOME@3800+450
+turn K2@4300:3
+press OCT-@4400
+# T3: slice poly (the settings' K1 = MACHINE), slices on every other step (TRIG), steps 3 and 11 play slices 6 and 10
+#     (KEYBOARD: ALGO = the target step, a black key = the slice)
+press GLO@4800+150
+lower 2@4850+60
+press HOME@5000+450
+turn K1@5500:4
+press OCT-@5600
+press HOME@5700
+lower 0@5900+60
+lower 2@6000+60
+lower 4@6100+60
+lower 6@6200+60
+lower 8@6300+60
+lower 10@6400+60
+lower 12@6500+60
+lower 14@6600+60
+press HOME@6700
+turn ALGO@6900:1
+turn ALGO@6920:1
+turn ALGO@6940:1
+upper 5@7000+80
+turn ALGO@7100:1
+turn ALGO@7120:1
+turn ALGO@7140:1
+turn ALGO@7160:1
+turn ALGO@7180:1
+turn ALGO@7200:1
+turn ALGO@7220:1
+upper 9@7300+80
+turn ALGO@7400:-1
+turn ALGO@7405:-1
+turn ALGO@7410:-1
+turn ALGO@7415:-1
+turn ALGO@7420:-1
+turn ALGO@7425:-1
+turn ALGO@7430:-1
+turn ALGO@7435:-1
+turn ALGO@7440:-1
+turn ALGO@7445:-1
+turn ALGO@7450:-1
+turn ALGO@7455:-1
+turn ALGO@7460:-1
+turn ALGO@7465:-1
+turn ALGO@7470:-1
+turn ALGO@7475:-1
 press ENV@7500
 turn K4@7600:-40
-# T4: slot 1, the chopped warp, a trig on 1 and 9 with a ratchet on 9
-upper 3@8000+60
-press SEL@8100+60
-turn K4@8200:-3
-press GLO@8300+150
-press SEL@8350+60
-turn K2@8500:12
-press GLO@8700+150
-press SEL@8750+60
-press SEQ@8900
-lower 0@9000+60
-lower 8@9100+60
-press SEQ@9200
-lower 8@9300+500
-turn K3@9500:2
-# save
-press GLO@10000+300
-press REC@10100+60
+# T4: the chopped warp, a trig on 1 and 9 with a ratchet on 9 (TRIG: HOME from KEYBOARD = LOOP ENGINE, again = TRIG;
+#     COND = B2, hold the step + K3)
+press GLO@8000+150
+lower 3@8050+60
+press HOME@8200+450
+turn K2@8700:12
+press OCT-@8800
+press HOME@8900
+press HOME@9050
+press HOME@9200
+upper 0@9350+60
+lower 0@9450+60
+lower 8@9550+60
+upper 1@9650+60
+lower 8@9750+500
+turn K3@9950:2
+# save (SHIFT + FILE)
+press GLO@10300+300
+press SAVE@10400+60
 ms 11000

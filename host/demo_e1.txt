@@ -1,96 +1,101 @@
-# The E1/E2 demo, built through panel input only (ec_run --out DIR --script ...; host/render_e1.sh runs it).
-# A fresh project with build/demo_folder (host/make_demo_folder.py): four loops at 120 BPM.
-# Times are device ms. lower I = step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN (0..10).
+# The E1/E2 demo, built through panel input only (ec_run --out DIR --script ...; host/render_e1.sh runs it), with the
+# 0.6.0 modes (docs/UX-V2.md). A fresh project with build/demo_folder (host/make_demo_folder.py): four loops at 120 BPM.
+# Times are device ms. lower I = white key W(I+1) (0..15), upper I = black key B(I+1) (0..10). SHIFT (GLO) held +
+# W1..W9 selects T1..T6 S1 S2 MST. A mode button acts on its release; a hold (400 ms) opens its settings.
 
 png-scale 2
 master 640@0
 
-# ---- power on: the scan finds the loops, T1 (a new project) loads the first one
-png 1200:01_boot_src.png
+# ---- power on: the scan finds the loops, T1 (a new project) loads the first one (a knob skips the intro)
+turn ALGO@10:1
+png 1250:01_boot_src.png
 
-# ---- FILE: the bass into T2, the chords into T3, the percussion into T4 (SELECT = cursor, FILE again = load)
+# ---- FILE: SEL = the cursor, B10 = LOAD into the next free pool slot (the selected track plays it): the bass on T2,
+#      the chords on T3, the percussion on T4
 press SAVE@1500
-upper 1@1600+80
-turn SELECT@1700:1
-png 1750:02_file_browser.png
-press SAVE@1800
-upper 2@2300+80
-turn SELECT@2400:1
-press SAVE@2500
-upper 3@3000+80
-turn SELECT@3100:1
-press SAVE@3200
-png 3212:03_file_loading.png
+press GLO@1600+150
+lower 1@1650+60
+turn SELECT@1800:1
+png 1850:02_file_browser.png
+upper 9@1900+60
+press GLO@2300+150
+lower 2@2350+60
+turn SELECT@2500:1
+upper 9@2550+60
+press GLO@3000+150
+lower 3@3050+60
+turn SELECT@3200:1
+upper 9@3250+60
+png 3262:03_file_loading.png
 
-# ---- T4: the SLICE machine (SHIFT + SRC = the SRC setup list)
-press GLO@3700+150
-press SEL@3750+60
-turn K1@3950:2
-png 4000:04_src_setup.png
-press GLO@4200+300
-press SEL@4300+60
-# slice pads while stopped: hold SEL, play pads 3 and 7
-press SEL@4700+600
+# ---- T4: the SLICE machine (HOME held = LOOP ENGINE's settings; F1 back)
+press HOME@3700+450
+turn K1@4200:2
+png 4250:04_src_setup.png
+press OCT-@4400
+# slice pads while stopped: LOOP ENGINE (HOME), its white keys are the pads: 3 and 7
+press HOME@4500
 lower 2@4800+150:110
 lower 6@5000+150:70
 png 4850:05_src_slices.png
 
-# ---- T3: the granular warp (changes only while stopped), its WARP page
-upper 2@5400+80
-press GLO@5500+150
-press SEL@5550+60
-turn K2@5700:3
-press GLO@5900+150
-press SEL@6000+60
-turn SELECT@6100:3
-turn K1@6200:8
-turn K2@6300:20
-png 6400:06_warp_granular.png
-turn SELECT@6500:-3
+# ---- T3: the granular warp (changes only while stopped: the settings' K2), LOOP ENGINE's WARP page (B3)
+press GLO@5400+150
+lower 2@5450+60
+press HOME@5600+450
+turn K2@6100:3
+press OCT-@6200
+upper 2@6300+60
+turn K1@6400:8
+turn K2@6500:20
+png 6600:06_warp_granular.png
+upper 0@6700+60
 
-# ---- T1: trigs on 1 and 9, step 13 locks the region of loop key 5 (hold step + hold SEL + key), step 15 a ghost,
-#      step 16 a FILL trig (TRIG page 2, hold step + KN2)
-upper 0@6800+80
-press SEQ@6900
-lower 0@7000+80
-lower 8@7150+80
-lower 12@7300+900
-press SEL@7400+500
-lower 4@7500+100
-png 7550:07_step_region_lock.png
-press GLO@8400+300
-lower 14@8500+80
-press SEQ@8800
-lower 15@8900+500
-turn K2@9100:10
-png 9200:08_trig_cond_lock.png
+# ---- T1 in TRIG (HOME again): trigs on 1, 9 and 13; step 13 locked (hold the step + KN1); step 16 a FILL trig
+#      (COND page = B2, hold the step + KN2)
+press GLO@6800+150
+lower 0@6850+60
+press HOME@7000
+lower 0@7200+80
+lower 8@7350+80
+lower 12@7500+80
+lower 12@7700+600
+turn K1@7900:5
+png 8000:07_step_lock.png
+upper 1@8500+60
+lower 15@8700+500
+turn K2@8900:10
+png 9000:08_trig_cond_lock.png
 
-# ---- T2: the bass on 1 7 9 12; step 9 pitch-locked +5 (TRIG page, hold step + KN1); step 12 on 1:2
-upper 1@9600+80
-press SEQ@9700
-press SEQ@9800
-lower 0@9900+80
-lower 6@10050+80
-lower 8@10200+80
-lower 11@10350+80
-lower 8@10600+600
-turn K1@10800:5
-png 10900:09_trig_pitch_lock.png
-press SEQ@11300
-lower 11@11400+500
-turn K2@11600:1
+# ---- T2: the bass on 1 7 9 12; step 9 pitch-locked +5 (TRIG page = B1, hold step + KN1); step 12 on 1:2 (COND)
+press GLO@9400+150
+lower 1@9450+60
+upper 0@9600+60
+lower 0@9700+80
+lower 6@9850+80
+lower 8@10000+80
+lower 11@10150+80
+lower 8@10400+600
+turn K1@10600:5
+png 10700:09_trig_pitch_lock.png
+upper 1@11100+60
+lower 11@11200+500
+turn K2@11400:1
 
-# ---- T3: the chords on 1 and 9; FILT: cutoff down, resonance up, step 9 locks the cutoff lower; F.ENV depth; AMP
-upper 2@12000+80
+# ---- T3: the chords on 1 and 9; FILTER (SEL): cutoff down, resonance up, step 9 locks the cutoff lower; F.ENV (B2)
+#      depth; AMP (ENV)
+press GLO@11800+150
+lower 2@11850+60
+upper 0@12000+60
 lower 0@12100+80
-lower 8@12250+80
-press EDIT@12400
+lower 8@12200+80
+press SEL@12350
 turn K1@12500:-40
 turn K2@12600:70
 lower 8@12800+600
 turn K1@13000:-30
 png 13100:10_filter_lock.png
-press EDIT@13500
+upper 1@13500+60
 turn K4@13600:30
 png 13700:11_filter_env.png
 press ENV@13900
@@ -98,86 +103,119 @@ turn K2@14000:-60
 turn K3@14100:-90
 png 14200:12_amp_env.png
 
-# ---- T4: percussion on every other step; steps 3 7 11 15 get slices 5 9 13 16 (hold step + hold SEL + pad);
-#      step 15 ratchets (SLICE page RTCH, hold step + KN3)
-upper 3@14500+80
-press SEQ@14600
-lower 0@14700+60
-lower 2@14800+60
-lower 4@14900+60
-lower 6@15000+60
-lower 8@15100+60
-lower 10@15200+60
-lower 12@15300+60
-lower 14@15400+60
-lower 2@15600+400
-press SEL@15650+300
-lower 4@15750+80
-lower 6@16100+400
-press SEL@16150+300
-lower 8@16250+80
-lower 10@16600+400
-press SEL@16650+300
-lower 12@16750+80
-lower 14@17100+400
-press SEL@17150+300
-lower 15@17250+80
-lower 14@17600+500
-turn K3@17800:2
+# ---- T4: percussion on every other step (TRIG: HOME's last mode); KEYBOARD (HOME again) writes slices 5 9 13 16 on
+#      steps 3 7 11 15 (ALGO = the target step, a black key = the slice, B11 = the next ten); step 15 ratchets (TRIG's
+#      third page = B3, hold the step + KN3)
+press GLO@14500+150
+lower 3@14550+60
+press HOME@14700
+lower 0@14900+60
+lower 2@15000+60
+lower 4@15100+60
+lower 6@15200+60
+lower 8@15300+60
+lower 10@15400+60
+lower 12@15500+60
+lower 14@15600+60
+press HOME@15800
+turn ALGO@16000:1
+turn ALGO@16020:1
+turn ALGO@16040:1
+upper 4@16200+80
+turn ALGO@16400:1
+turn ALGO@16420:1
+turn ALGO@16440:1
+upper 8@16500+80
+turn ALGO@16600:1
+turn ALGO@16620:1
+turn ALGO@16640:1
+upper 10@16800+80
+upper 2@16900+80
+turn ALGO@17000:1
+turn ALGO@17020:1
+turn ALGO@17040:1
+upper 5@17200+80
+turn ALGO@17300:-1
+turn ALGO@17305:-1
+turn ALGO@17310:-1
+turn ALGO@17315:-1
+turn ALGO@17320:-1
+turn ALGO@17325:-1
+turn ALGO@17330:-1
+turn ALGO@17335:-1
+turn ALGO@17340:-1
+turn ALGO@17345:-1
+turn ALGO@17350:-1
+turn ALGO@17355:-1
+turn ALGO@17360:-1
+turn ALGO@17365:-1
+turn ALGO@17370:-1
+turn ALGO@17375:-1
+upper 10@17400+60
+press HOME@17500
+press HOME@17700
+upper 2@17900+60
+lower 14@18000+500
+turn K3@18200:2
 
-# ---- PLAY
-press PLAY@18200
-upper 0@18300+80
-press SEL@18400+60
-png 19000:13_src_playing.png
-# the live loop-key scrub on T1: hold SEL, hold key 9, then 9 + 10, let go (the playhead boomerangs back)
-press SEL@20000+1400
+# ---- PLAY; T1 in LOOP ENGINE (HOME twice: TRIG -> KEYBOARD -> LOOP ENGINE)
+press PLAY@18600
+press GLO@18700+150
+lower 0@18750+60
+press HOME@18900
+press HOME@19100
+png 20050:13_src_playing.png
+# the live loop-key scrub on T1: hold key 9, then 9 + 10, let go (the playhead boomerangs back)
 lower 8@20200+1000
 lower 9@20600+400
 png 20500:14_loop_key_scrub.png
-upper 3@21800+80
+press GLO@21700+150
+lower 3@21750+60
 png 22300:15_slices_playing.png
 
-# ---- pattern 2 at the next bar (PATN tap latches the overlay, a step key picks the pattern)
-upper 10@22600+80
+# ---- pattern 2 at the next bar: PATTERN LAUNCH (SEQ), W2 launches it
+press SEQ@22500
 png 22700:16_pattern_overlay.png
 lower 1@22900+80
 png 23000:17_pattern_pending.png
-upper 0@24300+80
-lower 0@24500+60
-lower 4@24600+60
-lower 8@24700+60
-lower 12@24800+60
-png 25000:18_pattern2.png
-press GLO@25450+150
-turn PRESETS@25500:-1
+press GLO@24200+150
+lower 0@24250+60
+# T1 in TRIG (HOME: LOOP ENGINE, again: TRIG): trigs on 1 5 9 13 of pattern 2
+press HOME@24400
+press HOME@24550
+lower 0@24700+60
+lower 4@24800+60
+lower 8@24900+60
+lower 12@25000+60
+png 25100:18_pattern2.png
+press SEQ@25300
+lower 0@25500+60
 
-# ---- back on pattern 1: hold FILL for a bar (T1's step 16 plays)
-upper 9@26100+2000
+# ---- back on pattern 1: FILL (SHIFT + B11) held for a bar (T1's step 16 plays)
+press GLO@26100+2100
+upper 10@26150+2000
 
-# ---- MASTER / MIX (the MST key): T3's level down, T2 muted for a bar (a track key held = mute)
-upper 8@28200+60
-upper 2@28300+80
-turn K1@28400:-30
-upper 1@28600+500
-png 29500:19_mix.png
-upper 1@30000+500
+# ---- MIX (EDIT): T3's level down, T2 muted for a bar (a track key held = mute)
+press EDIT@28400
+lower 2@28600+60
+turn K1@28800:-30
+lower 1@29000+500
+png 29700:19_mix.png
+lower 1@30000+500
 
 # ---- the other pages
-press ARP@30300
-png 30400:20_pat.png
-press LFO@30600
-png 30700:21_mod_e4.png
-press GLO@30900+300
-press EDIT@31000+60
-png 31100:22_filt_setup.png
-press GLO@31300+300
-press EDIT@31400+60
+press SEQ@30600
+png 30700:20_pat.png
+press LFO@30900
+png 31000:21_mod_e4.png
+press GLO@31200+300
+press SEL@31300+60
+png 31400:22_filt_setup.png
+press OCT-@31600
 
-# ---- save (SHIFT + REC), then stop (SHIFT + PLAY)
-press GLO@31800+300
-press REC@31900+60
-png 32000:23_saved.png
-press GLO@33000+300
-press PLAY@33100+60
+# ---- save (SHIFT + FILE), then stop (PLAY)
+press GLO@31900+300
+press SAVE@32000+60
+png 32100:23_saved.png
+press PLAY@33100
 ms 34000

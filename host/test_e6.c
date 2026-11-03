@@ -98,6 +98,14 @@ static void press(int b, int dur)
     btn(b, 0);
     run(20);
 }
+/* 0.6.0: the recorder is the SAMPLER's stand-in (FILE, FILE again) */
+static void open_rec(void)
+{
+    int n;
+    for (n = 0; n < 3 && !(ec_app_mode() == EC_MODE_SAMPLER && A->rec.open); n++)
+        press(FM1P_B_SAVE, 40);
+    run(900);
+}
 static void turn(int role, int n)
 {
     P->enc[P->enc_id[role]] += n * P->enc_dir[role];
@@ -169,19 +177,16 @@ static void test_input_machine(void)
     in_mode = IN_BUFFER;
     memset(inbuf, 0, sizeof inbuf);
     inbuf[2 * at] = inbuf[2 * at + 1] = 20000;
-    /* T1 on INPUT through the panel: SRC setup (SHIFT + SRC), K1 = MACHINE, LOOP -> .. -> INPUT (T1 skips NEIGH) */
-    btn(FM1P_B_GLO, 1);
-    run(20);
-    press(FM1P_B_SEL, 40);
-    btn(FM1P_B_GLO, 0);
-    run(20);
-    CHECK(A->settings && A->cat == EC_CAT_SRC, "SRC setup");
+    /* T1 on INPUT through the panel: LOOP ENGINE's settings (HOME held), K1 = MACHINE, LOOP -> .. -> INPUT (T1 skips
+     * NEIGH) */
+    press(FM1P_B_HOME, 500);
+    CHECK(A->settings && A->cat == EC_CAT_SRC, "LOOP ENGINE's settings");
     turn(FM1P_E_K1, 5);
     CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_RAZOR_POLY, "K1 +5: R.POLY (%g)", tvp(0)[EC_P_MACHINE]);
     turn(FM1P_E_K1, 1);
     CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_INPUT, "T1: +1 past R.POLY = INPUT (no NEIGH on T1) (%g)",
           tvp(0)[EC_P_MACHINE]);
-    press(FM1P_B_HOME, 40);
+    press(FM1P_B_OCTDN, 40);
     run(3200 - (int)ms > 0 ? 3200 - (int)ms : 0);
     run(300);
     for (i = (uint32_t)at - 2000u; i < (uint32_t)at + 2000u; i++)
@@ -226,10 +231,9 @@ static void test_input_machine(void)
 /* ------------------------------------------------------------------------------------------- the pop-up --- */
 static void test_popup(void)
 {
-    press(FM1P_B_HOME, 40);
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "SAMPLING"), "REC's label closed: %s", L(FM1CORE_LBL_BTN0 + FM1P_B_REC));
-    press(FM1P_B_REC, 40);
-    CHECK(A->rec.open && ec_app_popup(A), "REC: the pop-up");
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "REC"), "REC's label closed: %s", L(FM1CORE_LBL_BTN0 + FM1P_B_REC));
+    open_rec();
+    CHECK(A->rec.open && ec_app_popup(A), "the SAMPLER (FILE again): the pop-up");
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "ARM") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "CLOSE") &&
               lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "ARM") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K2, "LENGTH") &&
               lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "SLOT"),
@@ -250,8 +254,9 @@ static void test_popup(void)
     press(FM1P_B_OCTDN, 40);
     CHECK(!A->rec.open, "OCT- idle: closed");
     press(FM1P_B_REC, 40);
+    CHECK(A->rec.open, "REC in the SAMPLER: open again");
     press(FM1P_B_HOME, 40);
-    CHECK(!A->rec.open && A->cat == EC_CAT_SRC, "HOME closes it");
+    CHECK(!A->rec.open && ec_app_mode() != EC_MODE_SAMPLER, "HOME closes it (leaves the SAMPLER)");
 }
 
 /* ------------------------------------------------------------------------------------------- synced take --- */
@@ -302,7 +307,7 @@ static void test_synced_take(void)
     in_mode = IN_LOOP;
     loop_d = lat;                                  /* the round trip, as the web player reports it */
     fm1core_audio_in_info(1, lat);
-    press(FM1P_B_REC, 40);
+    open_rec();
     CHECK(A->rec.src == EC_RSRC_IN && A->rec.sync == EC_RSYNC_PLAY && A->rec.len == 1, "IN, PLAY, 1 BAR");
     press(FM1P_B_OCTUP, 40);
     CHECK(A->rec.state == EC_RS_ARMED, "armed");
@@ -361,10 +366,10 @@ static void test_wav_and_reboot(void)
         take = malloc((size_t)n * 4);
         memcpy(take, s->data, (size_t)n * 4);
     }
-    /* SHIFT + REC: save the project, then reboot from the flash */
+    /* SHIFT + FILE: save the project, then reboot from the flash */
     btn(FM1P_B_GLO, 1);
     run(20);
-    press(FM1P_B_REC, 40);
+    press(FM1P_B_SAVE, 40);
     btn(FM1P_B_GLO, 0);
     run(20);
     {
@@ -397,7 +402,7 @@ static void test_resample(void)
     /* the master out: SRC MST, synced on PLAY, no shift: the click track's step 1 on frame 0 */
     click_track();
     dbg("resample start");
-    press(FM1P_B_REC, 40);
+    open_rec();
     turn(FM1P_E_K1, 1);
     dbg("resample K1");
     turn(FM1P_E_K2, -2);
@@ -427,7 +432,7 @@ static void test_threshold(void)
     fm1core_audio_in_info(1, 0);
     CHECK(A->rec.open, "(the pop-up stays open after a take)");
     press(FM1P_B_HOME, 40);
-    press(FM1P_B_REC, 40);
+    open_rec();
     turn(FM1P_E_K1, -1);
     turn(FM1P_E_K4, 2);
     turn(FM1P_E_K3, 7);

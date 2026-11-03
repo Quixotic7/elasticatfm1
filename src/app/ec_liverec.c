@@ -33,9 +33,31 @@ static int free_slot(void)
     return -1;
 }
 
+/* the stand-in's page keys (the mock's B3 browser / B4 RAZOR) until the layout gives FILE's pages keys */
+static void file_page(int pic)
+{
+    int p;
+    for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)
+        if (ec_page_pic(EC_CAT_FILE, p, 0) == pic) {
+            ec_app_set_page(EC_CAT_FILE, p);
+            A->redraw = 1;
+            return;
+        }
+}
+
 void ec_file_black(int key, int down)
 {
-    if (!down || A->fn || key != 10 || ec_app_mode() != EC_CAT_FILE)
+    if (!down || A->fn || ec_app_mode() != EC_CAT_FILE)
+        return;
+    if (ec_cat_key_page(EC_CAT_FILE, key) >= 0) {
+        ec_app_set_page(EC_CAT_FILE, ec_cat_key_page(EC_CAT_FILE, key));
+        return;
+    }
+    if (key == 3 || key == 4) {
+        file_page(key == 3 ? EC_PIC_FILE : EC_PIC_RAZOR);
+        return;
+    }
+    if (key != 10)
         return;
     if (ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) != EC_PIC_FILE)
         return;

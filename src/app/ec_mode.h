@@ -106,6 +106,7 @@ typedef struct {
     uint32_t xf_ms;
     uint8_t xf_lean;           /* its pressure 0..100 */
     int xf_b11;                /* B11 (CAPTURE) held */
+    int xf_from;               /* the param mode CROSSFADER was entered from: B1 / B2 held, the knobs are its page */
     /* PATTERN LAUNCH */
     int bank;                  /* 0..3 */
     /* APP SETTINGS */

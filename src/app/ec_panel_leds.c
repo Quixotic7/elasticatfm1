@@ -614,6 +614,8 @@ static void black_labels(void)
             case EC_CAT_FILE:
                 if (i == 9 && ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE)
                     s = "LOAD";
+                else if (i == 2 || i == 3)
+                    s = i == 2 ? "BROWSE" : "RAZOR";
                 break;
             default:
                 if (ec_src_mode(mode))

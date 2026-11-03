@@ -1,21 +1,20 @@
 # The E3 demo (host/render_e3.sh): razor machine + RAZOR page, the new warp modes' WARP pages, the neighbor machine,
-# all through panel input. A fresh project with build/demo_folder (host/make_demo_folder.py): T1 loads a_drums.
-# Times are device ms. lower I = step key I (0..15), upper I = T1..T6 S1 S2 MST FILL PATN (0..10).
+# all through panel input (0.6.0's modes, docs/UX-V2.md). A fresh project with build/demo_folder
+# (host/make_demo_folder.py): T1 loads a_drums. Times are device ms. lower I = the white keys W1..W16 (0..15: steps,
+# loop keys, pads), upper I = the black keys B1..B11 (0..10).
 png-scale 2
 master 640@0
 
-# ---- T1: the RAZOR machine (SHIFT + SRC = setup; K1: LOOP TRIG SLICE RAZOR)
-press GLO@1200+150
-press SEL@1250+60
-turn K1@1400:3
-png 1450:e3_01_src_setup_razor.png
-press GLO@1600+150
-press SEL@1650+60
+# ---- T1: the RAZOR machine (HOME held = LOOP ENGINE's settings; K1: LOOP TRIG SLICE RAZOR; F1 closes them). The
+# first press also skips the intro
+press HOME@1200+500
+turn K1@1700:3
+png 1750:e3_01_src_setup_razor.png
+press OCT-@1850+40
 
-# ---- FILE, then SAVE again = SAMPLE's lane 2, again = the RAZOR page (the cursor is on T1's file): 16 even slices
-press SAVE@1900
-press SAVE@2000+60
-press SAVE@2120+60
+# ---- FILE (the SAVE button), B4 = its RAZOR page (the cursor is on T1's file): 16 even slices
+press SAVE@1950
+upper 3@2100+60
 png 2300:e3_02_razor_even.png
 # SHIFT + OCT+ = Auto-Chop (one slice per transient)
 press GLO@2500+150
@@ -29,16 +28,9 @@ png 3200:e3_04_razor_selected_playing.png
 turn K4@3600:3
 turn K1@3700:-6
 png 3800:e3_05_razor_zoom.png
-# SAVE: RAZOR's lane 2: K1 snap ZERO-X, K2 choke group B
-press SAVE@3900+60
-turn K1@4000:1
-turn K2@4100:2
-png 4250:e3_06_razor_lane2.png
-# OCT+ splits slice 5 at the edited point; SAVE x3 (SAMPLE, its lane 2, RAZOR lane 1): K4 back to 1x
+# (0.6.0: RAZOR's lane 2, SNAP / CHOKE, has no panel path while SELECT picks the slice: not shown)
+# F2 (OCT+, page-local) splits slice 5 at the edited point; K4 back to 1x
 press OCT+@4600
-press SAVE@4620+20
-press SAVE@4650+20
-press SAVE@4680+20
 turn K4@4720:-3
 png 4800:e3_07_razor_split.png
 # the pads: slices 1..12 played from the lower keys
@@ -56,133 +48,109 @@ lower 9@6125+110:80
 lower 10@6250+110:80
 lower 11@6375+110:80
 png 5790:e3_08_razor_pads.png
-# the SRC page draws the razor slices
-press SEL@6700+60
+# LOOP ENGINE (HOME) draws the razor slices; W1 plays pad 1
+press HOME@6700+60
 lower 0@6900+100:100
 png 6950:e3_09_src_razor.png
 
-# ---- T2: the drums; every new warp mode on its WARP page (warp mode changes while stopped)
-upper 1@7400+80
+# ---- T2 (SHIFT + W2): the drums (FILE, B3 = the SAMPLE browser, B10 = LOAD: the file is already in the pool, so T2
+# plays T1's slot); every new warp mode on LOOP ENGINE's WARP page (B3; the warp mode is HOME's settings' K2, changed
+# while stopped)
+press GLO@7300+100
+lower 1@7330+40
 press SAVE@7500
-press SAVE@7600
-press SAVE@7700
-press SAVE@7800
+upper 2@7650+60
+upper 9@7800+60
+press HOME@8000+60
+upper 2@8200+60
 # domino
-press GLO@8600+150
-press SEL@8650+60
-turn K2@8800:2
-press GLO@8900+150
-press SEL@8950+60
-turn SELECT@9050:3
+press HOME@8400+450
+turn K2@8900:2
+press OCT-@8950+40
 press PLAY@9200
 png 9900:e3_10_warp_domino.png
-press GLO@10000+150
 press PLAY@10050+60
 # random_ola
-press GLO@10300+150
-press SEL@10350+60
-turn K2@10500:2
-press GLO@10600+150
-press SEL@10650+60
+press HOME@10100+450
+turn K2@10600:2
+press OCT-@10650+40
 turn K1@10800:60
 press PLAY@10900
 png 11600:e3_11_warp_random_ola.png
-press GLO@11700+150
 press PLAY@11750+60
 # pitch_corrected
-press GLO@12000+150
-press SEL@12050+60
-turn K2@12200:1
-press GLO@12300+150
-press SEL@12350+60
+press HOME@11800+450
+turn K2@12300:1
+press OCT-@12350+40
 press PLAY@12600
 png 13300:e3_12_warp_pitch_corrected.png
-press GLO@13400+150
 press PLAY@13450+60
 # harmonizer
-press GLO@13700+150
-press SEL@13750+60
-turn K2@13900:1
-press GLO@14000+150
-press SEL@14050+60
+press HOME@13500+450
+turn K2@14000:1
+press OCT-@14050+40
 turn K1@14200:60
 turn K3@14220:12
 press PLAY@14300
 png 15000:e3_13_warp_harmonizer.png
-press GLO@15100+150
 press PLAY@15150+60
 # wavetable
-press GLO@15400+150
-press SEL@15450+60
-turn K2@15600:1
-press GLO@15700+150
-press SEL@15750+60
+press HOME@15200+450
+turn K2@15700:1
+press OCT-@15750+40
 turn K1@15900:40
 turn K4@15920:30
 press PLAY@16000
 png 16700:e3_14_warp_wavetable.png
-press GLO@16800+150
 press PLAY@16850+60
 # spectral_freeze
-press GLO@17100+150
-press SEL@17150+60
-turn K2@17300:1
-press GLO@17400+150
-press SEL@17450+60
+press HOME@16900+450
+turn K2@17400:1
+press OCT-@17450+40
 turn K2@17600:40
 press PLAY@17700
 png 18400:e3_15_warp_spectral_freeze.png
-press GLO@18500+150
 press PLAY@18550+60
 # formant
-press GLO@18800+150
-press SEL@18850+60
-turn K2@19000:1
-press GLO@19100+150
-press SEL@19150+60
+press HOME@18600+450
+turn K2@19100:1
+press OCT-@19150+40
 turn K1@19300:5
 press PLAY@19400
 png 20100:e3_16_warp_formant.png
-press GLO@20200+150
 press PLAY@20250+60
 # gstretch
-press GLO@20500+150
-press SEL@20550+60
-turn K2@20700:1
-press GLO@20800+150
-press SEL@20850+60
+press HOME@20300+450
+turn K2@20800:1
+press OCT-@20850+40
 press PLAY@21100
 png 21800:e3_17_warp_gstretch.png
-press GLO@21900+150
 press PLAY@21950+60
 # gstretch2
-press GLO@22200+150
-press SEL@22250+60
-turn K2@22400:1
-press GLO@22500+150
-press SEL@22550+60
+press HOME@22000+450
+turn K2@22500:1
+press OCT-@22550+40
 press PLAY@22800
 png 23500:e3_18_warp_gstretch2.png
-press GLO@23600+150
 press PLAY@23650+60
-# ---- T3: the NEIGHBOR machine (T2 heard through T3); T3's filter down
-upper 2@23900+80
-press GLO@24000+150
-press SEL@24050+60
-turn K1@24200:6
-press GLO@24300+150
-press SEL@24350+60
-turn SELECT@24450:-2
+# ---- T3 (SHIFT + W3): the NEIGHBOR machine (T2 heard through T3; HOME's settings, K1); B1 = LOOP ENGINE's first
+# page; FILTER (SEL): T3's filter down; back to LOOP ENGINE (HOME)
+press GLO@23700+100
+lower 2@23730+40
+press HOME@23800+450
+turn K1@24300:6
+press OCT-@24350+40
+upper 0@24450+60
 press PLAY@24600
-press EDIT@24700
+press SEL@24700
 turn K1@24800:-35
-press SEL@24900+60
-png 25400:e3_19_neighbor_src.png
-upper 8@25600+60
-png 25900:e3_20_neighbor_mix.png
-# ---- save (SHIFT + REC), stop (SHIFT + PLAY)
-press GLO@26200+300
-press REC@26300+60
-press GLO@26700+300
-press PLAY@26800+60
-ms 27400
+press HOME@24900+60
+png 25800:e3_19_neighbor_src.png
+# MIX (EDIT)
+press EDIT@25900+60
+png 26900:e3_20_neighbor_mix.png
+# ---- save (SHIFT + FILE), stop (PLAY)
+press GLO@27000+300
+press SAVE@27100+60
+press PLAY@27400+60
+ms 28000

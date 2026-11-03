@@ -161,6 +161,8 @@ void ec_pn_enter(int mode)
         P->last[b] = mode;
     if (mode == EC_CAT_MASTER)                     /* MIX: MASTER is what it shows on the MST target */
         ec_app_set_page(EC_CAT_MASTER, A->bus == 3 && ec_cat_pages(EC_CAT_MASTER, 0) > 1 ? 1 : 0);
+    if (mode == EC_CAT_XFD && was != EC_CAT_XFD)   /* A / B held: the knobs lock the page it came from */
+        P->xf_from = ec_src_mode(was) ? was : EC_CAT_FILT;
     if (mode == EC_MODE_SAMPLER && was != EC_MODE_SAMPLER)
         ec_sampler_enter(1);
     if (mode != was) {
@@ -409,7 +411,9 @@ static void button_down(int b)
             A->dirty_ms = A->ms;
         break;
     case EC_B_REC:
-        if (A->fn)
+        if (ec_app_mode() == EC_MODE_SAMPLER && !A->rec.open && !A->fn)
+            ec_rec_open();                         /* (the stand-in: REC opens the recorder again) */
+        else if (A->fn)
             ec_liverec_settings();
         else {
             P->rec_down = 1;
@@ -602,11 +606,8 @@ static void white_down(int k, int i, int vel, int lean)
             A->key_role[k] = R_KB;
             return;
         case EC_CAT_XFD:
-            A->key_role[k] = R_SWALLOW;
-            if (i < 12 || !A->fn) {
-                ec_xfd_white(i, 1, lean);
-                A->key_role[k] = R_XFD;
-            }
+            ec_xfd_white(i, 1, lean);
+            A->key_role[k] = R_XFD;
             return;
         case EC_CAT_PAT:
             A->key_role[k] = R_SWALLOW;
@@ -968,6 +969,8 @@ void ec_pn_tick(const void *vin)
     for (r = 0; r < EC_NE; r++)
         if (in->enc[r])
             dismiss();
+    if ((in->btn_up >> EC_B_FN & 1u) && !(in->btn_down >> EC_B_FN & 1u))
+        button_up(EC_B_FN);                        /* SHIFT let go in the tick another button went down: let go first */
     for (b = 0; b < EC_NB; b++)
         if (in->btn_down >> b & 1u)
             button_down(b);
@@ -1003,7 +1006,7 @@ void ec_pn_tick(const void *vin)
         A->redraw = 1;
     }
     for (b = 0; b < EC_NB; b++)
-        if (in->btn_up >> b & 1u)
+        if ((in->btn_up >> b & 1u) && (b != EC_B_FN || (in->btn_down >> EC_B_FN & 1u)))
             button_up(b);
     {   /* 0.5.0: the live controls: aftertouch (the highest held key, on the selected track), CC 1, CC 11; APP
          * SETTINGS turns them off. In CROSSFADER the pressure is the glide's, not aftertouch */
@@ -1097,7 +1100,8 @@ const char *ec_pn_roles(int mode, int *cur)
         *cur = P->bank;
         break;
     case EC_CAT_FILE:
-        r[9] = 'A';                                /* (part 2 draws its own: B10 LOAD for now) */
+        r[2] = r[3] = 'P';                         /* (part 2 draws its own: B3 / B4 pages, B10 LOAD for now) */
+        r[9] = 'A';
         break;
     default:
         if (ec_src_mode(mode)) {

@@ -1,0 +1,234 @@
+# Elasticat FM-1 0.6.0: modes and key shortcuts (spec, 2026-11-03)
+
+The owner proposed this on 2026-11-03 and settled it in six rounds of questions. **Status: for review**, with one
+mockup per mode, and **no build until the owner OKs it**.
+
+It replaces 0.3.0's category / lane model (docs/UX-REDESIGN.md) and 0.5.0's MOD KEYS mode (docs/MOD-MATRIX.md §3).
+The 0.5.0 matrix itself stays.
+
+## 0. Words used here
+
+- **Black keys B1..B11** (F#3..F#5) and **white keys W1..W16** (F3..G5). These are the same names FIZZ uses.
+- Only keys F3..C5 have pressure (RemoteFM1 PLAN.md: keys 0..19). That is **W1..W12 and B1..B8**.
+- **F1 = the OCT- button, F2 = the OCT+ button.**
+- **SEL** = the SELECT knob. **ALGO** = the ALGORITHM knob. **PRESETS** = the PRESETS knob. **K1..K4** = KNOB 1..4.
+- Buttons are called by their printed names: FX SEL ENV LFO EDIT GLO HOME FILE (printed SAVE) ARP SEQ PLAY REC.
+- A **mode** is what a button opens. Each mode has **pages**.
+  - **Tapping the lit mode button again** goes to the next page, or for HOME and EDIT to the next sub-mode.
+  - **Each mode remembers its page** when you leave it and come back.
+- **"Settings"** means the mode's setup pages. You open them with **a hold (400 ms) or SHIFT + the button**, and they stay open after you let go.
+
+## 1. Global rules (every mode, unless the mode says otherwise)
+
+| Control | Does |
+|---|---|
+| White keys | **select steps**. Hold a step + turn a knob = lock that param on the step. Hold a step + turn **PRESETS** = lock a sample slot on the step |
+| Black keys | per mode (§3) |
+| ALGO | the step page (1-16, 17-32 ...) |
+| PRESETS | the track's sample slot (the pool, §5) |
+| SEL | the page / row (as today) |
+| K1..K4 | the page's four values. SHIFT + a value knob snaps it (as today) |
+| F1 | tap = sticky on/off, hold = on while held. While on: **turn a knob = clear every step lock of that param** (selected track); **white keys = copy / paste steps** (§2) |
+| F2 | the same, but **turn a knob = clear every modulation of that param** (matrix slots aimed at it); **white keys = cut / paste steps** |
+| F1 + F2 | F3 (pattern length, rate, launch quantize; also **hold SEQ / SHIFT + SEQ**) |
+| GLO = SHIFT | hold = held. A quick tap = **sticky SHIFT**, which stays on until GLO is tapped again or the mode changes |
+| PLAY | **start / stop at once, on press** |
+| REC | live record on / off, in any mode (§4). Hold / SHIFT + REC = record settings |
+
+**SHIFT layer:**
+
+| SHIFT + | Does |
+|---|---|
+| SEL | BPM |
+| ALGO | swing |
+| PRESETS | the track (prev / next) |
+| White keys W1..W9 | select the track: T1..T6, S1, S2, MST |
+| F1 / F2 | UNDO / REDO |
+| FILE (SAVE) | save the project |
+| Black keys | shortcuts: B1 TAP TEMPO, B2 LATCH, B3 MEMORIZE, B4 RECALL, B11 FILL. B5-B10 are free (labels dark) |
+| A mode button | that mode's settings |
+
+The SHIFT keys light while SHIFT is held, and their labels come from `ec_app_labels`.
+
+**The source template** applies in FILTER, AMP, MODULATION, LOOP ENGINE and FX:
+
+| B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| page 1 (hold = quick setting) | page 2 | page 3 | page 4 | page 5 | LFO 1 | LFO 2 | MOD ENV | VEL | AT | the mode's special key |
+
+- **B6-B10, the sources:** hold one + turn any value knob = route that source to that param and set the depth. This is 0.5.0's MOD KEYS gesture, now always present.
+  - Add F2 while turning = remove that route.
+  - Hold steps as well = depth locks.
+  - A tap opens the source's page in MODULATION.
+
+## 2. Step copy / cut / paste (F1 / F2 on)
+
+There is a one-step **buffer**.
+
+- **Copy (F1).** The first tap on a step copies it into the buffer. The next tap pastes the buffer there, onto any step, even one that isn't empty.
+  - After that, a tap on **a step that isn't empty copies it** (a new buffer), and a tap on **an empty step pastes**.
+- **Cut (F2).** It is the same, but taking a step into the buffer empties it.
+  - So cutting a step, then tapping another step, **moves** it.
+  - Cutting a step and tapping it again puts it back, and further taps on empty steps paste copies.
+- The buffer empties when F1/F2 turns off.
+- In PAGES, F1 / F2 do the same with **whole pages** on the black keys. In PATTERN LAUNCH they do it with **patterns** on the white keys.
+
+## 3. The modes
+
+| Button | Mode | Tap again | Settings (hold / SHIFT +) |
+|---|---|---|---|
+| FX | FX | next FX page | FX settings |
+| SEL | FILTER: FILTER / FILTER ENV / MIX pages | next page | filter settings |
+| ENV | AMP: AMP / AMP ENV / MOD ENV pages | next page | amp settings |
+| LFO | MODULATION: MATRIX / LFO 1 / LFO 2 / VEL / MACROS | next page | (none) |
+| EDIT | **MIX ↔ PAGES** | the other one | track settings |
+| HOME | **LOOP ENGINE → TRIG → KEYBOARD** | the next one | the machine / loop settings |
+| FILE (SAVE) | FILE (browser, editor, razor) ↔ SAMPLER | the other one | file settings |
+| ARP | CROSSFADER | | scene settings |
+| SEQ | PATTERN LAUNCH | | F3 |
+
+**Power-on / project load:** LOOP ENGINE. The old HOME "back to the main view" is gone: every mode is a main view.
+
+### FX
+- **Black keys:** B1 INSERT 1, B2 INSERT 2, B3 SEND 1, B4 SEND 2, B5 MASTER. B6-B10 are the sources. **B11 = MIX** (the FX mix page).
+- **Hold an FX slot key (B1-B5)**, then change that slot's FX engine with the white keys (one engine per key), K1, or SEL.
+
+### FILTER (SEL)
+- Pages: FILTER, FILTER ENV, MIX (from the layout).
+- Black keys follow the template. **Hold B1 = filter type**, changed with K1 or SEL.
+- B11 = filter env on/off (or the env mode).
+
+### AMP (ENV)
+- Pages: AMP, AMP ENV, MOD ENV.
+- Black keys follow the template. Hold B1 = the env mode.
+
+### MODULATION (LFO)
+- **B1 = MATRIX.**
+- **B2-B5 = M1-M4.** A tap opens that macro's page. Hold + turn routes that macro, like the other sources.
+- B6-B10 are the sources (a tap opens their page). **B11 = MACROS overview.**
+- **The macro values can be sequenced:** they are lockable and recorded as automation.
+
+### MIX (EDIT, first)
+- **White keys W1..W9 = the tracks** (T1-T6, S1, S2, MST).
+  - A tap selects the track. **A hold toggles mute.** SHIFT + a track key toggles solo.
+  - FILL held + a track key clears every mute and solo.
+- **Black keys = the selected track's rate:** B1..B9 for the rate list, B10 / B11 for slower / faster.
+
+### PAGES (EDIT, second)
+- **Black keys = the pattern's step pages**, FIZZ style.
+  - A tap edits the page. A hold (0.4 s) puts the page in or out of the loop.
+- With F1 or F2 on, they copy / cut and paste pages (§2).
+
+### LOOP ENGINE (HOME, first)
+- Black keys follow the template: B1..B5 are LOOP, MACHINE, WARP, RANGE and the next page from the layout.
+- **B11 cycles the zoom:** 16 → 32 (first half) → 32 (second half).
+- **White keys play the loop** (0.4's loop keys). On the RANGE page they play the range.
+
+### TRIG (HOME, second)
+- Pages: TRIG, COND, PLAYHEAD. Black keys follow the template.
+
+### KEYBOARD (HOME, third)
+- **The keybed is a full keyboard** for the selected track.
+- **F1 = octave down, F2 = octave up.** That replaces copy / cut in this mode.
+- **On slice tracks (SLICE / RAZOR):** the **black keys pick the slice** (10 at a time). **B11 steps the slice bank** (1-10, 11-20 ...). The white keys play the selected slice at a pitch.
+- **ALGO = the target step** for step entry. Turning it below step 1 means "live" (no entry). With a target step, playing a key writes a trig with that note or slice.
+  - **Advance or stay** is a KEYBOARD setting (HOME settings), ADVANCE on/off, defaulting to on. Either way SHIFT + the key does the other.
+  - Chords are not stacked: one note per step.
+
+### FILE (FILE, first): browser, editor, razor
+- **It can't open while playing.** The button shakes or flashes "STOP FIRST". Inside FILE, **PLAY and REC do nothing**. Leave FILE to play.
+- **Browser:**
+  - SEL scrolls the files, **walking folders and subfolders**. **B1 = up a folder, B2 = into the folder** under the cursor.
+  - Every move **previews** the file (auto-preview on by default, a setting).
+  - **B11 = preview** (play / stop).
+  - **B10 = LOAD** puts the file in **the next free pool slot**, and the cursor stays put. Load, scroll, load ... so 50 samples are a minute's work.
+- **The pool meter:** a bar shows the arena used / free and the slots used of 128.
+- **Editor:**
+  - Black keys = the zoom levels. **B1 = scroll left, B11 = scroll right** when zoomed.
+  - **White keys set the trim:** the first tap sets start, the second sets end.
+- **Razor:** as 0.4.
+- **F2 on a pool slot frees it. SHIFT + B11 = purge** (frees every slot no pattern uses). Loading into a full pool shows FULL.
+
+### SAMPLER (FILE, second): not gated
+- **B11 arms.** Recording starts on the next bar, or at once when stopped. B11 again stops at the end of the bar.
+- The length is a setting: free / 1 / 2 / 4 / 8 bars.
+- The take is saved to /data/rec and **lands in the next free pool slot**, tagged with the BPM.
+- **White keys = the input level meter**, lit like a VU.
+- The source is 0.4's ain1 input.
+
+### CROSSFADER (ARP)
+- **B1 = scene A, B2 = scene B.**
+  - **Hold one + turn a knob** = lock that param to the scene (the selected track, like a step lock).
+  - **B11 held + A / B = capture:** every param of every track goes into that scene.
+  - **SHIFT + A / B = clear** that scene's locks.
+- **W1..W12 = the crossfader**, W1 = 0 and W12 = 127.
+  - **Hold a key** and the fader glides to that key's value.
+  - **More pressure = faster glide.** Let go and the fader stays where it is.
+- **SHIFT + W1..W12 = jump** there at once.
+- **W13-W16 set the base glide time:** instant / fast / medium / slow. That time is used with no pressure (the on-screen panel), and pressure scales it.
+- **The crossfader is never sequenced or recorded.** It is a live control only.
+- Memorize / recall are SHIFT + B3 / B4 everywhere.
+
+### PATTERN LAUNCH (SEQ)
+- **4 banks × 16 patterns = 64** (EC_NPAT 16 → 64).
+- **White keys launch** the bank's patterns, with the launch quantize from F3.
+- **B1-B4 pick the bank.**
+- F1 / F2 copy / cut and paste patterns.
+- Hold SEQ, or SHIFT + SEQ, = F3, which also has the pattern name.
+
+## 4. Live recording (REC)
+
+- **REC toggles recording in any mode except FILE.** The REC LED is lit while recording.
+- **What gets written:**
+  - **notes from KEYBOARD**, with pitch, velocity and slice
+  - **LOOP ENGINE key presses**, as a trig plus the loop position locked
+  - **knob moves**, as locks, on ghost trigs where there's no trig; this includes **the macro values**
+  - **Not the crossfader.**
+- **Timing:** each hit goes to the nearest step and keeps its early or late offset as a micro-timing lock. A setting turns the offset off (hard quantize).
+- **Record settings** (hold REC / SHIFT + REC):
+
+  | Setting | Choices |
+  |---|---|
+  | MODE | **CAPTURE**, **FIXED**, **OVERDUB** |
+  | LENGTH | for FIXED: 1 / 2 / 4 / 8 bars |
+  | COUNT-IN | 0 / 1 / 2 bars |
+  | METRONOME | off / rec only / always, with a level |
+  | AUTOMATION | on / off |
+  | QUANTIZE | offset kept / hard |
+
+  - **CAPTURE** records as played. If playback is stopped, it starts on the first key or loop-key press.
+  - **FIXED** records for a fixed length and then stops recording; playback continues.
+  - **OVERDUB** adds to and replaces steps without clearing.
+  - **AUTOMATION** records the knob moves (ghost locks).
+- **The metronome and count-in click** play on the main output, **after the master bus**, so they are never resampled. The click has its own level.
+
+## 5. The sample pool
+
+- **128 slots** (EC_NSLOT 16 → 128). The project file format version goes up, and older projects load into slots 1-16.
+- **No per-sample length limit.** The arena takes whatever is free.
+- **Memory:** `MEMORY_MIB 256` (from 128), and the arena grows to about 224 MiB, roughly 22 minutes of stereo at 44.1 kHz.
+  - The owner wants the use visible: FILE's pool meter, and a small bar in PRESETS' takeover.
+  - Hosts refuse a cart that doesn't fit ("needs N MB"), per VIRTUAL-CARTS.md §2.
+- **PRESETS** walks the used slots, skipping empty ones, and you hear the change at once.
+
+## 6. What goes away
+
+| Gone | Replaced by |
+|---|---|
+| The lower-key modes from the OCT keys (STEPS / LOOP KEYS / KEYS / SCENE) | the modes LOOP ENGINE / KEYBOARD / CROSSFADER; steps are the default |
+| SRC held = loop keys | LOOP ENGINE |
+| MOD KEYS mode (hold LFO) | the source template on the black keys |
+| The track keys on the black row | SHIFT + W1..W9, and MIX |
+| The MST key | MIX's MST, and SHIFT + W9 |
+| PATN | PATTERN LAUNCH |
+| FILL key | SHIFT + B11 |
+| SHIFT + OCT = undo / redo | SHIFT + F1 / F2 (same meaning, new names) |
+| OCT+ held + knob = clear lock | F1 + knob |
+| Pop-ups' OCT- = back / OCT+ = OK | stays (F1 = back, F2 = OK) inside pop-ups only |
+
+## 7. Must hold for the build (after the owner's OK)
+
+- The 0.5.0 tests are rewritten for the new gestures, and every gesture in this file gets a harness test.
+- The layout tool knows the modes: the categories become the modes' page lists.
+- Worst case ≥ 2x real time in wasm3, measured at 256 MiB.
+- 0.6.0.

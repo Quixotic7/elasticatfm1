@@ -99,6 +99,8 @@ typedef struct {
     uint32_t bk_ms[EC_NBKEY];
     int src_key;               /* the source key held (B6..B10, MODULATION's B2..B5): its index 1..11, 0 none */
     int slot_key;              /* FX's slot key held (B1, B3..B5) / FILTER, AMP's B1: 1..5, 0 none */
+    int ins_slot;              /* 0.6.1: FX's INSERT page: the slot SEL picked, 0 INS 1, 1 INS 2 */
+    int ins_page;              /*   its knob page (P1..): a tap on the insert key turns it */
     /* MIX: the track keys W1..W9 held (tap select, hold mute) */
     uint16_t trk_down, trk_used;
     uint32_t trk_ms[9];
@@ -174,6 +176,14 @@ int ec_src_knob(int role, int det);           /* a hold's knob (slot engine, qui
 int ec_src_white(int i);                      /* a white key while a slot key is held: 1 = used */
 int ec_src_hold_tick(void);
 int ec_src_mk_index(int key);                 /* the ec_mk source (EC_MK_*) a black key is in this mode, -1 */
+/* 0.6.1: FX's INSERT page (the track's, not a bus's) is shown: its cells are the selected slot's knob page */
+int ec_src_insert_page(void);
+int ec_src_ins_pages(void);                   /* the selected slot's knob pages (P1..): its params in threes, >= 1 */
+int ec_src_ins_param(int slot, int i);        /* the id knob K(i%3+1) of page i/3 edits (INS 2: EC_P_INS2_Pn), -1 */
+int ec_src_ins_mix(int slot);                 /* the slot's K4 MIX param (INS 1: fx_mix / fx_wet, INS 2: its MIX) */
+void ec_src_ins_items(void *out);             /* (ec_page_t *) the INSERT page's four cells */
+void ec_src_select(int d);                    /* SEL on the INSERT page: INS 1 / INS 2 */
+float ec_src_load(void);                      /* the load meter's reading 0..1 (the counted engine load) */
 /* ---- ec_clip.c ---- */
 void ec_clip_reset(void);
 void ec_clip_tap(int kind, int index);        /* a tap with F1 / F2 on: a step (0..), a page (0..), a pattern (0..63) */

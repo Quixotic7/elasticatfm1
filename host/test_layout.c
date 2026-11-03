@@ -159,6 +159,26 @@ static void walk(int c, int setup, uint8_t *found)
                   p + 1, lane + 1);
             check_lane(found, c);
         }
+        if (c == EC_CAT_FX && !setup && ec_src_insert_page()) {   /* 0.6.1: INSERT's knob pages (the insert key's
+                                                                    * taps), INS 1's, then INS 2's on the same machine */
+            float *v = ec_app_params(A);
+            const float m2 = v[EC_P_INS2_MACHINE];
+            int slot, kp;
+            v[EC_P_INS2_MACHINE] = v[EC_P_FX_MACHINE];
+            ec_ins2_reset(v);
+            for (slot = 0; slot < 2; slot++) {
+                A->pn.ins_slot = slot;
+                for (kp = slot ? 0 : 1; kp < ec_src_ins_pages(); kp++) {
+                    A->pn.ins_page = kp;
+                    A->redraw = 1;
+                    run(20);
+                    check_lane(found, c);
+                }
+            }
+            A->pn.ins_slot = A->pn.ins_page = 0;
+            v[EC_P_INS2_MACHINE] = m2;
+            ec_ins2_reset(v);
+        }
     }
 }
 

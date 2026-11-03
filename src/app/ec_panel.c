@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "ec_app.h"
+#include "ec_holdmenu.h"
 #include "ec_browse.h"
 #include "ec_gfx.h"
 #include "ec_razor_ui.h"
@@ -160,6 +161,7 @@ void ec_pn_enter(int mode)
     overlays_close();
     ec_mk_off();                                   /* a source key's hold ends (no tap) */
     P->src_key = P->slot_key = 0;
+    ec_hm_cancel();                                /* 0.6.1: a hold menu goes with its mode */
     E->anchor = 0;
     P->cat = 0;
     if (was == EC_MODE_SAMPLER && mode != EC_MODE_SAMPLER)
@@ -891,7 +893,9 @@ static void select_knob(int d)
         return;
     default: break;
     }
-    if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
+    if (ec_src_insert_page()) {
+        ec_src_select(d);                          /* 0.6.1: FX's INSERT page: SEL picks INS 1 / INS 2 */
+    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
         ec_file_select(d);                         /* the browser: the cursor (folders, files) */
     } else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX) {
         if (!ec_mk_select(d))                      /* 0.5.0: the MATRIX page's row, then on to the next page */

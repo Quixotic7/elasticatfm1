@@ -95,6 +95,9 @@ add_executable(ec_test_mtx host/test_mtx.c host/ec_png.c)   # 0.5.0: the mod mat
 target_link_libraries(ec_test_mtx PRIVATE elasticat)
 target_compile_options(ec_test_mtx PRIVATE -Wall -Wextra)
 
+add_executable(ec_mock_ux2 host/mock_ux2.c host/ec_png.c)   # 0.6.0 mockups (tools/mockups/README.md); no test
+target_link_libraries(ec_mock_ux2 PRIVATE elasticat)
+target_compile_options(ec_mock_ux2 PRIVATE -Wall -Wextra)
 add_executable(ec_test_pack tools/layout/test_pack.c tools/layout/ec_layout_pack.c)   # the designer's load path
 target_include_directories(ec_test_pack PRIVATE tools/layout)
 target_compile_options(ec_test_pack PRIVATE -Wall -Wextra)

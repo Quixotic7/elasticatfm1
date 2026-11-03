@@ -5,3 +5,6 @@ __pycache__/
 
 # listening renders (make -C tests/dsp render); kept out of git
 results/**/*.wav
+
+# the 0.6.0 mockups (tools/mockups/make_mockups.sh); regenerated, kept out of git
+results/ux-v2-mockups/

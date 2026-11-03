@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<!-- The FM-1 as RemoteFM1 draws it (tools/layout/fm1/panel.js, vendored), fed one 0.6.0 mode's live labels, LEDs and
+     screen PNG; driven by render_panels.mjs (headless Chromium). window.mock.render(file) -> the LCD's box -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: "Chakra Petch"; src: url("../layout/fm1/ChakraPetch-Bold-latin.woff") format("woff"); font-weight: 700; }
+html, body { margin: 0; background: #000; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="panel"></canvas>
+<script type="module">
+import { Controls, DeviceView, panelLabels, ledIndexOf, labelToMatrix, keyBlack, B, NKEY } from "../layout/fm1/panel.js";
+import { MODES, liveOf } from "./modes.js";
+
+// the desktop layout (padLandscape, as the designer's 1146:744 canvas), sized so the LCD lands at exactly 2x of the
+// 240 LCD (drawDisplay keeps an integer scale only within 8 % of the bezel's inside): 1092 x 709 CSS px at dpr 2
+const CW = 1092, CH = 709, DPR = 2;
+const canvas = document.getElementById("panel");
+canvas.style.width = CW + "px"; canvas.style.height = CH + "px";
+const lcdCanvas = Object.assign(document.createElement("canvas"), { width: 240, height: 240 });
+const view = new DeviceView(canvas, new Controls(() => {}), { canvas: lcdCanvas });
+view.setRunning(true);
+
+const loadImage = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+
+async function render(file) {
+  const m = MODES.find((x) => x.file === file);
+  const L = liveOf(m);
+  await document.fonts.load('700 16px "Chakra Petch"');
+  // the screen: the 480x480 mockup back to the 240 LCD (every 2x2 block is one colour, so nearest is exact)
+  const img = await loadImage(`../../results/ux-v2-mockups/${file}_screen.png`);
+  const g = lcdCanvas.getContext("2d");
+  g.imageSmoothingEnabled = false;
+  g.drawImage(img, 0, 0, 240, 240);
+  // the LEDs: the lit mode button(s), the keys with a job (steps: where there is a trig)
+  const idx = ledIndexOf(null), lv = new Uint8Array(44);
+  for (const b of L.buttonsLit) lv[idx[labelToMatrix(B[b])]] = 255;
+  let w = 0, k2 = 0;
+  for (let k = 0; k < NKEY; k++) {
+    const on = keyBlack(k) ? L.blackLit[k2++] : L.whiteLit[w++];
+    if (on && idx[14 + k] >= 0) lv[idx[14 + k]] = 255;
+  }
+  view.setKeymap(null);
+  view.setLeds(lv, 0);
+  view.setLabels(panelLabels(null, L.live));
+  view.layout(CW, CH, DPR);
+  view.draw();
+  // the LCD's box in device pixels (drawDisplay's own arithmetic), and its corner radius, for check_png.py
+  const d = view.L.display, pad = Math.max(6, Math.round(d.size * 0.045)), lr = Math.max(4, Math.round(d.size * 0.035));
+  const inner = (d.size - 2 * pad) * DPR, k = Math.floor(inner / 240);
+  const s = k >= 1 && k * 240 >= inner * 0.92 ? k * 240 : Math.round(inner);
+  const x = Math.round((d.x + d.size / 2) * DPR - s / 2), y = Math.round((d.y + d.size / 2) * DPR - s / 2);
+  return { x, y, s, r: Math.ceil(lr * DPR * s / inner), w: canvas.width, h: canvas.height, layout: view.kind };
+}
+window.mock = { render, modes: MODES.map((m) => m.file) };
+window.mockReady = true;
+</script>
+</body>
+</html>

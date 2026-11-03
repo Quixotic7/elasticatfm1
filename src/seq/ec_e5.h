@@ -77,7 +77,9 @@ void ec_clip_paste_slice(const ec_clip_slice_t *c, ec_slicemap_t *m, int slice);
 void ec_e5_random_name(char *out, int cap, uint32_t *rng);   /* namesizer: "descriptor thing" (<= 16) */
 
 /* ---- quick undo (lib/undo.lua): gesture-coalesced, 16 deep ---- */
-enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1: several params at once */ };
+enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1: several params at once */,
+       EC_U_TRIM /* 0.6.1: a pool slot's trim (start, end, steps) */,
+       EC_U_SLOTS /* 0.6.1: two pool slots swapped (FILE / POOL MOVE) with every reference */ };
 #define EC_U_NV 10              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8) */
 typedef struct {
     uint8_t kind;
@@ -113,6 +115,11 @@ void ec_undo_params(ec_undo_t *u, const ec_project_t *p, int track, const uint8_
                     uint32_t ms);
 void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int track, int page, uint16_t mask, const char *label,
                    uint32_t key, uint32_t ms);
+/* 0.6.1: slot s's trim before an edit (fresh: a gesture of its own, else coalesced with the last edit of that slot) */
+void ec_undo_trim(ec_undo_t *u, const ec_project_t *p, int slot, int fresh, uint32_t ms);
+/* 0.6.1: slots a and b swapped (ec_project_swap_slots, done by the caller); undo / redo swap them again and hand the
+ * caller a in *gid and b in *gval (the app's runtime slots follow) */
+void ec_undo_slots(ec_undo_t *u, int a, int b, uint32_t ms);
 /* pop the last entry into the project; returns its kind (0: nothing to undo). EC_U_GLOBAL: *gid / *gval are the
  * global's id and value for the caller to apply (the project globals belong to the app) */
 int ec_undo_pop(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap);

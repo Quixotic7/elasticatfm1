@@ -613,6 +613,39 @@ void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int t, int page, uint16_
     snprintf(e->label, sizeof e->label, "%s", label);
 }
 
+void ec_undo_trim(ec_undo_t *u, const ec_project_t *p, int slot, int fresh, uint32_t ms)
+{
+    ec_undo_entry_t *e;
+    if (slot < 0 || slot >= EC_NSLOT)
+        return;
+    if (fresh)
+        u->last_ok = 0;
+    e = ec_undo_record(u, mix(EC_U_TRIM, (uint32_t)slot), ms);
+    if (!e)
+        return;
+    e->kind = EC_U_TRIM;
+    e->track = -1;
+    e->id = (uint8_t)slot;
+    e->val = p->slot[slot].trim_start;
+    e->vals[0] = p->slot[slot].trim_end;
+    e->vals[1] = p->slot[slot].steps;
+    snprintf(e->label, sizeof e->label, "TRIM");
+}
+
+void ec_undo_slots(ec_undo_t *u, int a, int b, uint32_t ms)
+{
+    ec_undo_entry_t *e;
+    u->last_ok = 0;
+    e = ec_undo_record(u, mix(mix(EC_U_SLOTS, (uint32_t)a), (uint32_t)b), ms);
+    if (!e)
+        return;
+    e->kind = EC_U_SLOTS;
+    e->track = -1;
+    e->ids[0] = (uint8_t)a;
+    e->ids[1] = (uint8_t)b;
+    snprintf(e->label, sizeof e->label, "MOVE");
+}
+
 /* apply entry e to the project, leaving in e what it replaced (so applying it again undoes the apply) */
 static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *track, int *gid, float *gval, char *label,
                      int cap)
@@ -653,6 +686,23 @@ static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *tra
         ec_scene_apply(p, e->val);
         e->val = old;
     } break;
+    case EC_U_TRIM: {
+        ec_slot_t *sl = &p->slot[e->id < EC_NSLOT ? e->id : 0];
+        const float s0 = sl->trim_start, s1 = sl->trim_end, st = sl->steps;
+        sl->trim_start = e->val;
+        sl->trim_end = e->vals[0];
+        sl->steps = e->vals[1];
+        e->val = s0;
+        e->vals[0] = s1;
+        e->vals[1] = st;
+    } break;
+    case EC_U_SLOTS:
+        ec_project_swap_slots(p, e->ids[0], e->ids[1]);
+        if (gid)
+            *gid = e->ids[0];
+        if (gval)
+            *gval = (float)e->ids[1];
+        break;
     case EC_U_STEPS:
         if (e->pat >= 0 && e->pat < EC_NPAT && e->track >= 0 && e->track < EC_NTRACK)
             for (i = 0; i < 16; i++)

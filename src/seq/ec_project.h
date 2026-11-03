@@ -130,6 +130,9 @@ typedef struct ec_project {
 void ec_project_init(ec_project_t *p);                       /* a new project */
 static inline ec_ptrack_t *ec_project_track(ec_project_t *p, int t) { return &p->pat[p->current].tr[t]; }
 void ec_slot_clear(ec_slot_t *s);
+/* 0.6.1 (FILE / POOL MOVE): slots a and b (0-based) change places, and every reference follows: the tracks' slot
+ * params and the slot step locks (and slice locks) in all 64 patterns. Its own inverse (undo = the same swap). */
+void ec_project_swap_slots(ec_project_t *p, int a, int b);
 void ec_bus_default(float *v);           /* E4: a bus record's defaults (NONE) */
 
 /* steps */

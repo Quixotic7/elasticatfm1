@@ -811,11 +811,13 @@ static void edit_slot(int id, int det, int mult)
         sl->gain = sl->gain < 0 ? 0 : sl->gain > 4 ? 4 : sl->gain;
         break;
     case EC_S_TRIM_START:   /* (SHIFT: the finest step, the original's trim scan) */
+        ec_undo_trim(&A->e5.undo, &A->proj, s, 0, A->ms);   /* 0.6.1: undoable (a turn coalesced) */
         sl->trim_start += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_start = sl->trim_start < 0 ? 0 : sl->trim_start > sl->trim_end - 0.005f ? sl->trim_end - 0.005f
                                                                                            : sl->trim_start;
         break;
     default:
+        ec_undo_trim(&A->e5.undo, &A->proj, s, 0, A->ms);
         sl->trim_end += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_end = sl->trim_end > 1 ? 1 : sl->trim_end < sl->trim_start + 0.005f ? sl->trim_start + 0.005f
                                                                                        : sl->trim_end;

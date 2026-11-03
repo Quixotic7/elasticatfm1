@@ -17,6 +17,40 @@ void ec_slot_clear(ec_slot_t *s)
     s->gain = 1.0f;
 }
 
+static void swap_ref(float *v, int a, int b)
+{
+    const int x = (int)floorf(*v + 0.5f);
+    if (x == a + 1)
+        *v = (float)(b + 1);
+    else if (x == b + 1)
+        *v = (float)(a + 1);
+}
+
+void ec_project_swap_slots(ec_project_t *p, int a, int b)
+{
+    int q, t, i, k;
+    ec_slot_t tmp;
+    if (a < 0 || b < 0 || a >= EC_NSLOT || b >= EC_NSLOT || a == b)
+        return;
+    tmp = p->slot[a];
+    p->slot[a] = p->slot[b];
+    p->slot[b] = tmp;
+    for (q = 0; q < EC_NPAT; q++)
+        for (t = 0; t < EC_NTRACK; t++) {
+            ec_ptrack_t *tr = &p->pat[q].tr[t];
+            ec_slicemap_t *m = &p->pe5[q].slices[t];
+            swap_ref(&tr->v[EC_P_SLOT], a, b);
+            for (i = 0; i < EC_MAXSTEPS; i++)
+                for (k = 0; k < tr->steps[i].nlock && k < EC_STEP_LOCKS; k++)
+                    if (tr->steps[i].lock_id[k] == EC_P_SLOT)
+                        swap_ref(&tr->steps[i].lock_val[k], a, b);
+            for (i = 0; i < 32; i++)
+                for (k = 0; k < m->nlock[i] && k < EC_SLICE_LOCKS; k++)
+                    if (m->lock_id[i][k] == EC_P_SLOT)
+                        swap_ref(&m->lock_val[i][k], a, b);
+        }
+}
+
 void ec_project_init(ec_project_t *p)
 {
     int i, t;

@@ -93,8 +93,8 @@ static void hold_menu(const ec_app_t *a)
     ec_scr_header_s(a, "", "", r);
     for (i = 0; i < rows && top + i < n; i++) {
         const int k = top + i, y = 12 + i * rh, on = k == cur;
-        if (on)
-            R(EC_C_L3, 0, y, W, rh - 1);
+        if (on)                                    /* 0.6.1: 2 units round the name (over the gaps) */
+            R(EC_C_L3, 0, y - 1, W, rh + 1);
         if (k == now)
             R(on ? EC_C_ACC : EC_C_L8, 2, y + 3, 3, 6);
         T2(on ? EC_C_L15 : EC_C_L8, ec_hm_label(k), 9, y + 1, EC_AL_LEFT);
@@ -383,10 +383,10 @@ static void sample_area(const ec_app_t *a, int top, int bot)
             re = rs + 1;
         ec_kit_wave(smp->overview, EC_SS_OVERVIEW, x0, x1, top, bot, EC_C_L15, EC_C_L5, rs, re);
         /* the region brackets */
-        R(EC_C_L12, rs - 1, top - 3, 1, bot - top + 6);
-        R(EC_C_L12, rs - 1, top - 3, 4, 2);
-        R(EC_C_L12, re, top - 3, 1, bot - top + 6);
-        R(EC_C_L12, re - 3, top - 3, 4, 2);
+        R(EC_C_L12, rs - 2, top - 3, 2, bot - top + 6);   /* 0.6.1: 2 units */
+        R(EC_C_L12, rs - 2, top - 3, 5, 2);
+        R(EC_C_L12, re, top - 3, 2, bot - top + 6);
+        R(EC_C_L12, re - 3, top - 3, 5, 2);
         if (st.reader_on)
             ec_kit_playhead(x0 + (int)(st.pos_sample * (float)cols), top - 1, bot + 1);
     }
@@ -450,7 +450,7 @@ static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
     }
     ec_kit_steps(top, bot, trigs, ghosts, locks, beyond, held, pl);
     for (i = 0; i < pages && pages > 1 && pages_y > 0; i++)
-        R(i == a->step_page ? EC_C_L15 : EC_C_L5, W / 2 - pages * 2 + i * 4, pages_y, 3, 1);
+        R(i == a->step_page ? EC_C_L15 : EC_C_L5, W / 2 - pages * 2 + i * 4, pages_y, 2, 2);
 }
 
 static const char *file_name(const ec_app_t *a)
@@ -685,7 +685,7 @@ static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
 
 /* ------------------------------------------------------------------------------------------- PAT --- */
 /* the pattern grid (the mock's PATTERNS): the bank's 16, the current one filled, the queued one blinking in the
- * accent, used ones framed; the global cycle under them */
+ * accent, used ones a dim block; the global cycle under them */
 static void pat_screen(const ec_app_t *a, const ec_page_t *pg)
 {
     const int bank = a->proj.current / 16;
@@ -695,26 +695,27 @@ static void pat_screen(const ec_app_t *a, const ec_page_t *pg)
     right_info(a, r, sizeof r);
     header(a, t, 1, r);
     for (i = 0; i < 16 && bank * 16 + i < EC_NPAT; i++) {
-        const int p = bank * 16 + i, col = i % 4, row = i / 4, x = 2 + col * 29, y = 12 + row * 14, w = 27, h = 12;
+        const int p = bank * 16 + i, col = i % 4, row = i / 4, x = 2 + col * 29, y = 11 + row * 15, w = 27, h = 14;
         char n[8];
         snprintf(n, sizeof n, "%c%d", 'A' + bank, i + 1);
         if (p == a->proj.current) {
             R(EC_C_L15, x, y, w, h);
-            T2(EC_C_BG, n, x + w / 2, y + 1, EC_AL_CENTER);
+            T2(EC_C_BG, n, x + w / 2, y + 2, EC_AL_CENTER);
         } else if (p == a->seq.pending) {
             R((a->ms / 120) & 1u ? EC_C_ACC : EC_C_L5, x, y, w, h);
-            T2(EC_C_BG, n, x + w / 2, y + 1, EC_AL_CENTER);
+            T2(EC_C_BG, n, x + w / 2, y + 2, EC_AL_CENTER);
         } else {
-            ec_gfx_frame(x, y, w, h, a->proj.pat[p].used ? EC_C_L8 : EC_C_L3);
-            T2(a->proj.pat[p].used ? EC_C_L12 : EC_C_L5, n, x + w / 2, y + 1, EC_AL_CENTER);
+            if (a->proj.pat[p].used)                /* 0.6.1: a dim block (a 2-unit frame would cut the name) */
+                R(EC_C_L3, x, y, w, h);
+            T2(a->proj.pat[p].used ? EC_C_L12 : EC_C_L5, n, x + w / 2, y + 2, EC_AL_CENTER);
         }
     }
     /* the global cycle: a pending switch engages at its end */
     {
         const int gl = clampi(a->proj.glen, 1, 256);
         const int pos = a->seq.playing || a->seq.paused ? a->seq.global_pos : 0;
-        R(EC_C_L3, 2, 70, W - 4, 2);
-        R(a->seq.pending >= 0 ? EC_C_ACC : EC_C_L8, 2, 70, (W - 4) * (pos + 1) / gl, 2);
+        R(EC_C_L3, 2, 71, W - 4, 2);
+        R(a->seq.pending >= 0 ? EC_C_ACC : EC_C_L8, 2, 71, (W - 4) * (pos + 1) / gl, 2);
     }
     cells(a, pg);
 }

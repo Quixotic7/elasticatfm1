@@ -72,7 +72,7 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
         ec_gfx_dots_h(x0, x1, (top + bot) / 2, 2, EC_C_L3);
         T2(EC_C_L5, "NO SAMPLE", W / 2, top + 10, EC_AL_CENTER);
     } else {
-        /* the waveform, read from the sample: peak |L,R| per grid column */
+        /* the waveform, read from the sample: peak |L,R| per 2-unit column (0.6.1), at least 2 high */
         const int px0 = x0, pcols = x1 - x0, mid = (top + bot) / 2, half = (bot - top) / 2;
         const double f0 = (lo + (hi - lo) * v0 / 128.0) * smp->frames, f1 = (lo + (hi - lo) * v1 / 128.0) * smp->frames;
         int sx = x0 + (int)((rz->start[sel - 1] - v0) / (v1 - v0) * (float)(x1 - x0));
@@ -84,10 +84,10 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             R(EC_C_L15, sx, top - 2, ex - sx, bot - top + 4);   /* the selected slice: a cream block (mockup) */
         else
             ec_gfx_dots_h(x0, x1, mid, 2, EC_C_L3);
-        for (c = 0; c < pcols; c++) {
-            const double a0 = f0 + (f1 - f0) * c / pcols, a1 = f0 + (f1 - f0) * (c + 1) / pcols;
+        for (c = 0; c + 1 < pcols; c += 2) {
+            const double a0 = f0 + (f1 - f0) * c / pcols, a1 = f0 + (f1 - f0) * (c + 2) / pcols;
             uint32_t i0 = a0 < 0 ? 0 : (uint32_t)a0, i1 = a1 < 0 ? 0 : (uint32_t)a1, i, step;
-            const float x = v0 + (v1 - v0) * ((float)c + 0.5f) / (float)pcols;
+            const float x = v0 + (v1 - v0) * ((float)c + 1.0f) / (float)pcols;
             const int sl = slice_at(rz, count, x);
             int pk = 0, h;
             int col;
@@ -105,9 +105,9 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
                 if (rr > pk)
                     pk = rr;
             }
-            h = (int)((long)pk * half / 32768);
+            h = (int)((long)pk * (half - 1) / 32768);
             col = sl == sel ? EC_C_BG : !sl || rz->mute[sl - 1] ? EC_C_L5 : EC_C_L12;
-            ec_gfx_rect(px0 + c, mid - h, 1, 2 * h + 1, col);
+            ec_gfx_rect(px0 + c, mid - h, 2, 2 * h + 2, col);
         }
         /* the slice starts (and ends where a gap follows), dotted */
         for (k = 0; k < count; k++) {
@@ -128,7 +128,7 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             for (k = 0; k < n; k++) {
                 const int px = x0 + (int)((tr[k] - v0) / (v1 - v0) * (float)(x1 - x0));
                 if (px >= x0 && px < x1)
-                    R(EC_C_L8, px, top - 3, 1, 1);
+                    R(EC_C_L8, px, top - 4, 2, 2);
             }
         }
         /* the sounding voices */
@@ -159,8 +159,8 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
     /* the zoom window over the whole track (zoomed in) */
     if (ec_rzui.zoom > 1) {
         const int zx = x0 + (int)(v0 / 128.0f * (float)(x1 - x0)), zw = (int)((v1 - v0) / 128.0f * (float)(x1 - x0));
-        R(EC_C_L3, x0, 67, x1 - x0, 1);
-        R(EC_C_L12, zx, 66, zw > 1 ? zw : 1, 3);
+        R(EC_C_L3, x0, 67, x1 - x0, 2);
+        R(EC_C_L12, zx, 66, zw > 2 ? zw : 2, 3);
     }
     /* the pads: this bank of 16 slices on the lower keys */
     {
@@ -171,12 +171,12 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             const int s = bank * 16 + k + 1, x = (int)(2 + k * cw + 0.5f), w = (int)(cw + 0.5f) - 2;
             if (s > count)
                 continue;
-            if (s == sel)
-                R(EC_C_L15, x, 70, w, 3);
+            if (s == sel)                          /* (rows 69..71: the cells' lane marks are at 73) */
+                R(EC_C_L15, x, 69, w, 3);
             else if (on >> (s - 1) & 1u)
-                R(EC_C_ACC, x, 71, w, 1);
+                R(EC_C_ACC, x, 70, w, 2);
             else
-                R(rz->mute[s - 1] ? EC_C_L3 : EC_C_L8, x, 71, w, 1);
+                R(rz->mute[s - 1] ? EC_C_L3 : EC_C_L8, x, 70, w, 2);
         }
     }
     ec_scr_cells(a, pg);
@@ -199,10 +199,10 @@ void ec_scr_neighbor(const ec_app_t *a, int top, int bot)
     T2(EC_C_L15, l, 26, y0 + h / 2 - 5, EC_AL_CENTER);
     T2(EC_C_BG, r, 94, y0 + h / 2 - 5, EC_AL_CENTER);
     /* the arrow */
-    R(EC_C_L12, 48, y0 + h / 2, 22, 1);
-    R(EC_C_L12, 67, y0 + h / 2 - 2, 1, 5);
-    R(EC_C_L12, 68, y0 + h / 2 - 1, 1, 3);
-    R(EC_C_L12, 69, y0 + h / 2, 1, 1);
+    R(EC_C_L12, 48, y0 + h / 2 - 1, 18, 2);         /* 0.6.1: 2-unit steps */
+    R(EC_C_L12, 66, y0 + h / 2 - 3, 2, 6);
+    R(EC_C_L12, 68, y0 + h / 2 - 2, 2, 4);
+    R(EC_C_L12, 70, y0 + h / 2 - 1, 2, 2);
     /* the levels: the left track's (heard only through this one) and this one's */
     {
         float pl = a->meter[left] > 1 ? 1 : a->meter[left], pr = a->meter[a->track] > 1 ? 1 : a->meter[a->track];

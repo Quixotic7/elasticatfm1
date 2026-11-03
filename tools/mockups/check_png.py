@@ -8,16 +8,16 @@ colours, at most 16).
                                           the grid rule, and how many blocks; and (0.6.1) their hairlines (a report;
                                           exit 0)
   python3 check_png.py --survey --strict <root>   the same, exit 1 if any screenshot breaks the grid rule or has a
-                                          hairline that isn't a cell rule
+                                          hairline
 
 The hairline survey (0.6.1, the owner's 1-unit depth bar, docs/UX-V2.md section 10): the grid rule passes anything
 drawn on the 120 grid, so a bar 1 grid unit thick passes it. On the 120x120 grid (one pixel per 2x2 / 4x4 block), a
 hairline is a straight run of one colour exactly 1 unit thick (both neighbours across it another colour) and at least
 HAIR_MIN (6) units long, in a colour that is neither the image's ground (its commonest colour) nor the local ground
 (the commonest within 7 units, e.g. LOCK in a filled cell): 1-unit gaps between things are not counted. Text never
-makes one: the glyphs are 3x5 units at scale 1 and 2 units thick at scale 2. The
-param cells' dividing rules (row 76 and row 98 across, column 60 down from 76: 1 unit by design, UX-V2 section 7) are
-listed apart as "rules"; everything else (bars, ticks, outlines, gaps) is reported with its colour and place.
+makes one: the glyphs are 3x5 units at scale 1 and 2 units thick at scale 2. Every
+hairline (bars, ticks, outlines, rules, gaps) is reported with its colour and place (0.6.1 wave 2: the param cells'
+rules are 2 units too, so nothing is listed apart any more; host/test_grid.c checks the canvas itself, runs >= 3).
 """
 import json
 import os
@@ -183,11 +183,6 @@ def hairlines(g):
     return out
 
 
-def is_rule(h):
-    d, x, y, n, _ = h
-    return (d == "-" and y in (76, 98)) or (d == "|" and x == 60 and y >= 76)
-
-
 def survey(root, strict=False):
     hits = []
     for dp, _, fs in os.walk(root):
@@ -205,17 +200,17 @@ def survey(root, strict=False):
                 continue
             b = bad_blocks(rows, 0, 0, w, h, w // 120)
             hs = hairlines(grid_of(rows, w))
-            hits.append((b, os.path.relpath(p, root), [x for x in hs if not is_rule(x)], [x for x in hs if is_rule(x)]))
-    for b, p, hs, rules in sorted(hits, key=lambda t: t[1]):
+            hits.append((b, os.path.relpath(p, root), hs))
+    for b, p, hs in sorted(hits, key=lambda t: t[1]):
         print(f"{'BREAKS' if b else 'ok    '} {p}" + (f": {b} of 14400 grid pixels not uniform" if b else "") +
-              f"; {len(hs)} hairlines, {len(rules)} rules")
+              f"; {len(hs)} hairlines")
         for d, x, y, n, c in hs[:6]:
             print(f"         hairline {d} at ({x}, {y}) {n} units, #{c[0]:02X}{c[1]:02X}{c[2]:02X}")
         if len(hs) > 6:
             print(f"         ... {len(hs) - 6} more")
     nb, nh = sum(1 for t in hits if t[0]), sum(1 for t in hits if t[2])
     print(f"{nb} of {len(hits)} firmware screenshots break the 120x120 grid rule; {nh} have hairlines (1-unit-thick "
-          f"runs >= {HAIR_MIN} units, not the cell rules): {sum(len(t[2]) for t in hits)} in all")
+          f"runs >= {HAIR_MIN} units): {sum(len(t[2]) for t in hits)} in all")
     return 1 if strict and (nb or nh) else 0
 
 

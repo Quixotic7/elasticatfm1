@@ -42,7 +42,7 @@ if(Python3_FOUND)
 endif()
 # src/plat/abi: copies of FM1VST's core-api/fm1core.h and core-glue/common/rfm1_host.h (FM1VST's own are used there)
 target_include_directories(elasticat PUBLIC src/plat src/plat/abi src/io src/ui src/dsp src/seq src/app)
-target_compile_definitions(elasticat PUBLIC EC_FS_NATIVE)
+target_compile_definitions(elasticat PUBLIC EC_FS_NATIVE EC_GFX_TEXT_MASK)
 target_compile_options(elasticat PRIVATE -Wall -Wextra -ffp-contract=off)
 target_link_libraries(elasticat PUBLIC m)
 

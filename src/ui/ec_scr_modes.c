@@ -66,13 +66,13 @@ static void pages_screen(const ec_app_t *a)
         const int cut = a->pn.clip_state != EC_CLIP_EMPTY && a->pn.clip_kind == EC_CK_PAGE && a->pn.clip_from == p;
         char n[4];
         snprintf(n, sizeof n, "%d", p + 1);
-        if (sel) {
-            R(EC_C_L15, 2, y, 11, 12);
+        if (sel) {                                 /* 0.6.1: 2 units round the number */
+            R(EC_C_L15, 2, y - 1, 11, 14);
             T2(EC_C_BG, n, 8, y + 1, EC_AL_CENTER);
         } else
             T2(loop ? EC_C_L12 : EC_C_L5, n, 8, y + 1, EC_AL_CENTER);
         if (loop)
-            R(EC_C_ACC, 15, y, 1, 12);             /* in the loop */
+            R(EC_C_ACC, 14, y, 2, 12);             /* in the loop */
         for (j = 0; j < 16; j++) {
             const int idx = p * 16 + j, x = 18 + j * 6 + (j / 4);
             const int on = idx < len && (tr->steps[idx].trig || tr->steps[idx].slices);
@@ -81,12 +81,12 @@ static void pages_screen(const ec_app_t *a)
                 c = EC_C_ACC;
             if (cut)
                 c = blink(a, 120) ? EC_C_ACC : c;
-            R(c, x, y + (on ? 1 : 8), 5, on ? 10 : 3);
+            R(c, x, y + (on ? 1 : 8), 4, on ? 10 : 3);   /* 0.6.1: 2-unit gaps */
         }
     }
     if (pages > 4) {                               /* where the window is */
-        R(EC_C_L3, W - 2, 13, 1, 57);
-        R(EC_C_L12, W - 2, 13 + 57 * first / pages, 1, 57 * 4 / pages);
+        R(EC_C_L3, W - 2, 13, 2, 57);
+        R(EC_C_L12, W - 2, 13 + 57 * first / pages, 2, 57 * 4 / pages);
     }
     ec_app_page(a, &pg);
     ec_scr_cells(a, &pg);
@@ -117,18 +117,19 @@ static void keyboard_screen(const ec_app_t *a)
         R(EC_C_L3, sx, 20, ex - sx, 30);
         if (smp)
             ec_kit_wave(smp->overview, EC_SS_OVERVIEW, 2, 114, 20, 50, EC_C_L15, EC_C_L8, sx, ex);
-        for (i = 0; i <= cnt; i++) {               /* the slices (an even grid; RAZOR's own points on FILE) */
-            const int x = 2 + 112 * i / cnt;
-            R(i == sel - 1 || i == sel ? EC_C_ACC : EC_C_L5, x > 113 ? 113 : x, 18, 1, 34);
+        for (i = 0; i <= cnt; i++) {               /* the slices (an even grid; RAZOR's own points on FILE): */
+            const int x = 2 + 112 * i / cnt, edge = i == sel - 1 || i == sel;   /* 2 units; too many: the selected's */
+            if (edge || cnt <= 112 / 6)
+                R(edge ? EC_C_ACC : EC_C_L5, x > 112 ? 112 : x, 18, 2, 34);
         }
     } else {                                       /* a keyboard: the notes held lit */
         const uint32_t held = 0;
         T(EC_C_L15, a->bus ? "TRACKS ONLY" : "KEYS", 2, 13, EC_AL_LEFT);
         for (i = 0; i < 16; i++) {
             const int x = 3 + i * 7;
-            R(EC_C_L12, x, 20, 6, 30);
+            R(EC_C_L12, x, 20, 5, 30);              /* 0.6.1: 2-unit gaps */
             if (((ec_kb_semis(ec_key_of_lower(i)) % 12) + 12) % 12 == 0)
-                R(EC_C_L5, x + 1, 46, 4, 2);       /* the Cs */
+                R(EC_C_L5, x + 1, 46, 3, 2);       /* the Cs */
         }
         for (i = 0; i < 11; i++) {                 /* the sharps between the naturals (F# G# A# C# D#) */
             static const int GAP[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
@@ -139,7 +140,7 @@ static void keyboard_screen(const ec_app_t *a)
             const int k = ec_kb_lit_key();
             const int lo = k >= 0 && k < EC_NKEY ? ec_key_lower(k) : -1, up = k >= 0 && k < EC_NKEY ? ec_key_upper(k) : -1;
             if (lo >= 0)
-                R(EC_C_ACC, 3 + lo * 7 + 1, 40, 4, 8);
+                R(EC_C_ACC, 3 + lo * 7 + 1, 40, 3, 8);
             else if (up >= 0) {
                 static const int GAP[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
                 R(EC_C_ACC, 3 + GAP[up] * 7 + 4, 30, 4, 7);
@@ -179,8 +180,8 @@ static void xfd_screen(const ec_app_t *a)
     R(EC_C_L8, x0, 26, kx - x0, 3);
     if (a->e5.gliding) {                           /* gliding to the held key */
         const int tx = x0 + (int)(len * a->e5.glide_target + 0.5f);
-        for (i = kx < tx ? kx + 4 : tx; i < (kx < tx ? tx : kx - 3); i += 2)
-            R(EC_C_ACC, i, 27, 1, 1);
+        for (i = kx < tx ? kx + 5 : tx; i + 1 < (kx < tx ? tx : kx - 4); i += 4)
+            R(EC_C_ACC, i, 26, 2, 3);
     }
     R(EC_C_L15, kx - 2, 20, 5, 15);
     for (i = 0; i < 12; i++) {                     /* W1..W12 */
@@ -216,27 +217,31 @@ static void patterns_screen(const ec_app_t *a)
         ec_scr_header_s(a, t, pgs, r);             /* 0.6.1: the shared header (messages, held keys) */
     }
     for (i = 0; i < 16; i++) {
-        const int p = ec_pat_index(bank, i), col = i % 4, row = i / 4, x = 2 + col * 29, y = 12 + row * 14, w = 27,
-                  h = 12;
+        const int p = ec_pat_index(bank, i), col = i % 4, row = i / 4, x = 2 + col * 29, y = 11 + row * 15, w = 27,
+                  h = 14;                          /* 0.6.1: 2 units round the name */
         const int cut = a->pn.clip_state != EC_CLIP_EMPTY && a->pn.clip_kind == EC_CK_PATTERN && a->pn.clip_from == p;
         char n[8];
         pat_name(p, n, sizeof n);
         if (p == a->proj.current) {
             R(EC_C_L15, x, y, w, h);
-            T2(EC_C_BG, n, x + w / 2, y + 1, EC_AL_CENTER);
+            T2(EC_C_BG, n, x + w / 2, y + 2, EC_AL_CENTER);
         } else if (p == a->seq.pending) {
             R(blink(a, 120) ? EC_C_ACC : EC_C_L5, x, y, w, h);
-            T2(EC_C_BG, n, x + w / 2, y + 1, EC_AL_CENTER);
-        } else {
-            F(cut && blink(a, 120) ? EC_C_ACC : a->proj.pat[p].used ? EC_C_L8 : EC_C_L3, x, y, w, h);
-            T2(a->proj.pat[p].used ? EC_C_L12 : EC_C_L5, n, x + w / 2, y + 1, EC_AL_CENTER);
+            T2(EC_C_BG, n, x + w / 2, y + 2, EC_AL_CENTER);
+        } else {                                   /* 0.6.1: a dim block (a 2-unit frame would cut the name) */
+            if (cut && blink(a, 120))
+                R(EC_C_ACC, x, y, w, h);
+            else if (a->proj.pat[p].used)
+                R(EC_C_L3, x, y, w, h);
+            T2(cut && blink(a, 120) ? EC_C_BG : a->proj.pat[p].used ? EC_C_L12 : EC_C_L5, n, x + w / 2, y + 2,
+               EC_AL_CENTER);
         }
     }
     {   /* to the launch: the global cycle (a pending switch engages at its end) */
         const int gl = clampi(a->proj.glen, 1, 256);
         const int pos = a->seq.playing || a->seq.paused ? a->seq.global_pos : 0;
-        R(EC_C_L3, 2, 70, W - 4, 2);
-        R(a->seq.pending >= 0 ? EC_C_ACC : EC_C_L8, 2, 70, (W - 4) * (pos + 1) / gl, 2);
+        R(EC_C_L3, 2, 71, W - 4, 2);
+        R(a->seq.pending >= 0 ? EC_C_ACC : EC_C_L8, 2, 71, (W - 4) * (pos + 1) / gl, 2);
     }
     ec_app_page(a, &pg);
     ec_scr_cells(a, &pg);
@@ -258,7 +263,7 @@ static void appset_screen(const ec_app_t *a)
     ec_scr_header(a, "APP/SETTINGS", 0, "");
     ec_kit_settings(rows, EC_AS_NROW, a->pn.as_row / 4, a->pn.as_row);
     for (i = 0; i < ec_gfx_themes(); i++)          /* THEME: the six, the current one marked */
-        R(i == a->pn.as.theme ? EC_C_L15 : EC_C_L5, 26 + i * 4, 21, 3, i == a->pn.as.theme ? 3 : 2);
+        R(i == a->pn.as.theme ? EC_C_L15 : EC_C_L5, 26 + i * 4, 21, 2, i == a->pn.as.theme ? 3 : 2);
 }
 
 /* ------------------------------------------------------------------------------------------- dispatch --- */

@@ -4,10 +4,47 @@
 // that this pack of the shipped design is byte for byte the generator's), the canonical JSON text, variant matching.
 // An ES module: the page imports it, node can too.
 
-export const CATS = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"];
+export const CATS = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT", "XFD"];
+// 0.6.0: every category is a mode (docs/UX-V2.md §3): its name, the header's tag, its FM-1 button and its place among
+// that button's modes; the fixed screens are modes without params. EC_MB_* = BUTTONS index + 1. A design may leave
+// these out (a design before 0.6.0): it gets these (as gen_layout.py)
+export const BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "HOME", "FILE", "ARP", "SEQ"];
+export const MODE_DEFAULT = { TRIG: ["TRIG", "TRIG", "HOME", 2], SRC: ["LOOP ENGINE", "LOOP", "HOME", 1],
+  FILT: ["FILTER", "FILTER", "SEL", 1], AMP: ["AMP", "AMP", "ENV", 1], FX: ["FX", "FX", "FX", 1],
+  MOD: ["MODULATION", "MOD", "LFO", 1], MST: ["MIX", "MIX", "EDIT", 1], FILE: ["FILE", "FILE", "FILE", 1],
+  PAT: ["PATTERN LAUNCH", "PATTERNS", "SEQ", 1], XFD: ["CROSSFADER", "CROSSFADER", "ARP", 1] };
+export const SCREENS = ["KEYBOARD", "PAGES", "SAMPLER"];
+export const SCREEN_DEFAULT = { KEYBOARD: ["HOME", 3], PAGES: ["EDIT", 2], SAMPLER: ["FILE", 2] };
+// the black keys B1..B11 (a page's "key", 0 = none); a category that names none: the source template's pages 1..5 =
+// B1..B5, MOD: MATRIX B1, MACRO n B(n+1), MACROS B11; FX's buses S1 S2 MST: B3 B4 B5
+export const NBKEY = 11, TEMPLATE = ["TRIG", "SRC", "FILT", "AMP", "FX"], BUS_KEY_DEFAULT = [3, 4, 5];
+export const MODE_MAX = 16, TAG_MAX = 10, BUS_TAG = "FILTER";
+// a category's mode as the design gives it, with the defaults: {name, tag, button, order}
+export function modeOf(c) {
+  const d = MODE_DEFAULT[c.cat] || ["?", "?", "FX", 1];
+  return { name: c.mode ?? d[0], tag: c.tag ?? d[1], button: c.button ?? d[2], order: c.order ?? d[3] };
+}
+// every mode of a design, in the panel's button order: [{button, order, name, cat (null: a fixed screen)}]
+export function modeList(design) {
+  const out = [];
+  for (const c of design.categories || []) if (c && CATS.includes(c.cat)) { const m = modeOf(c); out.push({ ...m, cat: c.cat }); }
+  const scr = Array.isArray(design.screens) ? design.screens : SCREENS.map((m) => ({ mode: m, button: SCREEN_DEFAULT[m][0], order: SCREEN_DEFAULT[m][1] }));
+  for (const x of scr) if (x && typeof x === "object") out.push({ name: x.mode, button: x.button, order: x.order, cat: null });
+  return out.sort((a, b) => (BUTTONS.indexOf(a.button) - BUTTONS.indexOf(b.button)) || (a.order - b.order));
+}
+// the black key of each page of a category (as compile() gives them: the design's, or the defaults when it names none)
+export function pageKeys(c) {
+  const ps = c.pages || [];
+  if (ps.some((p) => p && typeof p === "object" && "key" in p)) return ps.map((p) => (Number.isInteger(p?.key) ? p.key : 0));
+  return ps.map((p, i) => {
+    if (TEMPLATE.includes(c.cat)) return i < 5 ? i + 1 : 0;
+    if (c.cat === "MOD") return p.picture === "matrix" ? 1 : p.picture === "macros" ? 11 : p.picture === "macro" ? (p.macro || 1) + 1 : 0;
+    return 0;
+  });
+}
 export const PICS = ["steps", "wave", "wave-machine", "wave-warp", "wave-range", "filter", "fenv", "aenv", "fx", "sends",
   "lfo1", "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix"];
-export const FIXED = { mix: "MST", scene: "MST", file: "FILE", razor: "FILE", pattern: "PAT", matrix: "MOD" };
+export const FIXED = { mix: "MST", scene: "XFD", file: "FILE", razor: "FILE", pattern: "PAT", matrix: "MOD" };
 // the MATRIX page (0.5.0): its knobs are fixed (SELECT picks the row; KNOB 1-3 its SRC, DST, DEPTH)
 export const MATRIX_LANES = [["mtx.src", "mtx.dst", "mtx.depth", null]];
 export const MATRIX_PAGE = () => ({ title: "MATRIX", picture: "matrix", lanes: JSON.parse(JSON.stringify(MATRIX_LANES)) });
@@ -40,7 +77,7 @@ export const SPECIAL = {
   "mtx.src": [6, 0, "SRC"], "mtx.dst": [6, 1, "DST"], "mtx.depth": [6, 2, "DEPTH"],
 };
 export const STOPPED = new Set(["mode", "filter_machine", "filter_mix_mode"]);
-export const MAX_LANES = 4, SETUP_LANES = 2, MAX_PAGES = 16, CELL_LABEL_WARN = 5, LABEL_MAX = 10, TITLE_ROOM = 64;
+export const MAX_LANES = 4, SETUP_LANES = 2, MAX_PAGES = 16, CELL_LABEL_WARN = 5, LABEL_MAX = 10, TITLE_ROOM = 72;
 export const textW = (s) => (s ? s.length * 4 - 1 : 0);
 const ZERO = () => ({ mach: 0, warp: 0, filt: 0, fenv: 0, env: 0, fx: 0 });
 
@@ -88,7 +125,9 @@ export function whenText(w) {
 export function compile(design, catalog) {
   const params = new Map(catalog.map((p) => [p.name, p]));
   const errors = [], warnings = [];
-  const items = [], vars = [], pages = [];
+  const items = [], vars = [], pages = [], pkey = [];
+  const tags = {};
+  let legacy = false;
   const placed = new Map();
   const err = (w, m) => errors.push(`${w}: ${m}`);
   const warn = (w, m) => warnings.push(`${w}: ${m}`);
@@ -174,9 +213,75 @@ export function compile(design, catalog) {
   }
 
   function titleFits(where, cat, title) {
+    const tag = tags[cat] ?? cat;      // (the header shows the mode's tag: "LOOP/WARP")
     if (title !== title.toUpperCase()) err(where, `the title '${title}' has lower case (the font has capitals only)`);
-    if (textW(cat + "/" + title) > TITLE_ROOM) err(where, `the title '${title}' is too wide for the header (${cat}/ + ${Math.floor((TITLE_ROOM + 1) / 4) - cat.length - 1} characters at most)`);
+    if (textW(tag + "/" + title) > TITLE_ROOM) err(where, `the title '${title}' is too wide for the header (${tag}/ + ${Math.floor((TITLE_ROOM + 1) / 4) - tag.length - 1} characters at most)`);
   }
+  const isInt = (x) => Number.isInteger(x);
+  function textOk(where, what, t, most) {
+    if (typeof t !== "string" || !t) { err(where, `${what}: a text`); return false; }
+    if (t !== t.toUpperCase() || [...t].some((ch) => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) > 95)) err(where, `${what} '${t}': capitals, digits and the font's signs only`);
+    if (t.length > most) err(where, `${what} '${t}': ${most} characters at most`);
+    return true;
+  }
+  const mode = {}, screens = [];
+  function modes(byname) {
+    for (const n of CATS) {
+      const c = byname.get(n) || {}, d = MODE_DEFAULT[n];
+      let name = c.mode ?? d[0], tag = c.tag ?? d[1], btn = c.button ?? d[2], order = c.order ?? d[3];
+      if (!textOk(n, "mode", name, MODE_MAX)) name = d[0];
+      if (!textOk(n, "tag", tag, TAG_MAX)) tag = d[1];
+      if (!BUTTONS.includes(btn)) { err(n, `button '${btn}' (one of ${BUTTONS.join(" ")})`); btn = d[2]; }
+      if (!isInt(order) || order < 1) { err(n, `order ${JSON.stringify(order)}: 1 or more (the place among the button's modes)`); order = 1; }
+      mode[n] = [name, tag, btn, order];
+      tags[n] = tag;
+    }
+    const dflt = () => SCREENS.map((m) => ({ mode: m, button: SCREEN_DEFAULT[m][0], order: SCREEN_DEFAULT[m][1] }));
+    let scr = design.screens ?? dflt();
+    if (!Array.isArray(scr) || JSON.stringify(scr.map((x) => (x && typeof x === "object" ? x.mode : null))) !== JSON.stringify(SCREENS)) {
+      err("screens", `"screens" lists ${SCREENS.join(", ")} in that order`);
+      scr = dflt();
+    }
+    for (const x of scr) {
+      const w = `screens/${x.mode}`;
+      const ex = Object.keys(x).filter((k) => !["mode", "button", "order", "note"].includes(k));
+      if (ex.length) err(w, `unknown field(s) ${ex.sort().join(", ")}`);
+      let btn = x.button, order = x.order;
+      if (!BUTTONS.includes(btn)) { err(w, `button '${btn}' (one of ${BUTTONS.join(" ")})`); btn = SCREEN_DEFAULT[x.mode][0]; }
+      if (!isInt(order) || order < 1) { err(w, `order ${JSON.stringify(order)}: 1 or more`); order = 1; }
+      screens.push([x.mode, btn, order]);
+    }
+    const on = new Map();
+    const put = (b, o, m) => { if (!on.has(b)) on.set(b, []); on.get(b).push([o, m]); };
+    for (const n of CATS) put(mode[n][2], mode[n][3], mode[n][0]);
+    for (const [m, b, o] of screens) put(b, o, m);
+    for (const [b, ms] of on) {
+      const os = ms.map((x) => x[0]).sort((a, c) => a - c);
+      if (os.some((o, i) => o !== i + 1)) {
+        const srt = ms.slice().sort((a, c) => a[0] - c[0] || (a[1] < c[1] ? -1 : 1));
+        err("modes", `the ${b} button's modes are numbered ${os.join(" ")} (1..${ms.length}, each once): ${srt.map(([o, m]) => `${m} ${o}`).join(", ")}`);
+      }
+    }
+  }
+  function keys(n, c, p0, np) {
+    const named = (c.pages || []).some((p) => p && typeof p === "object" && "key" in p);
+    if (!named) for (let i = 0; i < np; i++) {
+      const pic = PICS[pages[p0 + i][1]];
+      let k = 0;
+      if (TEMPLATE.includes(n) && i < 5) k = i + 1;
+      else if (n === "MOD") k = pic === "matrix" ? 1 : pic === "macros" ? 11 : pic === "macro" ? pages[p0 + i][2] + 2 : 0;
+      pkey[p0 + i] = k;
+    }
+    const seen = new Map();
+    if (n === "FX") ["S1", "S2", "MST"].forEach((b, bi) => { if (busKey[bi]) seen.set(busKey[bi], "bus " + b); });
+    for (let i = 0; i < np; i++) {
+      const k = pkey[p0 + i];
+      if (!k) continue;
+      if (seen.has(k)) err(`${n}/${pages[p0 + i][0]}`, `B${k} opens ${seen.get(k)} already`);
+      seen.set(k, pages[p0 + i][0]);
+    }
+  }
+  let busKey = BUS_KEY_DEFAULT.slice();
 
   function findPage(ref) {
     const i = ref.indexOf("/");
@@ -187,8 +292,10 @@ export function compile(design, catalog) {
 
   function page(where, p, cat, kind = "page") {
     if (!p || typeof p !== "object" || Array.isArray(p)) { err(where, "a page is an object"); p = {}; }
-    const extra = Object.keys(p).filter((k) => !["title", "picture", "lanes", "variants", "note", "same_as", "macro"].includes(k));
+    const extra = Object.keys(p).filter((k) => !["title", "picture", "lanes", "variants", "note", "same_as", "macro", "key"].includes(k) || (k === "key" && kind !== "page"));
     if (extra.length) err(where, `unknown field(s) ${extra.sort().join(", ")}`);
+    let bkey = p.key ?? 0;
+    if (!isInt(bkey) || bkey < 0 || bkey > NBKEY) { err(where, `key ${JSON.stringify(bkey)}: a black key 1..${NBKEY} (0 or none: no key)`); bkey = 0; }
     let src = p;
     if ("same_as" in p) {
       src = typeof p.same_as === "string" ? findPage(p.same_as) : null;
@@ -201,7 +308,8 @@ export function compile(design, catalog) {
     let pic = p.picture ?? src.picture ?? "steps";
     if (!PICS.includes(pic)) { err(where, `picture '${pic}' (one of ${PICS.join(", ")})`); pic = "steps"; }
     if (kind === "page" || kind === "bus") titleFits(where, cat, title);
-    if (FIXED[pic] && kind === "page" && FIXED[pic] !== cat) err(where, `the ${pic} picture stays in ${FIXED[pic]} (its page has behaviour of its own)`);
+    const home = pic === "scene" && legacy ? "MST" : FIXED[pic];
+    if (FIXED[pic] && kind === "page" && home !== cat) err(where, `the ${pic} picture stays in ${home} (its page has behaviour of its own)`);
     let arg = 0;
     if (pic === "macro") {
       const m = p.macro ?? src.macro;
@@ -240,13 +348,14 @@ export function compile(design, catalog) {
     vars.push([ZERO(), null, items.length, its.length, where]);
     items.push(...its);
     pages.push([title, PICS.indexOf(pic), arg, var0, vars.length - var0, where]);
+    pkey.push(bkey);
     return pages.length - 1;
   }
 
   if (!design || design.format !== "elasticat-layout" || design.version !== 1) {
     return { errors: ["not an elasticat-layout version 1 file"], warnings, pack: null };
   }
-  const extra = Object.keys(design).filter((k) => !["format", "version", "name", "note", "categories", "bus", "f3"].includes(k));
+  const extra = Object.keys(design).filter((k) => !["format", "version", "name", "note", "categories", "bus", "f3", "screens"].includes(k));
   if (extra.length) err("design", `unknown field(s) ${extra.sort().join(", ")}`);
   if (!Array.isArray(design.categories)) return { errors: ['"categories" is a list'], warnings, pack: null };
   const byname = new Map();
@@ -256,13 +365,27 @@ export function compile(design, catalog) {
     else if (byname.has(n)) err("categories", `${n} twice`);
     else byname.set(n, c);
   }
-  for (const n of CATS) if (!byname.has(n)) err("categories", `${n} is missing`);
+  // a design before 0.6.0 has no XFD: CROSSFADER then shows its SCENE page where it is (MST)
+  legacy = !byname.has("XFD");
+  for (const n of CATS) if (!byname.has(n) && n !== "XFD") err("categories", `${n} is missing`);
+  if (legacy) warn("XFD", "no XFD category (a design before 0.6.0): CROSSFADER shows MST's SCENE page");
   if (errors.length) return { errors, warnings, pack: null };
+  modes(byname);
+  if (Array.isArray(design.bus)) design.bus.slice(0, 3).forEach((b, bi) => {
+    if (b && typeof b === "object" && "key" in b) {
+      let k = b.key;
+      if (!isInt(k) || k < 0 || k > NBKEY) { err(`bus ${b.bus ?? "?"}`, `key ${JSON.stringify(k)}: a black key 1..${NBKEY} in FX (0: none)`); k = 0; }
+      busKey[bi] = k;
+    }
+  });
+  const nz = busKey.filter((k) => k);
+  if (new Set(nz).size !== nz.length) err("bus", `two buses on one key (${busKey.map((k) => "B" + k).join(" ")})`);
   const cats = [];
   const fixedCount = Object.fromEntries(Object.keys(FIXED).map((k) => [k, 0]));
   for (const n of CATS) {
+    if (n === "XFD" && legacy) { cats.push(null); continue; }
     const c = byname.get(n);
-    const ex = Object.keys(c).filter((k) => !["cat", "pages", "setup"].includes(k));
+    const ex = Object.keys(c).filter((k) => !["cat", "pages", "setup", "mode", "tag", "button", "order"].includes(k));
     if (ex.length) err(n, `unknown field(s) ${ex.sort().join(", ")}`);
     let ps = c.pages;
     if (!Array.isArray(ps) || !ps.length) { err(n, "a category needs one page at least"); ps = []; }
@@ -281,8 +404,14 @@ export function compile(design, catalog) {
     let setup = -1;
     if (c.setup != null) setup = page(n + "/SETUP", { title: "SETUP", picture: "steps", lanes: c.setup }, n, "setup");
     cats.push([p0, pages.length - p0 - (setup >= 0 ? 1 : 0), setup]);
+    keys(n, c, p0, cats[cats.length - 1][1]);
   }
-  for (const [pic, cat] of Object.entries(FIXED)) {
+  if (legacy) {
+    const sc = pages.findIndex((pg) => PICS[pg[1]] === "scene");
+    cats[CATS.indexOf("XFD")] = [sc >= 0 ? sc : cats[CATS.indexOf("MST")][0], 1, -1];
+  }
+  for (let [pic, cat] of Object.entries(FIXED)) {
+    if (legacy && pic === "scene") cat = "MST";
     if (pic === "matrix" && fixedCount[pic] === 0) warn(cat, "no MATRIX page (0.5.0): the mod matrix is reached by MOD KEYS only; add it as MOD's first page");
     else if (pic !== "mix" && fixedCount[pic] !== 1) err(cat, `the ${pic} page must be there once (${fixedCount[pic]})`);
     if (pic === "mix" && fixedCount[pic] < 1) err(cat, "the mix page is missing");
@@ -296,9 +425,9 @@ export function compile(design, catalog) {
   let mstSrc = -1;
   for (const b of bus) {
     const name = b.bus ?? "?";
-    const ex = Object.keys(b).filter((k) => !["bus", "page", "setup", "src"].includes(k));
+    const ex = Object.keys(b).filter((k) => !["bus", "page", "setup", "src", "key"].includes(k));
     if (ex.length) err("bus " + name, `unknown field(s) ${ex.sort().join(", ")}`);
-    busPage.push(page(`bus ${name}`, b.page ?? {}, "TRIG", "bus"));
+    busPage.push(page(`bus ${name}`, b.page ?? {}, BUS_TAG, "bus"));
     busSetup.push(b.setup != null ? page(`bus ${name}/SETUP`, { title: "SETUP", lanes: b.setup ?? [] }, "FX", "setup") : -1);
     if (name === "MST") {
       if (!("src" in b)) err("bus MST", '"src": the master bus\'s SRC page (the mix) is missing');
@@ -314,13 +443,14 @@ export function compile(design, catalog) {
   if (unplaced.length) warn("design", `not on any page: ${unplaced.join(", ")}`);
   if (errors.length) return { errors, warnings, pack: null, placed };
   const s = (x) => (x == null ? "" : x);
-  const out = [`ECL1\t${design.name ?? ""}`];
-  for (const c of cats) out.push(`C\t${c[0]}\t${c[1]}\t${c[2]}`);
-  out.push(`B\t${[...busPage, ...busSetup, mstSrc, f3].join("\t")}`);
-  for (const [t, pic, arg, v0, nv] of pages) out.push(`P\t${pic}\t${arg}\t${v0}\t${nv}\t${t}`);
+  const out = [`ECL2\t${design.name ?? ""}`];
+  CATS.forEach((n, ci) => { const c = cats[ci], [name, tag, btn, order] = mode[n]; out.push(`C\t${c[0]}\t${c[1]}\t${c[2]}\t${BUTTONS.indexOf(btn) + 1}\t${order}\t${tag}\t${name}`); });
+  for (const [m, b, o] of screens) out.push(`S\t${BUTTONS.indexOf(b) + 1}\t${o}\t${m}`);
+  out.push(`B\t${[...busPage, ...busSetup, mstSrc, f3, ...busKey].join("\t")}`);
+  pages.forEach(([t, pic, arg, v0, nv], i) => out.push(`P\t${pic}\t${arg}\t${pkey[i]}\t${v0}\t${nv}\t${t}`));
   for (const [m, vt, i0, n] of vars) out.push(`V\t${m.mach}\t${m.warp}\t${m.filt}\t${m.fenv}\t${m.env}\t${m.fx}\t${i0}\t${n}\t${s(vt)}`);
   for (const [kind, id, fl, lb] of items) out.push(`I\t${kind}\t${id}\t${fl}\t${s(lb)}`);
-  return { errors, warnings, pack: out.join("\n") + "\n", placed, npages: pages.length, nvars: vars.length, nitems: items.length };
+  return { errors, warnings, pack: out.join("\n") + "\n", placed, npages: pages.length, nvars: vars.length, nitems: items.length, legacy };
 }
 
 // ------------------------------------------------------------------------------------------------ canonical JSON

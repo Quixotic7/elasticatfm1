@@ -1,14 +1,19 @@
 {
   "format": "elasticat-layout",
   "version": 1,
-  "name": "elasticat-0.5.0",
-  "note": "The owner's design elasticat-02 (2026-11-02): renamed pages, longer labels",
+  "name": "elasticat-0.6.0",
+  "note": "0.6.0 (docs/UX-V2.md): the categories are the modes; elasticat-0.5.0 (the owner's elasticat-02) rearranged into them: AMP gets an AMP page and MOD ENV, FX an FX MIX page (B11), SCENE moves to CROSSFADER",
   "categories": [
     {
       "cat": "TRIG",
+      "mode": "TRIG",
+      "tag": "TRIG",
+      "button": "HOME",
+      "order": 2,
       "pages": [
         {
           "title": "TRIG",
+          "key": 1,
           "picture": "steps",
           "lanes": [
             [{"item": "pitch", "label": "NOTE"}, "default_length", "default_velocity", null],
@@ -18,6 +23,7 @@
         },
         {
           "title": "COND",
+          "key": 2,
           "picture": "steps",
           "lanes": [
             [{"item": "trig_chance", "label": "CHANCE"}, "trig_condition", {"item": "trig_ratchet", "label": "RATCHET"}]
@@ -25,6 +31,7 @@
         },
         {
           "title": "PLAYHEAD",
+          "key": 3,
           "picture": "steps",
           "lanes": [
             [{"item": "trig_jump", "label": "SNAP START"}, {"item": "trig_release", "label": "RET MODE"}]
@@ -46,9 +53,14 @@
     },
     {
       "cat": "SRC",
+      "mode": "LOOP ENGINE",
+      "tag": "LOOP",
+      "button": "HOME",
+      "order": 1,
       "pages": [
         {
           "title": "LOOP",
+          "key": 1,
           "picture": "wave",
           "lanes": [
             [{"item": "pitch", "label": "PITCH"}, "sample_slot", {"item": "loop_start", "label": "START"}, "loop_end"],
@@ -70,6 +82,7 @@
         },
         {
           "title": "MACHINE",
+          "key": 2,
           "picture": "wave-machine",
           "lanes": [
             [{"item": "loop_reverse", "label": "LREVERSE"}, {"item": "xfade", "label": "LXFADE"}, {"item": "trig_release", "label": "RET MODE"}]
@@ -90,6 +103,7 @@
         },
         {
           "title": "WARP",
+          "key": 3,
           "picture": "wave-warp",
           "lanes": [
             ["mode_macro", "warp_rate"]
@@ -186,6 +200,7 @@
         },
         {
           "title": "RANGE",
+          "key": 4,
           "picture": "wave-range",
           "lanes": [
             [null, null, {"item": "range_start", "label": "R-START"}, {"item": "range_end", "label": "R-END"}]
@@ -204,9 +219,14 @@
     },
     {
       "cat": "FILT",
+      "mode": "FILTER",
+      "tag": "FILTER",
+      "button": "SEL",
+      "order": 1,
       "pages": [
         {
           "title": "FILTER",
+          "key": 1,
           "picture": "filter",
           "lanes": [
             ["filter_cutoff", "filter_res", "filter_type", "filter_env_depth"],
@@ -256,7 +276,8 @@
           ]
         },
         {
-          "title": "ENV",
+          "title": "FILTER ENV",
+          "key": 2,
           "picture": "fenv",
           "lanes": [
             [{"item": "filter_env_attack", "label": "ATTACK"}, "filter_env_hold", {"item": "filter_env_release", "label": "RELEASE"}, {"item": "filter_env_depth", "label": "DEPTH"}]
@@ -274,6 +295,7 @@
         },
         {
           "title": "MIX",
+          "key": 3,
           "picture": "steps",
           "lanes": [
             [{"item": "filter_balance", "label": "STEREO BAL"}, {"item": "filter_mix", "label": "WET"}]
@@ -287,23 +309,45 @@
     },
     {
       "cat": "AMP",
+      "mode": "AMP",
+      "tag": "AMP",
+      "button": "ENV",
+      "order": 1,
       "pages": [
         {
-          "title": "ENV",
+          "title": "AMP",
+          "key": 1,
+          "picture": "steps",
+          "lanes": [
+            [{"item": "amp", "label": "LEVEL"}, "pan", {"item": "default_velocity", "label": "VELOCITY"}, {"item": "mvel_depth", "label": "VEL DEPTH"}],
+            [{"item": "send1_level", "label": "SEND 1"}, {"item": "send2_level", "label": "SEND 2"}]
+          ]
+        },
+        {
+          "title": "AMP ENV",
+          "key": 2,
           "picture": "aenv",
           "lanes": [
-            [{"item": "env_attack", "label": "ATTACK"}, "env_hold", null, {"item": "env_release", "label": "RELEASE"}],
-            ["pan", "send1_level", "send2_level", "amp"]
+            [{"item": "env_attack", "label": "ATTACK"}, "env_hold", null, {"item": "env_release", "label": "RELEASE"}]
           ],
           "variants": [
             {
               "when": {"env": ["ADSR"]},
               "lanes": [
-                ["env_attack", "env_decay", "env_sustain", "env_release"],
-                ["amp", "pan", "send1_level", "send2_level"]
+                ["env_attack", "env_decay", "env_sustain", "env_release"]
               ]
             }
           ]
+        },
+        {
+          "title": "MOD ENV",
+          "key": 3,
+          "picture": "menv",
+          "lanes": [
+            [{"item": "menv_attack", "label": "ATTACK"}, {"item": "menv_decay", "label": "DECAY"}, "menv_sustain", {"item": "menv_release", "label": "RELEASE"}],
+            [null, null, null, "menv_depth"]
+          ],
+          "note": "mod envelope also in mod matrix for destination"
         }
       ],
       "setup": [
@@ -313,9 +357,14 @@
     },
     {
       "cat": "FX",
+      "mode": "FX",
+      "tag": "FX",
+      "button": "FX",
+      "order": 1,
       "pages": [
         {
-          "title": "FX",
+          "title": "INSERT",
+          "key": 1,
           "picture": "fx",
           "lanes": [],
           "variants": [
@@ -437,11 +486,20 @@
         },
         {
           "title": "SENDS",
+          "key": 2,
           "picture": "sends",
           "lanes": [
             [null, null, {"item": "send1_level", "label": "SEND 1"}, {"item": "send2_level", "label": "SEND 2"}]
           ],
           "note": "Lets add 2 insert effects. On the SENDS page lets also add dry/wet knobs for each insert"
+        },
+        {
+          "title": "MIX",
+          "key": 11,
+          "picture": "steps",
+          "lanes": [
+            [{"item": "fx_mix", "label": "FX MIX"}, {"item": "fx_drive", "label": "DRIVE"}, {"item": "send1_level", "label": "SEND 1"}, {"item": "send2_level", "label": "SEND 2"}]
+          ]
         }
       ],
       "setup": [
@@ -450,9 +508,14 @@
     },
     {
       "cat": "MOD",
+      "mode": "MODULATION",
+      "tag": "MOD",
+      "button": "LFO",
+      "order": 1,
       "pages": [
         {
           "title": "MATRIX",
+          "key": 1,
           "picture": "matrix",
           "lanes": [
             ["mtx.src", "mtx.dst", "mtx.depth", null]
@@ -474,15 +537,6 @@
           ]
         },
         {
-          "title": "ENV",
-          "picture": "menv",
-          "lanes": [
-            [{"item": "menv_attack", "label": "ATTACK"}, {"item": "menv_decay", "label": "DECAY"}, "menv_sustain", {"item": "menv_release", "label": "RELEASE"}],
-            [null, null, null, "menv_depth"]
-          ],
-          "note": "mod envelope also in mod matrix for destination"
-        },
-        {
           "title": "VELOCITY",
           "picture": "vel",
           "lanes": [
@@ -492,6 +546,7 @@
         },
         {
           "title": "MACROS",
+          "key": 11,
           "picture": "macros",
           "lanes": [
             ["macro1_value", "macro2_value", "macro3_value", "macro4_value"]
@@ -499,6 +554,7 @@
         },
         {
           "title": "MACRO 1",
+          "key": 2,
           "picture": "macro",
           "lanes": [
             [{"item": "macro1_value", "label": "VAL"}]
@@ -508,6 +564,7 @@
         },
         {
           "title": "MACRO 2",
+          "key": 3,
           "picture": "macro",
           "lanes": [
             [{"item": "macro2_value", "label": "VAL"}]
@@ -516,6 +573,7 @@
         },
         {
           "title": "MACRO 3",
+          "key": 4,
           "picture": "macro",
           "lanes": [
             [{"item": "macro3_value", "label": "VAL"}]
@@ -524,6 +582,7 @@
         },
         {
           "title": "MACRO 4",
+          "key": 5,
           "picture": "macro",
           "lanes": [
             [{"item": "macro4_value", "label": "VAL"}]
@@ -534,12 +593,17 @@
     },
     {
       "cat": "MST",
+      "mode": "MIX",
+      "tag": "MIX",
+      "button": "EDIT",
+      "order": 1,
       "pages": [
         {
           "title": "TRACK MIX",
           "picture": "mix",
           "lanes": [
-            ["amp", "pan", "mute", {"item": "global.bpm", "label": "BPM"}]
+            [{"item": "amp", "label": "LEVEL"}, "pan", {"item": "send1_level", "label": "SEND 1"}, {"item": "send2_level", "label": "SEND 2"}],
+            [{"item": "mute", "label": "MUTE"}]
           ]
         },
         {
@@ -547,13 +611,6 @@
           "picture": "steps",
           "lanes": [
             [{"item": "global.bpm", "label": "BPM"}, {"item": "global.swing", "label": "SWNG"}, {"item": "global.glen", "label": "GLO LENGTH"}, null]
-          ]
-        },
-        {
-          "title": "SCENE",
-          "picture": "scene",
-          "lanes": [
-            [{"item": "e5.xfd", "label": "CROSSFADE"}]
           ]
         }
       ],
@@ -563,6 +620,10 @@
     },
     {
       "cat": "FILE",
+      "mode": "FILE",
+      "tag": "FILE",
+      "button": "FILE",
+      "order": 1,
       "pages": [
         {
           "title": "SAMPLE",
@@ -584,6 +645,10 @@
     },
     {
       "cat": "PAT",
+      "mode": "PATTERN LAUNCH",
+      "tag": "PATTERNS",
+      "button": "SEQ",
+      "order": 1,
       "pages": [
         {
           "title": "PATTERN",
@@ -596,15 +661,32 @@
       "setup": [
         [{"item": "global.quant", "label": "LNCH MODE"}, {"item": "global.glen", "label": "GLO LENGTH"}]
       ]
+    },
+    {
+      "cat": "XFD",
+      "mode": "CROSSFADER",
+      "tag": "CROSSFADER",
+      "button": "ARP",
+      "order": 1,
+      "pages": [
+        {
+          "title": "SCENE",
+          "picture": "scene",
+          "lanes": [
+            [{"item": "e5.xfd", "label": "CROSSFADE"}]
+          ]
+        }
+      ]
     }
   ],
   "bus": [
     {
       "bus": "S1",
+      "key": 3,
       "page": {
         "title": "SEND 1",
         "picture": "fx",
-        "same_as": "FX/FX"
+        "same_as": "FX/INSERT"
       },
       "setup": [
         [{"item": "fx_insert1_machine", "label": "SEND 1 FX"}]
@@ -612,10 +694,11 @@
     },
     {
       "bus": "S2",
+      "key": 4,
       "page": {
         "title": "SEND 2",
         "picture": "fx",
-        "same_as": "FX/FX"
+        "same_as": "FX/INSERT"
       },
       "setup": [
         [{"item": "fx_insert1_machine", "label": "SEND 2 FX"}]
@@ -623,10 +706,11 @@
     },
     {
       "bus": "MST",
+      "key": 5,
       "page": {
         "title": "MASTER",
         "picture": "fx",
-        "same_as": "FX/FX"
+        "same_as": "FX/INSERT"
       },
       "setup": [
         [{"item": "fx_insert1_machine", "label": "MASTER FX"}]
@@ -642,5 +726,22 @@
   ],
   "f3": [
     [{"item": "pattern_steps", "label": "LENGTH"}, "pattern_rate", {"item": "global.glen", "label": "GLO LENGTH"}, {"item": "global.quant", "label": "LNCH MODE"}]
+  ],
+  "screens": [
+    {
+      "mode": "KEYBOARD",
+      "button": "HOME",
+      "order": 3
+    },
+    {
+      "mode": "PAGES",
+      "button": "EDIT",
+      "order": 2
+    },
+    {
+      "mode": "SAMPLER",
+      "button": "FILE",
+      "order": 2
+    }
   ]
 }

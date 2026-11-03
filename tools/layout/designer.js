@@ -22,9 +22,11 @@ function h(tag, attrs, ...kids) {
 }
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// the FM-1 buttons by label (fm1core.h FM1P_B_* order) and the category each opens; MST is the MST upper key
+// the FM-1 buttons by label (fm1core.h FM1P_B_* order)
 const BTN = { FX: 0, SEL: 1, ENV: 2, LFO: 3, EDIT: 4, GLO: 5, HOME: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, OCTM: 12, OCTP: 13 };
-const CAT_BTN = { TRIG: "SEQ", SRC: "SEL", FILT: "EDIT", AMP: "ENV", FX: "FX", MOD: "LFO", MST: null, FILE: "SAVE", PAT: "ARP" };
+// 0.6.0: the categories are modes on the buttons (L.modeOf); the modes the bus pages do not show on
+const NO_BUS = ["MST", "FILE", "PAT", "XFD"];
+const NTH = (o) => ({ 1: "1st", 2: "2nd", 3: "3rd" }[o] || o + "th");
 const TARGETS = ["T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"];
 const PIC_NAMES = { steps: "steps", wave: "waveform · sample", "wave-machine": "waveform · machine",
   "wave-warp": "waveform · warp", "wave-range": "waveform · range", filter: "filter curve", fenv: "filter env",
@@ -64,7 +66,7 @@ async function boot() {
     catalog: f("lw_catalog", "string", []),
     button: f("lw_button", null, ["number", "number"]), key: f("lw_key", null, ["number", "number", "number"]),
     master: f("lw_master", null, ["number"]), leds: f("lw_leds", "number", []), wiring: f("lw_wiring", "string", []),
-    labels: f("lw_labels", "string", []),
+    labels: f("lw_labels", "string", []), modes: f("lw_modes", "string", []),
   };
   S.api.boot("/demo", "/demo.flash");
   S.catalog = JSON.parse(S.api.catalog());
@@ -80,7 +82,7 @@ async function boot() {
   let start = S.shipped, restored = false;
   try {
     const t = localStorage.getItem(STORE);
-    if (t) { const d = JSON.parse(t); const added = ensureMatrix(d); if (L.compile(d, S.catalog).pack) { start = d; restored = true; S.inserted = added; } }
+    if (t) { const d = JSON.parse(t); const added = [ensureMatrix(d), ensureModes(d)].filter(Boolean).join(" · "); if (L.compile(d, S.catalog).pack) { start = d; restored = true; S.inserted = added; } }
   } catch (e) { /* no storage: start from the shipped layout */ }
   S.design = clone(start);
   readState();
@@ -205,6 +207,63 @@ function ensureMatrix(d) {
   while (mod.pages.some((p) => p && p.title === t)) t = "MATRIX " + n++;
   mod.pages.unshift({ ...L.MATRIX_PAGE(), title: t });
   return `MOD/${t} inserted as MOD's first page (the design had no mod matrix page)`;
+}
+// a design made before 0.6.0 gets the modes: CROSSFADER (XFD) with MST's SCENE page, every category's mode (name,
+// tag, button, order) and its pages' black keys written out, FX's bus keys, the fixed screens. The text of what was
+// done, or ""
+function ensureModes(d) {
+  if (!d || !Array.isArray(d.categories) || d.categories.some((c) => c && c.cat === "XFD")) return "";
+  const out = [];
+  const mst = d.categories.find((c) => c && c.cat === "MST");
+  const xfd = { cat: "XFD", pages: [] };
+  if (mst && Array.isArray(mst.pages)) {
+    const i = mst.pages.findIndex((p) => p && p.picture === "scene");
+    if (i >= 0 && mst.pages.length > 1) { xfd.pages.push(mst.pages.splice(i, 1)[0]); out.push(`MST/${xfd.pages[0].title} moved to CROSSFADER`); }
+  }
+  if (!xfd.pages.length) xfd.pages.push({ title: "SCENE", picture: "scene", lanes: [[{ item: "e5.xfd", label: "CROSSFADE" }]] });
+  d.categories.push(xfd);
+  d.categories = d.categories.map((c) => {
+    if (!c || !L.CATS.includes(c.cat)) return c;
+    const keys = L.pageKeys(c), m = L.modeOf(c);
+    const n = { cat: c.cat, mode: m.name, tag: m.tag, button: m.button, order: m.order };
+    for (const [k, v] of Object.entries(c)) if (!(k in n)) n[k] = v;
+    n.pages = (n.pages || []).map((p, i) => withKey(p, keys[i]));
+    return n;
+  });
+  (d.bus || []).forEach((b, bi) => { if (b && typeof b === "object" && !("key" in b)) { const n = { bus: b.bus, key: L.BUS_KEY_DEFAULT[bi] }; Object.assign(n, b); for (const k of Object.keys(b)) delete b[k]; Object.assign(b, n); } });
+  if (!d.screens) d.screens = L.SCREENS.map((m) => ({ mode: m, button: L.SCREEN_DEFAULT[m][0], order: L.SCREEN_DEFAULT[m][1] }));
+  out.push("the modes added (0.6.0): buttons, orders, black keys");
+  return out.join("; ");
+}
+// a page with its black key k (after its title; 0: none)
+function withKey(p, k) {
+  if (!p || typeof p !== "object") return p;
+  const n = {};
+  for (const [kk, v] of Object.entries(p)) {
+    if (kk === "key") continue;
+    n[kk] = v;
+    if (kk === "title" && k) n.key = k;
+  }
+  if (k && !("key" in n)) n.key = k;
+  return n;
+}
+// the category's keys written out (so that an edit of one keeps the others), then fn
+function setKeys(c, fn) {
+  const ks = L.pageKeys(c);
+  c.pages = c.pages.map((p, i) => withKey(p, ks[i]));
+  if (fn) fn();
+}
+function setPageKey(cat, pi, k) {
+  const c = catObj(cat);
+  edit(() => setKeys(c, () => {
+    const old = c.pages[pi].key || 0;
+    if (k) {
+      const other = c.pages.findIndex((p, i) => i !== pi && p.key === k);
+      if (other >= 0) c.pages[other] = withKey(c.pages[other], old);     // (a key taken: the two swap)
+      if (cat === "FX") S.design.bus.forEach((b) => { if (b.key === k) b.key = old || 0; });
+    }
+    c.pages[pi] = withKey(c.pages[pi], k);
+  }));
 }
 function maxLanes(scope) { return scope === "setup" || scope === "bsetup" ? L.SETUP_LANES : scope === "f3" ? 1 : L.MAX_LANES; }
 
@@ -393,7 +452,7 @@ function pageEl(c, pi) {
   const vref = { scope: "page", cat: c.cat, pi, vi: cur };
   const isSel = S.selPage && S.selPage.scope === "page" && S.selPage.cat === c.cat && S.selPage.pi === pi;
   const e = h("div", { class: "page" + (isSel ? " sel" : ""), "data-cat": c.cat, "data-pi": pi });
-  const title = h("input", { class: "title", value: p.title, "data-key": `title-${c.cat}-${pi}`, maxlength: Math.floor((L.TITLE_ROOM + 1) / 4) - c.cat.length - 1, spellcheck: "false", title: "the page's name (the header shows CAT/NAME)",
+  const title = h("input", { class: "title", value: p.title, "data-key": `title-${c.cat}-${pi}`, maxlength: Math.floor((L.TITLE_ROOM + 1) / 4) - L.modeOf(c).tag.length - 1, spellcheck: "false", title: `the page's name (the header shows ${L.modeOf(c).tag}/NAME)`,
     onchange: (ev) => { const t = ev.target.value.toUpperCase().trim(); if (t && t !== p.title) edit(() => { renameRefs(c.cat, p.title, t); p.title = t; }); },
     oninput: (ev) => { ev.target.value = ev.target.value.toUpperCase(); } });
   const grip = h("span", { class: "grip", draggable: fixed ? "false" : "true", title: fixed ? "a fixed page stays in its category" : "drag onto another category or page to move it" }, "⠿");
@@ -407,10 +466,13 @@ function pageEl(c, pi) {
       FREE_PICS.map((x) => h("option", { value: x, selected: x === p.picture }, PIC_NAMES[x])));
   const macroSel = p.picture === "macro" ? h("select", { title: "which macro", onchange: (ev) => edit(() => { p.macro = +ev.target.value; }) },
     [1, 2, 3, 4].map((m) => h("option", { value: m, selected: m === p.macro }, "M" + m))) : null;
-  const moveSel = fixed ? null : h("select", { title: "move the page to another category", "data-key": `move-${c.cat}-${pi}`, onchange: (ev) => { const to = ev.target.value; if (to) movePage(c.cat, pi, to, catObj(to).pages.length); } },
-    h("option", { value: "" }, "MOVE TO…"), L.CATS.filter((x) => x !== c.cat).map((x) => h("option", { value: x }, x)));
+  const moveSel = fixed ? null : h("select", { title: "move the page to another mode", "data-key": `move-${c.cat}-${pi}`, onchange: (ev) => { const to = ev.target.value; if (to) movePage(c.cat, pi, to, catObj(to).pages.length); } },
+    h("option", { value: "" }, "MOVE TO…"), S.design.categories.filter((x) => x.cat !== c.cat).map((x) => h("option", { value: x.cat }, L.modeOf(x).name)));
+  const k = L.pageKeys(c)[pi];
+  const keySel = h("select", { class: "key" + (k ? " on" : ""), title: `the black key that opens this page in ${L.modeOf(c).name}`, "data-key": `key-${c.cat}-${pi}`, onchange: (ev) => setPageKey(c.cat, pi, +ev.target.value) },
+    h("option", { value: 0, selected: !k }, "—"), Array.from({ length: L.NBKEY }, (_, i) => h("option", { value: i + 1, selected: k === i + 1 }, "B" + (i + 1))));
   e.append(h("div", { class: "prow", "data-tip": pageTip({ scope: "page", cat: c.cat, pi }, p, cur), onclick: (ev) => { if (!ev.target.closest("select, input, button")) selectPage({ scope: "page", cat: c.cat, pi }); } },
-    grip, title, picSel, macroSel, p.note ? h("span", { class: "notemark", title: p.note }, "✎") : null, h("span", { class: "sp" }),
+    grip, keySel, title, picSel, macroSel, p.note ? h("span", { class: "notemark", title: p.note }, "✎") : null, h("span", { class: "sp" }),
     h("button", { class: "small", title: "earlier", disabled: pi === 0, onclick: (ev) => { ev.stopPropagation(); movePage(c.cat, pi, c.cat, pi - 1); } }, "↑"),
     h("button", { class: "small", title: "later", disabled: pi >= c.pages.length - 1, onclick: (ev) => { ev.stopPropagation(); movePage(c.cat, pi, c.cat, pi + 2); } }, "↓"),
     moveSel,
@@ -428,15 +490,19 @@ function movePage(fromCat, pi, toCat, toIndex) {
   if (!p || (L.FIXED[p.picture] && toCat !== fromCat)) return;
   if (fromCat !== toCat && catObj(fromCat).pages.length < 2) { flash("a category keeps one page at least"); return; }
   edit(() => {
+    setKeys(catObj(fromCat));                 // (the keys written out first: the pages keep theirs; a page moved to
+    if (fromCat !== toCat) setKeys(catObj(toCat));   // another mode keeps its key if that mode has it free, else none)
     const src = catObj(fromCat).pages, dst = catObj(toCat).pages;
+    let moved = src[pi];
+    if (fromCat !== toCat && moved.key && (dst.some((x) => x.key === moved.key) || (toCat === "FX" && S.design.bus.some((b) => b.key === moved.key)))) moved = withKey(moved, 0);
     src.splice(pi, 1);
     let at = toIndex;
     if (fromCat === toCat && toIndex > pi) at--;
-    let t = p.title, n = 2;
-    while (fromCat !== toCat && dst.some((x) => x.title === t)) t = (p.title.slice(0, 8) + " " + n++).toUpperCase();
-    if (t !== p.title) { renameRefs(fromCat, p.title, t); p.title = t; }
-    for (const b of S.design.bus) if (b.page && b.page.same_as === `${fromCat}/${p.title}`) b.page.same_as = `${toCat}/${p.title}`;
-    dst.splice(Math.max(0, Math.min(at, dst.length)), 0, p);
+    let t = moved.title, n = 2;
+    while (fromCat !== toCat && dst.some((x) => x.title === t)) t = (moved.title.slice(0, 8) + " " + n++).toUpperCase();
+    if (t !== moved.title) { renameRefs(fromCat, moved.title, t); moved.title = t; }
+    for (const b of S.design.bus) if (b.page && b.page.same_as === `${fromCat}/${moved.title}`) b.page.same_as = `${toCat}/${moved.title}`;
+    dst.splice(Math.max(0, Math.min(at, dst.length)), 0, moved);
   });
 }
 
@@ -444,11 +510,29 @@ function renderTree() {
   const t = $("#tree");
   const top = t.scrollTop;
   t.innerHTML = "";
-  for (const c of S.design.categories) {
+  // 0.6.0: the modes by their FM-1 button (in the panel's order), a button's modes in their order (HOME: LOOP ENGINE
+  // -> TRIG -> KEYBOARD); a mode with params is its category (its pages with their black keys, its setup), a fixed
+  // screen a line
+  const modes = L.modeList(S.design);
+  let grp = null, lastBtn = null;
+  for (const m of modes) {
+    if (m.button !== lastBtn) {
+      lastBtn = m.button;
+      const n = modes.filter((x) => x.button === m.button).length;
+      grp = h("div", { class: "btngrp", "data-button": m.button }, h("div", { class: "btnhead", "data-tip": `the ${m.button} button${n > 1 ? `: ${modes.filter((x) => x.button === m.button).map((x) => x.name).join(" → ")} (tap it again: the next)` : ""}` },
+        h("span", { class: "b" }, m.button === "FILE" ? "FILE (SAVE)" : m.button), n > 1 ? h("span", { class: "dim" }, `${n} modes, tap again: the next`) : null));
+      t.append(grp);
+    }
+    if (!m.cat) {
+      grp.append(h("div", { class: "cat screen", "data-screen": m.name }, h("div", { class: "cathead" }, h("span", { class: "ord" }, NTH(m.order)), h("span", { class: "n" }, m.name), h("span", { class: "dim" }, "a fixed screen: no params of its own"))));
+      continue;
+    }
+    const c = catObj(m.cat);
+    const nOn = modes.filter((x) => x.button === m.button).length;
     const on = S.st && L.CATS[S.st.cat] === c.cat;
-    const box = h("div", { class: "cat" + (on ? " on" : ""), "data-cat": c.cat });
-    const head = h("div", { class: "cathead", "data-tip": `${c.cat}\n${S.desc.cats[c.cat] || ""}`, onclick: (ev) => { if (ev.target.closest("button")) return; S.view.cat = c.cat; tapCategory(c.cat); } },
-      h("span", { class: "n" }, c.cat), h("span", { class: "dim" }, `${c.pages.length} page${c.pages.length > 1 ? "s" : ""}`), h("span", { class: "sp" }),
+    const box = h("div", { class: "cat" + (on ? " on" : ""), "data-cat": c.cat, "data-mode": m.name });
+    const head = h("div", { class: "cathead", "data-tip": `${m.name} (${c.cat}): the ${m.button} button${nOn > 1 ? `, ${NTH(m.order)}` : ""}\n${S.desc.cats[c.cat] || ""}`, onclick: (ev) => { if (ev.target.closest("button")) return; S.view.cat = c.cat; tapCategory(c.cat); } },
+      nOn > 1 ? h("span", { class: "ord" }, NTH(m.order)) : null, h("span", { class: "n" }, m.name), h("span", { class: "dim" }, `${c.cat} · ${m.tag}/ · ${c.pages.length} page${c.pages.length > 1 ? "s" : ""}`), h("span", { class: "sp" }),
       h("button", { class: "small", title: "a new page at the end", disabled: c.pages.length >= L.MAX_PAGES, onclick: (ev) => { ev.stopPropagation(); addPage(c); } }, "+ PAGE"));
     head.addEventListener("dragover", (ev) => { if (drag && drag.page) { ev.preventDefault(); head.classList.add("drop"); } });
     head.addEventListener("dragleave", () => head.classList.remove("drop"));
@@ -462,15 +546,15 @@ function renderTree() {
     if (c.setup) setup.append(lanesEl(sref));
     else setup.append(h("button", { class: "small", onclick: () => edit(() => { c.setup = [[null, null, null, null]]; }) }, "+ SETUP LIST"));
     box.append(setup);
-    t.append(box);
+    grp.append(box);
   }
   // the buses
-  const bx = h("div", { class: "cat bus" }, h("div", { class: "cathead" }, h("span", { class: "n" }, "BUSES"), h("span", { class: "dim" }, "S1 S2 MST: every category but MST FILE PAT")));
+  const bx = h("div", { class: "cat bus" }, h("div", { class: "cathead" }, h("span", { class: "n" }, "BUSES"), h("span", { class: "dim" }, "S1 S2 MST: FX's B3 B4 B5; every mode but MIX, FILE, PATTERN LAUNCH, CROSSFADER shows the bus's page")));
   S.design.bus.forEach((b, bi) => {
     const p = b.page;
     const vref = { scope: "bus", bus: bi, vi: curVariant("bus", p, bi) };
     const e = h("div", { class: "page", "data-bus": bi });
-    e.append(h("div", { class: "prow", "data-tip": pageTip({ scope: "bus", bus: bi }, p, vref.vi), onclick: (ev) => { if (!ev.target.closest("select, input, button")) selectPage({ scope: "bus", bus: bi }); } }, h("b", {}, b.bus), " ",
+    e.append(h("div", { class: "prow", "data-tip": pageTip({ scope: "bus", bus: bi }, p, vref.vi), onclick: (ev) => { if (!ev.target.closest("select, input, button")) selectPage({ scope: "bus", bus: bi }); } }, h("b", {}, b.bus), b.key ? h("span", { class: "keytag", title: "the black key that targets this bus in FX" }, "FX B" + b.key) : null, " ",
       h("input", { class: "title", value: p.title, spellcheck: "false", onchange: (ev) => { const v = ev.target.value.toUpperCase().trim(); if (v) edit(() => { p.title = v; }); } }),
       h("span", { class: "dim" }, PIC_NAMES[p.picture || "fx"])));
     if (p.same_as) {
@@ -479,7 +563,8 @@ function renderTree() {
     } else {
       e.append(variantRow("bus", p, vref, bi));
       e.append(lanesEl(vref, p));
-      e.append(h("button", { class: "small", title: "use FX/FX's lanes again", onclick: () => edit(() => { delete p.lanes; delete p.variants; p.same_as = "FX/FX"; }) }, "LINK TO FX/FX"));
+      const fxp = catObj("FX").pages.find((x) => x.picture === "fx");
+      if (fxp) e.append(h("button", { class: "small", title: `use FX/${fxp.title}'s lanes again`, onclick: () => edit(() => { delete p.lanes; delete p.variants; p.same_as = `FX/${fxp.title}`; }) }, `LINK TO FX/${fxp.title}`));
     }
     if (b.setup) e.append(h("div", { class: "h" }, b.bus + " SETUP"), lanesEl({ scope: "bsetup", bus: bi, vi: -1 }));
     if (b.src) {
@@ -517,7 +602,7 @@ function selectPage(sp) {
   if (sp.cat) S.view.cat = sp.cat;
   if (sp.scope === "page") { if (S.target >= 6) { S.target = 0; S.api.target(0); } S.api.f3(0); S.api.goto(L.CATS.indexOf(sp.cat), sp.pi, 0, 0); }
   else if (sp.scope === "setup") { if (S.target >= 6) { S.target = 0; S.api.target(0); } S.api.f3(0); S.api.goto(L.CATS.indexOf(sp.cat), 0, 0, 1); }
-  else if (sp.scope === "bus") { S.target = 6 + sp.bus; pushCtx(); S.api.f3(0); S.api.goto(L.CATS.includes(S.view.cat) && !["MST", "FILE", "PAT"].includes(S.view.cat) ? L.CATS.indexOf(S.view.cat) : 4, 0, 0, 0); }
+  else if (sp.scope === "bus") { S.target = 6 + sp.bus; pushCtx(); S.api.f3(0); S.api.goto(L.CATS.includes(S.view.cat) && !NO_BUS.includes(S.view.cat) ? L.CATS.indexOf(S.view.cat) : 4, 0, 0, 0); }
   readState();
   renderSelection();
 }
@@ -547,11 +632,12 @@ function gotoRef(ref) {
   }
   readState();
 }
+// a mode picked (its header or its button above the panel): its page; again: its next page (the gestures that reach
+// it on the unit are the panel's own, below)
 function tapCategory(cat) {
-  const b = CAT_BTN[cat];
   S.api.f3(0);
-  if (b) S.api.press(BTN[b], 60);
-  else { const ci = L.CATS.indexOf(cat); const np = catObj(cat).pages.length; const st = S.st; S.api.goto(ci, st && st.cat === ci && !st.settings ? (st.page + 1) % np : st ? 0 : 0, 0, 0); }
+  const ci = L.CATS.indexOf(cat), np = catObj(cat).pages.length, st = S.st;
+  S.api.goto(ci, st && st.cat === ci && !st.settings ? (st.page + 1) % np : 0, 0, 0);
   S.api.run(80);
   readState();
   markActive();
@@ -567,13 +653,13 @@ function markActive() {
     for (const x of want) if (!x.classList.contains("on")) x.classList.add("on");
   };
   let pe = null;
-  document.querySelectorAll("#buttons .grp:first-child button").forEach((b) => { const on = b.textContent === cat && !st.f3; if (b.classList.contains("on") !== on) b.classList.toggle("on", on); });
+  document.querySelectorAll("#buttons .grp:first-child button").forEach((b) => { const on = b.dataset.cat === cat && !st.f3; if (b.classList.contains("on") !== on) b.classList.toggle("on", on); });
   if (S.lastCat !== cat) {                 // the unit went to another category: the tray follows
     S.lastCat = cat;
     if (S.view.cat !== cat) { S.view.cat = cat; renderTray(); }
   }
   if (st.f3) return mark();
-  if (st.bus && !["MST", "FILE", "PAT"].includes(cat)) {
+  if (st.bus && !NO_BUS.includes(cat)) {
     pe = st.bus === 3 && cat === "SRC" ? null : document.querySelector(`.page[data-bus="${st.bus - 1}"]`);
   } else if (st.settings) pe = document.querySelector(`.page.setup[data-cat="${cat}"]`);
   else pe = document.querySelector(`.page[data-cat="${cat}"][data-pi="${st.page}"]`);
@@ -617,7 +703,9 @@ function renderButtons() {
   const b = $("#buttons");
   b.innerHTML = "";
   const st = S.st || {};
-  b.append(h("div", { class: "grp" }, L.CATS.map((c) => h("button", { class: L.CATS[st.cat] === c && !st.f3 ? "on" : "", "data-tip": `${c}${CAT_BTN[c] ? ` (the ${CAT_BTN[c]} button: its page; again: the next page)` : " (the MST upper key)"}\n${S.desc.cats[c] || ""}`, onclick: () => { S.view.cat = c; tapCategory(c); renderTray(); } }, c))));
+  b.append(h("div", { class: "grp" }, L.modeList(S.design).filter((m) => m.cat).map((m) => h("button", { class: L.CATS[st.cat] === m.cat && !st.f3 ? "on" : "", "data-cat": m.cat,
+    "data-tip": `${m.name} (the ${m.button} button${L.modeList(S.design).filter((x) => x.button === m.button).length > 1 ? `, ${NTH(m.order)}` : ""}): its page; again: the next page\n${S.desc.cats[m.cat] || ""}`,
+    onclick: () => { S.view.cat = m.cat; tapCategory(m.cat); renderTray(); } }, m.tag))));
 }
 
 // ------------------------------------------------------------------------------------------------ the side
@@ -701,7 +789,8 @@ function places(d) {
   const put = (n, where) => { if (!n) return; if (!m.has(n)) m.set(n, []); m.get(n).push(where); };
   const walk = (ls, where) => (ls || []).forEach((l, li) => l.forEach((s, k) => put(L.slotName(s) && (L.slotName(s) + (L.slotLabel(s) ? `"${L.slotLabel(s)}"` : "")), `${where} L${li + 1}K${k + 1}`)));
   for (const c of d.categories) {
-    pagesBy[c.cat] = c.pages.map((p) => p.title);
+    const ks = L.pageKeys(c);
+    pagesBy[c.cat] = c.pages.map((p, i) => p.title + (ks[i] ? ` B${ks[i]}` : ""));
     for (const p of c.pages) {
       walk(p.lanes, `${c.cat}/${p.title}${p.variants ? "·otherwise" : ""}`);
       for (const v of p.variants || []) walk(v.lanes, `${c.cat}/${p.title}·${L.whenText(v.when)}`);
@@ -722,7 +811,7 @@ function renderDiff() {
   const a = places(S.shipped), b = places(S.design);
   const rows = [];
   for (const cat of L.CATS) {
-    const x = a.pagesBy[cat].join(", "), y = (b.pagesBy[cat] || []).join(", ");
+    const x = (a.pagesBy[cat] || []).join(", "), y = (b.pagesBy[cat] || []).join(", ");
     if (x !== y) rows.push(h("div", {}, h("b", {}, cat), " pages: ", x, h("span", { class: "mv" }, " → "), y));
   }
   const names = new Set([...a.m.keys(), ...b.m.keys()]);
@@ -734,7 +823,7 @@ function renderDiff() {
     else if (!came.length) rows.push(h("div", {}, h("b", {}, n), h("span", { class: "mv" }, " no longer on "), gone.join(", ")));
     else rows.push(h("div", {}, h("b", {}, n), " ", gone.join(", "), h("span", { class: "mv" }, " → "), came.join(", ")));
   }
-  if (S.inserted && catObj("MOD")?.pages.some((p) => p.picture === "matrix")) rows.unshift(h("div", {}, h("b", {}, "MOD"), h("span", { class: "mv" }, " added: "), S.inserted));
+  if (S.inserted) rows.unshift(h("div", {}, h("b", {}, "OPENED"), h("span", { class: "mv" }, " added: "), S.inserted));
   for (const c of S.design.categories) for (const p of c.pages) if (p.note) rows.push(h("div", {}, h("b", {}, `${c.cat}/${p.title}`), " note: ", p.note));
   for (const bb of S.design.bus) if (bb.page.note) rows.push(h("div", {}, h("b", {}, bb.bus), " note: ", bb.page.note));
   if (!rows.length) out.append(h("div", { class: "empty-note" }, "the design is the shipped layout"));
@@ -782,7 +871,7 @@ function doExport() {
 }
 function openDesign(d, what) {
   d = clone(d);
-  const added = ensureMatrix(d);
+  const added = [ensureMatrix(d), ensureModes(d)].filter(Boolean).join(" · ");
   const r = L.compile(d, S.catalog);
   if (!r.pack) { flash(`${what}: ${r.errors.length} error(s), not opened (${r.errors[0]})`); return false; }
   S.inserted = added;
@@ -976,6 +1065,9 @@ window.designer = {
   shippedPack: () => S.shippedPack,
   jsPackOfShipped: () => L.compile(S.shipped, S.catalog).pack,
   cPack: () => S.api.pack(),
+  modes: () => JSON.parse(S.api.modes()),           // the firmware's modes and black keys (the loaded layout)
+  modeList: () => L.modeList(S.design),
+  setKey: (cat, pi, k) => setPageKey(cat, pi, k),
   state: () => { readState(); return S.st; },
   goto: (cat, page, lane, settings = 0) => { S.api.f3(0); S.api.goto(L.CATS.indexOf(cat), page, lane, settings); S.api.run(40); readState(); markActive(); },
   context: (c) => { Object.assign(S.ctx, c); pushCtx(); render(); },

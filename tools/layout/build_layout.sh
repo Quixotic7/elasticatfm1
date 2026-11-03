@@ -45,7 +45,7 @@ mkdir -p "$OUT/designs"
   [ $first = 1 ] || printf ','; printf '"%s"' "$f"; first=0; done; printf ']\n' ) > "$OUT/designs/index.json"
 
 SRCS=$(ls "$R"/src/plat/*.c "$R"/src/io/*.c "$R"/src/ui/*.c "$R"/src/dsp/*.c "$R"/src/seq/*.c "$R"/src/app/*.c)
-FUNCS=_lw_boot,_lw_run,_lw_ms,_lw_rgba,_lw_load,_lw_error,_lw_use_shipped,_lw_pack,_lw_context,_lw_bus_fx,_lw_target,_lw_goto,_lw_f3,_lw_turn,_lw_press,_lw_state,_lw_value,_lw_catalog,_lw_button,_lw_key,_lw_master,_lw_leds,_lw_wiring,_lw_labels,_malloc,_free
+FUNCS=_lw_boot,_lw_run,_lw_ms,_lw_rgba,_lw_load,_lw_error,_lw_use_shipped,_lw_pack,_lw_context,_lw_bus_fx,_lw_target,_lw_goto,_lw_f3,_lw_turn,_lw_press,_lw_state,_lw_modes,_lw_value,_lw_catalog,_lw_button,_lw_key,_lw_master,_lw_leds,_lw_wiring,_lw_labels,_malloc,_free
 "$EMCC" -O2 -std=gnu99 -Wall -Wextra -ffp-contract=off -DEC_FS_NATIVE -DEC_SS_ARENA_MIB=24 \
     -I"$R/src/plat" -I"$R/src/plat/abi" -I"$R/src/io" -I"$R/src/ui" -I"$R/src/dsp" -I"$R/src/seq" -I"$R/src/app" \
     -I"$R/tools/layout" $SRCS "$R/tools/layout/ec_layout_pack.c" "$R/tools/layout/ec_layout_wasm.c" \

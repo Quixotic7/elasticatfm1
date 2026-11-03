@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* test_layout: the SHIPPED layout (design/layout/elasticat.json, whatever its arrangement) through panel input. For
+/* test_layout: the SHIPPED layout (design/layout/elasticat.json, whatever its arrangement) in the app. First the
+ * modes (0.6.0): every mode on a button, numbered in order, every page's black key opening that page. Then, for
  * contexts covering every variant (each machine, warp mode, filter machine, env mode, insert FX; each bus with each
- * FX machine), it walks every category as a player would (its button, then SELECT: lane by lane, on into the next
- * page, round; FILE: SAVE; MST: the MST key; setups: the button held 0.4 s; F3: OCT- + OCT+) and finds every item the
- * layout places in that context on a knob, by its id: the knob's live panel label is the item's, and a turn of
- * that knob changes that param (then it is set back). Nothing here knows where a param sits: a rearranged design is
+ * FX machine), every lane of every page of every mode and of every setup list, opened directly (ec_pages' data and
+ * ec_app_goto: the panel gestures that reach them are the modes', tested by test_ux), and every item the layout places
+ * in that context found on its knob, by its id: the knob's live panel label is the item's, and a turn of that knob
+ * changes that param (then it is set back); F3 too. Nothing here knows where a param sits: a rearranged design is
  * tested the same way. The other tests and the demo scripts run on the fixed 0.4.0 layout (host/ec_layout_test.h).
  *   ec_test_layout <folder> [--layout test]   (host/make_demo_folder.py) */
 #include <math.h>
@@ -49,59 +50,38 @@ static void run(int n)
             C->frame();
     }
 }
-static void press(int b, int dur)
-{
-    const uint32_t m = 1u << P->btn_id[b];
-    P->buttons |= m;
-    P->buttons_tap |= m;
-    run(dur);
-    P->buttons &= ~m;
-    run(20);
-}
-static int key_of(int upper, int i)
-{
-    int k, nl = 0, nu = 0;
-    for (k = 0; k < FM1P_NKEY; k++) {
-        const int s = k % 12;
-        const int natural = s == 0 || s == 2 || s == 4 || s == 6 || s == 7 || s == 9 || s == 11;
-        if (natural && !upper && nl++ == i)
-            return k;
-        if (!natural && upper && nu++ == i)
-            return k;
-    }
-    return 0;
-}
-static void tapkey(int upper, int i, int dur)
-{
-    const int k = key_of(upper, i);
-    P->key_vel[k] = 100;
-    P->keys |= 1u << k;
-    P->keys_tap |= 1u << k;
-    run(dur);
-    P->keys &= ~(1u << k);
-    run(20);
-}
 static void turn(int role, int n)
 {
     P->enc[P->enc_id[role]] += n * P->enc_dir[role];
     run(120);                                        /* (slow turns: no knob acceleration) */
 }
-static void home(void)
-{
-    press(FM1P_B_HOME, 60);
-    run(30);
-}
 
-static const int CAT_BTN[EC_NCAT] = {FM1P_B_SEQ, FM1P_B_SEL, FM1P_B_EDIT, FM1P_B_ENV, FM1P_B_FX, FM1P_B_LFO, -1,
-                                     FM1P_B_SAVE, FM1P_B_ARP};
-static void open_cat(int c, int setup)
+/* 0.6.0: the pages are opened directly, through ec_pages' data and ec_app_goto (the panel's gestures to reach them
+ * are the modes' own, tested by test_ux): the page, its lane (or the setup list and its lane), the target */
+static void reset_view(void)
 {
-    home();
-    if (CAT_BTN[c] < 0)                              /* MST: the MST upper key (held 0.4 s: its setup) */
-        tapkey(1, 8, setup ? 500 : 60);
-    else
-        press(CAT_BTN[c], setup ? 500 : 60);
+    A->ux.f3 = 0;
+    A->settings = 0;
+    A->redraw = 1;
+    run(20);
+}
+static void open_lane(int c, int page, int setup, int lane)
+{
+    reset_view();
+    ec_app_goto(c, page);
+    if (setup) {
+        A->settings = 1;
+        A->ux.set_lane = lane;
+    } else
+        A->ux.lane[c] = lane;
+    A->redraw = 1;
     run(40);
+}
+static void target(int bus)                          /* 0 the track (T2), 1..3 S1 S2 MST */
+{
+    A->bus = bus;
+    A->redraw = 1;
+    run(20);
 }
 
 /* the value an item's knob moves: the param in the track or the bus record */
@@ -161,38 +141,24 @@ static void check_lane(uint8_t *found, int where_cat)
     }
 }
 
-/* every lane of category c (its pages or its setup), stepped as a player does; the ids reached */
+/* every lane of every page of category c (or of its setup list), each opened directly; the ids reached */
 static void walk(int c, int setup, uint8_t *found)
 {
-    int steps;
-    open_cat(c, setup);
-    for (steps = 0; !setup && steps < 4 * 16 + 4; steps++) {   /* to the first page's first lane (SELECT goes round) */
+    const int np = setup ? 1 : ec_cat_pages(c, ec_app_params(A));
+    int p, lane;
+    for (p = 0; p < np; p++) {
         ec_page_t pg;
+        open_lane(c, p, setup, 0);
         ec_app_page(A, &pg);
-        if (A->page[c] == 0 && ec_app_lane(A, &pg) == 0)
-            break;
-        if (c == EC_CAT_FILE)
-            press(FM1P_B_SAVE, 60);
-        else
-            turn(EC_E_SELECT, 1);
-    }
-    for (steps = 0; steps < 4 * 16 + 4; steps++) {
-        ec_page_t pg;
-        check_lane(found, c);
-        ec_app_page(A, &pg);
-        if (setup) {
-            if (ec_app_lane(A, &pg) + 1 >= ec_ux_lanes(pg.n))
-                break;
-            turn(EC_E_SELECT, 1);
-            continue;
+        CHECK(A->cat == c && (setup ? A->settings : A->page[c] == p && !A->settings), "[%s] %s page %d does not open",
+              ctxname, ec_cat_name(c), p + 1);
+        for (lane = 0; lane < ec_ux_lanes(pg.n); lane++) {
+            if (lane)
+                open_lane(c, p, setup, lane);
+            CHECK(ec_app_lane(A, &pg) == lane, "[%s] %s page %d lane %d does not open", ctxname, ec_cat_name(c),
+                  p + 1, lane + 1);
+            check_lane(found, c);
         }
-        /* the last lane of the last page: done (the next step wraps to the first page) */
-        if (A->page[c] == ec_cat_pages(c, ec_app_params(A)) - 1 && ec_app_lane(A, &pg) + 1 >= ec_ux_lanes(pg.n))
-            break;
-        if (c == EC_CAT_FILE)
-            press(FM1P_B_SAVE, 60);                  /* (SELECT is the file cursor / the slice there) */
-        else
-            turn(EC_E_SELECT, 1);
     }
 }
 
@@ -239,9 +205,9 @@ static void one_context(void)
                 walk(c, 1, found);
         }
     }
-    home();
+    reset_view();
     for (i = 0; i < EC_NP; i++)
-        CHECK(!want[i] || found[i], "[%s] %s is on a page but SELECT never reached it", ctxname, EC_PARAMS[i].name);
+        CHECK(!want[i] || found[i], "[%s] %s is on a page but never on a knob there", ctxname, EC_PARAMS[i].name);
     (void)n;
     memcpy(ec_app_params(A), keep, sizeof keep);
 }
@@ -254,6 +220,53 @@ static void set_ctx(int m, int w, int f, int fe, int e, int fx)
     ec_seq_touch(&A->seq, A->track);
     snprintf(ctxname, sizeof ctxname, "T%d mach %d warp %d filt %d fenv %d env %d fx %d", A->track + 1, m, w, f, fe, e,
              fx);
+}
+
+/* 0.6.0: the modes as the layout gives them: every mode on a button, a button's modes numbered 1..n; every page's
+ * black key opens that page (and no other); FX's bus keys; the modes listed */
+static void modes(void)
+{
+    static const char *const BN[EC_NMB] = {"-", "FX", "SEL", "ENV", "LFO", "EDIT", "HOME", "FILE", "ARP", "SEQ"};
+    int bt, m, c, p, k;
+    for (bt = EC_MB_FX; bt < EC_NMB; bt++) {
+        int ms[EC_NMODE], n = ec_button_modes(bt, ms, EC_NMODE);
+        printf("test_layout: %-4s", BN[bt]);
+        for (m = 0; m < n; m++) {
+            CHECK(ec_mode_button(ms[m]) == bt && ec_mode_order(ms[m]) == m + 1, "%s: mode %d is %s (order %d)", BN[bt],
+                  m + 1, ec_mode_name(ms[m]), ec_mode_order(ms[m]));
+            printf("%s %s", m ? " ->" : "", ec_mode_name(ms[m]));
+            if (ms[m] < EC_NCAT) {
+                printf(" [");
+                for (p = 0; p < ec_cat_pages(ms[m], ec_app_params(A)); p++) {
+                    ec_page_t pg;
+                    ec_page_items(ms[m], p, ec_app_params(A), 0, &pg);
+                    k = ec_cat_page_key(ms[m], p);
+                    printf("%s%s", p ? ", " : "", pg.title);
+                    if (k)
+                        printf(" B%d", k);
+                }
+                printf("]");
+            }
+        }
+        printf("\n");
+    }
+    for (m = 0; m < EC_NMODE; m++)
+        CHECK(ec_mode_button(m) > EC_MB_NONE && ec_mode_button(m) < EC_NMB && ec_mode_order(m) >= 1,
+              "mode %s: no button", ec_mode_name(m));
+    for (c = 0; c < EC_NCAT; c++) {
+        for (p = 0; p < ec_cat_pages(c, ec_app_params(A)); p++) {
+            k = ec_cat_page_key(c, p);
+            CHECK(!k || ec_cat_key_page(c, k) == p, "%s page %d: B%d opens page %d", ec_cat_name(c), p + 1, k,
+                  ec_cat_key_page(c, k) + 1);
+        }
+        for (k = 1; k <= EC_NBKEY; k++) {
+            p = ec_cat_key_page(c, k);
+            CHECK(p < 0 || ec_cat_page_key(c, p) == k, "%s: B%d", ec_cat_name(c), k);
+            CHECK(!(p >= 0 && ec_cat_key_bus(c, k)), "%s: B%d opens a page and a bus", ec_cat_name(c), k);
+        }
+    }
+    for (k = 1; k <= 3; k++)
+        CHECK(!ec_bus_key(k) || ec_cat_key_bus(EC_CAT_FX, ec_bus_key(k)) == k, "bus %d's key", k);
 }
 
 int main(int argc, char **argv)
@@ -276,8 +289,10 @@ int main(int argc, char **argv)
     P->ready = 2;
     C->init(0);
     run(1500);
+    modes();
     /* T2 (T1 would be the NEIGH machine's source: any track works) */
-    tapkey(1, 1, 60);
+    A->track = 1;
+    target(0);
     for (i = 1; i <= 8; i++)                     /* every machine */
         set_ctx(i, 1, 1, 2, 2, 1), one_context();
     for (i = 1; i <= 13; i++)                    /* every warp mode (a loop machine) */
@@ -287,30 +302,24 @@ int main(int argc, char **argv)
     for (i = 1; i <= 18; i++)                    /* every insert FX */
         set_ctx(3, 4, 1, 1, 1, i), one_context();
     set_ctx(1, 1, 1, 2, 2, 1);
-    for (b = 1; b <= 3; b++)                     /* each bus with each FX machine (ALGORITHM past T6) */
+    for (b = 1; b <= 3; b++)                     /* each bus with each FX machine */
         for (i = 1; i <= 18; i++) {
             A->proj.bus[b - 1][EC_P_FX_MACHINE] = (float)i;
-            turn(EC_E_ALGO, 9);
-            turn(EC_E_ALGO, -(3 - b));
+            target(b);
             snprintf(ctxname, sizeof ctxname, "bus %d fx %d", b, i);
-            CHECK(A->bus == b, "ALGORITHM: bus %d (%d)", b, A->bus);
             one_context();
-            turn(EC_E_ALGO, -9);
-            tapkey(1, 1, 60);
+            target(0);
         }
-    {                                            /* F3: OCT- + OCT+ together */
+    {                                            /* F3 */
         uint8_t f3[EC_NP];
-        const uint32_t m = 1u << P->btn_id[FM1P_B_OCTDN] | 1u << P->btn_id[FM1P_B_OCTUP];
         memset(f3, 0, sizeof f3);
-        P->buttons |= m;
-        P->buttons_tap |= m;
-        run(80);
-        P->buttons &= ~m;
+        reset_view();
+        A->ux.f3 = 1;
+        A->redraw = 1;
         run(40);
-        CHECK(A->ux.f3, "F3 opens");
         snprintf(ctxname, sizeof ctxname, "F3");
         check_lane(f3, EC_CAT_PAT);
-        home();
+        reset_view();
     }
     C->shutdown();
     printf("test_layout: %d params found on their knobs and turned (%d turns), %d checks, %d failed\n", found_total,

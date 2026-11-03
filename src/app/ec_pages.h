@@ -7,8 +7,29 @@
 #define EC_PAGES_H
 #include <stdint.h>
 
-enum { EC_CAT_TRIG, EC_CAT_SRC, EC_CAT_FILT, EC_CAT_AMP, EC_CAT_FX, EC_CAT_MOD, EC_CAT_MASTER, EC_CAT_FILE,
-       EC_CAT_PAT, EC_NCAT };
+/* the categories: each is a mode (0.6.0, docs/UX-V2.md §3) with its pages. The order is stable (append only); a
+ * category's display name is its mode's (ec_cat_name) */
+enum { EC_CAT_TRIG,     /* TRIG (HOME, second) */
+       EC_CAT_SRC,      /* LOOP ENGINE (HOME, first) */
+       EC_CAT_FILT,     /* FILTER (SEL) */
+       EC_CAT_AMP,      /* AMP (ENV) */
+       EC_CAT_FX,       /* FX (FX) */
+       EC_CAT_MOD,      /* MODULATION (LFO) */
+       EC_CAT_MASTER,   /* MIX (EDIT, first) */
+       EC_CAT_FILE,     /* FILE (FILE, first) */
+       EC_CAT_PAT,      /* PATTERN LAUNCH (SEQ) */
+       EC_CAT_XFD,      /* 0.6.0: CROSSFADER (ARP): the SCENE page */
+       EC_NCAT };
+/* 0.6.0: the modes = the categories, then the fixed screens (modes without params of their own) */
+enum { EC_MODE_KEYBOARD = EC_NCAT,   /* HOME, third */
+       EC_MODE_PAGES,                /* EDIT, second */
+       EC_MODE_SAMPLER,              /* FILE, second */
+       EC_NMODE };
+#define EC_NSCREEN (EC_NMODE - EC_NCAT)
+/* the FM-1 buttons a mode sits on (by their printed names; FILE is printed SAVE) */
+enum { EC_MB_NONE, EC_MB_FX, EC_MB_SEL, EC_MB_ENV, EC_MB_LFO, EC_MB_EDIT, EC_MB_HOME, EC_MB_FILE, EC_MB_ARP, EC_MB_SEQ,
+       EC_NMB };
+#define EC_NBKEY 11               /* the black keys B1..B11 */
 
 /* item kinds */
 enum { EC_IT_BLANK, EC_IT_PARAM, EC_IT_GLOBAL, EC_IT_SLOT, EC_IT_RAZOR /* E3: ec_razor_ui.h */, EC_IT_E5,
@@ -72,7 +93,23 @@ typedef struct {
     int arg;                      /* the picture's argument (EC_PIC_MACRO: the macro 0..3) */
 } ec_page_t;
 
-const char *ec_cat_name(int cat);             /* "SRC" */
+const char *ec_cat_name(int cat);             /* the mode's name: "LOOP ENGINE" (the pop-up) */
+const char *ec_cat_tag(int cat);              /* the header's short form: "LOOP" ("LOOP/WARP") */
+/* 0.6.0, the modes (mode: EC_CAT_* or EC_MODE_*), from the layout */
+const char *ec_mode_name(int mode);           /* "LOOP ENGINE", "KEYBOARD" */
+int ec_mode_button(int mode);                 /* the button that opens it: EC_MB_* */
+int ec_mode_order(int mode);                  /* its place among that button's modes, 1.. (HOME: LOOP ENGINE 1) */
+/* the button's modes in order (tap the lit button again: the next); returns how many (<= max) */
+int ec_button_modes(int button, int *modes, int max);
+/* the black keys: the key (1..11) that opens page `page` of the mode, 0 none; the page key bkey opens, -1 none */
+int ec_cat_page_key(int cat, int page);
+int ec_cat_key_page(int cat, int bkey);
+/* FX's bus keys: the bus (1 S1, 2 S2, 3 MST) black key bkey targets in mode cat (only FX has them), 0 none */
+int ec_cat_key_bus(int cat, int bkey);
+int ec_bus_key(int bus);                      /* the key that targets bus 1..3 in FX, 0 none */
+/* the first page (in EC_CAT_* order) with picture pic (and arg, unless arg < 0): 1 and *cat / *page, or 0. For the
+ * source keys' taps (LFO 1 -> MODULATION's LFO 1 page, MOD ENV -> AMP's MOD ENV, AT -> the MATRIX) */
+int ec_page_find(int pic, int arg, int *cat, int *page);
 int ec_cat_pages(int cat, const float *v);    /* pages of the category for a track's params */
 /* the picture of the category's page as shown on target bus (0 a track): the page's own, or the bus page's */
 int ec_page_pic(int cat, int page, int bus);

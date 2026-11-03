@@ -11,6 +11,10 @@
 //   4. undo: the preview's pixels back to the first frame's; 4b. the MATRIX page: MOD's first (tree and preview),
 //      its slots fixed (drops refused), never in the tray; a design without one opened: inserted, in the changes
 //   5. a page moved to another category with a new lane; a bad title refused
+//  5b. the modes (0.6.0): the tree groups the modes by their FM-1 button in order (HOME: LOOP ENGINE -> TRIG ->
+//      KEYBOARD), a mode's pages with their black keys = the firmware's (lw_modes); a key set on a page opens it on the
+//      unit and a key taken swaps; a page moved between modes keeps its key where it is free (and the preview's
+//      firmware maps it); a design before 0.6.0 opened gets CROSSFADER with MST's SCENE page, in the changes
 //   6. every kind of <select> (context, a page's picture, MOVE TO, VARIANT, + VARIANT FOR, OPEN) opened with the
 //      mouse stays: 2 s of the demo playing, the same element, focused, its value kept
 //   7. descriptions: a slot's and a page header's tooltip, the inspector, the tray's search over descriptions
@@ -172,7 +176,7 @@ try {
   const diff4 = await js(`document.querySelector("#difflist").textContent`);
   ok(opened && mp[0].title === "MATRIX" && mp[0].picture === "matrix" && c4.errors.length === 0 && /MATRIX inserted/.test(diff4) &&
     c4.warnings.some((w) => /macro1_pitch_depth is retired/.test(w)),
-    `   a design without one opened: MOD/${mp[0].title} inserted first (changes: "${(diff4.match(/MOD added[^]*?page\)/) || [""])[0]}"), a retired item kept with a warning`);
+    `   a design without one opened: MOD/${mp[0].title} inserted first (changes: "${(diff4.match(/OPENED added[^]*?page\)/) || [""])[0]}"), a retired item kept with a warning`);
   await js("designer.undo(), true");
   ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   undo: the shipped file again");
 
@@ -203,6 +207,70 @@ try {
   await js("designer.undo(), designer.undo(), designer.undo(), true");
   ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   three undos: the shipped file again");
 
+  // 5b. the modes
+  const BTNS = ["FX", "SEL", "ENV", "LFO", "EDIT", "HOME", "FILE", "ARP", "SEQ"];
+  const shipped = JSON.parse(readFileSync(join(WEB, "shipped.json"), "utf8"));
+  const tree = await js(`[...document.querySelectorAll("#tree .btngrp")].map((g) => ({ b: g.dataset.button,
+    modes: [...g.querySelectorAll(":scope > .cat")].map((c) => c.dataset.mode || c.dataset.screen) }))`);
+  const home = tree.find((g) => g.b === "HOME");
+  ok(tree.length === 9 && tree.map((g) => g.b).join() === BTNS.join() && home && home.modes.join(" > ") === "LOOP ENGINE > TRIG > KEYBOARD" &&
+    tree.find((g) => g.b === "EDIT").modes.join(" > ") === "MIX > PAGES" && tree.find((g) => g.b === "ARP").modes.join() === "CROSSFADER",
+    `5b. the tree: the modes by button (${tree.map((g) => g.b + ": " + g.modes.join(" > ")).join(" | ")})`);
+  const fw = await js("designer.modes()");
+  const keysIn = (cat) => js(`[...document.querySelectorAll('.page[data-cat="${cat}"]:not(.setup) select.key')].map((e) => +e.value)`);
+  let same = true;
+  for (const c of shipped.categories) {
+    const ci = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT", "XFD"].indexOf(c.cat);
+    const tk = await keysIn(c.cat);
+    const fk = c.pages.map((_, pi) => fw[ci].keys.indexOf(pi) + 1);
+    if (tk.join() !== fk.join() || fw[ci].name !== c.mode || BTNS[fw[ci].button - 1] !== c.button || fw[ci].order !== c.order) { same = false; log(`  ${c.cat}: tree ${tk} firmware ${fk} ${fw[ci].name}`); }
+  }
+  const amp = fw[3], fx = fw[4], modm = fw[5];
+  ok(same && amp.keys.slice(0, 3).join() === "0,1,2" && fx.keys[10] === 2 && fx.bus.slice(2, 5).join() === "1,2,3" && modm.keys[0] === 0 && modm.keys[10] === 4 && fw[10].name === "KEYBOARD",
+    `   every mode's pages and black keys in the tree = the firmware's (AMP B1-B3 ${amp.keys.slice(0, 3)}, FX B11 page ${fx.keys[10]} and buses ${fx.bus.slice(2, 5)}, MOD B1 / B11 ${modm.keys[0]} / ${modm.keys[10]})`);
+  await shot("03b_modes");
+  // a key set on FILT's MIX page (B3 -> B5), then onto B1 (taken by FILTER: the two swap)
+  await js("designer.setKey('FILT', 2, 5), true");
+  const k1 = (await js("designer.modes()"))[2].keys;
+  await js("designer.goto('FILT', 2, 0), designer.run(60), true");
+  const sk = await js("designer.state()");
+  await js("designer.setKey('FILT', 2, 1), true");
+  const k2 = (await js("designer.modes()"))[2].keys;
+  const fd = (await js("designer.design()")).categories.find((c) => c.cat === "FILT").pages;
+  ok(k1[4] === 2 && k1[2] === -1 && sk.key === 5 && sk.mode === "FILTER" && k2[0] === 2 && k2[4] === 0 && fd[0].key === 5 && fd[2].key === 1,
+    `   FILT/MIX set to B5: the firmware's B5 opens it (the unit on ${sk.mode}/${sk.title} says B${sk.key}); then B1: FILTER takes its B5 (B1 -> page ${k2[0] + 1}, B5 -> page ${k2[4] + 1})`);
+  await js("designer.undo(), designer.undo(), true");
+  // a page moved between modes: AMP's MOD ENV (B3) to MODULATION, where B3 is MACRO 2's: it arrives without a key,
+  // AMP keeps its B1 B2; given a free key there (B8), the unit opens it by that key
+  await js("designer.movePage('AMP', 2, 'MOD', 99), true");
+  const d5b = await js("designer.design()");
+  const modp = d5b.categories.find((c) => c.cat === "MOD").pages, ampp = d5b.categories.find((c) => c.cat === "AMP").pages;
+  const fw2 = await js("designer.modes()");
+  const lastPi = modp.length - 1;
+  ok(modp[lastPi].title === "MOD ENV" && !modp[lastPi].key && ampp.length === 2 && ampp.map((p) => p.key).join() === "1,2" && fw2[5].keys.indexOf(lastPi) < 0 && fw2[3].keys.slice(0, 3).join() === "0,1,-1",
+    `   AMP/MOD ENV (B3) moved to MODULATION (B3 is MACRO 2's there): it arrives keyless, AMP keeps B1 B2 (firmware: AMP ${fw2[3].keys.slice(0, 3)}, MOD keys ${fw2[5].keys})`);
+  await js(`designer.setKey('MOD', ${lastPi}, 8), true`);
+  await js(`designer.goto('MOD', ${lastPi}, 0), designer.run(60), true`);
+  const sm = await js("designer.state()");
+  ok(sm.mode === "MODULATION" && sm.title === "MOD ENV" && sm.key === 8 && (await js("designer.modes()"))[5].keys[7] === lastPi,
+    `   given B8 there: the unit's MODULATION/${sm.title} is opened by B${sm.key}`);
+  await js("designer.undo(), designer.undo(), true");
+  ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   undos: the shipped file again");
+  // a design before 0.6.0 (no XFD, no modes, no keys): opened, it gets CROSSFADER with MST's SCENE page and the modes
+  const legacy = JSON.parse(readFileSync(join(REPO, "host/fixtures/layout-0.4.0.json"), "utf8"));
+  const op = await js(`designer.open(${JSON.stringify(legacy)}, "the 0.4.0 layout")`);
+  const dl = await js("designer.design()");
+  const xf = dl.categories.find((c) => c.cat === "XFD"), ms = dl.categories.find((c) => c.cat === "MST");
+  const diffL = await js(`document.querySelector("#difflist").textContent`);
+  const cl = await js("designer.compiled()");
+  const fwl = await js("designer.modes()");
+  ok(op && xf && xf.pages[0].picture === "scene" && !ms.pages.some((p) => p.picture === "scene") && xf.mode === "CROSSFADER" && xf.button === "ARP" &&
+    dl.categories.find((c) => c.cat === "SRC").pages.map((p) => p.key).join() === "1,2,3,4" && dl.screens?.length === 3 && cl.errors.length === 0 &&
+    /moved to CROSSFADER/.test(diffL) && fwl[9].keys.every((k) => k === -1) && fwl[1].name === "LOOP ENGINE",
+    `   the 0.4.0 layout opened: XFD/${xf && xf.pages[0].title} from MST, the modes and keys written (LOOP ENGINE ${dl.categories.find((c) => c.cat === "SRC").pages.map((p) => "B" + p.key).join(" ")}), ${cl.errors.length} errors`);
+  await js("designer.undo(), true");
+  ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   undo: the shipped file again");
+
   // 6. dropdowns stay open while the preview plays: each kind of <select> clicked with the mouse (CDP input), 2 s of
   // the demo playing, the same element still in the page and focused (nothing rebuilt it), its value kept
   const mouse = async (type, x, y, extra = {}) => cdp("Input.dispatchMouseEvent", { type, x, y, button: type === "mouseMoved" || type === "mouseWheel" ? "none" : "left", clickCount: 1, ...extra });
@@ -214,6 +282,7 @@ try {
     ["a page's MOVE TO", `document.querySelector('.page[data-cat="MOD"][data-pi="1"] [data-key^="move-"]')`],
     ["a page's VARIANT", `document.querySelector('.page[data-cat="FILT"][data-pi="0"] [data-key^="var-"]')`],
     ["+ VARIANT FOR", `document.querySelector('.page[data-cat="AMP"][data-pi="0"] [data-key^="addvar-"]')`],
+    ["a page's black key", `document.querySelector('.page[data-cat="FILT"][data-pi="1"] [data-key^="key-"]')`],
     ["OPEN", `document.querySelector("#open")`]];
   for (const [what, q] of sels) {
     const c = await centre(q);
@@ -262,7 +331,9 @@ try {
   await sleep(300);
   const s8 = await js("designer.state()");
   const lbl8 = await js("designer.panel.labels()");
-  ok(s8.cat === 0 && s8.title === "TRIG", `8. the panel's SEQ button (drawn "${lbl8.buttons[9]}") pressed: the preview is on ${["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"][s8.cat]}/${s8.title}`);
+  // (0.5.0's app: SEQ opens TRIG; 0.6.0's: the layout's SEQ mode, PATTERN LAUNCH)
+  const seqMode = (await js("designer.modes()")).find((m) => m.button === 9);
+  ok((s8.cat === 0 && s8.title === "TRIG") || (seqMode && s8.cat === seqMode.mode), `8. the panel's SEQ button (drawn "${lbl8.buttons[9]}") pressed: the preview is on ${s8.mode}/${s8.title}`);
   let maxLit = 0, litKeys = new Set();
   for (let i = 0; i < 20; i++) { const lv = await js("designer.panel.keyLevels()"); lv.forEach((v, k) => { if (k <= 26 && v >= 176) litKeys.add(k); maxLit = Math.max(maxLit, v); }); await sleep(60); }
   ok(litKeys.size > 0, `   the key LEDs light for the trigs (keys lit over 1.2 s: ${[...litKeys].join(" ")})`);

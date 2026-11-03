@@ -23,11 +23,30 @@ import sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
-CATS = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"]
+CATS = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT", "XFD"]
+# 0.6.0: every category is a mode (docs/UX-V2.md §3): its name, the header's short tag, the FM-1 button that opens it
+# and its place among that button's modes (HOME: LOOP ENGINE -> TRIG -> KEYBOARD). EC_MB_* = BUTTONS index + 1. A
+# design may leave these out (a design before 0.6.0): it gets these
+BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "HOME", "FILE", "ARP", "SEQ"]
+MODE_DEFAULT = {"TRIG": ("TRIG", "TRIG", "HOME", 2), "SRC": ("LOOP ENGINE", "LOOP", "HOME", 1),
+                "FILT": ("FILTER", "FILTER", "SEL", 1), "AMP": ("AMP", "AMP", "ENV", 1), "FX": ("FX", "FX", "FX", 1),
+                "MOD": ("MODULATION", "MOD", "LFO", 1), "MST": ("MIX", "MIX", "EDIT", 1),
+                "FILE": ("FILE", "FILE", "FILE", 1), "PAT": ("PATTERN LAUNCH", "PATTERNS", "SEQ", 1),
+                "XFD": ("CROSSFADER", "CROSSFADER", "ARP", 1)}
+# the fixed screens: modes without params of their own (EC_MODE_KEYBOARD ..), in this order
+SCREENS = ["KEYBOARD", "PAGES", "SAMPLER"]
+SCREEN_DEFAULT = {"KEYBOARD": ("HOME", 3), "PAGES": ("EDIT", 2), "SAMPLER": ("FILE", 2)}
+# the black keys B1..B11 (a page's "key", 0 = none); the source template's modes: pages 1..5 = B1..B5 when the design
+# names no key in that category; MOD: MATRIX B1, MACRO n B(n+1), MACROS B11; FX's buses S1 S2 MST: B3 B4 B5
+NBKEY = 11
+TEMPLATE = ["TRIG", "SRC", "FILT", "AMP", "FX"]
+BUS_KEY_DEFAULT = [3, 4, 5]
+MODE_MAX, TAG_MAX = 16, 10
+BUS_TAG = "FILTER"   # the widest tag a bus page can show under (the bus pages' titles are checked with it)
 PICS = ["steps", "wave", "wave-machine", "wave-warp", "wave-range", "filter", "fenv", "aenv", "fx", "sends", "lfo1",
         "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix"]
 # pictures with behaviour of their own: their category, and how many pages there may carry them
-FIXED = {"mix": "MST", "scene": "MST", "file": "FILE", "razor": "FILE", "pattern": "PAT", "matrix": "MOD"}
+FIXED = {"mix": "MST", "scene": "XFD", "file": "FILE", "razor": "FILE", "pattern": "PAT", "matrix": "MOD"}
 # the MATRIX page's knobs are fixed (0.5.0): SELECT picks the row, KNOB 1-3 its SRC, DST, DEPTH
 MATRIX_LANES = [["mtx.src", "mtx.dst", "mtx.depth", None]]
 MTX_RE = re.compile(r"^mtx[1-8]_(src|dst|depth)$")
@@ -74,7 +93,8 @@ STOPPED = {"mode", "filter_machine", "filter_mix_mode"}     # change only while 
 MAX_LANES, SETUP_LANES, MAX_PAGES = 4, 2, 16
 CELL_LABEL_WARN, LABEL_MAX = 5, 10
 TEXT_W = lambda s: len(s) * 4 - 1 if s else 0               # the 3x5 font (src/ui/ec_gfx.c ec_gfx_text_w), units
-TITLE_ROOM = 64      # the header: "CAT/TITLE" from x 17 up to the right-hand info ("P16>16") at x 83 (120-unit grid)
+TITLE_ROOM = 72      # the header: "TAG/TITLE" from x 17 up to the right-hand info (4 characters, "P01") at x 91
+#                      (120-unit grid; 0.6.0: the mode's tag, 0.5.0 the category's id with 64)
 
 
 class Fail(Exception):
@@ -136,6 +156,8 @@ class Gen:
         self.params = params
         self.errors, self.warnings = [], []
         self.items, self.vars, self.pages = [], [], []
+        self.pkey = []           # each page's black key (0 none)
+        self.tags = {}
         self.placed = {}
 
     def err(self, where, msg):
@@ -263,9 +285,15 @@ class Gen:
         if not isinstance(p, dict):
             self.err(where, "a page is an object")
             p = {}
-        extra = set(p) - {"title", "picture", "lanes", "variants", "note", "same_as", "macro"}
+        extra = set(p) - {"title", "picture", "lanes", "variants", "note", "same_as", "macro", "key"}
+        if kind != "page":
+            extra |= {"key"} & set(p)
         if extra:
             self.err(where, "unknown field(s) %s" % ", ".join(sorted(extra)))
+        bkey = p.get("key", 0)
+        if not isinstance(bkey, int) or isinstance(bkey, bool) or not 0 <= bkey <= NBKEY:
+            self.err(where, "key %r: a black key 1..%d (0 or none: no key)" % (bkey, NBKEY))
+            bkey = 0
         src = p
         if "same_as" in p:
             src = self.find_page(p["same_as"]) if isinstance(p["same_as"], str) else None
@@ -286,8 +314,9 @@ class Gen:
             pic = "steps"
         if kind in ("page", "bus"):
             self.title_fits(where, cat, title)
-        if pic in FIXED and kind == "page" and FIXED[pic] != cat:
-            self.err(where, "the %s picture stays in %s (its page has behaviour of its own)" % (pic, FIXED[pic]))
+        home = "MST" if pic == "scene" and getattr(self, "legacy", False) else FIXED.get(pic)
+        if pic in FIXED and kind == "page" and home != cat:
+            self.err(where, "the %s picture stays in %s (its page has behaviour of its own)" % (pic, home))
         arg = 0
         if pic == "macro":
             m = p.get("macro", src.get("macro"))
@@ -338,21 +367,110 @@ class Gen:
                           len(items), where))
         self.items += items
         self.pages.append((title, PICS.index(pic), arg, var0, len(self.vars) - var0, where))
+        self.pkey.append(bkey)
         return len(self.pages) - 1
 
     def title_fits(self, where, cat, title):
+        tag = self.tags.get(cat, cat)      # (the header shows the mode's tag: "LOOP/WARP")
         if title != title.upper():
             self.err(where, "the title %r has lower case (the font has capitals only)" % title)
-        if TEXT_W(cat + "/" + title) > TITLE_ROOM:
+        if TEXT_W(tag + "/" + title) > TITLE_ROOM:
             self.err(where, "the title %r is too wide for the header (%s/ + %d characters at most)" %
-                     (title, cat, (TITLE_ROOM + 1) // 4 - len(cat) - 1))
+                     (title, tag, (TITLE_ROOM + 1) // 4 - len(tag) - 1))
+
+    def text_ok(self, where, what, t, most):
+        if not isinstance(t, str) or not t:
+            self.err(where, "%s: a text" % what)
+            return False
+        if t != t.upper() or any(not (32 <= ord(ch) <= 95) for ch in t):
+            self.err(where, "%s %r: capitals, digits and the font's signs only" % (what, t))
+        if len(t) > most:
+            self.err(where, "%s %r: %d characters at most" % (what, t, most))
+        return True
+
+    def modes(self, byname):
+        """0.6.0: each category's mode (name, tag, button, order) and the fixed screens; checked: a button's modes
+        are numbered 1..n"""
+        self.mode = {}
+        for n in CATS:
+            c = byname.get(n, {})
+            dn, dt, db, do = MODE_DEFAULT[n]
+            name, tag, btn, order = c.get("mode", dn), c.get("tag", dt), c.get("button", db), c.get("order", do)
+            if not self.text_ok(n, "mode", name, MODE_MAX):
+                name = dn
+            if not self.text_ok(n, "tag", tag, TAG_MAX):
+                tag = dt
+            if btn not in BUTTONS:
+                self.err(n, "button %r (one of %s)" % (btn, " ".join(BUTTONS)))
+                btn = db
+            if not isinstance(order, int) or isinstance(order, bool) or order < 1:
+                self.err(n, "order %r: 1 or more (the place among the button's modes)" % (order,))
+                order = 1
+            self.mode[n] = (name, tag, btn, order)
+            self.tags[n] = tag
+        scr = self.d.get("screens")
+        self.screens = []
+        if scr is None:
+            scr = [{"mode": m, "button": SCREEN_DEFAULT[m][0], "order": SCREEN_DEFAULT[m][1]} for m in SCREENS]
+        if not isinstance(scr, list) or [x.get("mode") if isinstance(x, dict) else None for x in scr] != SCREENS:
+            self.err("screens", "\"screens\" lists %s in that order" % ", ".join(SCREENS))
+            scr = [{"mode": m, "button": SCREEN_DEFAULT[m][0], "order": SCREEN_DEFAULT[m][1]} for m in SCREENS]
+        for x in scr:
+            w = "screens/%s" % x["mode"]
+            extra = set(x) - {"mode", "button", "order", "note"}
+            if extra:
+                self.err(w, "unknown field(s) %s" % ", ".join(sorted(extra)))
+            btn, order = x.get("button"), x.get("order")
+            if btn not in BUTTONS:
+                self.err(w, "button %r (one of %s)" % (btn, " ".join(BUTTONS)))
+                btn = SCREEN_DEFAULT[x["mode"]][0]
+            if not isinstance(order, int) or isinstance(order, bool) or order < 1:
+                self.err(w, "order %r: 1 or more" % (order,))
+                order = 1
+            self.screens.append((x["mode"], btn, order))
+        on = {}
+        for n in CATS:
+            on.setdefault(self.mode[n][2], []).append((self.mode[n][3], self.mode[n][0]))
+        for m, b, o in self.screens:
+            on.setdefault(b, []).append((o, m))
+        for b, ms in on.items():
+            if sorted(o for o, _ in ms) != list(range(1, len(ms) + 1)):
+                self.err("modes", "the %s button's modes are numbered %s (1..%d, each once): %s" %
+                         (b, " ".join(str(o) for o, _ in sorted(ms)), len(ms),
+                          ", ".join("%s %d" % (m, o) for o, m in sorted(ms))))
+
+    def keys(self, n, c, p0, np_):
+        """the black keys of a category's pages: as the design names them, else (none named) the default"""
+        named = any(isinstance(p, dict) and "key" in p for p in c.get("pages", []))
+        if not named:
+            for i in range(np_):
+                pic = PICS[self.pages[p0 + i][1]]
+                k = 0
+                if n in TEMPLATE and i < 5:
+                    k = i + 1
+                elif n == "MOD":
+                    k = 1 if pic == "matrix" else 11 if pic == "macros" else self.pages[p0 + i][2] + 2 if \
+                        pic == "macro" else 0
+                self.pkey[p0 + i] = k
+        seen = {}
+        if n == "FX":
+            for bi, b in enumerate(["S1", "S2", "MST"]):
+                if self.bus_key[bi]:
+                    seen[self.bus_key[bi]] = "bus " + b
+        for i in range(np_):
+            k = self.pkey[p0 + i]
+            if not k:
+                continue
+            if k in seen:
+                self.err("%s/%s" % (n, self.pages[p0 + i][0]), "B%d opens %s already" % (k, seen[k]))
+            seen[k] = self.pages[p0 + i][0]
 
     # ------------------------------------------------------------------------------------------ the design
     def run(self):
         d = self.d
         if d.get("format") != "elasticat-layout" or d.get("version") != 1:
             raise Fail("not an elasticat-layout version 1 file")
-        extra = set(d) - {"format", "version", "name", "note", "categories", "bus", "f3"}
+        extra = set(d) - {"format", "version", "name", "note", "categories", "bus", "f3", "screens"}
         if extra:
             self.err("design", "unknown field(s) %s" % ", ".join(sorted(extra)))
         cats = d.get("categories")
@@ -367,16 +485,37 @@ class Gen:
                 self.err("categories", "%s twice" % n)
             else:
                 byname[n] = c
+        # a design before 0.6.0 has no XFD: CROSSFADER then shows its SCENE page where it is (MST)
+        self.legacy = "XFD" not in byname
         for n in CATS:
-            if n not in byname:
+            if n not in byname and n != "XFD":
                 self.err("categories", "%s is missing" % n)
+        if self.legacy:
+            self.warn("XFD", "no XFD category (a design before 0.6.0): CROSSFADER shows MST's SCENE page")
         if self.errors:
             return
+        self.modes(byname)
+        bus = d.get("bus")
+        self.bus_key = list(BUS_KEY_DEFAULT)
+        if isinstance(bus, list):
+            for bi, b in enumerate(bus[:3]):
+                if isinstance(b, dict) and "key" in b:
+                    k = b["key"]
+                    if not isinstance(k, int) or isinstance(k, bool) or not 0 <= k <= NBKEY:
+                        self.err("bus %s" % b.get("bus", "?"), "key %r: a black key 1..%d in FX (0: none)" % (k, NBKEY))
+                        k = 0
+                    self.bus_key[bi] = k
+        nz = [k for k in self.bus_key if k]
+        if len(nz) != len(set(nz)):
+            self.err("bus", "two buses on one key (%s)" % " ".join("B%d" % k for k in self.bus_key))
         self.cats = []
         fixed_count = {k: 0 for k in FIXED}
         for n in CATS:
+            if n == "XFD" and self.legacy:
+                self.cats.append(None)            # (below: the SCENE page's)
+                continue
             c = byname[n]
-            extra = set(c) - {"cat", "pages", "setup"}
+            extra = set(c) - {"cat", "pages", "setup", "mode", "tag", "button", "order"}
             if extra:
                 self.err(n, "unknown field(s) %s" % ", ".join(sorted(extra)))
             pages = c.get("pages")
@@ -402,7 +541,13 @@ class Gen:
                 setup = self.page(n + "/SETUP", {"title": "SETUP", "picture": "steps", "lanes": c["setup"]}, n,
                                   "setup")
             self.cats.append((p0, len(self.pages) - p0 - (1 if setup >= 0 else 0), setup))
+            self.keys(n, c, p0, self.cats[-1][1])
+        if self.legacy:
+            sc = [i for i, pg in enumerate(self.pages) if PICS[pg[1]] == "scene"]
+            self.cats[CATS.index("XFD")] = (sc[0] if sc else self.cats[CATS.index("MST")][0], 1, -1)
         for pic, cat in FIXED.items():
+            if self.legacy and pic == "scene":
+                cat = "MST"
             if pic == "matrix" and fixed_count[pic] == 0:
                 self.warn(cat, "no MATRIX page (0.5.0): the mod matrix is reached by MOD KEYS only; add it as MOD's "
                                "first page")
@@ -417,10 +562,10 @@ class Gen:
         self.bus_page, self.bus_setup, self.mst_src = [], [], -1
         for b in bus:
             name = b.get("bus", "?")
-            extra = set(b) - {"bus", "page", "setup", "src"}
+            extra = set(b) - {"bus", "page", "setup", "src", "key"}
             if extra:
                 self.err("bus " + name, "unknown field(s) %s" % ", ".join(sorted(extra)))
-            self.bus_page.append(self.page("bus %s" % name, b.get("page", {}), "TRIG", "bus"))   # (the widest name)
+            self.bus_page.append(self.page("bus %s" % name, b.get("page", {}), BUS_TAG, "bus"))   # (the widest tag)
             self.bus_setup.append(self.page("bus %s/SETUP" % name, {"title": "SETUP", "lanes": b.get("setup", [])},
                                             "FX", "setup") if b.get("setup") is not None else -1)
             if name == "MST":
@@ -463,14 +608,23 @@ class Gen:
                         i0, n, w.replace("*/", "* /")))
         out.append("};")
         out.append("static const ec_lay_page_t %s_page[%d] = {" % (lo, len(self.pages)))
-        for t, pic, arg, v0, nv, w in self.pages:
-            out.append("    {%s, %d, %d, %d, %d},   /* %s */" % (q(t), pic, arg, v0, nv, w.replace("*/", "* /")))
+        for i, (t, pic, arg, v0, nv, w) in enumerate(self.pages):
+            out.append("    {%s, %d, %d, %d, %d, %d},   /* %s%s */" % (q(t), pic, arg, self.pkey[i], v0, nv,
+                                                                     w.replace("*/", "* /"),
+                                                                     " B%d" % self.pkey[i] if self.pkey[i] else ""))
         out.append("};")
         out.append("const ec_layout_t %s = {" % symbol)
         out.append("    %s," % q(self.d.get("name", "")))
-        out.append("    {" + ", ".join("{%d, %d, %d}" % c for c in self.cats) + "},")
-        out.append("    {%d, %d, %d}, {%d, %d, %d}, %d, %d," % (tuple(self.bus_page) + tuple(self.bus_setup) +
-                                                             (self.mst_src, self.f3)))
+        out.append("    {")
+        for n, c in zip(CATS, self.cats):
+            name, tag, btn, order = self.mode[n]
+            out.append("        {%d, %d, %d, %s, %s, %d, %d},   /* %s */" % (c + (q(name), q(tag), BUTTONS.index(btn) + 1,
+                                                                            order, n)))
+        out.append("    },")
+        out.append("    {%d, %d, %d}, {%d, %d, %d}, %d, %d, {%d, %d, %d}," %
+                   (tuple(self.bus_page) + tuple(self.bus_setup) + (self.mst_src, self.f3) + tuple(self.bus_key)))
+        out.append("    {" + ", ".join("{%s, %d, %d}" % (q(m), BUTTONS.index(b) + 1, o) for m, b, o in self.screens) +
+                   "},")
         out.append("    %s_page, %s_var, %s_item, %d, %d, %d," % (lo, lo, lo, len(self.pages), len(self.vars),
                                                                   len(self.items)))
         out.append("};")
@@ -488,13 +642,16 @@ class Gen:
                     return idx
             raise Fail("no number for %s" % cid)
         s = lambda x: "" if x is None else x
-        out = ["ECL1\t%s" % self.d.get("name", "")]
-        for c in self.cats:
-            out.append("C\t%d\t%d\t%d" % c)
-        out.append("B\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" % (tuple(self.bus_page) + tuple(self.bus_setup) +
-                                                         (self.mst_src, self.f3)))
-        for t, pic, arg, v0, nv, _ in self.pages:
-            out.append("P\t%d\t%d\t%d\t%d\t%s" % (pic, arg, v0, nv, t))
+        out = ["ECL2\t%s" % self.d.get("name", "")]
+        for n, c in zip(CATS, self.cats):
+            name, tag, btn, order = self.mode[n]
+            out.append("C\t%d\t%d\t%d\t%d\t%d\t%s\t%s" % (c + (BUTTONS.index(btn) + 1, order, tag, name)))
+        for m, b, o in self.screens:
+            out.append("S\t%d\t%d\t%s" % (BUTTONS.index(b) + 1, o, m))
+        out.append("B\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d" %
+                   (tuple(self.bus_page) + tuple(self.bus_setup) + (self.mst_src, self.f3) + tuple(self.bus_key)))
+        for i, (t, pic, arg, v0, nv, _) in enumerate(self.pages):
+            out.append("P\t%d\t%d\t%d\t%d\t%d\t%s" % (pic, arg, self.pkey[i], v0, nv, t))
         for masks, vt, i0, n, _ in self.vars:
             out.append("V\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s" % (masks["mach"], masks["warp"], masks["filt"],
                                                                 masks["fenv"], masks["env"], masks["fx"], i0, n, s(vt)))
@@ -510,44 +667,70 @@ class Gen:
             return lb
         return self.params[name][2]
 
+    def mode_list(self):
+        """every mode: (button, order, name, cat or None for a fixed screen), in the panel's button order"""
+        ms = [(self.mode[n][2], self.mode[n][3], self.mode[n][0], n) for n in CATS]
+        ms += [(b, o, m, None) for m, b, o in self.screens]
+        return sorted(ms, key=lambda x: (BUTTONS.index(x[0]), x[1]))
+
     def docs(self):
-        """the markdown tables: per category its pages and lanes (variants as their own rows)"""
+        """the markdown tables: the modes by button, then per mode its pages (with their black keys) and lanes
+        (variants as their own rows)"""
         fmtw = lambda masks: ", ".join(self.when_text(masks))
+        head = ["| Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |", "|---|---|---|---|---|---|---|"]
+        nth = lambda o: {1: "1st", 2: "2nd", 3: "3rd"}.get(o, "%dth" % o)
         out = ["<!-- layout:begin (generated by tools/layout/gen_layout.py from design/layout/elasticat.json: edit the "
                "design, not this) -->", "",
-               "## Pages and knobs (the layout \"%s\")" % self.d.get("name", ""), "",
-               "Each category button opens its first page; tapping it again goes to the next page. A page has one or "
-               "more lanes of four values on KNOB 1-4; SELECT steps the lanes and runs on into the next page. Where a "
-               "page depends on the track's machine, warp mode, filter machine, envelope mode or FX machine, each "
-               "variant has its own rows. Setup: hold the category button, or SHIFT + it.", ""]
-        for ci, n in enumerate(CATS):
+               "## Modes, pages and knobs (the layout \"%s\")" % self.d.get("name", ""), "",
+               "Each mode button opens its mode; tapping the lit button again goes to the mode's next page (HOME, EDIT "
+               "and FILE: to the next mode on that button). In a mode, the black key a page names (Key) opens that "
+               "page. A page has one or more lanes of four values on KNOB 1-4. Where a page depends on the track's "
+               "machine, warp mode, filter machine, envelope mode or FX machine, each variant has its own rows. "
+               "Settings: hold the mode button, or SHIFT + it.", "",
+               "| Button | Modes (in order) |", "|---|---|"]
+        ms = self.mode_list()
+        for b in BUTTONS:
+            names = [("%s" % m) + ("" if c else " (a fixed screen)") for bb, o, m, c in ms if bb == b]
+            if names:
+                out.append("| %s | %s |" % (b, " → ".join(names)))
+        out.append("")
+        for b, o, m, n in ms:
+            if not n:
+                continue
+            ci = CATS.index(n)
             p0, np, setup = self.cats[ci]
-            out += ["### %s" % n, "", "| Page | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |", "|---|---|---|---|---|---|"]
+            many = sum(1 for x in ms if x[0] == b) > 1
+            out += ["### %s (%s%s · %s)" % (m, b, ", " + nth(o) if many else "", n), ""] + head
             for pi in range(p0, p0 + np):
-                out += self.page_rows(pi, fmtw)
+                out += self.page_rows(pi, fmtw, key=self.pkey[pi])
+            if n == "FX":
+                for bi, bn in enumerate(["S1", "S2", "MST"]):
+                    if self.bus_key[bi]:
+                        out.append("| %s bus | B%d | | the bus's page (below) | | | |" % (bn, self.bus_key[bi]))
             if setup >= 0:
-                out += self.page_rows(setup, fmtw, "SETUP")
+                out += self.page_rows(setup, fmtw, "SETUP", key="hold")
             out.append("")
-        out += ["### Buses (S1, S2, MST: every category but MST, FILE, PAT shows the bus's page)", "",
-                "| Page | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |", "|---|---|---|---|---|---|"]
+        out += ["### Buses (S1, S2, MST: every mode but MIX, FILE, PATTERN LAUNCH and CROSSFADER shows the bus's page)",
+                ""] + head
         for bi, b in enumerate(["S1", "S2", "MST"]):
             if self.bus_setup[bi] >= 0:
-                out += self.page_rows(self.bus_setup[bi], fmtw, "%s SETUP" % b)
+                out += self.page_rows(self.bus_setup[bi], fmtw, "%s SETUP" % b, key="hold")
         for bi, b in enumerate(["S1", "S2", "MST"]):
             p = self.bus_page[bi]
             twin = None
             for ci, n in enumerate(CATS):
                 for q in range(self.cats[ci][0], self.cats[ci][0] + self.cats[ci][1]):
                     if twin is None and self.same_key(q) == self.same_key(p):
-                        twin = "%s/%s" % (n, self.pages[q][0])
+                        twin = "%s/%s" % (self.mode[n][1], self.pages[q][0])
+            k = "B%d" % self.bus_key[bi] if self.bus_key[bi] else ""
             if twin:
-                out.append("| %s: %s | | the lanes of %s, for the bus's own FX machine | | | |" %
-                           (b, self.pages[p][0], twin))
+                out.append("| %s: %s | %s | | the lanes of %s, for the bus's own FX machine | | | |" %
+                           (b, self.pages[p][0], k, twin))
             else:
-                out += self.page_rows(p, fmtw, "%s: %s" % (b, self.pages[p][0]))
+                out += self.page_rows(p, fmtw, "%s: %s" % (b, self.pages[p][0]), key=k)
         if self.mst_src >= 0:
-            out += self.page_rows(self.mst_src, fmtw, "MST: SRC = %s" % self.pages[self.mst_src][0])
-        out += ["", "### F3", "", "| Page | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |", "|---|---|---|---|---|---|"]
+            out += self.page_rows(self.mst_src, fmtw, "MST: LOOP ENGINE = %s" % self.pages[self.mst_src][0])
+        out += ["", "### F3", ""] + head
         out += self.page_rows(self.f3, fmtw, "F3")
         out += ["", "<!-- layout:end -->"]
         return "\n".join(out)
@@ -592,9 +775,10 @@ class Gen:
             out += [it[4] for it in self.items[i0:i0 + n] if it[4]]
         return out
 
-    def page_rows(self, p, fmtw, name=None):
+    def page_rows(self, p, fmtw, name=None, key=None):
         t, pic, arg, v0, nv, _ = self.pages[p]
         rows = []
+        kt = ("B%d" % key if key else "") if isinstance(key, int) or key is None else key
         if nv > 1 and self.covered(v0, nv):
             nv -= 1
         for v in range(v0, v0 + nv):
@@ -606,13 +790,15 @@ class Gen:
             cond = fmtw(masks)
             if nv > 1:
                 label += " · " + (cond if cond else "otherwise")
+            first = v == v0
             if not items:
-                rows.append("| %s | - | | | | |" % label.replace("|", "\\|"))
+                rows.append("| %s | %s | - | | | | |" % (label.replace("|", "\\|"), kt if first else ""))
                 continue
             for li in range(0, len(items), 4):
                 lane = [self.label_of(x) for x in items[li:li + 4]] + [""] * 4
-                rows.append("| %s | %d | %s |" % (label.replace("|", "\\|") if li == 0 else "", li // 4 + 1,
-                                                    " | ".join(x.replace("|", "\\|") for x in lane[:4])))
+                rows.append("| %s | %s | %d | %s |" % (label.replace("|", "\\|") if li == 0 else "",
+                                                         kt if first and li == 0 else "", li // 4 + 1,
+                                                         " | ".join(x.replace("|", "\\|") for x in lane[:4])))
         return rows
 
 
@@ -704,13 +890,15 @@ def desc_docs(g, desc):
     esc = lambda t: str(t).replace("|", "\\|")
     out = ["<!-- params:begin (generated by tools/layout/gen_layout.py from design/layout/descriptions.json: edit that, "
            "not this) -->", "", "## Parameter reference", "",
-           "What every value does, grouped by the category whose pages show it first (the designer shows the same "
+           "What every value does, grouped by the mode whose pages show it first (the designer shows the same "
            "text as tooltips). Label: the screen's own short name (a page may give it another).", ""]
     for n in CATS + ["OTHER"]:
         if not rows[n]:
             continue
-        out += ["### %s%s" % (n, "" if n == "OTHER" else ": " + esc(desc.get("cats", {}).get(n, ""))), "",
-                "| Item | Label | Name | What it does |", "|---|---|---|---|"]
+        out += ["### %s" % (n if n == "OTHER" else "%s (%s)" % (g.mode[n][0], n)), ""]
+        if n != "OTHER" and desc.get("cats", {}).get(n):
+            out += [desc["cats"][n], ""]
+        out += ["| Item | Label | Name | What it does |", "|---|---|---|---|"]
         for k in rows[n]:
             lb = SPECIAL[k][2] if k in SPECIAL else g.params[k][2]
             out.append("| `%s` | %s | %s | %s |" % (k, esc(lb), esc(items[k]["name"]), esc(items[k]["desc"])))

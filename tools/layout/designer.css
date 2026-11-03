@@ -46,6 +46,15 @@ body.coldrag { cursor: col-resize; user-select: none; }
   letter-spacing: .1em; cursor: pointer; }
 .cathead .n { background: var(--l12); color: var(--bg); padding: 0 6px; }
 .cathead.drop { outline: 1px dashed var(--acc); }
+/* 0.6.0: the modes grouped by their FM-1 button; a page's black key */
+.btngrp { margin-bottom: 12px; }
+.btnhead { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 4px; }
+.btnhead .b { border: 1px solid var(--l8); color: var(--l15); padding: 0 6px; border-radius: 3px; font-weight: 700; font-size: 11px; }
+.cathead .ord { color: var(--l8); font-size: 11px; font-weight: 400; }
+.cat.screen .cathead .n { background: var(--l5); }
+.prow select.key { width: 56px; color: var(--l8); }
+.prow select.key.on { color: var(--bg); background: var(--acc); font-weight: 700; }
+.keytag { color: var(--acc); font-size: 11px; margin-left: 4px; }
 .page { margin: 4px 0 6px; padding: 4px 6px; background: var(--l2); border: 1px solid transparent; }
 .page.on { border-color: var(--l8); }
 .page.sel { border-color: var(--acc); }

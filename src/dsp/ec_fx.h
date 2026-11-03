@@ -44,6 +44,8 @@ typedef struct ec_fx_params {
     int   machine;                       /* EC_FX_* */
     float mix;                           /* fx_mix 0..1 (fxMixBlend XFade2) */
     float drive;                         /* fx_drive 0..1 (DESTROY's DRIV) */
+    float wet;                           /* 0.6.1: fx_wet 0..1, the dry / wet blend of the machines without
+                                          * their own (ec_fx_has_mix 0): 1 = wet only, as before 0.6.1 */
     /* delay */
     float delay_beats, delay_feedback, delay_tone;
     /* reverb (+ blackhole SIZE / HI) */
@@ -90,6 +92,8 @@ typedef struct ec_fx_params {
 } ec_fx_params_t;
 
 void ec_fx_params_default(ec_fx_params_t *p);
+/* 1: the machine blends dry / wet by mix (fxMixBlend); 0: DESTROY, DJ EQ, DUCK, MOTION, LIMIT (by wet), NONE */
+int ec_fx_has_mix(int machine);
 const char *ec_fx_name(int machine);     /* "DELAY", "TAPE ECHO", ... ("?" out of range) */
 
 /* Dynamics meter of the running machine (COMP / DUCK / LIMIT; the SC
@@ -114,6 +118,9 @@ void ec_fx_process(ec_fx_t *fx, const ec_fx_params_t *p, float bpm,
                    const float *keyL, const float *keyR, float *L, float *R, int n);
 
 void ec_fx_clear(ec_fx_t *fx);           /* drop every tail now (panic / double stop) */
+/* 0.6.1: 1 when the slot is an empty insert at rest (machine NONE asked for and running, no swap fading): its
+ * ec_fx_process would pass the signal through untouched, so the caller may skip the call (no state touched) */
+int  ec_fx_bypassed(const ec_fx_t *fx, const ec_fx_params_t *p);
 int  ec_fx_running(const ec_fx_t *fx);   /* the machine audible now (EC_FX_*) */
 void ec_fx_meter(const ec_fx_t *fx, ec_fx_meter_t *m);
 

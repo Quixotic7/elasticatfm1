@@ -244,6 +244,12 @@ float ec_param_snap(int id, float x, int det)
     int k, n = det < 0 ? -det : det;
     if (d->kind != EC_PK_NUM)                           /* lists never snap: one item a click */
         return ec_param_nudge(id, x, det);
+    if (d->fmt == EC_PF_MDEP) {                         /* 0.5.0: a matrix DEPTH: 0, +-25, +-50, +-100 */
+        static const float Q[] = {-100, -50, -25, 0, 25, 50, 100};
+        for (k = 0; k < n; k++)
+            x = ec_snap_list(Q, N(Q), x, det);
+        return x;
+    }
     s = table(id);
     for (k = 0; k < n; k++) {
         if (s.n)

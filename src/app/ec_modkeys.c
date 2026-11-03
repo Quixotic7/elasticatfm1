@@ -1,0 +1,384 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* 0.5.0: the mod matrix on the panel (ec_modkeys.h, docs/MOD-MATRIX.md) */
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "ec_app.h"
+#include "ec_layout.h"
+#include "ec_mtx.h"
+
+#define A (&ec_app)
+#define MK (&ec_app.mk)
+
+static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
+static float *tv(void) { return ec_project_track(&A->proj, A->track)->v; }
+
+static const int KEY_SRC[EC_MK_N] = {EC_MS_LFO1, EC_MS_LFO2, EC_MS_ENV, EC_MS_VEL, EC_MS_AT, EC_MS_M1, EC_MS_M2,
+                                     EC_MS_M3, EC_MS_M4, 0, 0};
+int ec_mk_src_of_key(int i) { return i >= 0 && i < EC_MK_N ? KEY_SRC[i] : 0; }
+const char *ec_mk_key_name(int i)
+{
+    static const char *const N[EC_MK_N] = {"LFO 1", "LFO 2", "ENV", "VEL", "AT", "M1", "M2", "M3", "M4",
+                                           "SCN A", "SCN B"};
+    return i >= 0 && i < EC_MK_N ? N[i] : "";
+}
+
+/* ------------------------------------------------------------------------------------------- the DST order --- */
+/* every param that can be a destination, in the layout's order (category by category, page by page, first place
+ * it shows), then any the layout does not place; with its category and its layout label */
+static const ec_layout_t *g_lay;
+static uint8_t g_ord[EC_NP], g_cat[EC_NP];
+static const char *g_lbl[EC_NP];
+static int g_n, g_pos[EC_NP];
+
+static void order_build(void)
+{
+    const ec_layout_t *L = ec_layout();
+    int c, p, vv, k, id;
+    if (g_lay == L)
+        return;
+    g_lay = L;
+    g_n = 0;
+    for (id = 0; id < EC_NP; id++) {
+        g_pos[id] = -1;
+        g_lbl[id] = 0;
+    }
+    for (c = 0; c < EC_NCAT; c++)
+        for (p = 0; p < L->cat[c].npages; p++) {
+            const ec_lay_page_t *pg = &L->page[L->cat[c].page0 + p];
+            for (vv = 0; vv < pg->nvar; vv++) {
+                const ec_lay_var_t *x = &L->var[pg->var0 + vv];
+                for (k = 0; k < x->n; k++) {
+                    const ec_item_t *it = &L->item[x->item0 + k];
+                    if (it->kind != EC_IT_PARAM || !ec_param_mod_dest(it->id))
+                        continue;
+                    if (g_pos[it->id] < 0) {
+                        g_pos[it->id] = g_n;
+                        g_cat[g_n] = (uint8_t)c;
+                        g_ord[g_n++] = it->id;
+                    }
+                    if (!g_lbl[it->id] && it->label)
+                        g_lbl[it->id] = it->label;
+                }
+            }
+        }
+    for (id = 0; id < EC_NP; id++)
+        if (ec_param_mod_dest(id) && g_pos[id] < 0) {
+            g_pos[id] = g_n;
+            g_cat[g_n] = EC_NCAT;
+            g_ord[g_n++] = (uint8_t)id;
+        }
+}
+
+float ec_mk_dst_step(float x, int det, int shift)
+{
+    const int cur = (int)floorf(x + 0.5f) - 1;
+    int pos, n = det < 0 ? -det : det;
+    order_build();
+    pos = cur >= 0 && cur < EC_NP ? g_pos[cur] : -1;      /* -1: OFF (before the first) */
+    for (; n > 0; n--) {
+        if (!shift)
+            pos = clampi(pos + (det > 0 ? 1 : -1), -1, g_n - 1);
+        else if (det > 0) {                                /* the next category's first */
+            const int c = pos < 0 ? -1 : g_cat[pos];
+            int q = pos + 1;
+            while (q < g_n && (int)g_cat[q] == c)
+                q++;
+            if (q < g_n)
+                pos = q;
+        } else {                                           /* this category's first, else the previous one's */
+            int q;
+            if (pos < 0)
+                break;
+            q = pos;
+            while (q > 0 && g_cat[q - 1] == g_cat[pos])
+                q--;
+            if (q == pos) {
+                if (q == 0) {
+                    pos = -1;
+                    continue;
+                }
+                q--;
+                while (q > 0 && g_cat[q - 1] == g_cat[q])
+                    q--;
+            }
+            pos = q;
+        }
+    }
+    return pos < 0 ? 0.0f : (float)(g_ord[pos] + 1);
+}
+
+void ec_mk_dst_name(float x, char *out, int cap)
+{
+    const int id = (int)floorf(x + 0.5f) - 1;
+    order_build();
+    if (id < 0 || id >= EC_NP)
+        snprintf(out, (size_t)cap, "OFF");
+    else
+        snprintf(out, (size_t)cap, "%s", id == EC_P_PITCH ? "PITCH" : g_lbl[id] ? g_lbl[id] : EC_PARAMS[id].label);
+}
+
+/* ------------------------------------------------------------------------------------------- slots --- */
+void ec_mk_slot_edited(int k)
+{
+    float *v = tv();
+    const int lv = ec_mtx_level_id(ec_mtx_src(v, k));
+    if (lv >= 0 && ec_mtx_dst(v, k) >= 0 && fabsf(v[lv] - 64.0f) < 0.5f) {   /* a silent source: full level */
+        v[lv] = 128.0f;
+        ec_seq_touch(&A->seq, A->track);
+    }
+}
+
+static void slot_clear(float *v, int k)
+{
+    v[ec_mtx_src_id(k)] = EC_PARAMS[ec_mtx_src_id(k)].def;
+    v[ec_mtx_dst_id(k)] = EC_PARAMS[ec_mtx_dst_id(k)].def;
+    v[ec_mtx_depth_id(k)] = EC_PARAMS[ec_mtx_depth_id(k)].def;
+}
+
+static void bad(const char *why, const char *label)
+{
+    ec_ux_takeover(label, why, 0.5f);
+    MK->bad_ms = A->ms ? A->ms : 1;
+}
+
+/* ------------------------------------------------------------------------------------------- MOD KEYS --- */
+void ec_mk_toggle(void)
+{
+    MK->on = !MK->on;
+    MK->held = -1;
+    ec_app_message(MK->on ? "MOD KEYS" : "MOD KEYS OFF");
+    A->redraw = 1;
+}
+
+static void release(void);
+void ec_mk_off(void)
+{
+    if (MK->held >= 0)
+        release();
+    MK->on = 0;
+    MK->held = -1;
+}
+
+/* the page a source key's tap opens */
+static void goto_source(int i)
+{
+    int c = EC_CAT_MOD, pic = EC_PIC_MATRIX, arg = -1, p;
+    switch (i) {
+    case EC_MK_LFO1: pic = EC_PIC_LFO1; break;
+    case EC_MK_LFO2: pic = EC_PIC_LFO2; break;
+    case EC_MK_ENV: pic = EC_PIC_MENV; break;
+    case EC_MK_VEL: pic = EC_PIC_VEL; break;
+    case EC_MK_SCNA:
+    case EC_MK_SCNB: c = EC_CAT_MASTER, pic = EC_PIC_SCENE; break;
+    case EC_MK_AT: break;
+    default: pic = EC_PIC_MACRO, arg = i - EC_MK_M1; break;
+    }
+    for (p = 0; p < ec_cat_pages(c, tv()); p++) {
+        ec_page_t pg;
+        ec_page_items(c, p, tv(), 0, &pg);
+        if (pg.pic == pic && (arg < 0 || pg.arg == arg)) {
+            ec_app_goto(c, p);
+            return;
+        }
+    }
+    if (pic == EC_PIC_MACRO)                              /* (a layout without MACRO n: the macros' page) */
+        for (p = 0; p < ec_cat_pages(c, tv()); p++)
+            if (ec_page_pic(c, p, 0) == EC_PIC_MACROS) {
+                ec_app_goto(c, p);
+                return;
+            }
+    ec_app_goto(c, 0);
+}
+
+/* the key comes up: free the slots this hold made and left at 0 (no locks on their depth), a tap's page */
+static void release(void)
+{
+    const int i = MK->held;
+    float *v = tv();
+    int k;
+    for (k = 0; k < EC_MTX_SLOTS; k++)
+        if ((MK->created >> k & 1u) && v[ec_mtx_depth_id(k)] == 0.0f && !ec_ux_locked_somewhere(ec_mtx_depth_id(k)))
+            slot_clear(v, k);
+    if (MK->created) {
+        ec_seq_touch(&A->seq, A->track);
+        ec_app_mark_dirty();
+    }
+    if (i == EC_MK_SCNA || i == EC_MK_SCNB) {
+        if (A->e5.anchor == i - EC_MK_SCNA + 1)
+            A->e5.anchor = 0;
+    }
+    MK->held = -1;
+    MK->created = 0;
+    MK->hot_id = -1;
+    if (!MK->used)
+        goto_source(i);
+    A->redraw = 1;
+}
+
+int ec_mk_upper(int i, int down)
+{
+    if (!MK->on || i < 0 || i >= EC_MK_N)
+        return 0;
+    if (down) {
+        if (MK->held >= 0)
+            return 1;                                     /* (one source at a time) */
+        MK->held = i;
+        MK->used = 0;
+        MK->created = 0;
+        MK->hot_id = -1;
+        if (i == EC_MK_SCNA || i == EC_MK_SCNB)
+            A->e5.anchor = i - EC_MK_SCNA + 1;            /* the scene anchor path (ec_e5_knob_cell) */
+    } else if (MK->held == i)
+        release();
+    A->redraw = 1;
+    return 1;
+}
+
+int ec_mk_turn(const ec_item_t *it, int role, int det)
+{
+    const int i = MK->held;
+    int src, id, k;
+    float *v;
+    char lb[24], val[16];
+    if (!MK->on || i < 0)
+        return 0;
+    MK->used = 1;
+    if (i == EC_MK_SCNA || i == EC_MK_SCNB)
+        return 0;                                         /* ec_e5_knob_cell writes the scene */
+    src = KEY_SRC[i];
+    if (it->kind != EC_IT_PARAM || A->bus || A->settings || !ec_param_mod_dest(it->id)) {
+        bad("NO MOD", ec_mk_key_name(i));
+        return 1;
+    }
+    id = it->id;
+    v = tv();
+    k = ec_mtx_find(v, src, id);
+    MK->hot_id = id;
+    if (A->ux.oct_held & 2) {                             /* OCT+ held: clear that source's slot on this param */
+        A->ux.oct_used |= 2;
+        if (k >= 0) {
+            slot_clear(v, k);
+            ec_seq_touch(&A->seq, A->track);
+            ec_app_mark_dirty();
+        }
+        ec_app_message(k >= 0 ? "MOD CLEARED" : "NO MOD");
+        return 1;
+    }
+    if (k < 0) {                                          /* the first detent: a free slot takes the route */
+        k = ec_mtx_free(v);
+        if (k < 0) {
+            bad("FULL", ec_mk_key_name(i));
+            return 1;
+        }
+        slot_clear(v, k);
+        v[ec_mtx_src_id(k)] = (float)(src + 1);
+        v[ec_mtx_dst_id(k)] = (float)(id + 1);
+        MK->created |= (uint16_t)(1u << k);
+        ec_mk_slot_edited(k);
+        ec_seq_touch(&A->seq, A->track);
+        ec_app_mark_dirty();
+    } else                                                /* later detents (or a route there before): DEPTH */
+        ec_app_edit_param(ec_mtx_depth_id(k), det, ec_ux_accel(role, ec_app_param_steps(ec_mtx_depth_id(k)), det));
+    if (!ec_app_cells_visible(A)) {                       /* the param isn't on screen: the takeover shows it */
+        const int hs = ec_app_held_step(A);
+        float d = v[ec_mtx_depth_id(k)];
+        if (hs >= 0)
+            ec_step_lock_get(&ec_project_track(&A->proj, A->track)->steps[hs], ec_mtx_depth_id(k), &d);
+        snprintf(lb, sizeof lb, "%s > %s", ec_mtx_src_name(src), EC_PARAMS[id].label);
+        ec_param_format(ec_mtx_depth_id(k), d, 3, val, sizeof val);
+        ec_ux_takeover(lb, val, (d + 100.0f) / 200.0f);
+    }
+    A->redraw = 1;
+    return 1;
+}
+
+int ec_mk_hot_slot(int id)
+{
+    const int i = MK->held;
+    if (!MK->on || i < 0 || !KEY_SRC[i] || A->bus)
+        return -1;
+    return ec_mtx_find(tv(), KEY_SRC[i], id);
+}
+
+uint32_t ec_mk_marks(int id)
+{
+    const float *v = tv();
+    uint32_t m = 0;
+    int k;
+    if (A->bus)
+        return 0;
+    for (k = 0; k < EC_MTX_SLOTS; k++)
+        if (ec_mtx_src(v, k) != EC_MS_OFF && ec_mtx_dst(v, k) == id)
+            m |= 1u << ec_mtx_src(v, k);
+    return m;
+}
+
+/* ------------------------------------------------------------------------------------------- the MATRIX page --- */
+int ec_mk_select(int d)
+{
+    const int r = MK->row + d;
+    if (r >= 0 && r < EC_MTX_SLOTS) {
+        MK->row = r;
+        A->redraw = 1;
+        return 1;
+    }
+    MK->row = d > 0 ? 0 : EC_MTX_SLOTS - 1;               /* past the ends: the next / previous page */
+    return 0;
+}
+
+void ec_mk_item(const ec_item_t *in, ec_item_t *out)
+{
+    static const char *const LB[EC_NMX] = {"SRC", "DST", "DEPTH"};
+    *out = *in;
+    if (in->kind != EC_IT_MTX)
+        return;
+    out->kind = EC_IT_PARAM;
+    out->id = (uint8_t)(EC_P_MTX1_SRC + 3 * clampi(MK->row, 0, EC_MTX_SLOTS - 1) + clampi(in->id, 0, 2));
+    out->label = in->label ? in->label : LB[clampi(in->id, 0, 2)];
+}
+
+/* ------------------------------------------------------------------------------------------- tick, LEDs, labels --- */
+void ec_mk_tick(void)
+{
+    int t;
+    for (t = 0; t < EC_NTRACK; t++)
+        ec_dsp_mod_live(A->dsp, t, t == A->track ? MK->at : 0.0f, MK->mw, MK->expr);
+}
+
+void ec_mk_leds(void)
+{
+    int i;
+    if (!MK->on)
+        return;
+    for (i = 0; i < EC_NUPPER && i < EC_MK_N; i++)
+        ec_plat_led_upper(i, MK->held == i ? EC_LED_LIT : EC_LED_DIM);
+    ec_plat_led_button(EC_B_LFO, EC_LED_LIT);
+}
+
+void ec_mk_labels(void)
+{
+    int i;
+    if (!MK->on || A->fn || A->e5.naming)
+        return;
+    if (MK->held >= 0 && KEY_SRC[MK->held] && !A->ux.f3) {   /* a source held: the knobs map it */
+        ec_page_t pg;
+        int lane;
+        ec_app_page(A, &pg);
+        lane = ec_app_lane(A, &pg);
+        for (i = 0; i < 4; i++) {
+            const int c = lane * 4 + i;
+            char b[24];
+            ec_item_t it;
+            if (c >= pg.n || pg.it[c].kind == EC_IT_BLANK)
+                continue;
+            ec_mk_item(&pg.it[c], &it);
+            snprintf(b, sizeof b, "%s %s", ec_mtx_src_name(KEY_SRC[MK->held]), ec_app_item_label(&it));
+            ec_plat_label(EC_LBL_KNOB0 + EC_E_K1 + i, b);
+        }
+    }
+    for (i = 0; i < EC_NUPPER && i < EC_MK_N; i++)
+        ec_plat_label(EC_LBL_BLACK0 + i, ec_mk_key_name(i));
+    ec_plat_label(EC_LBL_BTN0 + EC_B_LFO, "MOD KEYS");
+}

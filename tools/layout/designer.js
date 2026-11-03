@@ -29,8 +29,8 @@ const TARGETS = ["T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"];
 const PIC_NAMES = { steps: "steps", wave: "waveform · sample", "wave-machine": "waveform · machine",
   "wave-warp": "waveform · warp", "wave-range": "waveform · range", filter: "filter curve", fenv: "filter env",
   aenv: "amp env", fx: "FX picture", sends: "sends", lfo1: "LFO 1 shape", lfo2: "LFO 2 shape", menv: "mod env",
-  vel: "velocity", macros: "macros", macro: "macro matrix", mix: "mixer", scene: "crossfader", file: "file list",
-  razor: "razor editor", pattern: "pattern grid" };
+  vel: "velocity", macros: "macros", macro: "one macro · its matrix rows", mix: "mixer", scene: "crossfader", file: "file list",
+  razor: "razor editor", pattern: "pattern grid", matrix: "mod matrix" };
 const FREE_PICS = L.PICS.filter((p) => !L.FIXED[p]);
 const STORE = "elasticat-layout-design-v1";
 
@@ -43,6 +43,7 @@ const S = {
   view: { cat: "SRC" },
   ctx: { mach: 1, warp: 1, filt: 1, fenv: 2, env: 2, fx: 1 }, busfx: [1, 1, 1], target: 0,
   st: null, compiled: null, lastGood: "", home: new Map(), msg: "",
+  inserted: "",          // what opening a design added to it (a MATRIX page for a design made before 0.5.0)
   desc: { cats: {}, pages: {}, options: {}, items: {} },   // design/layout/descriptions.json
   panel: null,           // the drawn FM-1: {view, controls, ...}
 };
@@ -79,7 +80,7 @@ async function boot() {
   let start = S.shipped, restored = false;
   try {
     const t = localStorage.getItem(STORE);
-    if (t) { const d = JSON.parse(t); if (L.compile(d, S.catalog).pack) { start = d; restored = true; } }
+    if (t) { const d = JSON.parse(t); const added = ensureMatrix(d); if (L.compile(d, S.catalog).pack) { start = d; restored = true; S.inserted = added; } }
   } catch (e) { /* no storage: start from the shipped layout */ }
   S.design = clone(start);
   readState();
@@ -194,6 +195,17 @@ function setSlot(ref, v) {
   lane[ref.k] = v;
 }
 const sameRef = (a, b) => a && b && ["scope", "cat", "pi", "bus", "vi", "lane", "k"].every((k) => a[k] === b[k]);
+// the MATRIX page's slots are fixed (L.MATRIX_LANES): nothing dropped onto or dragged off them, no lane edits
+function fixedSlots(ref) { return !!ref && ref.scope === "page" && catObj(ref.cat)?.pages[ref.pi]?.picture === "matrix"; }
+// a design without a MATRIX page (made before 0.5.0) gets it as MOD's first page: the text of what was done, or ""
+function ensureMatrix(d) {
+  const mod = (d.categories || []).find((c) => c && c.cat === "MOD");
+  if (!mod || !Array.isArray(mod.pages) || mod.pages.some((p) => p && p.picture === "matrix")) return "";
+  let t = "MATRIX", n = 2;
+  while (mod.pages.some((p) => p && p.title === t)) t = "MATRIX " + n++;
+  mod.pages.unshift({ ...L.MATRIX_PAGE(), title: t });
+  return `MOD/${t} inserted as MOD's first page (the design had no mod matrix page)`;
+}
 function maxLanes(scope) { return scope === "setup" || scope === "bsetup" ? L.SETUP_LANES : scope === "f3" ? 1 : L.MAX_LANES; }
 
 // the variant a page shows now (for a bus page: with that bus's FX machine)
@@ -207,6 +219,8 @@ let drag = null;     // {ref} | {name}
 function drop(src, dst) {
   if (!src || !dst) return false;
   if (src.ref && dst.ref && sameRef(src.ref, dst.ref)) return false;
+  if (fixedSlots(src.ref) || fixedSlots(dst.ref)) { flash("the MATRIX page's knobs are fixed (SRC, DST, DEPTH)"); return false; }
+  if (src.name && (L.isMtx(src.name) || L.SPECIAL[src.name]?.[0] === L.IT.MTX)) { flash(`${src.name}: the MATRIX page has it`); return false; }
   edit(() => {
     if (src.ref && dst.ref) {                 // swap (or move onto an empty slot)
       const a = getSlot(src.ref), b = getSlot(dst.ref);
@@ -268,8 +282,10 @@ function pageTip(sp, page, vi) {
 function slotEl(ref) {
   const slot = getSlot(ref);
   const info = itemInfo(slot);
+  const fixed = fixedSlots(ref);
   const e = h("div", { class: "slot" + (info ? "" : " empty") + (info && info.relabel ? " relabel" : "") + (info && info.special ? " special" : "") +
-      (sameRef(ref, S.sel) ? " sel" : ""), draggable: info ? "true" : "false", "data-tip": info ? itemTip(info.name, info.relabel ? `label ${info.label}, its own ${info.own}` : "") : "empty: drop a parameter here" },
+      (fixed ? " fixedslot" : "") + (sameRef(ref, S.sel) ? " sel" : ""), draggable: info && !fixed ? "true" : "false", "data-fixed": fixed ? "1" : null,
+    "data-tip": info ? itemTip(info.name, (info.relabel ? `label ${info.label}, its own ${info.own}` : "") + (fixed ? "fixed: the MATRIX page's own knob" : "")) : fixed ? "fixed: the MATRIX page's knob 4 does nothing" : "empty: drop a parameter here" },
     h("span", { class: "lb", text: info ? info.label : "—" }),
     h("span", { class: "vl", text: info && !info.bad ? S.api.value(info.kind, info.id) : "" }),
     h("span", { class: "k", text: "K" + (ref.k + 1) }));
@@ -277,7 +293,7 @@ function slotEl(ref) {
   e.addEventListener("click", (ev) => { ev.stopPropagation(); select(ref, true); });
   e.addEventListener("dragstart", (ev) => { drag = { ref }; ev.dataTransfer.setData("text/plain", info ? info.name : ""); ev.dataTransfer.effectAllowed = "move"; });
   e.addEventListener("dragend", () => { drag = null; });
-  e.addEventListener("dragover", (ev) => { if (drag && (drag.ref || drag.name)) { ev.preventDefault(); e.classList.add("over"); } });
+  e.addEventListener("dragover", (ev) => { if (!fixed && drag && (drag.ref || drag.name)) { ev.preventDefault(); e.classList.add("over"); } });
   e.addEventListener("dragleave", () => e.classList.remove("over"));
   e.addEventListener("drop", (ev) => { ev.preventDefault(); e.classList.remove("over"); const d = drag; drag = null; drop(d, { ref }); });
   e.addEventListener("wheel", (ev) => {           // a knob on the unit: this page and lane, the knob turned
@@ -292,6 +308,7 @@ function slotEl(ref) {
 function lanesEl(ref0, page) {
   const ls = lanesOf(ref0);
   const max = maxLanes(ref0.scope);
+  const fixed = fixedSlots(ref0);
   const wrap = h("div", { class: "lanes" });
   const n = Math.max(1, ls.length);
   for (let li = 0; li < n; li++) {
@@ -299,14 +316,14 @@ function lanesEl(ref0, page) {
     const row = h("div", { class: "lane", "data-lane": li },
       h("span", { class: "ln", text: "L" + (li + 1) }),
       [0, 1, 2, 3].map((k) => slotEl(ref(k))),
-      h("span", { class: "lops" },
+      fixed ? h("span", { class: "lops" }) : h("span", { class: "lops" },
         h("button", { class: "small", title: "lane up", disabled: li === 0, onclick: () => edit(() => { const a = lanesOf(ref0, true); [a[li - 1], a[li]] = [a[li], a[li - 1]]; }) }, "↑"),
         h("button", { class: "small", title: "lane down", disabled: li >= ls.length - 1, onclick: () => edit(() => { const a = lanesOf(ref0, true); [a[li + 1], a[li]] = [a[li], a[li + 1]]; }) }, "↓"),
         h("button", { class: "small", title: "delete the lane (its parameters go back to the tray)", disabled: ls.length === 0, onclick: () => edit(() => { lanesOf(ref0, true).splice(li, 1); }) }, "✕")));
     row._lane = { ...ref0, lane: li };
     wrap.append(row);
   }
-  if (ls.length < max) wrap.append(h("div", { class: "addrow" }, h("button", { class: "small", onclick: () => edit(() => { lanesOf(ref0, true).push([null, null, null, null]); }) }, "+ LANE")));
+  if (ls.length < max && !fixed) wrap.append(h("div", { class: "addrow" }, h("button", { class: "small", onclick: () => edit(() => { lanesOf(ref0, true).push([null, null, null, null]); }) }, "+ LANE")));
   void page;
   return wrap;
 }
@@ -385,7 +402,7 @@ function pageEl(c, pi) {
   e.addEventListener("dragover", (ev) => { if (drag && drag.page) { ev.preventDefault(); e.classList.add("drop"); } });
   e.addEventListener("dragleave", () => e.classList.remove("drop"));
   e.addEventListener("drop", (ev) => { if (!drag || !drag.page) return; ev.preventDefault(); e.classList.remove("drop"); const d = drag.page; drag = null; movePage(d.cat, d.pi, c.cat, pi); });
-  const picSel = fixed ? h("span", { class: "fixed", title: "this page has behaviour of its own: its picture and category are fixed; its knobs are yours" }, "FIXED · " + PIC_NAMES[p.picture])
+  const picSel = fixed ? h("span", { class: "fixed", title: p.picture === "matrix" ? "the mod matrix: its picture, category and knobs are fixed (SELECT picks the row; KNOB 1-3 SRC, DST, DEPTH)" : "this page has behaviour of its own: its picture and category are fixed; its knobs are yours" }, "FIXED · " + PIC_NAMES[p.picture])
     : h("select", { title: "the picture above the cells", "data-key": `pic-${c.cat}-${pi}`, onchange: (ev) => edit(() => { p.picture = ev.target.value; if (p.picture === "macro") p.macro = p.macro || 1; else delete p.macro; }) },
       FREE_PICS.map((x) => h("option", { value: x, selected: x === p.picture }, PIC_NAMES[x])));
   const macroSel = p.picture === "macro" ? h("select", { title: "which macro", onchange: (ev) => edit(() => { p.macro = +ev.target.value; }) },
@@ -399,7 +416,7 @@ function pageEl(c, pi) {
     moveSel,
     h("button", { class: "small", title: fixed ? "a fixed page cannot be deleted" : "delete the page", disabled: fixed || c.pages.length < 2,
       onclick: (ev) => { ev.stopPropagation(); edit(() => { c.pages.splice(pi, 1); }); S.selPage = null; } }, "✕")));
-  e.append(variantRow("page", p, vref));
+  if (p.picture !== "matrix") e.append(variantRow("page", p, vref));
   e.append(lanesEl(vref, p));
   return e;
 }
@@ -611,7 +628,12 @@ function renderInspector() {
     const slot = getSlot(S.sel), info = itemInfo(slot);
     const where = S.sel.scope === "page" ? `${S.sel.cat}/${catObj(S.sel.cat).pages[S.sel.pi]?.title}` : S.sel.scope === "setup" ? `${S.sel.cat}/SETUP` : S.sel.scope.toUpperCase();
     box.append(h("div", { class: "h" }, "SLOT ", h("span", { class: "dim" }, `${where} · lane ${S.sel.lane + 1} · KNOB ${S.sel.k + 1}`)));
-    if (info) {
+    if (info && fixedSlots(S.sel)) {
+      const d = itemDesc(info.name);
+      box.append(h("div", { class: "row" }, h("span", { class: "big" }, info.label), h("span", { class: "dim" }, info.name), d ? h("span", { class: "dname" }, d.name) : null),
+        h("div", { class: "desc" }, d ? d.desc : "(no description in design/layout/descriptions.json)"),
+        h("div", { class: "row dim" }, "fixed: the MATRIX page's knobs are always SRC, DST, DEPTH"));
+    } else if (info) {
       const lab = h("input", { class: "lab", value: L.slotLabel(slot) || "", placeholder: info.own, maxlength: L.LABEL_MAX, spellcheck: "false",
         oninput: (ev) => { ev.target.value = ev.target.value.toUpperCase(); },
         onchange: (ev) => { const v = ev.target.value.toUpperCase().trim(); edit(() => setSlot(S.sel, v && v !== info.own ? { item: info.name, label: v } : info.name)); } });
@@ -620,7 +642,7 @@ function renderInspector() {
         h("div", { class: "desc" }, d ? d.desc : "(no description in design/layout/descriptions.json)"),
         h("div", { class: "row" }, "LABEL", lab, h("span", { class: "dim" }, `its own: ${info.own}`)),
         h("div", { class: "row" }, h("button", { onclick: () => edit(() => setSlot(S.sel, null)) }, "CLEAR SLOT"), h("span", { class: "dim" }, "or drag it to the tray")));
-    } else box.append(h("div", { class: "row dim" }, "empty: drag a parameter here, or click one in the tray"));
+    } else box.append(h("div", { class: "row dim" }, fixedSlots(S.sel) ? "fixed: the MATRIX page's knob 4 does nothing" : "empty: drag a parameter here, or click one in the tray"));
   }
   const sp = S.selPage;
   const page = sp && (sp.scope === "page" ? catObj(sp.cat)?.pages[sp.pi] : sp.scope === "bus" ? S.design.bus[sp.bus].page : null);
@@ -655,7 +677,8 @@ function renderTray() {
   const q = $("#search").value.trim().toLowerCase();
   const cat = S.view.cat;
   const { inCat, all } = placedNow(cat);
-  const names = [...S.catalog.map((p) => p.name), ...Object.keys(L.SPECIAL)];
+  // (never the matrix's own items or slot params, nor the params retired in 0.5.0)
+  const names = [...S.catalog.map((p) => p.name), ...Object.keys(L.SPECIAL)].filter((n) => !L.isMtx(n) && !L.isRetired(n) && L.SPECIAL[n]?.[0] !== L.IT.MTX);
   const label = (n) => (L.SPECIAL[n] ? L.SPECIAL[n][2] : S.byName.get(n).label);
   const dtext = (n) => { const d = itemDesc(n); return d ? (d.name + " " + d.desc).toLowerCase() : ""; };
   let shown = names.filter((n) => (q ? n.toLowerCase().includes(q) || label(n).toLowerCase().includes(q) || dtext(n).includes(q) : S.home.get(n) === cat && !inCat.has(n)));
@@ -664,7 +687,7 @@ function renderTray() {
   if (!shown.length) list.append(h("span", { class: "empty-note" }, q ? "nothing matches" : `every ${cat} parameter is on a page in this context`));
   for (const n of shown.slice(0, 160)) {
     const placed = all.has(n);
-    const chip = h("span", { class: "chip" + (q && placed ? " placed" : ""), draggable: "true", "data-tip": itemTip(n, placed ? "on a page already" : "") }, label(n), h("span", { class: "c" }, q ? S.home.get(n) : n));
+    const chip = h("span", { class: "chip" + (q && placed ? " placed" : ""), draggable: "true", "data-name": n, "data-tip": itemTip(n, placed ? "on a page already" : "") }, label(n), h("span", { class: "c" }, q ? S.home.get(n) : n));
     chip.addEventListener("dragstart", (ev) => { drag = { name: n }; ev.dataTransfer.setData("text/plain", n); });
     chip.addEventListener("dragend", () => { drag = null; });
     chip.addEventListener("click", () => { if (S.sel) drop({ name: n }, { ref: S.sel }); });
@@ -711,6 +734,7 @@ function renderDiff() {
     else if (!came.length) rows.push(h("div", {}, h("b", {}, n), h("span", { class: "mv" }, " no longer on "), gone.join(", ")));
     else rows.push(h("div", {}, h("b", {}, n), " ", gone.join(", "), h("span", { class: "mv" }, " → "), came.join(", ")));
   }
+  if (S.inserted && catObj("MOD")?.pages.some((p) => p.picture === "matrix")) rows.unshift(h("div", {}, h("b", {}, "MOD"), h("span", { class: "mv" }, " added: "), S.inserted));
   for (const c of S.design.categories) for (const p of c.pages) if (p.note) rows.push(h("div", {}, h("b", {}, `${c.cat}/${p.title}`), " note: ", p.note));
   for (const bb of S.design.bus) if (bb.page.note) rows.push(h("div", {}, h("b", {}, bb.bus), " note: ", bb.page.note));
   if (!rows.length) out.append(h("div", { class: "empty-note" }, "the design is the shipped layout"));
@@ -757,10 +781,13 @@ function doExport() {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function openDesign(d, what) {
+  d = clone(d);
+  const added = ensureMatrix(d);
   const r = L.compile(d, S.catalog);
   if (!r.pack) { flash(`${what}: ${r.errors.length} error(s), not opened (${r.errors[0]})`); return false; }
+  S.inserted = added;
   edit((cur) => { for (const k of Object.keys(cur)) delete cur[k]; Object.assign(cur, clone(d)); });
-  flash(`opened ${what}`);
+  flash(`opened ${what}${added ? " · " + added : ""}`);
   return true;
 }
 async function fillOpen() {
@@ -800,7 +827,7 @@ function bindUI() {
   document.addEventListener("keydown", (ev) => {
     const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !typing) { ev.preventDefault(); ev.shiftKey ? redo() : undo(); }
-    else if ((ev.key === "Delete" || ev.key === "Backspace") && S.sel && !typing) { ev.preventDefault(); edit(() => setSlot(S.sel, null)); }
+    else if ((ev.key === "Delete" || ev.key === "Backspace") && S.sel && !typing) { ev.preventDefault(); if (fixedSlots(S.sel)) flash("the MATRIX page's knobs are fixed"); else edit(() => setSlot(S.sel, null)); }
   });
 }
 
@@ -958,6 +985,9 @@ window.designer = {
   variantOf: (cat, pi) => curVariant("page", catObj(cat).pages[pi]),
   edit: (fn) => edit(fn),                 // (tests: any change to the design, as one undo step)
   movePage: (from, pi, to, at) => movePage(from, pi, to, at),
+  open: (d, what = "a test design") => openDesign(d, what),
+  fixedSlot: (r) => fixedSlots(r),
+  trayNames: (q = "") => { $("#search").value = q; renderTray(); const r = [...document.querySelectorAll("#traylist .chip")].map((c) => c.dataset.name); $("#search").value = ""; renderTray(); return r; },
   // the drawn FM-1: a control's centre in page coordinates (kind "btn" | "key" | "knob", the label / key / role)
   panel: {
     where: (kind, idx) => {

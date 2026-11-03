@@ -27,6 +27,9 @@ typedef struct {
     void (*event)(void *ctx, const ec_event_t *ev);                       /* for the next process() call */
     void (*params)(void *ctx, int track, const ec_track_params_t *p);     /* the resolved params, when changed */
     void (*process)(void *ctx, float *out_lr, int frames);                /* render (out_lr may be NULL) */
+    /* 0.5.0: the engine's mod sources of a track now (EC_MSRC_N values; NULL: none) for the matrix's generic
+     * destinations (ec_mtx.h) */
+    void (*sources)(void *ctx, int track, float *src);
 } ec_seq_sink_t;
 
 typedef struct {
@@ -46,6 +49,7 @@ typedef struct {
     ec_track_params_t sent;
     int sent_ok;
     int dirty;
+    int mtx_gen;                   /* 0.5.0: a matrix slot aims at a generic destination (resent every chunk) */
     /* live */
     float live_pitch;              /* keyboard transpose while a key is held */
     int live_pitch_on;

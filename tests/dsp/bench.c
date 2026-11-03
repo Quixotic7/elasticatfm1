@@ -83,7 +83,7 @@ int main(void)
             p.fx.rings_mode = 1;                                                   /* RINGS: the frequency shifter */
             p.send1_level = 0.3f;
             p.send2_level = 0.2f;
-            p.mod.lfo[0].dest = EC_MD_CUTOFF;
+            p.mod.slot[0].src = 1; p.mod.slot[0].bus = EC_MOD_CUTOFF; p.mod.slot[0].depth = 0.3f;
             p.mod.lfo[0].depth = 0.5f;
             ec_dsp_track_params(e, t, &p);
         }

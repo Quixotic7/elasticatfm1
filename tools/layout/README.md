@@ -70,7 +70,7 @@ frame.
 ## Descriptions
 
 `design/layout/descriptions.json`: every placeable item's `{name, desc}` (spec params, `global.*`, `slot.*`,
-`razor.*`, `e5.*`), every page's (`CAT/TITLE`, `CAT/SETUP`, `bus:S1`, `bus:MST/SRC`, `F3`), each category's, and
+`razor.*`, `e5.*`, `mtx.*`), every page's (`CAT/TITLE`, `CAT/SETUP`, `bus:S1`, `bus:MST/SRC`, `F3`), each category's, and
 each option value a variant picks (`machine`, `warp`, `filter`, `fenv`, `env`, `fx`). Written from the original's
 docs and code and the port's (where the port differs, the port's behaviour). `gen_layout.py` checks them with the
 design: an error for a description of an unknown item, category or option; a warning for anything placeable
@@ -85,7 +85,7 @@ Editing:
   clears the selected slot.
 - **Pages**: + PAGE, the grip (drag onto another page or category header), ↑ ↓, MOVE TO, ✕, the name (capitals; the
   header shows CAT/NAME), the picture (steps, waveform with its four captions, filter curve, filter / amp env, FX,
-  sends, LFO 1 / 2, mod env, velocity, macros, macro matrix).
+  sends, LFO 1 / 2, mod env, velocity, macros, one macro with its matrix rows; MOD/MATRIX's mod matrix is fixed).
 - **Lanes**: + LANE (up to 4 on a page, 2 in a setup list, 1 in F3), ↑ ↓ ✕. Empty slots are allowed.
 - **Variants**: the VARIANT select shows which one the context picks (and picking one sets the context);
   + VARIANT FOR gives the current machine / warp / filter / env / FX its own lanes (a copy to edit); ✕ VARIANT.
@@ -96,10 +96,17 @@ Editing:
   EXPORT.
 
 What is **fixed** (the designer keeps it; the generator refuses otherwise): the categories themselves (the panel's
-buttons); the five pages with behaviour of their own: MST/MIX (the mixer), MST/SCENE (the crossfader), FILE/SAMPLE
-(the file list: SELECT is its cursor, SAVE loads), FILE/RAZOR (the slice editor: SELECT picks the slice, the OCT keys
-split / delete) and PAT/PATTERN (the pattern grid): they stay in their category, once, with their picture; their
-knob slots are yours (the RAZOR items `razor.*` work on the RAZOR page only). On a bus every category but MST, FILE
+buttons); the six pages with behaviour of their own: MOD/MATRIX (the mod matrix, 0.5.0: 8 rows of SRC · DST · DEPTH,
+SELECT picks the row), MST/MIX (the mixer), MST/SCENE (the crossfader), FILE/SAMPLE (the file list: SELECT is its
+cursor, SAVE loads), FILE/RAZOR (the slice editor: SELECT picks the slice, the OCT keys split / delete) and
+PAT/PATTERN (the pattern grid): they stay in their category, once, with their picture; their knob slots are yours
+(the RAZOR items `razor.*` work on the RAZOR page only), except MATRIX's, which are fixed and fully defined: KNOB 1-3
+the row's `mtx.src` `mtx.dst` `mtx.depth`, KNOB 4 nothing (the designer shows them dotted: nothing dropped onto or
+dragged off them, no lane or variant controls). A design without a MATRIX page (made before 0.5.0) still builds, with
+a warning (MOD KEYS still reaches the matrix); the designer inserts it as MOD's first page when such a design is
+opened or imported (listed in the changes). The matrix's own params (`mtx1_src` .. `mtx8_depth`) are never placed
+and never in the tray; the params retired in 0.5.0 (`lfo1_dest` `lfo2_dest` `menv_dest` `mvel_dest`, the 20
+`macroN_*_depth`: kept for old saves, read by nothing) are not in the tray either, and placing one is a warning. On a bus every category but MST, FILE
 and PAT shows the bus's page, and the master bus's SRC is a mixer page. A page's caption over the step strip comes
 from its category (TRIG: machine / length / rate, FILT: the filter machine, AMP: the env mode). The REC pop-up and
 naming are not pages.
@@ -141,13 +148,15 @@ naming are not pages.
 - A slot: `null` (an empty knob), a parameter's spec name (`src/seq/ec_params.c`: `filter_cutoff`), or
   `{"item": .., "label": ..}` for a label of its own. Named items that are not track parameters: `global.bpm`
   `global.swing` `global.glen` `global.quant` `global.rtn`, `slot.bpm` `slot.steps` `slot.gain` `slot.trim_start`
-  `slot.trim_end`, `razor.start` .. `razor.sens` (RAZOR only), `e5.xfd` `e5.choke` `e5.gbpm` `e5.name` `e5.mute`.
+  `slot.trim_end`, `razor.start` .. `razor.sens` (RAZOR only), `e5.xfd` `e5.choke` `e5.gbpm` `e5.name` `e5.mute`,
+  `mtx.src` `mtx.dst` `mtx.depth` (MATRIX only: the selected row's).
 - `when`: `machine` (`loop` = LOOP + TRIG, `slice` = SLICE + S.POLY, `razor` = RAZOR + R.POLY, `neighbor`, `input`),
   `warp` (TAPE VARI DOMINO GRAIN OLA PITCH HARM WTBL FREEZE FORMNT GSTR GSTR2 CHOP), `filter` (CLASSC MORPH LADDER
   COMB FORMNT SVF), `fenv` / `env` (ADSR AHR), `fx` (NONE DELAY REVERB .. LIMIT); several keys = all must hold. A
   variant may rename the page (`"title"`). Bus pages test their bus's own record (its FX machine).
 - `picture`: steps, wave, wave-machine, wave-warp, wave-range, filter, fenv, aenv, fx, sends, lfo1, lfo2, menv, vel,
-  macros, macro (+ `"macro": 1..4`); fixed: mix, scene, file, razor, pattern.
+  macros, macro (+ `"macro": 1..4`: that macro's matrix rows); fixed: mix, scene, file, razor, pattern, matrix (MOD:
+  `"lanes": [["mtx.src", "mtx.dst", "mtx.depth", null]]`, no variants).
 
 ## The generator's checks
 
@@ -156,8 +165,11 @@ variant (the same item on two pages is fine: 0.4.0 has FENV DEPTH on FILTER and 
 more than 4 lanes on a page (setup 2, F3 1); more than 16 pages in a category, or none; two pages of a category with
 one name; a title wider than the header (CAT/TITLE, 16 characters in all) or in lower case; a label in lower case,
 longer than 10 or with characters the screen's font lacks; a fixed picture outside its category or not there exactly
-once; `razor.*` off the RAZOR page; a bad `same_as`; the buses not S1, S2, MST. It warns on: a parameter on no page
-at all; a cell label longer than 5 (the panel's knob label gets cut); a variant that can never show.
+once (MATRIX: at most once); `razor.*` off the RAZOR page, `mtx.*` off the MATRIX page; MATRIX's lanes other than
+`mtx.src mtx.dst mtx.depth -` or with variants; a matrix slot's param (`mtx1_src` ..) on any page; a bad `same_as`;
+the buses not S1, S2, MST. It warns on: a parameter on no page at all (not the matrix's own nor the retired ones); a
+retired parameter placed; no MATRIX page; a cell label longer than 5 (the panel's knob label gets cut); a variant
+that can never show.
 
 ## How it is built
 
@@ -182,7 +194,9 @@ at all; a cell label longer than 5 (the panel's knob label gets cut); a variant 
 - `node tools/layout/test_designer.mjs` (after `build_layout.sh`; headless Chromium, no window): the page boots and
   plays; the page's pack of the shipped design = the generator's, and = what the firmware loaded; a parameter dropped
   onto another slot changes the preview's pixels, the knob and the live labels, and Export is exactly the expected
-  JSON in the generator's canonical text; undo; a page moved to another category with a new lane; a bad title
+  JSON in the generator's canonical text; undo; MOD/MATRIX is MOD's first page in the tree and the preview, its slots
+  fixed (drops refused), its items and the matrix / retired params never in the tray, a design without it opened gets
+  it inserted (in the changes); a page moved to another category with a new lane; a bad title
   refused; every kind of `<select>` opened with the mouse stays open (2 s of the demo playing: the same element,
   focused, its value kept); a slot's and a page header's tooltip, the inspector's descriptions, the tray's search
   over descriptions; the panel by the mouse: SEQ -> TRIG, key LEDs for trigs, Shift-click latches SHIFT and the

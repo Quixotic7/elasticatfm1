@@ -218,23 +218,24 @@ static void test_duck(void)
 /* ---------------------------------------------------------------- MOD */
 static void sp_lfo_pan(ec_track_params_t *p)
 {
-    p->mod.lfo[0].dest = EC_MD_PAN; p->mod.lfo[0].wave = EC_LW_SINE; p->mod.lfo[0].depth = 1.f;
+    p->mod.slot[0].src = 1; p->mod.slot[0].bus = EC_MOD_PAN; p->mod.slot[0].depth = 1.f; p->mod.lfo[0].wave = EC_LW_SINE; p->mod.lfo[0].depth = 1.f;
     p->mod.lfo[0].beats = 1.f;
 }
 static void sp_lfo_cut_macro(ec_track_params_t *p)
 {
-    p->mod.lfo[0].dest = EC_MD_CUTOFF; p->mod.lfo[0].wave = EC_LW_SQR; p->mod.lfo[0].depth = -1.f;
+    p->mod.slot[0].src = 1; p->mod.slot[0].bus = EC_MOD_CUTOFF; p->mod.slot[0].depth = 0.3f; p->mod.lfo[0].wave = EC_LW_SQR; p->mod.lfo[0].depth = -1.f;
     p->mod.lfo[0].mode = EC_LM_TRIG;
-    p->mod.macro_base[1] = 0.5f; p->mod.macro_depth[1][EC_MOD_AMP] = -1.f;
+    p->mod.macro_base[1] = 0.5f;
+    p->mod.slot[1].src = 9; p->mod.slot[1].bus = EC_MOD_AMP; p->mod.slot[1].depth = -1.f;   /* M2 -> AMP */
 }
 static void sp_menv_res(ec_track_params_t *p)
 {
-    p->mod.menv_dest = EC_MD_RES; p->mod.menv_depth = 1.f; p->mod.menv_attack = 0.01f;
+    p->mod.slot[0].src = 3; p->mod.slot[0].bus = EC_MOD_RES; p->mod.slot[0].depth = 1.f; p->mod.menv_depth = 1.f; p->mod.menv_attack = 0.01f;
     p->mod.menv_decay = 0.1f; p->mod.menv_sustain = 0.5f; p->mod.menv_release = 0.05f;
 }
 static void sp_vel(ec_track_params_t *p)
 {
-    p->machine = EC_MACH_GRID_SLICE; p->mod.mvel_dest = EC_MD_PITCH; p->mod.mvel_depth = 1.f;
+    p->machine = EC_MACH_GRID_SLICE; p->mod.slot[0].src = 4; p->mod.slot[0].bus = EC_MOD_PITCH; p->mod.slot[0].depth = 1.f; p->mod.mvel_depth = 1.f;
 }
 
 static void test_mod(void)

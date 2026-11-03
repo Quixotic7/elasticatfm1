@@ -11,7 +11,10 @@ enum { EC_CAT_TRIG, EC_CAT_SRC, EC_CAT_FILT, EC_CAT_AMP, EC_CAT_FX, EC_CAT_MOD, 
        EC_CAT_PAT, EC_NCAT };
 
 /* item kinds */
-enum { EC_IT_BLANK, EC_IT_PARAM, EC_IT_GLOBAL, EC_IT_SLOT, EC_IT_RAZOR /* E3: ec_razor_ui.h */, EC_IT_E5 };
+enum { EC_IT_BLANK, EC_IT_PARAM, EC_IT_GLOBAL, EC_IT_SLOT, EC_IT_RAZOR /* E3: ec_razor_ui.h */, EC_IT_E5,
+       EC_IT_MTX /* 0.5.0: the MATRIX page's row (ec_modkeys.h) */ };
+/* 0.5.0: the MATRIX page's cells: the selected row's SRC, DST, DEPTH */
+enum { EC_MX_SRC, EC_MX_DST, EC_MX_DEPTH, EC_NMX };
 /* E5 items: the crossfader, a slice's choke group, global BPM on / off, the project name */
 enum { EC_X_XFD, EC_X_CHOKE, EC_X_GBPM, EC_X_NAME, EC_X_MUTE, EC_NX };
 /* globals (the project) */
@@ -54,6 +57,7 @@ enum {
     EC_PIC_FILE,           /* fixed: the file browser (SELECT is its cursor, SAVE loads) */
     EC_PIC_RAZOR,          /* fixed: the razor slice editor (SELECT picks the slice) */
     EC_PIC_PATTERN,        /* fixed: the pattern grid */
+    EC_PIC_MATRIX,         /* 0.5.0, fixed in MOD: the mod matrix (SELECT picks the row; K1 SRC, K2 DST, K3 DEPTH) */
     EC_NPIC
 };
 

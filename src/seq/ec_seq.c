@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "ec_e5.h"
+#include "ec_mtx.h"
 #include "ec_scene.h"
 #include "ec_seq.h"
 
@@ -620,6 +621,14 @@ static void flush(ec_seq_t *s)
         st->dirty = 0;
         for (i = 0; i < EC_NP; i++)
             v[i] = ec_seq_value(s, t, i);
+        st->mtx_gen = ec_mtx_generic(v);         /* 0.5.0: the matrix's generic destinations, per chunk */
+        if (st->mtx_gen) {
+            float live[EC_MSRC_N];
+            memset(live, 0, sizeof live);
+            if (s->sink.sources)
+                s->sink.sources(s->sink.ctx, t, live);
+            ec_mtx_apply(v, live);
+        }
         sl = &s->proj->slot[clampi(iv(v, EC_P_SLOT), 1, EC_NSLOT) - 1];
         meta.trim_start = sl->trim_start;
         meta.trim_end = sl->trim_end;
@@ -662,6 +671,9 @@ void ec_seq_render(ec_seq_t *s, float *out, int frames)
                 next = s->now + 1;
             global_rederive(s);
         }
+        for (int t = 0; t < EC_NTRACK; t++)       /* 0.5.0: the modulated params follow their sources */
+            if (s->tr[t].mtx_gen)
+                s->tr[t].dirty = 1;
         flush(s);
         if (next != NEVER && next - s->now < (uint64_t)n)
             n = (int)(next - s->now);

@@ -138,6 +138,8 @@ void ec_pattern_clear_steps(ec_pattern_t *pt);
 int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap);
 /* 0 ok (p replaced), -1 no project / bad / unknown version (p untouched) */
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n);
+/* 0.5.0: the mod routes the last load dropped converting a 0.4 project (past a track's 8 matrix slots) */
+int ec_project_mtx_dropped(void);
 
 #define EC_PROJECT_MAGIC 0x4A504345u    /* "ECPJ" */
 #define EC_PROJECT_VERSION 1

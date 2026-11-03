@@ -12,6 +12,7 @@
 #include "ec_gfx.h"
 #include "ec_leds.h"
 #include "ec_loader.h"
+#include "ec_mtx.h"
 #include "ec_razor_ui.h"   /* E3 */
 #include "ec_scene.h"        /* E5 (bus rows: the knob takes over) */
 #include "ec_screens.h"
@@ -102,6 +103,11 @@ float *ec_app_bus_params(ec_app_t *a, int id)
 
 const char *ec_app_item_label(const ec_item_t *it)
 {
+    ec_item_t mxi_;
+    if (it->kind == EC_IT_MTX) {                   /* 0.5.0: the MATRIX row's param */
+        ec_mk_item(it, &mxi_);
+        it = &mxi_;
+    }
     if (it->label)
         return it->label;
     if (it->kind == EC_IT_PARAM)
@@ -118,6 +124,11 @@ static float slot_seconds(const ec_app_t *a, int s)
 
 float ec_app_item_value(const ec_app_t *a, const ec_item_t *it, int *locked)
 {
+    ec_item_t mxi_;
+    if (it->kind == EC_IT_MTX) {                   /* 0.5.0: the MATRIX row's param */
+        ec_mk_item(it, &mxi_);
+        it = &mxi_;
+    }
     const ec_project_t *p = &a->proj;
     if (locked)
         *locked = 0;
@@ -170,6 +181,11 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
     static const char *const Q[] = {"SEQ", "JUMP", "START", "TEMP"};
     static const char *const RT[] = {"RETURN", "BOOMR", "RESET"};
     char b[24];
+    ec_item_t mxi_;
+    if (it->kind == EC_IT_MTX) {                   /* 0.5.0: the MATRIX row's param */
+        ec_mk_item(it, &mxi_);
+        it = &mxi_;
+    }
     if (it->kind == EC_IT_BLANK) {
         out[0] = 0;
         return;
@@ -180,6 +196,10 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
     }
     if (it->kind == EC_IT_E5) {                    /* E5 */
         ec_e5_item_format(it, x, out, cap);
+        return;
+    }
+    if (it->kind == EC_IT_PARAM && EC_PARAMS[it->id].fmt == EC_PF_MDST) {   /* 0.5.0: the layout's name */
+        ec_mk_dst_name(x, out, cap);
         return;
     }
     if (it->kind == EC_IT_PARAM) {
@@ -220,6 +240,11 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
 float ec_app_item_frac(const ec_app_t *a, const ec_item_t *it, float x)
 {
     (void)a;
+    ec_item_t mxi_;
+    if (it->kind == EC_IT_MTX) {                   /* 0.5.0: the MATRIX row's param */
+        ec_mk_item(it, &mxi_);
+        it = &mxi_;
+    }
     switch (it->kind) {
     case EC_IT_E5: return ec_e5_item_frac(it, x);  /* E5 */
     case EC_IT_PARAM: return ec_param_frac(it->id, x);
@@ -264,6 +289,11 @@ static void sink_process(void *ctx, float *out, int n)
 {
     (void)ctx;
     ec_dsp_process(A->dsp, out, n);
+}
+static void sink_sources(void *ctx, int t, float *src)
+{
+    (void)ctx;
+    ec_dsp_mod_sources(A->dsp, t, src);           /* 0.5.0: the matrix's generic destinations */
 }
 
 /* ------------------------------------------------------------------------------------------- samples --- */
@@ -551,6 +581,8 @@ static float nudge_machine(float m, int det)
 /* 0.3.0: a knob turn on a param: SHIFT snaps, else det clicks of mult finest steps (lists: one item a click) */
 float ec_app_move_param(int id, float x, int det, int mult)
 {
+    if (EC_PARAMS[id].fmt == EC_PF_MDST)          /* 0.5.0: a matrix DST: the layout's order, SHIFT a category */
+        return ec_mk_dst_step(x, det, A->fn);
     if (A->fn)
         return ec_param_snap(id, x, det);
     return ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det);
@@ -608,9 +640,19 @@ static void edit_param(int id, int det, int mult, int flags)
         v[id] = ec_app_move_param(id, v[id], det, mult);
     if (id == EC_P_RATE)
         ec_seq_timing_changed(&A->seq);
+    {
+        int col;                                     /* 0.5.0: a SRC / DST set: the source's level up from 0 */
+        const int k = ec_mtx_slot_of(id, &col);
+        if (k >= 0 && col < 2)
+            ec_mk_slot_edited(k);
+    }
     ec_seq_touch(&A->seq, A->track);
     mark_dirty();
 }
+
+/* 0.5.0: for ec_modkeys.c */
+void ec_app_edit_param(int id, int det, int mult) { edit_param(id, det, mult, 0); }
+int ec_app_param_steps(int id) { return param_steps(id); }
 
 /* 0.3.0: OCT+ held + a knob: clear that param's lock on the held steps (nothing held: on every step of the track) */
 static void clear_lock(int id)
@@ -754,9 +796,15 @@ static void turn_cell(const ec_page_t *pg, int cell, int role, int det)
 {
     const ec_item_t *it;
     int mult;
+    ec_item_t mx;
     if (cell >= pg->n || pg->it[cell].kind == EC_IT_BLANK)
         return;
-    it = &pg->it[cell];
+    ec_mk_item(&pg->it[cell], &mx);                  /* 0.5.0: a MATRIX cell is its row's param */
+    it = &mx;
+    if (!UX->f3 && ec_mk_turn(it, role, det)) {      /* 0.5.0: a source key held (MOD KEYS) */
+        A->redraw = 1;
+        return;
+    }
     if ((UX->oct_held & 2) && it->kind == EC_IT_PARAM && !A->settings) {
         clear_lock(it->id);
         A->redraw = 1;
@@ -824,6 +872,15 @@ static void set_page(int c, int page)
 {
     A->page[c] = page;
     UX->lane[c] = 0;
+}
+
+void ec_app_goto(int c, int page)
+{
+    ec_rec_close();
+    A->settings = 0;
+    A->cat = c;
+    set_page(c, page);
+    A->redraw = 1;
 }
 
 /* SELECT: the next lane, on past the last into the next page (and back: the previous page's last lane) */
@@ -914,6 +971,7 @@ static void go_home(void)
         ec_e5_answer(0);
     UX->f3 = 0;
     UX->to_ms = 0;
+    ec_mk_off();                                   /* 0.5.0: MOD KEYS off */
     ec_rec_close();                                /* E6 (a take goes on) */
     A->patn_open = A->patn_latched = 0;
     A->patn_ms = 0;
@@ -1211,6 +1269,8 @@ static void upper_down(int i)
         shift_upper(i);
         return;
     }
+    if (ec_mk_upper(i, 1))                         /* 0.5.0: MOD KEYS: the sources */
+        return;
     if (i < EC_NTRACK) {
         const uint8_t bit = (uint8_t)(1u << i);
         if (A->fill_held) {                        /* FILL held + a track key: every mute and solo off */
@@ -1252,6 +1312,8 @@ static void upper_down(int i)
 static void upper_up(int i)
 {
     if (ec_e5_upper(i, 0))                         /* E5 */
+        return;
+    if (ec_mk_upper(i, 0))                         /* 0.5.0 */
         return;
     if (i < EC_NTRACK) {
         const uint8_t bit = (uint8_t)(1u << i);
@@ -1354,7 +1416,9 @@ static void shift_button(int b)
         cat_setup(EC_CAT_SRC, 1);
         break;
     default:
-        if (CAT_OF[b] >= 0)
+        if (b == EC_B_LFO && !has_settings(EC_CAT_MOD))   /* 0.5.0: SHIFT + MOD = MOD KEYS on / off */
+            ec_mk_toggle();
+        else if (CAT_OF[b] >= 0)
             cat_setup(CAT_OF[b], 1);
         break;
     }
@@ -1556,8 +1620,14 @@ static void knob(int r, int d)
             const int n = ec_browse_count();       /* SAMPLE: the file cursor */
             if (n > 0)
                 A->cursor = ((A->cursor + d) % n + n) % n;
-        } else
+        } else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX) {
+            if (!ec_mk_select(d))                  /* 0.5.0: the MATRIX page's row, then on to the next page */
+                lane_step(d > 0 ? 1 : -1);
+        } else {
             lane_step(d);
+            if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX)
+                A->mk.row = d < 0 ? 7 : 0;         /* (onto MATRIX backwards: its last row) */
+        }
         break;
     case EC_E_ALGO: {
         const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
@@ -1586,6 +1656,10 @@ static void holds_tick(void)
     if (UX->cat_btn >= 0 && !UX->cat_used && A->ms - UX->cat_ms >= EC_HOLD_MS && has_settings(CAT_OF[UX->cat_btn])) {
         UX->cat_used = 1;                          /* a category held 400 ms: its setup (it stays open) */
         cat_setup(CAT_OF[UX->cat_btn], 0);
+    }
+    if (UX->cat_btn == EC_B_LFO && !UX->cat_used && A->ms - UX->cat_ms >= EC_HOLD_MS && !has_settings(EC_CAT_MOD)) {
+        UX->cat_used = 1;                          /* 0.5.0: MOD held (it has no setup): MOD KEYS on / off */
+        ec_mk_toggle();
     }
     if (UX->mst_down && !UX->mst_used && A->ms - UX->mst_ms >= EC_HOLD_MS) {
         UX->mst_used = 1;
@@ -1628,6 +1702,7 @@ void ec_app_init(void)
     uint32_t size;
     const uint8_t *rec;
     ec_seq_sink_t sink;
+    memset(&sink, 0, sizeof sink);
     int i;
     memset(A, 0, sizeof *A);
     if (ec_dsp_mem_size() > sizeof g_dsp_mem)   /* (cannot happen: ec_dsp.c checks it at compile time) */
@@ -1639,6 +1714,7 @@ void ec_app_init(void)
     A->redraw = 1;
     UX->cat_btn = -1;
     UX->pre_idx = -1;
+    A->mk.held = A->mk.hot_id = -1;
     for (i = 0; i < EC_NSLOT; i++)
         A->slot[i].handle = A->slot[i].old_handle = -1;
     for (i = 0; i < EC_NTRACK; i++)
@@ -1658,6 +1734,7 @@ void ec_app_init(void)
     sink.event = sink_event;
     sink.params = sink_params;
     sink.process = sink_process;
+    sink.sources = sink_sources;
     ec_seq_init(&A->seq, &A->proj, &sink, EC_FS);
     ec_dsp_set_tempo(A->dsp, A->proj.bpm);
     ec_e5_init();                                  /* E5 */
@@ -1711,6 +1788,16 @@ void ec_app_tick(const ec_input_t *in)
         if (in->btn_up >> b & 1u)
             button_up(b);
 
+    {   /* 0.5.0: the live controls: aftertouch (the highest held key, on the selected track), CC 1, CC 11 */
+        int at = 0;
+        for (k = 0; k < EC_NKEY; k++)
+            if ((in->key_held >> k & 1u) && in->key_lean[k] > at)
+                at = in->key_lean[k];
+        A->mk.at = (float)(at > 100 ? 100 : at) / 100.0f;
+        A->mk.mw = (float)in->cc_mw / 127.0f;
+        A->mk.expr = (float)in->cc_expr / 127.0f;
+        ec_mk_tick();
+    }
     holds_tick();                                  /* 0.3.0: holds, the takeover's end */
     sample_tick();                                 /* 0.3.0: PRESETS' debounced load */
     ec_rec_tick();                                 /* E6: a take ended -> its slot, the WAV writer */
@@ -1936,6 +2023,7 @@ static void leds(void)
         ec_plat_led_button(EC_B_REC, EC_LED_LIT);
     else if (A->rec.open)
         ec_plat_led_button(EC_B_REC, EC_LED_MID);
+    ec_mk_leds();                                  /* 0.5.0: MOD KEYS: the sources dim, the held one lit */
 }
 
 static void meters(void)
@@ -2032,6 +2120,9 @@ void ec_app_ui_info(char *buf, uint32_t n)
         l = (uint32_t)strlen(buf);   /* E6 */
         if (l < n)
             ec_rec_ui_info(buf + l, n - l);
+        l = (uint32_t)strlen(buf);   /* 0.5.0 */
+        if (l < n)
+            snprintf(buf + l, n - l, " mk:%d mkheld:%d mrow:%d", A->mk.on, A->mk.held + 1, A->mk.row + 1);
     }
 }
 

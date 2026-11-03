@@ -171,7 +171,7 @@ const ec_layout_t *ec_layout_unpack(const char *text)
         if (g_var[i].item0 + g_var[i].n > ni || g_var[i].n > EC_PAGE_ITEMS)
             FAIL("variant %d out of range", i);
     for (i = 0; i < ni; i++)
-        if (g_item[i].kind > EC_IT_E5)
+        if (g_item[i].kind > EC_IT_MTX)
             FAIL("item %d: kind", i);
     g_lay.page = g_page, g_lay.var = g_var, g_lay.item = g_item;
     g_lay.npage = (uint16_t)np, g_lay.nvar = (uint16_t)nv, g_lay.nitem = (uint16_t)ni;

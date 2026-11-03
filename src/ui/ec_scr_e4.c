@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "ec_gfx.h"
+#include "ec_mtx.h"
 #include "ec_scr_e4.h"
 
 #define W EC_GW
@@ -399,32 +400,51 @@ static float wave_at(int w, float ph)
     }
 }
 
-static const char *const DEST[10] = {"OFF", "PITCH", "CUTOFF", "RES", "AMP", "PAN", "M1", "M2", "M3", "M4"};
-
-static void dest_live(const ec_app_t *a, int dest)
+/* 0.5.0: the source's routes in the matrix ("> CUT +30%", more: "+2"), dim "> OFF" when it has none, and its live
+ * value as a bipolar meter at the right */
+static void routes(const ec_app_t *a, int src)
 {
-    ec_track_status_t st;
-    float v = 0;
-    ec_dsp_track_status(a->dsp, a->track, &st);
-    if (dest >= 2 && dest <= 6)
-        v = st.mod[dest - 2];
-    else if (dest >= 7)
-        v = st.macro[dest - 7] * 2 - 1;
-    {   /* a bipolar meter at the right */
-        const int x = W - 6, top = VT - 8, bot = VB, mid = (top + bot) / 2;
-        const int h = (int)(clampf(v, -1, 1) * (bot - top) / 2);
-        R(EC_C_L3, x, top, 2, bot - top);
-        if (h > 0)
-            R(EC_C_ACC, x, mid - h, 2, h);
+    const float *v = a->proj.pat[a->proj.current].tr[a->track].v;
+    char b[32], nm[16], dp[12];
+    int k, n = 0, first = -1;
+    for (k = 0; k < EC_MTX_SLOTS; k++)
+        if (ec_mtx_src(v, k) == src && ec_mtx_dst(v, k) >= 0) {
+            if (first < 0)
+                first = k;
+            n++;
+        }
+    if (first < 0)
+        snprintf(b, sizeof b, "> OFF");
+    else {
+        ec_mk_dst_name(v[ec_mtx_dst_id(first)], nm, sizeof nm);
+        ec_param_format(ec_mtx_depth_id(first), v[ec_mtx_depth_id(first)], 3, dp, sizeof dp);
+        if (n > 1)
+            snprintf(b, sizeof b, "> %s %s +%d", nm, dp, n - 1);
         else
-            R(EC_C_ACC, x, mid, 2, -h + 1);
-        R(EC_C_L8, x - 1, mid, 4, 1);
+            snprintf(b, sizeof b, "> %s %s", nm, dp);
+    }
+    T2(first < 0 ? EC_C_L5 : EC_C_L15, b, 2, 15, EC_AL_LEFT);
+    {
+        ec_track_status_t st;
+        float x;
+        ec_dsp_track_status(a->dsp, a->track, &st);
+        x = src >= EC_MS_LFO1 && src <= EC_MS_EXPR ? st.src[src - EC_MS_LFO1] : 0.0f;
+        {   /* a bipolar meter at the right */
+            const int mx = W - 6, top = VT - 8, bot = VB, mid = (top + bot) / 2;
+            const int h = (int)(clampf(x, -1, 1) * (bot - top) / 2);
+            R(EC_C_L3, mx, top, 2, bot - top);
+            if (h > 0)
+                R(EC_C_ACC, mx, mid - h, 2, h);
+            else
+                R(EC_C_ACC, mx, mid, 2, -h + 1);
+            R(EC_C_L8, mx - 1, mid, 4, 1);
+        }
     }
 }
 
 static void lfo_page(const ec_app_t *a, int k)
 {
-    const int dest = opt(a, k ? EC_P_LFO2_DEST : EC_P_LFO1_DEST), wave = opt(a, k ? EC_P_LFO2_WAVE : EC_P_LFO1_WAVE);
+    const int wave = opt(a, k ? EC_P_LFO2_WAVE : EC_P_LFO1_WAVE);
     const int mode = opt(a, k ? EC_P_LFO2_MODE : EC_P_LFO1_MODE);
     const float d = bip(a, k ? EC_P_LFO2_DEPTH : EC_P_LFO1_DEPTH);
     const int spd = opt(a, k ? EC_P_LFO2_SPEED : EC_P_LFO1_SPEED);
@@ -432,9 +452,7 @@ static void lfo_page(const ec_app_t *a, int k)
     float y[104];
     const float mid = (VT - 6 + VB) / 2.0f, hh = (VB - VT + 6) / 2.0f;
     int i;
-    char b[16];
-    snprintf(b, sizeof b, "> %s", DEST[(dest < 1 ? 1 : dest > 10 ? 10 : dest) - 1]);
-    T2(dest == 1 ? EC_C_L5 : EC_C_L15, b, 2, 15, EC_AL_LEFT);
+    routes(a, k ? EC_MS_LFO2 : EC_MS_LFO1);
     for (i = 0; i < 104; i++) {
         const float x = (float)i / 103 * cyc, ph = x - floorf(x);
         const float w = mode == 3 && x >= 1 ? wave_at(wave, 1.0f) : wave_at(wave, mode == 3 ? x : ph);
@@ -444,7 +462,6 @@ static void lfo_page(const ec_app_t *a, int k)
     if (mode == 2 || mode == 3)                 /* TRIG / ONE: the reset at the note */
         R(EC_C_L8, VX0, VT - 6, 1, VB - VT + 6);
     trace(y, 104, VX0, VX1, d == 0 ? EC_C_L5 : EC_C_L12, 1);
-    dest_live(a, dest);
 }
 
 static void menv_page(const ec_app_t *a)
@@ -468,30 +485,20 @@ static void menv_page(const ec_app_t *a)
         LINE(d == 0 ? EC_C_L5 : EC_C_L12, xs[i], ys[i], xs[i + 1], ys[i + 1]);
         R(EC_C_L15, (int)xs[i + 1] - 1, (int)ys[i + 1] - 1, 2, 2);
     }
-    {
-        char b[16];
-        const int dest = opt(a, EC_P_MENV_DEST);
-        snprintf(b, sizeof b, "> %s", DEST[(dest < 1 ? 1 : dest > 10 ? 10 : dest) - 1]);
-        T2(dest == 1 ? EC_C_L5 : EC_C_L15, b, 2, 15, EC_AL_LEFT);
-        dest_live(a, dest);
-    }
+    routes(a, EC_MS_ENV);
 }
 
 static void vel_page(const ec_app_t *a)
 {
-    const int dest = opt(a, EC_P_MVEL_DEST);
     const float d = bip(a, EC_P_MVEL_DEPTH), mid = (VT + VB) / 2.0f, hh = (VB - VT) / 2.0f;
-    char b[16];
     int k;
-    snprintf(b, sizeof b, "> %s", DEST[(dest < 1 ? 1 : dest > 10 ? 10 : dest) - 1]);
-    T2(dest == 1 ? EC_C_L5 : EC_C_L15, b, 2, 15, EC_AL_LEFT);
+    routes(a, EC_MS_VEL);
     for (k = 0; k < 8; k++) {                   /* velocity 1/8 .. 1 -> the push */
         const float v = (k + 1) / 8.0f * d;
         const int x = VX0 + 4 + k * 12, h = (int)(fabsf(v) * hh);
         R(EC_C_L3, x, VT, 8, VB - VT);
         R(EC_C_L12, x, v >= 0 ? (int)mid - h : (int)mid, 8, h > 0 ? h : 1);
     }
-    dest_live(a, dest);
 }
 
 static void macros_page(const ec_app_t *a, int single)
@@ -512,21 +519,73 @@ static void macros_page(const ec_app_t *a, int single)
         }
         return;
     }
-    {   /* one macro: its value and its depth to the five destinations (bipolar) */
-        static const char *const D[5] = {"PTCH", "CUT", "RES", "AMP", "PAN"};
-        const int mid = (16 + VB) / 2;
+    {   /* one macro: its value, and its rows of the matrix (read-only): DST, DEPTH from the centre */
+        const float *tvv = a->proj.pat[a->proj.current].tr[a->track].v;
         const float v = amt(a, EC_P_MACRO1 + single);
+        int y = 16, n = 0;
         R(EC_C_L3, 4, 16, 10, VB - 16);
         R(EC_C_L15, 4, VB - (int)(v * (VB - 16)), 10, (int)(v * (VB - 16)));
         R(EC_C_ACC, 2, VB - (int)(st.macro[single] * (VB - 16)), 14, 1);
-        for (k = 0; k < 5; k++) {
-            const float dd = bip(a, EC_P_MACRO_DEPTH + single * 5 + k);
-            const int x = 24 + k * 19, h = (int)(fabsf(dd) * (VB - 16) / 2);
-            R(EC_C_L3, x, 16, 12, VB - 16);
-            R(dd == 0 ? EC_C_L5 : EC_C_L12, x, dd >= 0 ? mid - h : mid, 12, h > 0 ? h : 1);
-            T(EC_C_L8, D[k], x + 6, VB + 2, EC_AL_CENTER);
+        for (k = 0; k < EC_MTX_SLOTS && n < 6; k++) {
+            char nm[16], dp[12];
+            float d;
+            int w;
+            if (ec_mtx_src(tvv, k) != EC_MS_M1 + single || ec_mtx_dst(tvv, k) < 0)
+                continue;
+            d = tvv[ec_mtx_depth_id(k)];
+            ec_mk_dst_name(tvv[ec_mtx_dst_id(k)], nm, sizeof nm);
+            ec_param_format(ec_mtx_depth_id(k), d, 3, dp, sizeof dp);
+            T(EC_C_L12, nm, 20, y + 1, EC_AL_LEFT);
+            T(EC_C_L8, dp, 76, y + 1, EC_AL_RIGHT);
+            R(EC_C_L3, 80, y + 3, 36, 1);
+            w = (int)(fabsf(d) / 100.0f * 18.0f + 0.5f);
+            R(EC_C_L15, d >= 0 ? 98 : 98 - w, y + 2, w > 0 ? w : 1, 3);
+            R(EC_C_L8, 98, y + 1, 1, 5);
+            y += 9;
+            n++;
         }
-        R(EC_C_L8, 22, mid, 98, 1);
+        if (!n)
+            T(EC_C_L5, "> OFF", 20, 17, EC_AL_LEFT);
+    }
+}
+
+/* 0.5.0: the MATRIX page: the eight slots, SRC DST DEPTH (a bar from the centre, the live amount as an orange tick);
+ * the selected row bright cream, the others grey */
+static void matrix_page(const ec_app_t *a)
+{
+    const float *v = a->proj.pat[a->proj.current].tr[a->track].v;
+    ec_track_status_t st;
+    int k;
+    ec_dsp_track_status(a->dsp, a->track, &st);
+    for (k = 0; k < EC_MTX_SLOTS; k++) {
+        const int y = 14 + k * 7, sel = k == a->mk.row, src = ec_mtx_src(v, k), live = ec_mtx_live(v, k);
+        const float d = v[ec_mtx_depth_id(k)];
+        const uint16_t c = sel ? EC_C_L15 : live ? EC_C_L8 : EC_C_L5;
+        char n[4], nm[16], dp[12];
+        int w;
+        if (sel)
+            R(EC_C_L3, 0, y - 1, W, 7);
+        snprintf(n, sizeof n, "%d", k + 1);
+        T(sel ? EC_C_L15 : EC_C_L5, n, 2, y + 1, EC_AL_LEFT);
+        T(c, src ? ec_mtx_src_name(src) : "--", 8, y + 1, EC_AL_LEFT);
+        ec_mk_dst_name(v[ec_mtx_dst_id(k)], nm, sizeof nm);
+        T(c, ec_mtx_dst(v, k) >= 0 ? nm : "--", 28, y + 1, EC_AL_LEFT);
+        ec_param_format(ec_mtx_depth_id(k), d, 3, dp, sizeof dp);
+        T(c, dp, 80, y + 1, EC_AL_RIGHT);
+        R(EC_C_L5, 84, y + 3, 34, 1);
+        w = (int)(fabsf(d) / 100.0f * 17.0f + 0.5f);
+        if (w)
+            R(sel ? EC_C_L15 : EC_C_L8, d >= 0 ? 101 : 101 - w, y + 2, w, 3);
+        R(sel ? EC_C_L15 : EC_C_L8, 101, y + 1, 1, 5);
+        if (live) {                                 /* the amount now: source x depth */
+            float x = 0;
+            if (src >= EC_MS_LFO1 && src <= EC_MS_EXPR)
+                x = st.src[src - EC_MS_LFO1];
+            else if (src >= EC_MS_M1)
+                x = st.macro[src - EC_MS_M1];
+            x = clampf(x * d / 100.0f, -1, 1);
+            R(EC_C_ACC, 101 + (int)(x * 17.0f), y + 1, 1, 5);
+        }
     }
 }
 
@@ -541,6 +600,7 @@ void ec_scr_e4(const ec_app_t *a, const ec_page_t *pg)
     case EC_PIC_VEL: vel_page(a); break;
     case EC_PIC_MACROS: macros_page(a, -1); break;
     case EC_PIC_MACRO: macros_page(a, pg->arg); break;
+    case EC_PIC_MATRIX: matrix_page(a); break;   /* 0.5.0 */
     default: break;
     }
 }

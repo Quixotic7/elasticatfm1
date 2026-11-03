@@ -36,6 +36,8 @@ static const char *const O_MSHAPE[] = {"SINE", "TRI", "SQR"};
 static const char *const O_RMODE[] = {"RING", "SHIFT"};
 static const char *const O_TAP[] = {"PRE", "POST"};
 static const char *const O_DEST[] = {"OFF", "PITCH", "CUT", "RES", "AMP", "PAN", "M1", "M2", "M3", "M4"};
+/* 0.5.0: the matrix sources (ec_mtx.h EC_MS_*, the option index - 1) */
+static const char *const O_MSRC[] = {"OFF", "LFO1", "LFO2", "ENV", "VEL", "AT", "MW", "EXPR", "M1", "M2", "M3", "M4"};
 static const char *const O_WAVE[] = {"SINE", "TRI", "SAW", "RSAW", "SQR", "RAND"};
 static const char *const O_SPEED[] = {"8BAR", "4BAR", "2BAR", "1BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64"};
 static const char *const O_LFOMODE[] = {"FREE", "TRIG", "ONE", "HOLD"};
@@ -46,6 +48,8 @@ static const char *const O_WTSHAPE[] = {"SINE", "TRI", "SAW", "S&H", "RAND"};   
 #define NUM(n, lb, mn, mx, st, df, fm, fl) {n, lb, mn, mx, st, df, EC_PK_NUM, fm, fl, 0, 0}
 #define OPT(n, lb, df, fl, o) {n, lb, 1, (float)(sizeof o / sizeof o[0]), 1, df, EC_PK_OPT, EC_PF_OPT, fl, \
                                (uint8_t)(sizeof o / sizeof o[0]), o}
+/* 0.5.0: a matrix DST: 0 OFF, else the destination param id + 1 (a list, never morphed) */
+#define MDST(n, lb) {n, lb, 0, (float)EC_NP, 1, 0, EC_PK_OPT, EC_PF_MDST, 0, 0, 0}
 #define BIN(n, lb, df, fl) {n, lb, 0, 1, 1, df, EC_PK_BIN, EC_PF_BIN, fl, 0, 0}
 /* E4: an FX amount 0..127 / bipolar 0..128 / real-unit param (all p-lockable) */
 #define FXA(n, lb, df) NUM(n, lb, 0, 127, 1, df, EC_PF_INT, L | EC_PF_FX)
@@ -128,12 +132,12 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_SEND2] = NUM("send2_level", "SND2", 0, 127, 1, 0, EC_PF_INT, L),
     [EC_P_AMP] = NUM("amp", "VOL", 0, 127, 1, 100, EC_PF_INT, L),
     [EC_P_PAN] = NUM("pan", "PAN", 0, 128, 1, 64, EC_PF_PAN, L),
-    [EC_P_LFO1_DEST] = OPT("lfo1_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_LFO1_DEST] = OPT("lfo1_dest", "DEST", 1, EC_PF_RETIRED, O_DEST),
     [EC_P_LFO1_WAVE] = OPT("lfo1_wave", "WAVE", 1, 0, O_WAVE),
     [EC_P_LFO1_SPEED] = OPT("lfo1_speed", "SPD", 4, L, O_SPEED),
     [EC_P_LFO1_DEPTH] = NUM("lfo1_depth", "DEP", 0, 128, 1, 64, EC_PF_BIP, L),
     [EC_P_LFO1_MODE] = OPT("lfo1_mode", "MODE", 1, 0, O_LFOMODE),
-    [EC_P_LFO2_DEST] = OPT("lfo2_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_LFO2_DEST] = OPT("lfo2_dest", "DEST", 1, EC_PF_RETIRED, O_DEST),
     [EC_P_LFO2_WAVE] = OPT("lfo2_wave", "WAVE", 1, 0, O_WAVE),
     [EC_P_LFO2_SPEED] = OPT("lfo2_speed", "SPD", 4, L, O_SPEED),
     [EC_P_LFO2_DEPTH] = NUM("lfo2_depth", "DEP", 0, 128, 1, 64, EC_PF_BIP, L),
@@ -227,19 +231,19 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_LIMIT_CEIL] = FXU("limit_ceil", "CEIL", 124),
     [EC_P_LIMIT_RELEASE] = FXU("limit_release", "REL", 38),
     /* E4: MOD (lib/pages/model.lua: DEST not lockable; times / depths / macro values are) */
-    [EC_P_MENV_DEST] = OPT("menv_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_MENV_DEST] = OPT("menv_dest", "DEST", 1, EC_PF_RETIRED, O_DEST),
     [EC_P_MENV_ATTACK] = NUM("menv_attack", "ATCK", 0, 127, 1, 0, EC_PF_ENV, L),
     [EC_P_MENV_DECAY] = NUM("menv_decay", "DECAY", 0, 127, 1, 64, EC_PF_ENV, L),
     [EC_P_MENV_SUSTAIN] = NUM("menv_sustain", "SUST", 0, 127, 1, 100, EC_PF_INT, L),
     [EC_P_MENV_RELEASE] = NUM("menv_release", "REL", 0, 127, 1, 48, EC_PF_ENV, L),
     [EC_P_MENV_DEPTH] = NUM("menv_depth", "DEPTH", 0, 128, 1, 64, EC_PF_BIP, L),
-    [EC_P_MVEL_DEST] = OPT("mvel_dest", "DEST", 1, 0, O_DEST),
+    [EC_P_MVEL_DEST] = OPT("mvel_dest", "DEST", 1, EC_PF_RETIRED, O_DEST),
     [EC_P_MVEL_DEPTH] = NUM("mvel_depth", "DEPTH", 0, 128, 1, 64, EC_PF_BIP, L),
     [EC_P_MACRO1] = NUM("macro1_value", "M1", 0, 127, 1, 0, EC_PF_INT, L),
     [EC_P_MACRO2] = NUM("macro2_value", "M2", 0, 127, 1, 0, EC_PF_INT, L),
     [EC_P_MACRO3] = NUM("macro3_value", "M3", 0, 127, 1, 0, EC_PF_INT, L),
     [EC_P_MACRO4] = NUM("macro4_value", "M4", 0, 127, 1, 0, EC_PF_INT, L),
-#define MD(m, d, nm, lb) [EC_P_MACRO_DEPTH + (m)*5 + (d)] = NUM(nm, lb, 0, 128, 1, 64, EC_PF_BIP, 0)
+#define MD(m, d, nm, lb) [EC_P_MACRO_DEPTH + (m)*5 + (d)] = NUM(nm, lb, 0, 128, 1, 64, EC_PF_BIP, EC_PF_RETIRED)
     MD(0, 0, "macro1_pitch_depth", "PTCH"), MD(0, 1, "macro1_cutoff_depth", "CUT"), MD(0, 2, "macro1_res_depth", "RES"),
     MD(0, 3, "macro1_amp_depth", "AMP"), MD(0, 4, "macro1_pan_depth", "PAN"),
     MD(1, 0, "macro2_pitch_depth", "PTCH"), MD(1, 1, "macro2_cutoff_depth", "CUT"), MD(1, 2, "macro2_res_depth", "RES"),
@@ -249,6 +253,31 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     MD(3, 0, "macro4_pitch_depth", "PTCH"), MD(3, 1, "macro4_cutoff_depth", "CUT"), MD(3, 2, "macro4_res_depth", "RES"),
     MD(3, 3, "macro4_amp_depth", "AMP"), MD(3, 4, "macro4_pan_depth", "PAN"),
 #undef MD
+    /* 0.5.0: the mod matrix (ec_mtx.h): SRC / DST not lockable, never morphed; DEPTH lockable and morphed */
+    [EC_P_MTX1_SRC] = OPT("mtx1_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX1_DST] = MDST("mtx1_dst", "DST"),
+    [EC_P_MTX1_DEPTH] = NUM("mtx1_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX2_SRC] = OPT("mtx2_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX2_DST] = MDST("mtx2_dst", "DST"),
+    [EC_P_MTX2_DEPTH] = NUM("mtx2_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX3_SRC] = OPT("mtx3_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX3_DST] = MDST("mtx3_dst", "DST"),
+    [EC_P_MTX3_DEPTH] = NUM("mtx3_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX4_SRC] = OPT("mtx4_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX4_DST] = MDST("mtx4_dst", "DST"),
+    [EC_P_MTX4_DEPTH] = NUM("mtx4_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX5_SRC] = OPT("mtx5_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX5_DST] = MDST("mtx5_dst", "DST"),
+    [EC_P_MTX5_DEPTH] = NUM("mtx5_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX6_SRC] = OPT("mtx6_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX6_DST] = MDST("mtx6_dst", "DST"),
+    [EC_P_MTX6_DEPTH] = NUM("mtx6_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX7_SRC] = OPT("mtx7_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX7_DST] = MDST("mtx7_dst", "DST"),
+    [EC_P_MTX7_DEPTH] = NUM("mtx7_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX8_SRC] = OPT("mtx8_src", "SRC", 1, 0, O_MSRC),
+    [EC_P_MTX8_DST] = MDST("mtx8_dst", "DST"),
+    [EC_P_MTX8_DEPTH] = NUM("mtx8_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
@@ -296,10 +325,70 @@ float ec_param_clamp(int id, float x)
     return x;
 }
 
+/* 0.5.0: a matrix DEPTH's step at magnitude a (fine near 0, ChoralRoot's AMT) */
+static float mdep_step(float a) { return a < 5.0f ? 0.5f : a < 20.0f ? 1.0f : a < 50.0f ? 2.0f : 5.0f; }
+
+float ec_mdep_nudge(float x, int det)
+{
+    const int dir = det > 0 ? 1 : -1;
+    int n = det < 0 ? -det : det;
+    for (; n > 0; n--) {
+        /* away from 0: the step where x is; towards it: the step just inside */
+        const int away = x == 0 || (x > 0) == (dir > 0);
+        const float st = mdep_step(away ? fabsf(x) : fabsf(x) - 1e-3f);
+        x = floorf((x + (float)dir * st) / st + 0.5f) * st;
+        if (x > 100)
+            x = 100;
+        if (x < -100)
+            x = -100;
+    }
+    return x;
+}
+
+/* 0.5.0: a matrix DST stepped through the ids that can be one (the app steps the layout's order instead) */
+float ec_mdst_nudge(float x, int det)
+{
+    int v = (int)floorf(x + 0.5f), n = det < 0 ? -det : det;
+    const int dir = det > 0 ? 1 : -1;
+    for (; n > 0; n--) {
+        int y = v + dir;
+        while (y > 0 && y <= EC_NP && !ec_param_mod_dest(y - 1))
+            y += dir;
+        if (y < 0 || y > EC_NP)
+            break;
+        v = y;
+    }
+    return (float)v;
+}
+
+int ec_param_mod_dest(int id)
+{
+    const ec_param_def_t *d;
+    if (id < 0 || id >= EC_NP)
+        return 0;
+    d = &EC_PARAMS[id];
+    if (d->kind != EC_PK_NUM || (d->flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_RETIRED)) || d->fmt == EC_PF_MDEP)
+        return 0;
+    switch (id) {                  /* the structural ones (the scenes' MORPH_EXCLUDE); the track volume IS one (AMP) */
+    case EC_P_PATTERN_STEPS:
+    case EC_P_SLOT:
+    case EC_P_SLICE_COUNT:
+    case EC_P_SLICE_INDEX:
+    case EC_P_CHOP_STEPS:
+    case EC_P_LOOP_DIVISION:
+    case EC_P_RATE: return 0;
+    default: return 1;
+    }
+}
+
 float ec_param_nudge(int id, float x, int det)
 {
     const ec_param_def_t *d = &EC_PARAMS[id];
     float y = x + (float)det * d->step;
+    if (d->fmt == EC_PF_MDEP)
+        return ec_mdep_nudge(x, det);
+    if (d->fmt == EC_PF_MDST)
+        return ec_mdst_nudge(x, det);
     if (d->flags & EC_PF_EXPSTEP) {   /* E3: semitone ratios per detent; from 0 the first detent is one step */
         const float lo = d->min > 0 ? d->min : d->step;
         if (x < lo)
@@ -427,6 +516,18 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
         break;
     case EC_PF_RATE: snprintf(out, (size_t)cap, "%s", ec_rate_label((int)(x + 0.5f))); break;
     case EC_PF_UNIT: ec_param_format_unit(id, x, out, cap); break;   /* E4 */
+    case EC_PF_MDST: {                                                  /* 0.5.0 */
+        const int t = (int)floorf(x + 0.5f) - 1;
+        snprintf(out, (size_t)cap, "%s", t < 0 || t >= EC_NP ? "OFF" : t == EC_P_PITCH ? "PITCH" : EC_PARAMS[t].label);
+    } break;
+    case EC_PF_MDEP:
+        if (x == 0)
+            snprintf(out, (size_t)cap, "0");
+        else if (fabsf(x) < 9.95f && fabsf(x - floorf(x + 0.5f)) > 0.01f)
+            snprintf(out, (size_t)cap, "%+.1f%%", (double)x);
+        else
+            snprintf(out, (size_t)cap, "%+d%%", (int)floorf(x + (x < 0 ? -0.5f : 0.5f)));
+        break;
     default: snprintf(out, (size_t)cap, "%d", (int)floorf(x + 0.5f)); break;
     }
 }

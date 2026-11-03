@@ -17,6 +17,7 @@
 
 #include "ec_dsp.h"
 #include "ec_e5.h"
+#include "ec_mtx.h"
 #include "ec_project.h"
 #include "ec_razor.h"
 #include "ec_scene.h"
@@ -86,7 +87,7 @@ static void push_buses(rig_t *r)
 
 static void rig_boot(rig_t *r, int mem)
 {
-    ec_seq_sink_t k = {r, sk_event, sk_params, sk_process};
+    ec_seq_sink_t k = {r, sk_event, sk_params, sk_process, 0};
     ec_sample_t loop = {g_loop, g_loop_n, (float)FS, 2, 120.f}, saw = {g_saw, g_saw_n, (float)FS, 2, 0.f};
     int t;
     r->d = ec_dsp_init(g_mem[mem], (float)FS);
@@ -205,6 +206,8 @@ static void build(ec_project_t *p)
     p->bus[0][EC_P_FX_MACHINE] = 3;                                 /* S1: REVERB */
     p->bus[0][EC_P_REVERB_SIZE] = 64;
     p->bus[0][EC_P_FX_MIX] = 127;
+    for (int t = 0; t < EC_NTRACK; t++)                              /* 0.5.0: the 0.4 routes as a load converts them */
+        ec_mtx_migrate(p->pat[0].tr[t].v);
 }
 
 /* ------------------------------------------------------------------------------------------- the tests --- */

@@ -383,6 +383,7 @@ typedef struct ec_track_status {
     float mod[EC_MOD_NDEST];/* the live mod sums (pitch cutoff res amp pan, -1..1) */
     float macro[4];         /* the macros' effective values */
     int   idle;             /* paused by the idle CPU saver */
+    float src[EC_MSRC_N];   /* 0.5.0: the mod sources (LFO1 LFO2 ENV VEL AT MW EXPR, each at its level), 0 when off */
 } ec_track_status_t;
 
 /* E4: the send buses and the master insert (bus 0 = S1, 1 = S2, 2 = master) */
@@ -424,6 +425,10 @@ void ec_dsp_input(ec_dsp_t *dsp, const float *in_lr, int frames);
 void ec_dsp_process(ec_dsp_t *dsp, float *out_lr, int frames);
 
 void  ec_dsp_track_status(const ec_dsp_t *dsp, int track, ec_track_status_t *st);
+/* 0.5.0: the mod matrix's live controls on a track (aftertouch, mod wheel, expression; each 0..1, smoothed) and its
+ * sources as of the last block (EC_MSRC_N values, the LFOs / ENV / VEL at their levels; 0 while no slot is live) */
+void  ec_dsp_mod_live(ec_dsp_t *dsp, int track, float at, float mw, float expr);
+void  ec_dsp_mod_sources(const ec_dsp_t *dsp, int track, float *src);
 /* E4: bus 0 S1, 1 S2, 2 master insert */
 void  ec_dsp_bus_params(ec_dsp_t *dsp, int bus, const ec_fx_params_t *p);
 void  ec_dsp_bus_status(const ec_dsp_t *dsp, int bus, ec_bus_status_t *st);

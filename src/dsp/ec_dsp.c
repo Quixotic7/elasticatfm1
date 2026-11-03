@@ -1028,6 +1028,20 @@ void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
 }
 
 /* ------------------------------------------------------------ status */
+void ec_dsp_mod_live(ec_dsp_t *d, int track, float at, float mw, float expr)
+{
+    if (!d || track < 0 || track >= EC_TRACKS) return;
+    d->tr[track].mod.live[0] = ec_clampf(at, 0.f, 1.f);
+    d->tr[track].mod.live[1] = ec_clampf(mw, 0.f, 1.f);
+    d->tr[track].mod.live[2] = ec_clampf(expr, 0.f, 1.f);
+}
+
+void ec_dsp_mod_sources(const ec_dsp_t *d, int track, float *src)
+{
+    for (int k = 0; k < EC_MSRC_N; ++k)
+        src[k] = d && track >= 0 && track < EC_TRACKS && d->tr[track].mod.alive ? d->tr[track].mod.src[k] : 0.f;
+}
+
 void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
 {
     memset(st, 0, sizeof *st);
@@ -1049,6 +1063,7 @@ void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
     ec_fx_meter(&t->fx, &st->fx_meter);
     for (int k = 0; k < EC_MOD_NDEST; ++k) st->mod[k] = t->mods[k];
     for (int k = 0; k < 4; ++k) st->macro[k] = t->mod.alive ? t->mod.macro_val[k] : 0.f;
+    for (int k = 0; k < EC_MSRC_N; ++k) st->src[k] = t->mod.alive ? t->mod.src[k] : 0.f;
     st->idle = t->idle;
     double F = t->frames > 1.0 ? t->frames : 1.0;
     for (int i = 0; i < EC_VOICE_POOL; ++i) {

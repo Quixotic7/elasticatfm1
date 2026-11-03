@@ -62,7 +62,7 @@ static void on_process(void *ctx, float *out, int n)
 
 static void setup(void)
 {
-    ec_seq_sink_t k = {0, on_event, on_params, on_process};
+    ec_seq_sink_t k = {0, on_event, on_params, on_process, 0};
     ec_project_init(&P);
     ec_seq_init(&S, &P, &k, FS);
     nrec = 0;

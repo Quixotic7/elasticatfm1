@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "ec_mtx.h"
 #include "ec_project.h"
 #include "ec_razor.h"
 #include "ec_version.h"
@@ -95,6 +96,25 @@ int main(int argc, char **argv)
     P.bus[2][EC_P_FX_MACHINE] = 5;      /* MST COMP */
     P.bus[2][EC_P_COMP_THRESH] = 20;
     P.bus[2][EC_P_COMP_RATIO] = 60;
+    for (int t = 0; t < EC_NTRACK; t++) {   /* 0.5.0: the 0.4 routes as a load converts them, then every slot full:
+                                             * generic destinations on every track (resolved every chunk) */
+        static const int GEN[][3] = {{EC_MS_LFO2 + 1, EC_P_FILTER_DRIVE, 40}, {EC_MS_ENV + 1, EC_P_FX_MIX, -30},
+                                     {EC_MS_M1 + 1, EC_P_SEND1, 50},        {EC_MS_LFO1 + 1, EC_P_WARP_RATE, 10},
+                                     {EC_MS_VEL + 1, EC_P_SEND2, 25},       {EC_MS_LFO2 + 1, EC_P_FILTER_MIX, -20},
+                                     {EC_MS_LFO1 + 1, EC_P_GRAIN_DENSITY, 30}, {EC_MS_M2 + 1, EC_P_FX_DRIVE, 60}};
+        float *v = P.pat[0].tr[t].v;
+        int k, g = 0;
+        ec_mtx_migrate(v);
+        v[EC_P_MACRO1] = 64;
+        v[EC_P_MENV_DEPTH] = 100;
+        for (k = 0; k < EC_MTX_SLOTS; k++)
+            if (ec_mtx_src(v, k) == EC_MS_OFF) {
+                v[ec_mtx_src_id(k)] = (float)GEN[g][0];
+                v[ec_mtx_dst_id(k)] = (float)(GEN[g][1] + 1);
+                v[ec_mtx_depth_id(k)] = (float)GEN[g][2];
+                g++;
+            }
+    }
     memset(img, 0xFF, sizeof img);
     n = ec_project_save(&P, img + 4096, sizeof img - 4096);
     if (n <= 0) {

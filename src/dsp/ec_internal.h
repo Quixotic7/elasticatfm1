@@ -316,6 +316,8 @@ typedef struct {
     float    phase[2], sweep[2], held[2], rnd[2], rnd_ph[2];
     float    vel, vel_lag;   /* the latched last trigger velocity */
     float    macro_val[4];   /* the macros' effective values (UI) */
+    float    live[3], live_lag[3];   /* 0.5.0: AT, MW, EXPR 0..1 (set by the app), smoothed */
+    float    src[EC_MSRC_N]; /* 0.5.0: the sources at the last chunk (each at its level; the sequencer reads them) */
     ec_env_t env;
     uint32_t rng;
 } ec_mod_t;

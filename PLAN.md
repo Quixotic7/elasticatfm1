@@ -82,7 +82,7 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **E6**: audio input (the `.rfm1` capability `ain1`, FM1VST docs/VIRTUAL-CARTS.md 8; the native ABI later), the
   INPUT machine, REC (sampling).
 
-## Status (0.4.0, 2026-11-02)
+## Status (0.5.0, 2026-11-02)
 
 - **E0-E2** done (0.1.0): the pipe, the core loop, the playable instrument; web player e2e.
 - **E3** done: RAZOR / R.POLY + the FILE / RAZOR page (Auto-Chop, snaps, split / delete, per-slice settings), every
@@ -127,6 +127,13 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **CPU** (rfm1_run, wasm3, M-series): the heaviest project (`ec_make_heavy`: six busy tracks in harmonizer /
   random_ola / spectral freeze / R.POLY x8 / wavetable / gstretch2, six inserts incl. BLACKHOLE, RINGS, REVERB, both
   sends, master COMP, LFOs on every track) 2.1x real time while playing; the v020 demo project 5.9x.
+
+- **Mod matrix** (0.5.0, docs/MOD-MATRIX.md): 8 slots of SRC / DST / DEPTH per track (LFO 1 / 2, ENV, VEL,
+  aftertouch, CC 1, CC 11, M1-M4 onto any continuous param; PITCH / CUT / RES / AMP / PAN on the fast buses, the rest
+  once per block in the sequencer), the MOD / MATRIX page, MOD KEYS (hold MOD or SHIFT + MOD: the black keys are the
+  sources), the cells' marks, 0.4 projects converted on load at the same strength. Tests: ctest 23 (+ mtx, 68
+  checks), the DSP suites, the designer (56), the web e2e (18). CPU: the heavy project with every slot full
+  (generic destinations on every track) 2.3x in wasm3 (its chord section 2.1x).
 
 Remaining / open:
 - **E6 in the hosts**: the web player first (then iOS incl. the AUv3 input bus, Android, FM1VST); the native ABI's

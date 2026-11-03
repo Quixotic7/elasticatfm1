@@ -452,6 +452,13 @@
       "cat": "MOD",
       "pages": [
         {
+          "title": "MATRIX",
+          "picture": "matrix",
+          "lanes": [
+            ["mtx.src", "mtx.dst", "mtx.depth", null]
+          ]
+        },
+        {
           "title": "LFO 1",
           "picture": "lfo1",
           "lanes": [
@@ -494,8 +501,7 @@
           "title": "MACRO 1",
           "picture": "macro",
           "lanes": [
-            [{"item": "macro1_value", "label": "VAL"}, {"item": "macro1_pitch_depth", "label": "PITCH"}, "macro1_cutoff_depth", "macro1_res_depth"],
-            ["macro1_amp_depth", "macro1_pan_depth"]
+            [{"item": "macro1_value", "label": "VAL"}]
           ],
           "macro": 1,
           "note": "macros should be in mod matrix, not hard fixed to specific params. "
@@ -504,8 +510,7 @@
           "title": "MACRO 2",
           "picture": "macro",
           "lanes": [
-            [{"item": "macro2_value", "label": "VAL"}, "macro2_pitch_depth", "macro2_cutoff_depth", "macro2_res_depth"],
-            ["macro2_amp_depth", "macro2_pan_depth"]
+            [{"item": "macro2_value", "label": "VAL"}]
           ],
           "macro": 2
         },
@@ -513,8 +518,7 @@
           "title": "MACRO 3",
           "picture": "macro",
           "lanes": [
-            [{"item": "macro3_value", "label": "VAL"}, "macro3_pitch_depth", "macro3_cutoff_depth", "macro3_res_depth"],
-            ["macro3_amp_depth", "macro3_pan_depth"]
+            [{"item": "macro3_value", "label": "VAL"}]
           ],
           "macro": 3
         },
@@ -522,8 +526,7 @@
           "title": "MACRO 4",
           "picture": "macro",
           "lanes": [
-            [{"item": "macro4_value", "label": "VAL"}, "macro4_pitch_depth", "macro4_cutoff_depth", "macro4_res_depth"],
-            ["macro4_amp_depth", "macro4_pan_depth"]
+            [{"item": "macro4_value", "label": "VAL"}]
           ],
           "macro": 4
         }

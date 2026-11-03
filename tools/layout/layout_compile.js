@@ -6,8 +6,16 @@
 
 export const CATS = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"];
 export const PICS = ["steps", "wave", "wave-machine", "wave-warp", "wave-range", "filter", "fenv", "aenv", "fx", "sends",
-  "lfo1", "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern"];
-export const FIXED = { mix: "MST", scene: "MST", file: "FILE", razor: "FILE", pattern: "PAT" };
+  "lfo1", "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix"];
+export const FIXED = { mix: "MST", scene: "MST", file: "FILE", razor: "FILE", pattern: "PAT", matrix: "MOD" };
+// the MATRIX page (0.5.0): its knobs are fixed (SELECT picks the row; KNOB 1-3 its SRC, DST, DEPTH)
+export const MATRIX_LANES = [["mtx.src", "mtx.dst", "mtx.depth", null]];
+export const MATRIX_PAGE = () => ({ title: "MATRIX", picture: "matrix", lanes: JSON.parse(JSON.stringify(MATRIX_LANES)) });
+// the mod matrix's slot params (reached through the MATRIX page, never placed) and the params retired in 0.5.0 (kept
+// for old saves, read by nothing: never in the tray, never "not on any page"; placing one is a warning)
+export const isMtx = (n) => /^mtx[1-8]_(src|dst|depth)$/.test(n);
+export const isRetired = (n) => ["lfo1_dest", "lfo2_dest", "menv_dest", "mvel_dest"].includes(n) ||
+  /^macro[1-4]_(pitch|cutoff|res|amp|pan)_depth$/.test(n);
 export const MACHINES = ["LOOP", "TRIG", "SLICE", "RAZOR", "S.POLY", "R.POLY", "NEIGH", "INPUT"];
 export const MCLASS = { loop: [1, 2], slice: [3, 5], razor: [4, 6], neighbor: [7], input: [8] };
 export const OPTS = {
@@ -19,7 +27,7 @@ export const OPTS = {
     "DUCK", "T.ECHO", "CASSET", "MOTION", "RINGS", "LIMIT"],
 };
 // item kinds (src/app/ec_pages.h EC_IT_*) and the named items that are not track params: [kind, id, default label]
-export const IT = { BLANK: 0, PARAM: 1, GLOBAL: 2, SLOT: 3, RAZOR: 4, E5: 5 };
+export const IT = { BLANK: 0, PARAM: 1, GLOBAL: 2, SLOT: 3, RAZOR: 4, E5: 5, MTX: 6 };
 export const SPECIAL = {
   "global.bpm": [2, 0, "BPM"], "global.swing": [2, 1, "SWNG"], "global.glen": [2, 2, "GLEN"],
   "global.quant": [2, 3, "QUANT"], "global.rtn": [2, 4, "RTN"],
@@ -29,6 +37,7 @@ export const SPECIAL = {
   "razor.snap": [4, 4, "SNAP"], "razor.choke": [4, 5, "CHOK"], "razor.pitch": [4, 6, "P/T"], "razor.sens": [4, 7, "SENS"],
   "e5.xfd": [5, 0, "XFD"], "e5.choke": [5, 1, "CHOK"], "e5.gbpm": [5, 2, "GBPM"], "e5.name": [5, 3, "NAME"],
   "e5.mute": [5, 4, "SMUT"],
+  "mtx.src": [6, 0, "SRC"], "mtx.dst": [6, 1, "DST"], "mtx.depth": [6, 2, "DEPTH"],
 };
 export const STOPPED = new Set(["mode", "filter_machine", "filter_mix_mode"]);
 export const MAX_LANES = 4, SETUP_LANES = 2, MAX_PAGES = 16, CELL_LABEL_WARN = 5, LABEL_MAX = 10, TITLE_ROOM = 64;
@@ -104,12 +113,15 @@ export function compile(design, catalog) {
     if (SPECIAL[name]) {
       const [kind, id, dl] = SPECIAL[name];
       if (kind === IT.RAZOR && ctx.pic !== "razor") err(where, `${name} works on the RAZOR page only`);
+      if (kind === IT.MTX && ctx.pic !== "matrix") err(where, `${name} works on the MATRIX page only`);
       const lb = label || dl;
       if (ctx.cells && lb.length > CELL_LABEL_WARN) warn(where, `${name}: the label '${lb}' is longer than ${CELL_LABEL_WARN} (the panel's knob label is cut)`);
       return [kind, id, 0, lb, name];
     }
     const p = params.get(name);
     if (!p) { err(where, `unknown item '${name}'`); return BLANK; }
+    if (isMtx(name)) err(where, `${name} is a mod matrix slot's: it is reached through the MATRIX page (MOD), not placed`);
+    else if (isRetired(name)) warn(where, `${name} is retired in 0.5.0: reads nothing (the mod matrix replaced it)`);
     if (ctx.cells && label && label.length > CELL_LABEL_WARN) warn(where, `${name}: the label '${label}' is longer than ${CELL_LABEL_WARN} (the panel's knob label is cut)`);
     if (!placed.has(name)) placed.set(name, []);
     placed.get(name).push(where);
@@ -197,6 +209,9 @@ export function compile(design, catalog) {
       else arg = m - 1;
     } else if ("macro" in p) err(where, '"macro" is for the macro picture');
     if ("note" in p && typeof p.note !== "string") err(where, "a note is a text");
+    if (pic === "matrix" && ((src.variants && src.variants.length) ||
+        JSON.stringify((Array.isArray(src.lanes) ? src.lanes : [[]]).filter(Array.isArray).flat().map(slotName)) !== JSON.stringify(MATRIX_LANES[0])))
+      err(where, `the MATRIX page's knobs are fixed: lanes ${pyDumps(MATRIX_LANES)}, no variants`);
     const ctx = { pic, cells: ["page", "bus", "f3"].includes(kind) };
     const maxL = { page: MAX_LANES, bus: MAX_LANES, setup: SETUP_LANES, f3: 1 }[kind];
     const var0 = vars.length;
@@ -268,7 +283,8 @@ export function compile(design, catalog) {
     cats.push([p0, pages.length - p0 - (setup >= 0 ? 1 : 0), setup]);
   }
   for (const [pic, cat] of Object.entries(FIXED)) {
-    if (pic !== "mix" && fixedCount[pic] !== 1) err(cat, `the ${pic} page must be there once (${fixedCount[pic]})`);
+    if (pic === "matrix" && fixedCount[pic] === 0) warn(cat, "no MATRIX page (0.5.0): the mod matrix is reached by MOD KEYS only; add it as MOD's first page");
+    else if (pic !== "mix" && fixedCount[pic] !== 1) err(cat, `the ${pic} page must be there once (${fixedCount[pic]})`);
     if (pic === "mix" && fixedCount[pic] < 1) err(cat, "the mix page is missing");
   }
   let bus = design.bus;
@@ -294,7 +310,7 @@ export function compile(design, catalog) {
   }
   if (!("f3" in design)) err("f3", "F3's lane is missing");
   const f3 = page("F3", { title: "F3", lanes: design.f3 ?? [] }, "PAT", "f3");
-  const unplaced = catalog.map((p) => p.name).filter((n) => !placed.has(n)).sort();
+  const unplaced = catalog.map((p) => p.name).filter((n) => !placed.has(n) && !isMtx(n) && !isRetired(n)).sort();
   if (unplaced.length) warn("design", `not on any page: ${unplaced.join(", ")}`);
   if (errors.length) return { errors, warnings, pack: null, placed };
   const s = (x) => (x == null ? "" : x);

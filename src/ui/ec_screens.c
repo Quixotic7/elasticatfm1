@@ -9,6 +9,7 @@
 #include "ec_browse.h"
 #include "ec_gfx.h"
 #include "ec_loader.h"
+#include "ec_mtx.h"
 #include "ec_scr_e5.h"
 #include "ec_screens.h"
 #include "ec_scr_e4.h"
@@ -91,6 +92,51 @@ static void title_of(const ec_app_t *a, const ec_page_t *pg, char *out, size_t c
 }
 
 /* ------------------------------------------------------------------------------------------- cells --- */
+/* 0.5.0: a matrix destination's mark at the cell's top right (right-aligned at x): an orange dot and the source's
+ * tag ("LFO1"; several sources: their count, "2 MOD") */
+static void mark(uint32_t m, int x, int y, int room)
+{
+    char b[12];
+    int n = 0, s = 0, k;
+    for (k = 1; k < EC_MS_N; k++)
+        if (m >> k & 1u) {
+            n++;
+            s = k;
+        }
+    if (n == 1)
+        snprintf(b, sizeof b, "%s", ec_mtx_src_name(s));
+    else
+        snprintf(b, sizeof b, "%d MOD", n);
+    if (TW(b) + 5 > room) {                           /* no room beside the label: the dot alone */
+        R(EC_C_ACC, x - 2, y + 1, 2, 2);
+        return;
+    }
+    T(EC_C_L12, b, x, y, EC_AL_RIGHT);
+    R(EC_C_ACC, x - TW(b) - 3, y + 1, 2, 2);
+}
+
+/* 0.5.0: a source key held: the cell shows the source > param and the slot's DEPTH as a bar from the centre */
+static void hot_cell(const ec_app_t *a, const ec_item_t *it, int k, int x, int y)
+{
+    const int hs = ec_app_held_step(a);
+    const float *v = a->proj.pat[a->proj.current].tr[a->track].v;
+    float d = v[ec_mtx_depth_id(k)];
+    int locked = 0, w;
+    char b[24], val[16];
+    if (hs >= 0 && ec_step_lock_get(&a->proj.pat[a->proj.current].tr[a->track].steps[hs], ec_mtx_depth_id(k), &d))
+        locked = 1;
+    snprintf(b, sizeof b, "%s>%s", ec_mtx_src_name(ec_mtx_src(v, k)), ec_app_item_label(it));
+    T(EC_C_L15, b, x, y, EC_AL_LEFT);
+    ec_param_format(ec_mtx_depth_id(k), d, 3, val, sizeof val);
+    if (locked)
+        R(EC_C_ACC, x - 1, y + 6, TW(val) * 2 + 3, 12);
+    T2(locked ? EC_C_BG : EC_C_L15, val, x, y + 7, EC_AL_LEFT);
+    R(EC_C_L3, x, y + 18, 54, 1);
+    w = (int)(fabsf(d) / 100.0f * 27.0f + 0.5f);
+    R(EC_C_ACC, d >= 0 ? x + 27 : x + 27 - w, y + 17, w > 0 ? w : 1, 2);
+    R(EC_C_L15, x + 27, y + 16, 1, 4);
+}
+
 static void cells(const ec_app_t *a, const ec_page_t *pg)
 {
     const int lane = a->ux.f3 ? 0 : ec_app_lane(a, pg);
@@ -105,6 +151,8 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         const int x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101, c = lane * 4 + i;
         char tag[8], val[24];
         const ec_item_t *it;
+        ec_item_t mx;
+        uint32_t marks;
         int locked = 0, some = 0, big;
         float v, f;
         uint16_t vc;
@@ -113,7 +161,12 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
             T(EC_C_L3, tag, x + 54, y, EC_AL_RIGHT);
             continue;
         }
-        it = &pg->it[c];
+        ec_mk_item(&pg->it[c], &mx);                  /* 0.5.0: a MATRIX cell is its row's param */
+        it = &mx;
+        if (it->kind == EC_IT_PARAM && !a->settings && !a->ux.f3 && ec_mk_hot_slot(it->id) >= 0) {
+            hot_cell(a, it, ec_mk_hot_slot(it->id), x, y);   /* 0.5.0: a source key held: its depth here */
+            continue;
+        }
         v = ec_app_item_value(a, it, &locked);
         ec_app_item_format(a, it, v, val, sizeof val);
         /* the lock chips: filled = locked on the held step (or held scene / pad), outlined = locked on some step */
@@ -123,7 +176,10 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         if ((it->flags & EC_IF_STOPPED) && a->seq.playing)
             vc = EC_C_L5;
         T(EC_C_L8, ec_app_item_label(it), x, y, EC_AL_LEFT);
-        T(EC_C_L5, tag, x + 54, y, EC_AL_RIGHT);
+        if (it->kind == EC_IT_PARAM && !a->settings && (marks = ec_mk_marks(it->id)) != 0)
+            mark(marks, x + 54, y, 54 - TW(ec_app_item_label(it)) - 1);                   /* 0.5.0: a matrix destination: its source's tag */
+        else
+            T(EC_C_L5, tag, x + 54, y, EC_AL_RIGHT);
         big = TW(val) * 2 <= 54;
         if (locked)
             R(EC_C_ACC, x - 1, y + (big ? 6 : 8), (big ? TW(val) * 2 : TW(val)) + 3, big ? 12 : 7);
@@ -137,7 +193,12 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         /* the stored value's bar, the actual (resolved) value as a mark when it differs (BASE_VALUE_RESOLVER) */
         f = ec_app_item_frac(a, it, v);
         R(EC_C_L3, x, y + 18, 54, 1);
-        R(locked ? EC_C_ACC : EC_C_L8, x, y + 18, (int)(f * 54.0f + 0.5f), 1);
+        if (it->kind == EC_IT_PARAM && EC_PARAMS[it->id].fmt == EC_PF_MDEP) {   /* 0.5.0: DEPTH from the centre */
+            const int w = (int)(fabsf(v) / 100.0f * 27.0f + 0.5f);
+            R(locked ? EC_C_ACC : EC_C_L8, v >= 0 ? x + 27 : x + 27 - w, y + 18, w, 1);
+            R(EC_C_L12, x + 27, y + 17, 1, 3);
+        } else
+            R(locked ? EC_C_ACC : EC_C_L8, x, y + 18, (int)(f * 54.0f + 0.5f), 1);
         if (it->kind == EC_IT_PARAM && !a->bus && a->seq.playing) {
             const float act = ec_seq_value(&a->seq, a->track, it->id);
             if (act != v && it->id != EC_P_LOOP_START && it->id != EC_P_LOOP_END) {
@@ -508,7 +569,7 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
     header(a, t, a->settings ? 1 : a->page[a->cat] + 1, r);
-    if (pg->pic >= EC_PIC_FX && pg->pic <= EC_PIC_MACRO) {   /* E4: FX / SENDS / MOD visuals */
+    if ((pg->pic >= EC_PIC_FX && pg->pic <= EC_PIC_MACRO) || pg->pic == EC_PIC_MATRIX) {   /* E4: FX / SENDS / MOD visuals */
         ec_scr_e4(a, pg);
         cells(a, pg);
         return;

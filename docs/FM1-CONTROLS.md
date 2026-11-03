@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.4.0)
+# Elasticat on the FM-1: controls (0.5.0)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample, machine, warp mode, filter, amp, insert FX, sends, MOD and 16-step pages;
@@ -55,7 +55,7 @@ values with decimals to whole numbers (0..1 to quarters), a small range one step
 | EDIT | FILT: FILTER (curve) / F.ENV / F.MIX | next page | setup: filter machine, filter env mode, mix mode |
 | ENV | AMP: envelope, VOL, PAN, sends (two lanes) | - | setup: env mode, env range, portamento, slice hold |
 | FX | FX: the insert machine's params (a picture per machine) / SENDS: S1, S2 levels, TAP. On S1 / S2 / MST: that bus's machine | next page | setup: **the FX machine** (insert, or the selected bus's), send tap |
-| LFO | MOD: LFO 1 / LFO 2 / MOD ENV / VELOCITY / MACROS / MACRO 1-4 | next page | (no setup: a hold is a tap) |
+| LFO | MOD: **MATRIX** / LFO 1 / LFO 2 / ENV / VELOCITY / MACROS / MACRO 1-4 | next page | (no setup) **held 0.4 s or SHIFT + LFO: MOD KEYS on / off** (below); the button stays lit while it is on |
 | SAVE | FILE: SAMPLE (the browser; SELECT is its cursor) | **on SAMPLE: loads the file under the cursor** into the track's slot; on the track's own file it steps the lanes, then the pages: SAMPLE (2 lanes), RAZOR (2 lanes), round | |
 | ARP | PAT: length, rate, global length, change mode | - | setup: quantize, global length |
 | HOME | Back to the main view (SRC), every pop-up closed | | |
@@ -196,20 +196,17 @@ Each category button opens its first page; tapping it again goes to the next pag
 
 | Page | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|
+| MATRIX | 1 | SRC | DST | DEPTH |  |
 | LFO 1 | 1 | WAVE | SPEED | DEPTH | MODE |
 | LFO 2 | 1 | WAVE | SPEED | DEPTH | MODE |
 | ENV | 1 | ATTACK | DECAY | SUST | RELEASE |
 |  | 2 | - | - | - | DEPTH |
 | VELOCITY | 1 | - | - | - | DEPTH |
 | MACROS | 1 | M1 | M2 | M3 | M4 |
-| MACRO 1 | 1 | VAL | PITCH | CUT | RES |
-|  | 2 | AMP | PAN |  |  |
-| MACRO 2 | 1 | VAL | PTCH | CUT | RES |
-|  | 2 | AMP | PAN |  |  |
-| MACRO 3 | 1 | VAL | PTCH | CUT | RES |
-|  | 2 | AMP | PAN |  |  |
-| MACRO 4 | 1 | VAL | PTCH | CUT | RES |
-|  | 2 | AMP | PAN |  |  |
+| MACRO 1 | 1 | VAL |  |  |  |
+| MACRO 2 | 1 | VAL |  |  |  |
+| MACRO 3 | 1 | VAL |  |  |  |
+| MACRO 4 | 1 | VAL |  |  |  |
 
 ### MST
 
@@ -448,48 +445,31 @@ What every value does, grouped by the category whose pages show it first (the de
 | `limit_ceil` | CEIL | Ceiling | LIMIT: the highest output level, -12 to 0 dB. P-lockable. |
 | `limit_release` | REL | Limiter release | LIMIT: how fast the gain comes back, 2 to 100 ms. P-lockable. |
 
-### MOD: The LFO button: two LFOs, the mod envelope, velocity modulation and the four macros with their depth matrices. No setup.
+### MOD: The LFO button: the mod matrix (8 slots of source, destination and depth per track), two LFOs, the mod envelope, velocity and the four macros, all of them matrix sources. No setup.
 
 | Item | Label | Name | What it does |
 |---|---|---|---|
 | `lfo1_wave` | WAVE | LFO 1 wave | SINE, TRI, SAW, RSAW (ramp down), SQR or RAND (sample and hold). Not p-lockable. |
 | `lfo1_speed` | SPD | LFO 1 speed | One cycle per 8 bars down to 1/64, synced to the tempo. P-lockable. |
-| `lfo1_depth` | DEP | LFO 1 depth | How much LFO 1 moves its destination, -64 to +64; 0 = off, negative inverts. P-lockable. |
+| `lfo1_depth` | DEP | LFO 1 depth | LFO 1's level into the mod matrix, -64 to +64; 0 = silent, negative inverts. Each matrix slot with SRC LFO1 scales it by its own DEPTH. P-lockable. |
 | `lfo1_mode` | MODE | LFO 1 mode | FREE runs freely; TRIG restarts on steps with LRST on; ONE plays one cycle per trig then stops; HOLD latches its value at each trig. |
 | `lfo2_wave` | WAVE | LFO 2 wave | SINE, TRI, SAW, RSAW (ramp down), SQR or RAND (sample and hold). Not p-lockable. |
 | `lfo2_speed` | SPD | LFO 2 speed | One cycle per 8 bars down to 1/64, synced to the tempo. P-lockable. |
-| `lfo2_depth` | DEP | LFO 2 depth | How much LFO 2 moves its destination, -64 to +64; 0 = off, negative inverts. P-lockable. |
+| `lfo2_depth` | DEP | LFO 2 depth | LFO 2's level into the mod matrix, -64 to +64; 0 = silent, negative inverts. Each matrix slot with SRC LFO2 scales it by its own DEPTH. P-lockable. |
 | `lfo2_mode` | MODE | LFO 2 mode | FREE runs freely; TRIG restarts on steps with LRST on; ONE plays one cycle per trig then stops; HOLD latches its value at each trig. |
 | `menv_attack` | ATCK | Mod env attack | The mod envelope's attack, 0 up to the envelope range. P-lockable. |
 | `menv_decay` | DECAY | Mod env decay | The time to fall to the sustain level, 0 up to the envelope range. P-lockable. |
 | `menv_sustain` | SUST | Mod env sustain | The level held while the note lasts, 0 to full. P-lockable. |
 | `menv_release` | REL | Mod env release | The time to fall back after the note ends, 0 up to the envelope range. P-lockable. |
-| `menv_depth` | DEPTH | Mod env depth | How much the mod envelope moves its destination, -64 to +64; 0 = off. P-lockable. |
-| `mvel_depth` | DEPTH | Velocity depth | How much velocity moves its destination, -64 to +64; 0 = off. P-lockable. |
-| `macro1_value` | M1 | Macro 1 | Macro 1's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 1 depths. LFOs and envelopes can also drive it. P-lockable. |
-| `macro2_value` | M2 | Macro 2 | Macro 2's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 2 depths. LFOs and envelopes can also drive it. P-lockable. |
-| `macro3_value` | M3 | Macro 3 | Macro 3's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 3 depths. LFOs and envelopes can also drive it. P-lockable. |
-| `macro4_value` | M4 | Macro 4 | Macro 4's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 4 depths. LFOs and envelopes can also drive it. P-lockable. |
-| `macro1_pitch_depth` | PTCH | Macro 1 to pitch | How far macro 1 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro1_cutoff_depth` | CUT | Macro 1 to cutoff | How far macro 1 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro1_res_depth` | RES | Macro 1 to resonance | How far macro 1 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro1_amp_depth` | AMP | Macro 1 to amp | How far macro 1 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro1_pan_depth` | PAN | Macro 1 to pan | How far macro 1 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro2_pitch_depth` | PTCH | Macro 2 to pitch | How far macro 2 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro2_cutoff_depth` | CUT | Macro 2 to cutoff | How far macro 2 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro2_res_depth` | RES | Macro 2 to resonance | How far macro 2 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro2_amp_depth` | AMP | Macro 2 to amp | How far macro 2 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro2_pan_depth` | PAN | Macro 2 to pan | How far macro 2 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro3_pitch_depth` | PTCH | Macro 3 to pitch | How far macro 3 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro3_cutoff_depth` | CUT | Macro 3 to cutoff | How far macro 3 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro3_res_depth` | RES | Macro 3 to resonance | How far macro 3 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro3_amp_depth` | AMP | Macro 3 to amp | How far macro 3 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro3_pan_depth` | PAN | Macro 3 to pan | How far macro 3 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro4_pitch_depth` | PTCH | Macro 4 to pitch | How far macro 4 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro4_cutoff_depth` | CUT | Macro 4 to cutoff | How far macro 4 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro4_res_depth` | RES | Macro 4 to resonance | How far macro 4 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro4_amp_depth` | AMP | Macro 4 to amp | How far macro 4 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
-| `macro4_pan_depth` | PAN | Macro 4 to pan | How far macro 4 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable. |
+| `menv_depth` | DEPTH | Mod env depth | The mod envelope's level into the mod matrix (source ENV), -64 to +64; 0 = silent. Each slot's DEPTH scales it. P-lockable. |
+| `mvel_depth` | DEPTH | Velocity depth | Velocity's level into the mod matrix (source VEL), -64 to +64; 0 = silent. Each slot's DEPTH scales it. P-lockable. |
+| `macro1_value` | M1 | Macro 1 | Macro 1's value, 0 to 127: a mod matrix source (M1); the slots with SRC M1 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable. |
+| `macro2_value` | M2 | Macro 2 | Macro 2's value, 0 to 127: a mod matrix source (M2); the slots with SRC M2 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable. |
+| `macro3_value` | M3 | Macro 3 | Macro 3's value, 0 to 127: a mod matrix source (M3); the slots with SRC M3 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable. |
+| `macro4_value` | M4 | Macro 4 | Macro 4's value, 0 to 127: a mod matrix source (M4); the slots with SRC M4 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable. |
+| `mtx.src` | SRC | Matrix source | The selected row's source: OFF, LFO1, LFO2, ENV (the mod envelope), VEL, AT (aftertouch), MW (mod wheel, CC 1), EXPR (expression pedal, CC 11) or a macro M1-M4. The LFOs are bipolar, the rest unipolar. Not lockable. |
+| `mtx.dst` | DST | Matrix destination | What the row moves: any continuous track param or PITCH, grouped by category in category order. A turn steps one item; SHIFT + the knob jumps a whole category. Not lockable. |
+| `mtx.depth` | DEPTH | Matrix depth | How far the row's source moves its destination, -100 to +100 % of its range; fine steps near 0, SHIFT snaps to 0 / +-25 / +-50 / +-100. P-lockable and morphed by scenes. |
 
 ### MST: The MST upper key: the mixer, the master settings (tempo, swing, global length, playhead return) and the A / B scene crossfader. Setup: return mode, tempo, global BPM, project name.
 
@@ -527,15 +507,6 @@ What every value does, grouped by the category whose pages show it first (the de
 | `pattern_steps` | LEN | Pattern length | The track's pattern length, 1 to 256 steps. Tracks can differ (polymeter). |
 | `pattern_rate` | RATE | Pattern rate | The track's step speed against the tempo, 1/16 to 2 (1 = sixteenth notes; 2 = twice as fast). |
 | `global.quant` | QUANT | Pattern change mode | How a picked pattern engages: SEQ (at the global length boundary), JUMP (now, same step), START (now, from step 1), TEMP (now, back after one pass). |
-
-### OTHER
-
-| Item | Label | Name | What it does |
-|---|---|---|---|
-| `lfo1_dest` | DEST | LFO 1 destination | What LFO 1 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable. |
-| `lfo2_dest` | DEST | LFO 2 destination | What LFO 2 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable. |
-| `menv_dest` | DEST | Mod env destination | What the mod envelope moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable. |
-| `mvel_dest` | DEST | Velocity destination | What velocity moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Velocity comes from slice trigs only. Not p-lockable. |
 
 ### Machines and modes (what a page variant is for)
 
@@ -628,15 +599,16 @@ What every value does, grouped by the category whose pages show it first (the de
 | FX/FX | The track's insert effect: the chosen FX machine's knobs over a picture of it (delay taps, reverb tail, compressor curve with meters ...). Empty for NONE. |
 | FX/SENDS | How much of the track goes to the S1 and S2 send buses, and where it is tapped (before or after the insert). |
 | FX/SETUP | Choose the insert FX machine (any time, with a short fade) and the send tap point. |
-| MOD/LFO 1 | LFO 1: destination, waveform, synced speed, bipolar depth and trigger mode. The bar shows the live value at the destination. |
-| MOD/LFO 2 | LFO 2: destination, waveform, synced speed, bipolar depth and trigger mode. The bar shows the live value at the destination. |
-| MOD/ENV | The mod envelope (ADSR), its destination and depth. It retriggers on steps whose ERST is on, for the note's length. |
-| MOD/VELOCITY | Velocity as a mod source: where it goes and how much. Velocity comes from slice trigs only. |
-| MOD/MACROS | The four macro values M1-M4 at a glance. Each macro moves pitch, cutoff, resonance, amp and pan by its own depths. |
-| MOD/MACRO 1 | Macro 1: its value and how far it moves pitch, cutoff, resonance, amp and pan. |
-| MOD/MACRO 2 | Macro 2: its value and how far it moves pitch, cutoff, resonance, amp and pan. |
-| MOD/MACRO 3 | Macro 3: its value and how far it moves pitch, cutoff, resonance, amp and pan. |
-| MOD/MACRO 4 | Macro 4: its value and how far it moves pitch, cutoff, resonance, amp and pan. |
+| MOD/MATRIX | The mod matrix: 8 slots per track, one row each, SRC · DST · DEPTH. SELECT picks the row (past row 8 it goes on to the next page); KNOB 1 the source, KNOB 2 the destination, KNOB 3 the depth. Fixed: its knobs are always these. Hold MOD (or SHIFT + MOD) for MOD KEYS: hold a black key (a source) and turn any knob to aim it there. |
+| MOD/LFO 1 | LFO 1: waveform, synced speed, depth and trigger mode. Where it goes is set in the mod matrix (MOD/MATRIX); the depth is its level into the matrix. |
+| MOD/LFO 2 | LFO 2: waveform, synced speed, depth and trigger mode. Where it goes is set in the mod matrix (MOD/MATRIX); the depth is its level into the matrix. |
+| MOD/ENV | The mod envelope (ADSR) and its depth, its level into the mod matrix (MOD/MATRIX sets where it goes). It retriggers on steps whose ERST is on, for the note's length. |
+| MOD/VELOCITY | Velocity as a mod source: its depth is its level into the mod matrix (MOD/MATRIX sets where it goes). Velocity comes from slice trigs only. |
+| MOD/MACROS | The four macro values M1-M4 at a glance. Each macro is a mod matrix source (M1-M4): MOD/MATRIX sets what it moves. |
+| MOD/MACRO 1 | Macro 1: its value; the picture lists the mod matrix rows whose source is M1 (read-only: edit them on MOD/MATRIX). |
+| MOD/MACRO 2 | Macro 2: its value; the picture lists the mod matrix rows whose source is M2 (read-only: edit them on MOD/MATRIX). |
+| MOD/MACRO 3 | Macro 3: its value; the picture lists the mod matrix rows whose source is M3 (read-only: edit them on MOD/MATRIX). |
+| MOD/MACRO 4 | Macro 4: its value; the picture lists the mod matrix rows whose source is M4 (read-only: edit them on MOD/MATRIX). |
 | MST/TRACK MIX | The mixer: all six tracks' levels and the S1 / S2 returns at a glance; the knobs set the selected track's volume, pan and mute, and the tempo. |
 | MST/MASTER | Project timing: tempo, swing, global pattern length and what the playhead does when the loop keys are let go. |
 | MST/SCENE | The A / B scene crossfader: the fader, its glide positions and the params that morph. The lower keys are the scene row here. |
@@ -840,12 +812,49 @@ the transients at SENS as ticks, the sounding voices in orange, the zoom window 
 
 ## MOD
 
-Two LFOs (DEST, WAVE, SPD synced, DEP bipolar; MODE free / trig / one / hold on lane 2), the mod envelope (ADSR; DEST,
-DEPTH on lane 2; retriggered where the step's ERST is on, the LFOs where LRST is on), velocity (slice trigs) and four
-macros (MACRO n: VAL and the depths to PTCH CUT RES, then AMP PAN). DEST: PITCH (+-12 st), CUTOFF, RES, AMP, PAN, or
-a macro (M1-M4). PITCH reaches every warp mode as in the original. The bar at the right of the LFO / env / velocity
-pages is the live value at the destination. Depths, speeds, the env times and macro values p-lock; DEST, WAVE and
-MODE do not (as the original).
+0.5.0 (docs/MOD-MATRIX.md): every modulation goes through the **mod matrix**, 8 slots per track, each **SRC · DST ·
+DEPTH**.
+
+- **Sources**: LFO1, LFO2 (bipolar), ENV (the mod envelope), VEL (the last trig's velocity), AT (aftertouch: the
+  highest held key, on the selected track), MW (MIDI CC 1, any channel), EXPR (CC 11), M1-M4 (the macro VALs).
+  LFO 1 / LFO 2 / ENV / VELOCITY keep their own DEPTH as the source's level.
+- **Destinations**: every continuous track param (in the layout's order, category by category), plus PITCH. PITCH,
+  CUTOFF, RESO, VOL and PAN ride the engine's fast buses (100 % = PITCH +-12 st, CUTOFF the whole range, RESO half
+  of it, VOL x0..2, PAN the whole width); any other is moved by source x DEPTH x its whole range once per audio
+  block, on top of its lock / scene / track value, and clamped. A macro VAL can be a destination (an LFO on M1, M1 on
+  three params).
+- **DEPTH** -100..+100 %, fine near 0 (0.5 % steps below 5 %); SHIFT snaps 0, +-25, +-50, +-100. It p-locks and the
+  scenes morph it; SRC and DST do not.
+- **MOD / MATRIX** (MOD's first page): the eight rows (the selected one bright; a bar from the centre for DEPTH and
+  an orange tick for the amount now). **SELECT** picks the row and runs on into the next page after row 8. **KNOB 1**
+  SRC, **KNOB 2** DST (one a click; **SHIFT + KNOB 2 jumps a category**), **KNOB 3** DEPTH. Setting a source whose
+  own level is 0 (LFO DEPTH etc.) puts that level at full.
+- **The marks**: a value aimed at by a slot shows a small orange dot and the source's tag (several: "2 MOD") in its
+  cell's corner, on every page.
+- The LFO / ENV / VELOCITY pages show where the source goes ("> CUTOFF +30%", "+1" for more) and its live value at
+  the right; MACRO n shows VAL and that macro's rows, read-only.
+- Old projects: the 0.4 fixed routes (each LFO / ENV / VEL DEST, the macro depths) become slots on load, at the same
+  strength (LFO / ENV / macro -> CUT at 30 %: 0.4 scaled them by 0.3).
+
+### MOD KEYS
+
+**Hold MOD 0.4 s, or SHIFT + MOD**: the black keys become the sources (again: off; HOME: off). MOD stays lit, the 11
+keys dim, a held one bright. SHIFT's layer on them still works.
+
+| B1 | B2 | B3 | B4 | B5 | B6-B9 | B10 | B11 |
+|---|---|---|---|---|---|---|---|
+| LFO 1 | LFO 2 | ENV | VEL | AT | M1-M4 | SCN A | SCN B |
+
+- **Hold a source + turn any value knob** (KNOB 1-4 on whatever page): the first detent puts that source on that
+  param (its slot, or the first free one; the cell shows SOURCE>PARAM and the DEPTH from the centre), the next
+  detents set the DEPTH. A param already routed from that source moves its DEPTH from the first detent. Not a
+  destination: **NO MOD**; eight slots taken: **FULL** (the takeover). Off screen: the takeover shows it.
+- **+ held steps**: the DEPTH is a lock on those steps.
+- **+ OCT+ held**: clears that source's slot on that param.
+- Let go: a slot this hold made and left at 0 (and no lock) is freed.
+- **A tap** (no turn): the source's page (LFO 1, LFO 2, ENV, VELOCITY, MACRO n; AT: MATRIX; SCN A / B: MST / SCENE).
+- **SCN A / SCN B held + a knob**: that scene's value for the param (as an anchor on the scene row).
+- MW and EXPR are set on the MATRIX page. ALGORITHM still picks the track.
 
 ## Scenes and the crossfader
 

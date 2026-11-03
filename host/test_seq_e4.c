@@ -58,7 +58,7 @@ static uint8_t buf[1 << 20];
 
 int main(void)
 {
-    ec_seq_sink_t k = {0, on_event, on_params, on_process};
+    ec_seq_sink_t k = {0, on_event, on_params, on_process, 0};
     ec_ptrack_t *tr;
     const double step = FS * 60.0 / 120.0 / 4.0;
     ec_project_init(&P);

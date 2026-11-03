@@ -7,6 +7,7 @@
 
 #include "ec_dsp.h"
 #include "ec_e5app.h"
+#include "ec_modkeys.h"
 #include "ec_pages.h"
 #include "ec_plat.h"
 #include "ec_project.h"
@@ -78,6 +79,7 @@ typedef struct {
     ec_e5app_t e5;               /* E5 */
     ec_ux_t ux;                  /* 0.3.0 */
     ec_rec_t rec;                /* E6: sampling (the REC pop-up), the input meters */
+    ec_mk_t mk;                  /* 0.5.0: the mod matrix's MATRIX page, MOD KEYS, the live controls */
 } ec_app_t;
 
 extern ec_app_t ec_app;
@@ -102,5 +104,11 @@ int ec_app_cells_visible(const ec_app_t *a);                 /* the active lane'
 int ec_app_popup(const ec_app_t *a);                         /* a pop-up is open (OCT- back / OCT+ OK; E6: REC) */
 int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held alone: its map shows */
 int ec_app_track_audible(const ec_app_t *a, int t);          /* not muted, not silenced by a solo */
+/* 0.5.0 (ec_modkeys.c) */
+void ec_app_edit_param(int id, int det, int mult);           /* a knob turn on a track param (locks, undo) */
+int ec_app_param_steps(int id);                              /* its finest steps (the knob speed) */
+void ec_app_goto(int cat, int page);                         /* that page, the setup / pop-ups closed */
+void ec_app_message(const char *s);
+void ec_app_mark_dirty(void);
 
 #endif

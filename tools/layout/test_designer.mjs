@@ -8,7 +8,8 @@
 //      FILTER (classic) KNOB 1 CUT <-> KNOB 2 RES. The preview's pixels change where the cells' labels are, the knob
 //      turns the new param, the live panel labels follow, and Export is exactly the shipped JSON with that swap
 //      (compared as data, and as text with gen_layout.py --format's canonical form)
-//   4. undo: the preview's pixels back to the first frame's
+//   4. undo: the preview's pixels back to the first frame's; 4b. the MATRIX page: MOD's first (tree and preview),
+//      its slots fixed (drops refused), never in the tray; a design without one opened: inserted, in the changes
 //   5. a page moved to another category with a new lane; a bad title refused
 //   6. every kind of <select> (context, a page's picture, MOVE TO, VARIANT, + VARIANT FOR, OPEN) opened with the
 //      mouse stays: 2 s of the demo playing, the same element, focused, its value kept
@@ -93,14 +94,18 @@ try {
     `2. the designer's pack of the shipped design = gen_layout.py --pack (${shippedPack.length} bytes)`);
   ok((await js("designer.cPack()")) === shippedPack, "   the firmware's pack of the layout it loaded = the same");
   const c0 = await js("designer.compiled()");
-  ok(c0.errors.length === 0 && c0.warnings.length === 0, `   the shipped design: ${c0.errors.length} errors, ${c0.warnings.length} warnings`);
+  // (the owner's long cell labels are theirs: "longer than 5" warnings are allowed; nothing else)
+  const w0 = c0.warnings.filter((w) => !/longer than 5/.test(w));
+  ok(c0.errors.length === 0 && w0.length === 0, `   the shipped design: ${c0.errors.length} errors, ${w0.length} warnings besides long labels${w0.length ? ": " + w0[0] : ""}`);
 
   // 3. the swap
   await js("designer.context({ filt: 1 }), designer.goto('FILT', 0, 0), true");
   await js("designer.run(200)");
   const px0 = region(await js("designer.pixels()"));
   const s1 = await js("designer.state()");
-  ok(s1.title === "FILTER" && s1.items[0].label === "CUT" && s1.items[1].label === "RES",
+  // (the labels the design gives cutoff and resonance there: CUT / RES, or the owner's CUTOFF / RESO)
+  const [CUT, RES] = [s1.items[0].label, s1.items[1].label];
+  ok(s1.title === "FILTER" && /^CUT(OFF)?$/.test(CUT) && /^RESO?$/.test(RES),
     `3. on FILT/FILTER (classic): KNOB 1 ${s1.items[0].label}, KNOB 2 ${s1.items[1].label}`);
   const vi = await js("designer.variantOf('FILT', 0)");
   const moved = await js(`designer.drop({ ref: designer.ref("page", { cat: "FILT", pi: 0, vi: ${vi}, lane: 0, k: 0 }) },
@@ -108,9 +113,9 @@ try {
   await js("designer.goto('FILT', 0, 0), designer.run(120), true");
   const s2 = await js("designer.state()");
   const px1 = region(await js("designer.pixels()"));
-  ok(moved && s2.items[0].label === "RES" && s2.items[1].label === "CUT", `   dropped CUT onto KNOB 2: KNOB 1 ${s2.items[0].label}, KNOB 2 ${s2.items[1].label}`);
+  ok(moved && s2.items[0].label === RES && s2.items[1].label === CUT, `   dropped CUT onto KNOB 2: KNOB 1 ${s2.items[0].label}, KNOB 2 ${s2.items[1].label}`);
   ok(ndiff(px0, px1) > 20, `   the preview's pixels changed where the labels are (${ndiff(px0, px1)} values)`);
-  ok(s2.labels[3] === "RES" && s2.labels[4] === "CUT", `   the live panel labels: KNOB 1 ${s2.labels[3]}, KNOB 2 ${s2.labels[4]}`);
+  ok(s2.labels[3] === RES && s2.labels[4] === CUT, `   the live panel labels: KNOB 1 ${s2.labels[3]}, KNOB 2 ${s2.labels[4]}`);
   const res0 = s2.items[0].value;
   await js("designer.turn(3, 5), designer.run(60), true");
   const s3 = await js("designer.state()");
@@ -133,20 +138,57 @@ try {
   await js("designer.undo(), designer.goto('FILT', 0, 0), designer.run(120), true");
   const s4 = await js("designer.state()");
   const px2 = region(await js("designer.pixels()"));
-  ok(s4.items[0].label === "CUT" && ndiff(px0, px2) === 0, `4. undo: KNOB 1 ${s4.items[0].label}, the label row as before (${ndiff(px0, px2)} values differ)`);
+  ok(s4.items[0].label === CUT && ndiff(px0, px2) === 0, `4. undo: KNOB 1 ${s4.items[0].label}, the label row as before (${ndiff(px0, px2)} values differ)`);
   ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   Export = the shipped file again, byte for byte");
 
-  // 5. pages: F.MIX moved from FILT to MOD, a lane added there with DRIV; a title in lower case is refused (the
-  // preview keeps the last good layout)
+  // 4b. the MATRIX page (0.5.0): MOD's first page in the tree and on the unit, its slots fixed, its items and the
+  // matrix / retired params never in the tray; a design without one gets it inserted on open (shown in the changes)
+  const t4 = await js(`(() => { const e = document.querySelector('.page[data-cat="MOD"][data-pi="0"]'); return e && { title: e.querySelector(".title").value,
+    fixed: [...e.querySelectorAll(".slot")].map((x) => x.dataset.fixed === "1" && x.getAttribute("draggable") === "false"),
+    ops: e.querySelectorAll(".lops button, .addrow button, .vrow").length, pic: e.querySelector(".prow .fixed")?.textContent }; })()`);
+  ok(t4 && t4.title === "MATRIX" && t4.fixed.length === 4 && t4.fixed.every(Boolean) && t4.ops === 0 && /mod matrix/.test(t4.pic),
+    `4b. the tree: MOD's first page is ${t4 && t4.title} (${t4 && t4.pic}), its 4 slots fixed (${t4 && t4.fixed.join(" ")}), ${t4 && t4.ops} lane / variant controls`);
+  await js("designer.goto('MOD', 0, 0), designer.run(120), true");
+  const s4b = await js("designer.state()");
+  ok(s4b.cat === 5 && s4b.page === 0 && s4b.title === "MATRIX", `   the preview: MOD page ${s4b.page + 1} is ${s4b.title}`);
+  await shot("02b_matrix");
+  const mref = (k) => `designer.ref("page", { cat: "MOD", pi: 0, lane: 0, k: ${k} })`;
+  const d4a = await js("designer.exportText()");
+  const r4 = await js(`[designer.drop({ ref: ${mref(0)} }, { ref: ${mref(3)} }), designer.drop({ name: "lfo1_wave" }, { ref: ${mref(3)} }),
+    designer.drop({ ref: designer.ref("page", { cat: "MOD", pi: 1, lane: 0, k: 0 }) }, { ref: ${mref(1)} }), designer.drop({ ref: ${mref(2)} }, { tray: true }),
+    designer.drop({ name: "mtx.src" }, { ref: designer.ref("page", { cat: "MOD", pi: 1, lane: 0, k: 3 }) })]`);
+  ok(r4.every((x) => x === false) && (await js("designer.exportText()")) === d4a, `   drops onto / off its slots refused (${r4.join(" ")}), the design unchanged`);
+  const tr = await js(`[designer.trayNames("mtx"), designer.trayNames("depth"), designer.trayNames("dest")]`);
+  const leak = tr.flat().filter((n) => /^mtx/.test(n) || /_dest$/.test(n) || /^macro\d_.*_depth$/.test(n));
+  ok(leak.length === 0 && tr[1].includes("lfo1_depth"), `   the tray never has mtx.* / mtx1_* / retired params (searches "mtx" ${tr[0].length}, "depth" ${tr[1].length}, "dest" ${tr[2].length}: ${leak.join(" ") || "none of them"})`);
+  const old = JSON.parse(readFileSync(join(WEB, "shipped.json"), "utf8"));
+  const om = old.categories.find((c) => c.cat === "MOD");
+  om.pages = om.pages.filter((p) => p.picture !== "matrix");
+  om.pages.find((p) => p.title === "MACRO 1").lanes.push(["macro1_pitch_depth"]);
+  const opened = await js(`designer.open(${JSON.stringify(old)}, "a 0.4 design")`);
+  const d4c = await js("designer.design()");
+  const mp = d4c.categories.find((c) => c.cat === "MOD").pages;
+  const c4 = await js("designer.compiled()");
+  const diff4 = await js(`document.querySelector("#difflist").textContent`);
+  ok(opened && mp[0].title === "MATRIX" && mp[0].picture === "matrix" && c4.errors.length === 0 && /MATRIX inserted/.test(diff4) &&
+    c4.warnings.some((w) => /macro1_pitch_depth is retired/.test(w)),
+    `   a design without one opened: MOD/${mp[0].title} inserted first (changes: "${(diff4.match(/MOD added[^]*?page\)/) || [""])[0]}"), a retired item kept with a warning`);
+  await js("designer.undo(), true");
+  ok((await js("designer.exportText()")) === readFileSync(join(WEB, "shipped.json"), "utf8"), "   undo: the shipped file again");
+
+  // 5. pages: FILT's third page (F.MIX, the owner's MIX) moved from FILT to MOD, a lane added there with DRIV; a title
+  // in lower case is refused (the preview keeps the last good layout)
+  const nfilt = (await js("designer.design()")).categories.find((c) => c.cat === "FILT").pages.length;
+  const fmix = (await js("designer.design()")).categories.find((c) => c.cat === "FILT").pages[2].title;
   await js("designer.movePage('FILT', 2, 'MOD', 99), true");
   await js("designer.edit((d) => { const p = d.categories.find((c) => c.cat === 'MOD').pages.at(-1); p.lanes.push(['filter_drive']); }), true");
   const d5 = await js("designer.design()");
   const mod = d5.categories.find((c) => c.cat === "MOD").pages;
-  ok(mod.at(-1).title === "F.MIX" && d5.categories.find((c) => c.cat === "FILT").pages.length === 2,
-    `5. F.MIX moved to MOD (page ${mod.length}), FILT has 2 pages`);
+  ok(mod.at(-1).title === fmix && d5.categories.find((c) => c.cat === "FILT").pages.length === nfilt - 1,
+    `5. FILT/${fmix} moved to MOD (page ${mod.length}), FILT has ${nfilt - 1} pages`);
   await js(`designer.goto('MOD', ${mod.length - 1}, 1), designer.run(120), true`);
   const s5 = await js("designer.state()");
-  ok(s5.title === "F.MIX" && s5.lanes === 2 && s5.items[4] && s5.items[4].label === "DRIV",
+  ok(s5.title === fmix && s5.lanes === 2 && s5.items[4] && s5.items[4].label === "DRIV",
     `   the preview: MOD/${s5.title}, ${s5.lanes} lanes, lane 2 KNOB 1 ${s5.items[4] && s5.items[4].label} (labels ${s5.labels.slice(3, 7).join(" ")})`);
   await shot("03_page_moved");
   const f5 = join(tmp, "moved.json");
@@ -169,7 +211,7 @@ try {
   const centre = (q) => js(`(() => { const e = ${q}; if (!e) return null; e.scrollIntoView({ block: "center" }); window.__sel = e; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + Math.min(r.height / 2, 8), v: e.value }; })()`);
   const sels = [["the context's MACHINE", `document.querySelector('[data-key="ctx-MACHINE"]')`],
     ["a page's picture", `document.querySelector('.page[data-cat="FILT"][data-pi="1"] [data-key^="pic-"]')`],
-    ["a page's MOVE TO", `document.querySelector('.page[data-cat="MOD"][data-pi="0"] [data-key^="move-"]')`],
+    ["a page's MOVE TO", `document.querySelector('.page[data-cat="MOD"][data-pi="1"] [data-key^="move-"]')`],
     ["a page's VARIANT", `document.querySelector('.page[data-cat="FILT"][data-pi="0"] [data-key^="var-"]')`],
     ["+ VARIANT FOR", `document.querySelector('.page[data-cat="AMP"][data-pi="0"] [data-key^="addvar-"]')`],
     ["OPEN", `document.querySelector("#open")`]];

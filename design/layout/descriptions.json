@@ -7,7 +7,7 @@
     "FILT": "The EDIT button: the track's filter, its envelope and its stereo / mid-side spread. Setup: filter machine, filter envelope mode, mix mode.",
     "AMP": "The ENV button: the amp envelope, volume, pan and the two send levels. Setup: envelope mode and range, portamento, slice hold.",
     "FX": "The FX button: the track's insert effect (or, with S1 / S2 / MST selected, that bus's effect) and the send levels. Setup: the FX machine and the send tap.",
-    "MOD": "The LFO button: two LFOs, the mod envelope, velocity modulation and the four macros with their depth matrices. No setup.",
+    "MOD": "The LFO button: the mod matrix (8 slots of source, destination and depth per track), two LFOs, the mod envelope, velocity and the four macros, all of them matrix sources. No setup.",
     "MST": "The MST upper key: the mixer, the master settings (tempo, swing, global length, playhead return) and the A / B scene crossfader. Setup: return mode, tempo, global BPM, project name.",
     "FILE": "The SAVE button: the sample browser and the slot's file settings, and RAZOR, the slice editor for the track's sample.",
     "PAT": "The ARP button: the track's pattern length and step rate, the global length and how pattern changes engage. Setup: change mode, global length."
@@ -31,15 +31,16 @@
     "FX/FX": "The track's insert effect: the chosen FX machine's knobs over a picture of it (delay taps, reverb tail, compressor curve with meters ...). Empty for NONE.",
     "FX/SENDS": "How much of the track goes to the S1 and S2 send buses, and where it is tapped (before or after the insert).",
     "FX/SETUP": "Choose the insert FX machine (any time, with a short fade) and the send tap point.",
-    "MOD/LFO 1": "LFO 1: destination, waveform, synced speed, bipolar depth and trigger mode. The bar shows the live value at the destination.",
-    "MOD/LFO 2": "LFO 2: destination, waveform, synced speed, bipolar depth and trigger mode. The bar shows the live value at the destination.",
-    "MOD/ENV": "The mod envelope (ADSR), its destination and depth. It retriggers on steps whose ERST is on, for the note's length.",
-    "MOD/VELOCITY": "Velocity as a mod source: where it goes and how much. Velocity comes from slice trigs only.",
-    "MOD/MACROS": "The four macro values M1-M4 at a glance. Each macro moves pitch, cutoff, resonance, amp and pan by its own depths.",
-    "MOD/MACRO 1": "Macro 1: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
-    "MOD/MACRO 2": "Macro 2: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
-    "MOD/MACRO 3": "Macro 3: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
-    "MOD/MACRO 4": "Macro 4: its value and how far it moves pitch, cutoff, resonance, amp and pan.",
+    "MOD/MATRIX": "The mod matrix: 8 slots per track, one row each, SRC · DST · DEPTH. SELECT picks the row (past row 8 it goes on to the next page); KNOB 1 the source, KNOB 2 the destination, KNOB 3 the depth. Fixed: its knobs are always these. Hold MOD (or SHIFT + MOD) for MOD KEYS: hold a black key (a source) and turn any knob to aim it there.",
+    "MOD/LFO 1": "LFO 1: waveform, synced speed, depth and trigger mode. Where it goes is set in the mod matrix (MOD/MATRIX); the depth is its level into the matrix.",
+    "MOD/LFO 2": "LFO 2: waveform, synced speed, depth and trigger mode. Where it goes is set in the mod matrix (MOD/MATRIX); the depth is its level into the matrix.",
+    "MOD/ENV": "The mod envelope (ADSR) and its depth, its level into the mod matrix (MOD/MATRIX sets where it goes). It retriggers on steps whose ERST is on, for the note's length.",
+    "MOD/VELOCITY": "Velocity as a mod source: its depth is its level into the mod matrix (MOD/MATRIX sets where it goes). Velocity comes from slice trigs only.",
+    "MOD/MACROS": "The four macro values M1-M4 at a glance. Each macro is a mod matrix source (M1-M4): MOD/MATRIX sets what it moves.",
+    "MOD/MACRO 1": "Macro 1: its value; the picture lists the mod matrix rows whose source is M1 (read-only: edit them on MOD/MATRIX).",
+    "MOD/MACRO 2": "Macro 2: its value; the picture lists the mod matrix rows whose source is M2 (read-only: edit them on MOD/MATRIX).",
+    "MOD/MACRO 3": "Macro 3: its value; the picture lists the mod matrix rows whose source is M3 (read-only: edit them on MOD/MATRIX).",
+    "MOD/MACRO 4": "Macro 4: its value; the picture lists the mod matrix rows whose source is M4 (read-only: edit them on MOD/MATRIX).",
     "MST/TRACK MIX": "The mixer: all six tracks' levels and the S1 / S2 returns at a glance; the knobs set the selected track's volume, pan and mute, and the tempo.",
     "MST/MASTER": "Project timing: tempo, swing, global pattern length and what the playhead does when the loop keys are let go.",
     "MST/SCENE": "The A / B scene crossfader: the fader, its glide positions and the params that morph. The lower keys are the scene row here.",
@@ -419,7 +420,7 @@
     },
     "lfo1_dest": {
       "name": "LFO 1 destination",
-      "desc": "What LFO 1 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: What LFO 1 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
     },
     "lfo1_wave": {
       "name": "LFO 1 wave",
@@ -431,7 +432,7 @@
     },
     "lfo1_depth": {
       "name": "LFO 1 depth",
-      "desc": "How much LFO 1 moves its destination, -64 to +64; 0 = off, negative inverts. P-lockable."
+      "desc": "LFO 1's level into the mod matrix, -64 to +64; 0 = silent, negative inverts. Each matrix slot with SRC LFO1 scales it by its own DEPTH. P-lockable."
     },
     "lfo1_mode": {
       "name": "LFO 1 mode",
@@ -439,7 +440,7 @@
     },
     "lfo2_dest": {
       "name": "LFO 2 destination",
-      "desc": "What LFO 2 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: What LFO 2 moves: OFF, PITCH (+-12 st), CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
     },
     "lfo2_wave": {
       "name": "LFO 2 wave",
@@ -451,7 +452,7 @@
     },
     "lfo2_depth": {
       "name": "LFO 2 depth",
-      "desc": "How much LFO 2 moves its destination, -64 to +64; 0 = off, negative inverts. P-lockable."
+      "desc": "LFO 2's level into the mod matrix, -64 to +64; 0 = silent, negative inverts. Each matrix slot with SRC LFO2 scales it by its own DEPTH. P-lockable."
     },
     "lfo2_mode": {
       "name": "LFO 2 mode",
@@ -803,7 +804,7 @@
     },
     "menv_dest": {
       "name": "Mod env destination",
-      "desc": "What the mod envelope moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: What the mod envelope moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Not p-lockable."
     },
     "menv_attack": {
       "name": "Mod env attack",
@@ -823,111 +824,111 @@
     },
     "menv_depth": {
       "name": "Mod env depth",
-      "desc": "How much the mod envelope moves its destination, -64 to +64; 0 = off. P-lockable."
+      "desc": "The mod envelope's level into the mod matrix (source ENV), -64 to +64; 0 = silent. Each slot's DEPTH scales it. P-lockable."
     },
     "mvel_dest": {
       "name": "Velocity destination",
-      "desc": "What velocity moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Velocity comes from slice trigs only. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: What velocity moves: OFF, PITCH, CUT, RES, AMP, PAN or a macro (M1-M4). Velocity comes from slice trigs only. Not p-lockable."
     },
     "mvel_depth": {
       "name": "Velocity depth",
-      "desc": "How much velocity moves its destination, -64 to +64; 0 = off. P-lockable."
+      "desc": "Velocity's level into the mod matrix (source VEL), -64 to +64; 0 = silent. Each slot's DEPTH scales it. P-lockable."
     },
     "macro1_value": {
       "name": "Macro 1",
-      "desc": "Macro 1's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 1 depths. LFOs and envelopes can also drive it. P-lockable."
+      "desc": "Macro 1's value, 0 to 127: a mod matrix source (M1); the slots with SRC M1 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable."
     },
     "macro2_value": {
       "name": "Macro 2",
-      "desc": "Macro 2's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 2 depths. LFOs and envelopes can also drive it. P-lockable."
+      "desc": "Macro 2's value, 0 to 127: a mod matrix source (M2); the slots with SRC M2 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable."
     },
     "macro3_value": {
       "name": "Macro 3",
-      "desc": "Macro 3's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 3 depths. LFOs and envelopes can also drive it. P-lockable."
+      "desc": "Macro 3's value, 0 to 127: a mod matrix source (M3); the slots with SRC M3 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable."
     },
     "macro4_value": {
       "name": "Macro 4",
-      "desc": "Macro 4's value, 0 to 127; moves pitch, cutoff, res, amp and pan by its MACRO 4 depths. LFOs and envelopes can also drive it. P-lockable."
+      "desc": "Macro 4's value, 0 to 127: a mod matrix source (M4); the slots with SRC M4 set what it moves and how far. A matrix slot can also aim at it (LFOs and envelopes drive it). P-lockable."
     },
     "macro1_pitch_depth": {
       "name": "Macro 1 to pitch",
-      "desc": "How far macro 1 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 1 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro1_cutoff_depth": {
       "name": "Macro 1 to cutoff",
-      "desc": "How far macro 1 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 1 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro1_res_depth": {
       "name": "Macro 1 to resonance",
-      "desc": "How far macro 1 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 1 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro1_amp_depth": {
       "name": "Macro 1 to amp",
-      "desc": "How far macro 1 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 1 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro1_pan_depth": {
       "name": "Macro 1 to pan",
-      "desc": "How far macro 1 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 1 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro2_pitch_depth": {
       "name": "Macro 2 to pitch",
-      "desc": "How far macro 2 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 2 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro2_cutoff_depth": {
       "name": "Macro 2 to cutoff",
-      "desc": "How far macro 2 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 2 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro2_res_depth": {
       "name": "Macro 2 to resonance",
-      "desc": "How far macro 2 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 2 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro2_amp_depth": {
       "name": "Macro 2 to amp",
-      "desc": "How far macro 2 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 2 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro2_pan_depth": {
       "name": "Macro 2 to pan",
-      "desc": "How far macro 2 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 2 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro3_pitch_depth": {
       "name": "Macro 3 to pitch",
-      "desc": "How far macro 3 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 3 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro3_cutoff_depth": {
       "name": "Macro 3 to cutoff",
-      "desc": "How far macro 3 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 3 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro3_res_depth": {
       "name": "Macro 3 to resonance",
-      "desc": "How far macro 3 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 3 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro3_amp_depth": {
       "name": "Macro 3 to amp",
-      "desc": "How far macro 3 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 3 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro3_pan_depth": {
       "name": "Macro 3 to pan",
-      "desc": "How far macro 3 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 3 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro4_pitch_depth": {
       "name": "Macro 4 to pitch",
-      "desc": "How far macro 4 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 4 moves pitch (up to +-12 semitones), -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro4_cutoff_depth": {
       "name": "Macro 4 to cutoff",
-      "desc": "How far macro 4 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 4 moves the filter cutoff, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro4_res_depth": {
       "name": "Macro 4 to resonance",
-      "desc": "How far macro 4 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 4 moves the filter resonance, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro4_amp_depth": {
       "name": "Macro 4 to amp",
-      "desc": "How far macro 4 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 4 moves the track's level, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "macro4_pan_depth": {
       "name": "Macro 4 to pan",
-      "desc": "How far macro 4 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
+      "desc": "Retired in 0.5.0: kept for old projects, read by nothing (a 0.4 project's setting becomes a mod matrix slot on load). It was: How far macro 4 moves the pan position, -64 to +64; 0 = not at all, negative inverts. Not p-lockable."
     },
     "global.bpm": {
       "name": "Tempo",
@@ -1020,6 +1021,18 @@
     "e5.mute": {
       "name": "Slice mute",
       "desc": "Mutes the held pads (else the SLIC slice) in the pattern's slice program; muted slices stay on their steps but play nothing."
+    },
+    "mtx.src": {
+      "name": "Matrix source",
+      "desc": "The selected row's source: OFF, LFO1, LFO2, ENV (the mod envelope), VEL, AT (aftertouch), MW (mod wheel, CC 1), EXPR (expression pedal, CC 11) or a macro M1-M4. The LFOs are bipolar, the rest unipolar. Not lockable."
+    },
+    "mtx.dst": {
+      "name": "Matrix destination",
+      "desc": "What the row moves: any continuous track param or PITCH, grouped by category in category order. A turn steps one item; SHIFT + the knob jumps a whole category. Not lockable."
+    },
+    "mtx.depth": {
+      "name": "Matrix depth",
+      "desc": "How far the row's source moves its destination, -100 to +100 % of its range; fine steps near 0, SHIFT snaps to 0 / +-25 / +-50 / +-100. P-lockable and morphed by scenes."
     }
   }
 }

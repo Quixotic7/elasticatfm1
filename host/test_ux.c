@@ -163,8 +163,12 @@ static void test_setup(void)
     btn(FM1P_B_GLO, 0);
     run(20);
     CHECK(!A->settings && A->cat == EC_CAT_FILT, "SHIFT + EDIT again: back to the pages");
+    press(FM1P_B_LFO, 500);                                   /* 0.5.0: MOD has no setup: a hold is MOD KEYS */
+    CHECK(!A->settings && A->cat == EC_CAT_FILT && A->mk.on, "MOD held: MOD KEYS on, the page stays");
     press(FM1P_B_LFO, 500);
-    CHECK(!A->settings && A->cat == EC_CAT_MOD, "MOD has no setup: a hold is a tap");
+    CHECK(!A->mk.on, "MOD held again: MOD KEYS off");
+    press(FM1P_B_LFO, 40);
+    CHECK(!A->settings && A->cat == EC_CAT_MOD, "MOD tapped: its pages");
     press(FM1P_B_ENV, 450);
     press(FM1P_B_EDIT, 40);
     CHECK(!A->settings && A->cat == EC_CAT_FILT, "in a setup, another button: its pages");

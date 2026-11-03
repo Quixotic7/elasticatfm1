@@ -9,6 +9,7 @@ void ec_mod_params_default(ec_mod_params_t *p)
 {
     memset(p, 0, sizeof *p);
     for (int i = 0; i < 2; ++i) p->lfo[i].beats = 4.f;   /* "1 BAR" (option 4) */
+    for (int k = 0; k < EC_MOD_SLOTS; ++k) p->slot[k].bus = -1;
     p->menv_attack = 0.0001f;
     p->menv_decay = 0.15f;
     p->menv_sustain = 100.f / 127.f;
@@ -17,11 +18,8 @@ void ec_mod_params_default(ec_mod_params_t *p)
 
 int ec_mod_needed(const ec_mod_params_t *p)
 {
-    if (p->lfo[0].depth != 0.f || p->lfo[1].depth != 0.f || p->menv_depth != 0.f || p->mvel_depth != 0.f)
-        return 1;
-    for (int m = 0; m < 4; ++m)
-        for (int d = 0; d < EC_MOD_NDEST; ++d)
-            if (p->macro_depth[m][d] != 0.f) return 1;
+    for (int k = 0; k < EC_MOD_SLOTS; ++k)
+        if (p->slot[k].src > 0 && p->slot[k].depth != 0.f) return 1;
     return 0;
 }
 
@@ -29,10 +27,12 @@ int ec_mod_needed(const ec_mod_params_t *p)
 static void mod_spawn(ec_mod_t *m)
 {
     uint32_t rng = m->rng ? m->rng : 0x9E3779B9u;
-    float vel = m->vel;
+    float vel = m->vel, live[3];
+    memcpy(live, m->live, sizeof live);
     memset(m, 0, sizeof *m);
     m->rng = rng;
     m->vel = m->vel_lag = vel;
+    for (int i = 0; i < 3; ++i) m->live[i] = m->live_lag[i] = live[i];
     ec_env_reset(&m->env);
     for (int i = 0; i < 2; ++i) m->rnd[i] = ec_frand2(&m->rng);
     m->alive = 1;
@@ -110,25 +110,24 @@ void ec_mod_note_off(ec_mod_t *m, const ec_mod_params_t *p, float fs)
     ec_env_note_off(&m->env, &sp, fs);
 }
 
-static inline float routed(float sig, int dest, int idx) { return dest == idx ? sig : 0.f; }
-
 void ec_mod_tick(ec_mod_t *m, const ec_mod_params_t *p, float bpm, float fs, const float *lag01, int n,
                  float *out)
 {
     for (int d = 0; d < EC_MOD_NDEST; ++d) out[d] = 0.f;
     if (!ec_mod_needed(p)) {
-        if (m->alive) { m->alive = 0; }
+        if (m->alive) {
+            m->alive = 0;
+            for (int i = 0; i < EC_MSRC_N; ++i) m->src[i] = 0.f;
+        }
         return;
     }
     if (!m->alive) mod_spawn(m);
 
-    /* sources at the chunk start */
-    float lfo[2];
-    int ld[2];
-    for (int i = 0; i < 2; ++i) {
-        lfo[i] = lfo_value(m, p, i) * ec_clampf(p->lfo[i].depth, -1.f, 1.f);
-        ld[i] = p->lfo[i].dest;
-    }
+    /* the sources at the chunk start, each at its level */
+    float src[1 + EC_MSRC_N + 4];
+    src[0] = 0.f;
+    for (int i = 0; i < 2; ++i)
+        src[1 + EC_MSRC_LFO1 + i] = lfo_value(m, p, i) * ec_clampf(p->lfo[i].depth, -1.f, 1.f);
     ec_envspec_t sp;
     menv_spec(p, &sp);
     float ev = 0.f;
@@ -136,28 +135,24 @@ void ec_mod_tick(ec_mod_t *m, const ec_mod_params_t *p, float bpm, float fs, con
         float v = ec_env_tick(&m->env, &sp, fs);
         if (i == 0) ev = v;
     }
-    float menv = ev * ec_clampf(p->menv_depth, -1.f, 1.f);
+    src[1 + EC_MSRC_ENV] = ev * ec_clampf(p->menv_depth, -1.f, 1.f);
     m->vel_lag = ec_lag(m->vel_lag, ec_clampf(m->vel, 0.f, 1.f), lag01, n);
-    float mvel = m->vel_lag * ec_clampf(p->mvel_depth, -1.f, 1.f);
-    int md = p->menv_dest, vd = p->mvel_dest;
-
-    /* stage 1: the macros (base + sources routed at them), 0..1 */
-    float mv[4];
+    src[1 + EC_MSRC_VEL] = m->vel_lag * ec_clampf(p->mvel_depth, -1.f, 1.f);
+    for (int i = 0; i < 3; ++i) {
+        m->live_lag[i] = ec_lag(m->live_lag[i], ec_clampf(m->live[i], 0.f, 1.f), lag01, n);
+        src[1 + EC_MSRC_AT + i] = m->live_lag[i];
+    }
     for (int k = 0; k < 4; ++k) {
-        int idx = EC_MD_MACRO1 + k;
-        mv[k] = ec_clampf(p->macro_base[k] + routed(lfo[0], ld[0], idx) + routed(lfo[1], ld[1], idx) +
-                          routed(menv, md, idx) + routed(mvel, vd, idx), 0.f, 1.f);
+        m->macro_val[k] = ec_clampf(p->macro_base[k], 0.f, 1.f);
+        src[1 + EC_MSRC_N + k] = m->macro_val[k];
     }
-    /* stage 2: the five destinations */
-    for (int d = 0; d < EC_MOD_NDEST; ++d) {
-        int idx = EC_MD_PITCH + d;
-        float direct = routed(lfo[0], ld[0], idx) + routed(lfo[1], ld[1], idx) + routed(menv, md, idx);
-        float mac = 0.f;
-        for (int k = 0; k < 4; ++k) mac += mv[k] * p->macro_depth[k][d];
-        if (d == EC_MOD_CUTOFF) out[d] = (direct + mac) * 0.3f + routed(mvel, vd, idx);
-        else out[d] = direct + mac + routed(mvel, vd, idx);
+    for (int i = 0; i < EC_MSRC_N; ++i) m->src[i] = src[1 + i];
+
+    /* the slots on the fast buses */
+    for (int k = 0; k < EC_MOD_SLOTS; ++k) {
+        const int s = p->slot[k].src, b = p->slot[k].bus;
+        if (s > 0 && s <= EC_MSRC_N + 4 && b >= 0 && b < EC_MOD_NDEST) out[b] += src[s] * p->slot[k].depth;
     }
-    for (int i = 0; i < 4; ++i) m->macro_val[i] = mv[i];
 
     /* advance */
     for (int i = 0; i < 2; ++i) {

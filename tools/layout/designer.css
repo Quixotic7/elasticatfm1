@@ -78,6 +78,7 @@ body.coldrag { cursor: col-resize; user-select: none; }
 .slot.over { background: #2a1a10; border-color: var(--acc); }
 .slot.relabel .lb { color: var(--acc); }
 .slot.special .lb::after { content: " •"; color: var(--l5); }
+.slot.fixedslot { cursor: default; border-style: dotted; }
 .addrow { display: flex; gap: 5px; margin-top: 3px; }
 .setup .h, .bus .h { margin-top: 2px; }
 /* ---- the preview */

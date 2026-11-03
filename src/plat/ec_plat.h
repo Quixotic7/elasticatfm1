@@ -51,6 +51,8 @@ typedef struct {
     int32_t enc[EC_NE];                /* detents this tick by role, + = clockwise */
     int32_t master;                    /* MASTER pot 0..1023 */
     int master_moved;                  /* 1 when master changed this tick */
+    uint8_t key_lean[EC_NKEY];         /* 0.5.0: aftertouch per key, 0..100 % (the panel's key_lean) */
+    uint8_t cc_mw, cc_expr;            /* 0.5.0: MIDI CC 1 / CC 11 (any channel), 0..127, the last value */
 } ec_input_t;
 
 /* ---- keys: the 27 note keys as two rows ---- */

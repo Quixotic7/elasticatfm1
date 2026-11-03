@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "ec_e5.h"
+#include "ec_mtx.h"
 #include "ec_project.h"
 
 void ec_slot_clear(ec_slot_t *s)
@@ -396,8 +397,12 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
 
 static float clampf(float x, float lo, float hi) { return x < lo ? lo : x > hi ? hi : x; }
 
+static int g_dropped;
+int ec_project_mtx_dropped(void) { return g_dropped; }
+
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
 {
+    uint32_t migrated = 0;
     io_t o;
     uint32_t len, sum, nslot, npat, ntr;
     uint32_t i, t, k, s;
@@ -414,6 +419,7 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
     if (len > n - HDR || fnv1a(buf + HDR, len) != sum)
         return -1;
     o.cap = HDR + len;
+    g_dropped = 0;
     ec_project_init(p);
     p->pat[0].used = 0;
     p->bpm = clampf(rf(&o), 20, 300);
@@ -459,6 +465,7 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
             ec_ptrack_t *tr = i < EC_NPAT && t < EC_NTRACK ? &p->pat[i].tr[t] : 0;
             const uint32_t np = r8(&o);
             uint32_t nsteps;
+            int has_mtx = 0;
             if (tr)
                 ec_params_default(tr->v);
             for (k = 0; k < np; k++) {
@@ -466,6 +473,12 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
                 const float v = rf(&o);
                 if (tr && id < EC_NP)
                     tr->v[id] = ec_param_clamp((int)id, v);
+                has_mtx |= id >= EC_P_MTX1_SRC && id < EC_P_MTX_END;
+            }
+            if (tr && !has_mtx && !o.bad) {      /* 0.5.0: a 0.4 track: its fixed mod routes into the matrix */
+                g_dropped += ec_mtx_migrate(tr->v);
+                if (i == (uint32_t)p->current)
+                    migrated |= 1u << t;
             }
             nsteps = r16(&o);
             for (k = 0; k < nsteps && !o.bad; k++) {
@@ -511,6 +524,22 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
     }
     if (o.bad)
         return -1;
+    for (t = 0; t < EC_NTRACK; t++)               /* 0.5.0: the scenes' old macro depths follow their slots */
+        if (migrated >> t & 1u) {
+            const float *v = p->pat[p->current].tr[t].v;
+            uint32_t sc;
+            for (k = EC_P_MACRO_DEPTH; k < EC_P_MACRO_DEPTH + 20; k++)
+                for (sc = 0; sc < 2; sc++)
+                    if (p->e5.sc.has[sc][t][k]) {
+                        float d;
+                        const int slot = ec_mtx_migrated_slot(v, (int)k, p->e5.sc.val[sc][t][k], &d);
+                        p->e5.sc.has[sc][t][k] = 0;
+                        if (slot >= 0) {
+                            p->e5.sc.has[sc][t][ec_mtx_depth_id(slot)] = 1;
+                            p->e5.sc.val[sc][t][ec_mtx_depth_id(slot)] = d;
+                        }
+                    }
+        }
     if (!p->pat[p->current].used) {
         p->pat[p->current].used = 1;
         for (t = 0; t < EC_NTRACK; t++) {

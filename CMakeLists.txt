@@ -91,6 +91,10 @@ add_executable(ec_test_e6 host/test_e6.c)   # E6: audio input, the INPUT machine
 target_link_libraries(ec_test_e6 PRIVATE elasticat)
 target_compile_options(ec_test_e6 PRIVATE -Wall -Wextra)
 
+add_executable(ec_test_mtx host/test_mtx.c host/ec_png.c)   # 0.5.0: the mod matrix, MOD KEYS, migration
+target_link_libraries(ec_test_mtx PRIVATE elasticat)
+target_compile_options(ec_test_mtx PRIVATE -Wall -Wextra)
+
 add_executable(ec_test_pack tools/layout/test_pack.c tools/layout/ec_layout_pack.c)   # the designer's load path
 target_include_directories(ec_test_pack PRIVATE tools/layout)
 target_compile_options(ec_test_pack PRIVATE -Wall -Wextra)
@@ -121,6 +125,8 @@ add_test(NAME v020_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_v020.
 add_test(NAME e6 COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/e6_folder >/dev/null && $<TARGET_FILE:ec_test_e6> ${CMAKE_BINARY_DIR}/e6_folder")
 # E6: the REC / INPUT screens through panel input with a stand-in input (host/render_e6.sh -> results/e6)
 add_test(NAME e6_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e6.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e6)
+# 0.5.0: the mod matrix (resolve, migration, the MATRIX page, MOD KEYS) on the shipped layout
+add_test(NAME mtx COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/mtx_folder >/dev/null && $<TARGET_FILE:ec_test_mtx> ${CMAKE_BINARY_DIR}/mtx_folder")
 add_test(NAME io COMMAND ec_test_io ${CMAKE_BINARY_DIR}/test_io_folder)
 add_test(NAME seq COMMAND ec_test_seq)
 add_test(NAME e3 COMMAND ec_test_e3)

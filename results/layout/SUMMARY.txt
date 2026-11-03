@@ -1,48 +1,55 @@
-tools/layout/test_designer.mjs (2026-11-02T23:48:24.784Z): 50 checks, 0 failed
+tools/layout/test_designer.mjs (2026-11-03T07:53:35.947Z): 56 checks, 0 failed
 
 ok   1. the page and its preview start
-ok      the demo project plays (SOURCE, 3216 device ms)
+ok      the demo project plays (LOOP, 3183 device ms)
   shot results/layout/01_designer.png
-ok   2. the designer's pack of the shipped design = gen_layout.py --pack (10872 bytes)
+ok   2. the designer's pack of the shipped design = gen_layout.py --pack (11247 bytes)
 ok      the firmware's pack of the layout it loaded = the same
-ok      the shipped design: 0 errors, 0 warnings
-ok   3. on FILT/FILTER (classic): KNOB 1 CUT, KNOB 2 RES
-ok      dropped CUT onto KNOB 2: KNOB 1 RES, KNOB 2 CUT
-ok      the preview's pixels changed where the labels are (432 values)
-ok      the live panel labels: KNOB 1 RES, KNOB 2 CUT
+ok      the shipped design: 0 errors, 0 warnings besides long labels
+ok   3. on FILT/FILTER (classic): KNOB 1 CUTOFF, KNOB 2 RESO
+ok      dropped CUT onto KNOB 2: KNOB 1 RESO, KNOB 2 CUTOFF
+ok      the preview's pixels changed where the labels are (816 values)
+ok      the live panel labels: KNOB 1 RESO, KNOB 2 CUTOFF
 ok      KNOB 1 turns RES now (0 -> 5), CUT stays 20K
   shot results/layout/02_after_swap.png
 ok      Export = the shipped JSON with that swap (as data)
 ok      Export's text = gen_layout.py --format's canonical text
-ok   4. undo: KNOB 1 CUT, the label row as before (0 values differ)
+ok   4. undo: KNOB 1 CUTOFF, the label row as before (0 values differ)
 ok      Export = the shipped file again, byte for byte
-ok   5. F.MIX moved to MOD (page 10), FILT has 2 pages
-ok      the preview: MOD/F.MIX, 2 lanes, lane 2 KNOB 1 DRIV (labels DRIV   )
+ok   4b. the tree: MOD's first page is MATRIX (FIXED · mod matrix), its 4 slots fixed (true true true true), 0 lane / variant controls
+ok      the preview: MOD page 1 is MATRIX
+  shot results/layout/02b_matrix.png
+ok      drops onto / off its slots refused (false false false false false), the design unchanged
+ok      the tray never has mtx.* / mtx1_* / retired params (searches "mtx" 0, "depth" 10, "dest" 8: none of them)
+ok      a design without one opened: MOD/MATRIX inserted first (changes: "MOD added: MOD/MATRIX inserted as MOD's first page (the design had no mod matrix page)"), a retired item kept with a warning
+ok      undo: the shipped file again
+ok   5. FILT/MIX moved to MOD (page 11), FILT has 2 pages
+ok      the preview: MOD/MIX, 2 lanes, lane 2 KNOB 1 DRIV (labels DRIV   )
   shot results/layout/03_page_moved.png
-ok      gen_layout.py --check of the export: gen_layout: warning: descriptions: description(s) for page(s) this design does not have: FILT/F.MIX
+ok      gen_layout.py --check of the export: gen_layout: warning: descriptions: description(s) for page(s) this design does not have: FILT/MIX
 ok      a lower-case title: 1 error (TRIG/trig: the title 'trig' has lower case (the font has capitals only)), the preview keeps the last good layout
 ok      three undos: the shipped file again
 ok   6. the context's MACHINE: found
 ok      the context's MACHINE: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "1")
 ok   6. a page's picture: found
-ok      a page's picture: opened, 2 s of the demo playing (2073 device ms): the same element, focused, value kept (true, true, "fenv")
+ok      a page's picture: opened, 2 s of the demo playing (2090 device ms): the same element, focused, value kept (true, true, "fenv")
 ok   6. a page's MOVE TO: found
 ok      a page's MOVE TO: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "")
 ok   6. a page's VARIANT: found
-ok      a page's VARIANT: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "0")
+ok      a page's VARIANT: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "0")
 ok   6. + VARIANT FOR: found
 ok      + VARIANT FOR: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "")
 ok   6. OPEN: found
-ok      OPEN: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "")
-ok   7. descriptions loaded: 225 items, 43 pages
+ok      OPEN: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "")
+ok   7. descriptions loaded: 228 items, 44 pages
 ok      hover FILT/FILTER KNOB 1: the tooltip is filter_cutoff's ("Cutoff, 20 Hz to 20 kHz. On COMB (TUNE) the comb's pitch; on...")
   shot results/layout/04_tooltip_slot.png
 ok      hover the FILT/FILTER header: the page's description and its variant's (CLASSC)
   shot results/layout/05_tooltip_page.png
 ok      the inspector: the slot's description and the page's (3 blocks: Cutoff, 20 Hz to 20 kHz. On COMB (TUNE)  / The filter machine's controls (cutoff, r / VARIANT CLASSC: CLASSC: Classic multimod)
-ok      the tray's search finds descriptions: "semitones" -> 12 (pitch filter_balance filter_env_depth harm_interval harm_interval2 harm_interval3)
+ok      the tray's search finds descriptions: "semitones" -> 8 (pitch filter_balance filter_env_depth harm_interval harm_interval2 harm_interval3)
 ok   8. the panel's SEQ button (drawn "TRIG") pressed: the preview is on TRIG/TRIG
-ok      the key LEDs light for the trigs (keys lit over 1.2 s: 1 2 4 6 7 9 11 12 14 16 18 19)
+ok      the key LEDs light for the trigs (keys lit over 1.2 s: 1 9 11 12 14 16 18 19 21 23 24)
   shot results/layout/06_panel_trig.png
 ok      Shift-click latches SHIFT: live labels on the buttons change (FX->SETUP SRC->SETUP AMP->SETUP MOD->LFO FILT->SETUP FILE->SAVE PAT->SETUP TRIG->SETUP PAUSE->STOP SAMPLING->SAVE LOOP KEYS->UNDO KEYS->REDO)
   shot results/layout/07_panel_shift_labels.png

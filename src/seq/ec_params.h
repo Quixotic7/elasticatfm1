@@ -66,10 +66,21 @@ enum {
     EC_P_MENV_DEST, EC_P_MENV_ATTACK, EC_P_MENV_DECAY, EC_P_MENV_SUSTAIN, EC_P_MENV_RELEASE, EC_P_MENV_DEPTH,
     EC_P_MVEL_DEST, EC_P_MVEL_DEPTH,
     EC_P_MACRO1, EC_P_MACRO2, EC_P_MACRO3, EC_P_MACRO4,
-    EC_P_MACRO_DEPTH,     /* 20 ids: EC_P_MACRO_DEPTH + macro * 5 + dest (pitch cutoff res amp pan) */
+    EC_P_MACRO_DEPTH,     /* 20 ids: EC_P_MACRO_DEPTH + macro * 5 + dest (pitch cutoff res amp pan); RETIRED 0.5.0 */
     EC_P_E4_END = EC_P_MACRO_DEPTH + 20,
-    EC_NP = EC_P_E4_END
+    /* 0.5.0: the mod matrix (docs/MOD-MATRIX.md): 8 slots of SRC, DST, DEPTH (ec_mtx.h) */
+    EC_P_MTX1_SRC = EC_P_E4_END, EC_P_MTX1_DST, EC_P_MTX1_DEPTH,
+    EC_P_MTX2_SRC, EC_P_MTX2_DST, EC_P_MTX2_DEPTH,
+    EC_P_MTX3_SRC, EC_P_MTX3_DST, EC_P_MTX3_DEPTH,
+    EC_P_MTX4_SRC, EC_P_MTX4_DST, EC_P_MTX4_DEPTH,
+    EC_P_MTX5_SRC, EC_P_MTX5_DST, EC_P_MTX5_DEPTH,
+    EC_P_MTX6_SRC, EC_P_MTX6_DST, EC_P_MTX6_DEPTH,
+    EC_P_MTX7_SRC, EC_P_MTX7_DST, EC_P_MTX7_DEPTH,
+    EC_P_MTX8_SRC, EC_P_MTX8_DST, EC_P_MTX8_DEPTH,
+    EC_P_MTX_END,
+    EC_NP = EC_P_MTX_END
 };
+_Static_assert(EC_NP <= 255, "param ids are u8 in saves and step locks");
 
 /* kinds */
 enum { EC_PK_NUM, EC_PK_OPT, EC_PK_BIN };
@@ -77,14 +88,16 @@ enum { EC_PK_NUM, EC_PK_OPT, EC_PK_BIN };
 enum {
     EC_PF_INT, EC_PF_DEC1, EC_PF_DEC2, EC_PF_MS, EC_PF_ENV, EC_PF_HZ, EC_PF_BIP, EC_PF_PAN, EC_PF_PCT01,
     EC_PF_PCT100, EC_PF_X, EC_PF_PITCH, EC_PF_OPT, EC_PF_BIN, EC_PF_RATE, EC_PF_STEPS, EC_PF_SEC,
-    EC_PF_UNIT            /* E4: real units by id (dB, ms, :1, bits, Hz; ec_param_format_unit) */
+    EC_PF_UNIT,           /* E4: real units by id (dB, ms, :1, bits, Hz; ec_param_format_unit) */
+    EC_PF_MDST,           /* 0.5.0: a matrix slot's DST (0 OFF, else param id + 1) */
+    EC_PF_MDEP            /* 0.5.0: a matrix slot's DEPTH, -100..100 % (fine steps near 0) */
 };
 /* flags */
 #define EC_PF_LOCKABLE 1u      /* p-lockable per step */
 #define EC_PF_REGION 2u        /* region / range point: a resolver input, never a held param (REGION_LOCKS) */
 #define EC_PF_SEQ 4u           /* steers the sequencer, never the engine (SEQUENCER_DOMAIN_LOCKS) */
 #define EC_PF_MOMENT 8u        /* consumed at trigger time, never held (length, velocity) */
-#define EC_PF_E4 16u           /* (unused since E4) */
+#define EC_PF_RETIRED 16u      /* 0.5.0: kept for old saves, read by nothing (the old mod dests / macro depths) */
 #define EC_PF_EXPSTEP 32u      /* E3: a detent multiplies by 2^(1/12) (wide ranges: wt_cycle, wt_lfo_rate) */
 #define EC_PF_FX 64u           /* E4: an FX machine param (the bus records hold these) */
 
@@ -124,6 +137,10 @@ float ec_param_clamp(int id, float x);      /* to the range (options / binaries 
 float ec_param_nudge(int id, float x, int det);
 /* the value as the cell shows it (<= 7 chars), env times need the track's env range (1..10) */
 void ec_param_format(int id, float x, int env_range, char *out, int cap);
+/* 0.5.0: the mod matrix's value steps (ec_param_nudge uses them for EC_PF_MDEP / EC_PF_MDST) */
+float ec_mdep_nudge(float x, int det);      /* DEPTH: fine near 0 */
+float ec_mdst_nudge(float x, int det);      /* DST: the next id that can be a destination */
+int ec_param_mod_dest(int id);              /* id can be a matrix destination (continuous, not structural) */
 /* 0..1 position of x in the range, for bars */
 float ec_param_frac(int id, float x);
 

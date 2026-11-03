@@ -59,6 +59,7 @@ static uint32_t g_ms;
 static uint32_t g_btn_prev, g_key_prev;
 static int32_t g_master_prev = -1;
 static ec_input_t g_in;
+static uint8_t g_cc_mw, g_cc_expr;             /* 0.5.0: the last CC 1 / CC 11 */
 
 /* the FM-1's wiring (hal/fm1_input.h FM1_KEYMAP): key id (0..13 matrix button, 14 + n note key n) at (row, column);
  * LED (column, line) = (column, row - 1) for rows 1..4 */
@@ -349,6 +350,10 @@ static void read_input(uint32_t ms)
             const uint8_t v = g_panel.key_vel[k];
             g_in.key_vel[k] = v ? (v > 127 ? 127 : v) : 100;
         }
+    for (k = 0; k < EC_NKEY; k++)                  /* 0.5.0: aftertouch, CC 1, CC 11 */
+        g_in.key_lean[k] = g_panel.key_lean[k];
+    g_in.cc_mw = g_cc_mw;
+    g_in.cc_expr = g_cc_expr;
     for (r = 0; r < EC_NE; r++)
         g_in.enc[r] = take_i32(&g_panel.enc[g_panel.enc_id[r]]) * (g_panel.enc_dir[r] < 0 ? -1 : 1);
     g_in.master = g_panel.master < 0 ? 0 : g_panel.master > 1023 ? 1023 : g_panel.master;
@@ -386,6 +391,7 @@ static void c_init(int demo)
     g_btn_prev = g_key_prev = 0;
     g_master_prev = -1;
     memset(&g_in, 0, sizeof g_in);
+    g_cc_mw = g_cc_expr = 0;
     g_shut = 0;
     flash_load();
     ec_plat_labels_clear();
@@ -425,10 +431,18 @@ static void c_audio(int16_t *stereo, uint32_t frames)
     g_ain_cur = NULL;
     g_ain_cur_n = 0;
 }
+/* 0.5.0: USB-MIDI packets (cable 0: CIN | status << 8 | d1 << 16 | d2 << 24): CC 1 (mod wheel) and CC 11
+ * (expression) on any channel feed the mod matrix's MW / EXPR; the rest is taken and ignored */
 static int c_midi_in(uint32_t pkt)
 {
-    (void)pkt;
-    return 1;                              /* taken (MIDI is not used yet) */
+    const uint32_t cin = pkt & 15u, st = (pkt >> 8) & 0xFFu, cc = (pkt >> 16) & 0x7Fu, val = (pkt >> 24) & 0x7Fu;
+    if (cin == 0xBu && (st & 0xF0u) == 0xB0u) {
+        if (cc == 1)
+            g_cc_mw = (uint8_t)val;
+        else if (cc == 11)
+            g_cc_expr = (uint8_t)val;
+    }
+    return 1;
 }
 static int c_midi_out_take(uint32_t *pkt)
 {

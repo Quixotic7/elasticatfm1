@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "ec_mtx.h"
 #include "ec_params.h"
 
 static int iv(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
@@ -96,29 +97,29 @@ void ec_params_fx(const float *v, ec_fx_params_t *f)
 
 void ec_params_mod(const float *v, ec_mod_params_t *m)
 {
-    static const int LFO[2][5] = {{EC_P_LFO1_DEST, EC_P_LFO1_WAVE, EC_P_LFO1_SPEED, EC_P_LFO1_DEPTH, EC_P_LFO1_MODE},
-                                  {EC_P_LFO2_DEST, EC_P_LFO2_WAVE, EC_P_LFO2_SPEED, EC_P_LFO2_DEPTH, EC_P_LFO2_MODE}};
+    static const int LFO[2][4] = {{EC_P_LFO1_WAVE, EC_P_LFO1_SPEED, EC_P_LFO1_DEPTH, EC_P_LFO1_MODE},
+                                  {EC_P_LFO2_WAVE, EC_P_LFO2_SPEED, EC_P_LFO2_DEPTH, EC_P_LFO2_MODE}};
     const int er = iv(v, EC_P_ENV_RANGE);
-    int i, k;
+    int i;
     for (i = 0; i < 2; i++) {
-        m->lfo[i].dest = clampi(iv(v, LFO[i][0]) - 1, 0, 9);
-        m->lfo[i].wave = clampi(iv(v, LFO[i][1]) - 1, 0, 5);
-        m->lfo[i].beats = MOD_BEATS[clampi(iv(v, LFO[i][2]), 1, 10) - 1];
-        m->lfo[i].depth = bip(v, LFO[i][3]);
-        m->lfo[i].mode = clampi(iv(v, LFO[i][4]) - 1, 0, 3);
+        m->lfo[i].wave = clampi(iv(v, LFO[i][0]) - 1, 0, 5);
+        m->lfo[i].beats = MOD_BEATS[clampi(iv(v, LFO[i][1]), 1, 10) - 1];
+        m->lfo[i].depth = bip(v, LFO[i][2]);
+        m->lfo[i].mode = clampi(iv(v, LFO[i][3]) - 1, 0, 3);
     }
-    m->menv_dest = clampi(iv(v, EC_P_MENV_DEST) - 1, 0, 9);
     m->menv_attack = ec_xf_env_seconds(v[EC_P_MENV_ATTACK], er);
     m->menv_decay = ec_xf_env_seconds(v[EC_P_MENV_DECAY], er);
     m->menv_sustain = amt(v, EC_P_MENV_SUSTAIN);
     m->menv_release = ec_xf_env_seconds(v[EC_P_MENV_RELEASE], er);
     m->menv_depth = bip(v, EC_P_MENV_DEPTH);
-    m->mvel_dest = clampi(iv(v, EC_P_MVEL_DEST) - 1, 0, 9);
     m->mvel_depth = bip(v, EC_P_MVEL_DEPTH);
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++)
         m->macro_base[i] = v[EC_P_MACRO1 + i] / 127.0f;
-        for (k = 0; k < EC_MOD_NDEST; k++)
-            m->macro_depth[i][k] = bip(v, EC_P_MACRO_DEPTH + i * 5 + k);
+    for (i = 0; i < EC_MOD_SLOTS; i++) {    /* 0.5.0: the matrix (ec_mtx.h) */
+        const int live = ec_mtx_live(v, i);
+        m->slot[i].src = live ? ec_mtx_src(v, i) : 0;
+        m->slot[i].bus = live ? ec_mtx_bus(ec_mtx_dst(v, i)) : -1;
+        m->slot[i].depth = live ? ec_mtx_depth(v, i) : 0.0f;
     }
 }
 

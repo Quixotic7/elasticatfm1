@@ -25,9 +25,14 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 CATS = ["TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"]
 PICS = ["steps", "wave", "wave-machine", "wave-warp", "wave-range", "filter", "fenv", "aenv", "fx", "sends", "lfo1",
-        "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern"]
+        "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix"]
 # pictures with behaviour of their own: their category, and how many pages there may carry them
-FIXED = {"mix": "MST", "scene": "MST", "file": "FILE", "razor": "FILE", "pattern": "PAT"}
+FIXED = {"mix": "MST", "scene": "MST", "file": "FILE", "razor": "FILE", "pattern": "PAT", "matrix": "MOD"}
+# the MATRIX page's knobs are fixed (0.5.0): SELECT picks the row, KNOB 1-3 its SRC, DST, DEPTH
+MATRIX_LANES = [["mtx.src", "mtx.dst", "mtx.depth", None]]
+MTX_RE = re.compile(r"^mtx[1-8]_(src|dst|depth)$")
+RETIRED = {"lfo1_dest", "lfo2_dest", "menv_dest", "mvel_dest"}
+RETIRED_RE = re.compile(r"^macro[1-4]_(pitch|cutoff|res|amp|pan)_depth$")
 MACHINES = ["LOOP", "TRIG", "SLICE", "RAZOR", "S.POLY", "R.POLY", "NEIGH", "INPUT"]
 MCLASS = {"loop": [1, 2], "slice": [3, 5], "razor": [4, 6], "neighbor": [7], "input": [8]}
 OPTS = {
@@ -54,9 +59,12 @@ SPECIAL = {
     "e5.xfd": ("EC_IT_E5", "EC_X_XFD", "XFD"), "e5.choke": ("EC_IT_E5", "EC_X_CHOKE", "CHOK"),
     "e5.gbpm": ("EC_IT_E5", "EC_X_GBPM", "GBPM"), "e5.name": ("EC_IT_E5", "EC_X_NAME", "NAME"),
     "e5.mute": ("EC_IT_E5", "EC_X_MUTE", "SMUT"),
+    "mtx.src": ("EC_IT_MTX", "EC_MX_SRC", "SRC"), "mtx.dst": ("EC_IT_MTX", "EC_MX_DST", "DST"),
+    "mtx.depth": ("EC_IT_MTX", "EC_MX_DEPTH", "DEPTH"),
 }
 # the C values of those ids (the enums in src/app/ec_pages.h), for the packed form
 SPECIAL_NUM = {"EC_IT_BLANK": 0, "EC_IT_PARAM": 1, "EC_IT_GLOBAL": 2, "EC_IT_SLOT": 3, "EC_IT_RAZOR": 4, "EC_IT_E5": 5,
+               "EC_IT_MTX": 6, "EC_MX_SRC": 0, "EC_MX_DST": 1, "EC_MX_DEPTH": 2,
                "EC_X_XFD": 0, "EC_X_CHOKE": 1, "EC_X_GBPM": 2, "EC_X_NAME": 3, "EC_X_MUTE": 4,
                "EC_G_BPM": 0, "EC_G_SWING": 1, "EC_G_GLEN": 2, "EC_G_QUANT": 3, "EC_G_RTN": 4,
                "EC_RZ_START": 0, "EC_RZ_END": 1, "EC_RZ_PLAY": 2, "EC_RZ_ZOOM": 3, "EC_RZ_SNAP": 4, "EC_RZ_CHOKE": 5,
@@ -73,27 +81,32 @@ class Fail(Exception):
     pass
 
 
+def slot_name(s):
+    return s.get("item") if isinstance(s, dict) else s
+
+
 def read_params(root):
     """spec name -> (index, C id expression, label), from src/seq/ec_params.h (the enum) and ec_params.c (the table)"""
     h = open(os.path.join(root, "src/seq/ec_params.h")).read()
-    body = re.search(r"enum\s*\{(.*?EC_NP\s*=\s*EC_P_E4_END)\s*\};", h, re.S).group(1)
+    body = re.search(r"enum\s*\{(.*?EC_NP\s*=\s*EC_P_\w+)\s*\};", h, re.S).group(1)
     body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
     index, i = {}, 0
     for tok in [t.strip() for t in body.split(",")]:
         if not tok:
             continue
-        m = re.match(r"(EC_P_\w+)\s*(?:=\s*(.*))?$", tok)
+        m = re.match(r"(EC_\w+)\s*(?:=\s*(.*))?$", tok)
         if not m:
             raise Fail("ec_params.h: cannot read the enum at %r" % tok)
         name, val = m.group(1), m.group(2)
-        if name == "EC_P_E4_END":
+        if name == "EC_NP":
             break
-        if val:
-            raise Fail("ec_params.h: unexpected value for %s" % name)
+        if val:     # "EC_P_X" or "EC_P_X + n" (EC_P_E4_END = EC_P_MACRO_DEPTH + 20, EC_P_MTX1_SRC = EC_P_E4_END)
+            v = re.match(r"(EC_P_\w+)\s*(?:\+\s*(\d+))?$", val.strip())
+            if not v or v.group(1) not in index:
+                raise Fail("ec_params.h: unexpected value for %s" % name)
+            i = index[v.group(1)] + int(v.group(2) or 0)
         index[name] = i
         i += 1
-        if name == "EC_P_MACRO_DEPTH":
-            i += 19
     c = open(os.path.join(root, "src/seq/ec_params.c")).read()
     params = {}
     for m in re.finditer(r"\[(EC_P_\w+)\]\s*=\s*[A-Z]+\(\s*\"(\w+)\"\s*,\s*\"([^\"]*)\"", c):
@@ -105,6 +118,16 @@ def read_params(root):
     if len(params) != len(set(p[0] for p in params.values())) or len(params) < 200:
         raise Fail("ec_params.c: the parameter table could not be read (%d)" % len(params))
     return params
+
+
+def is_mtx(name):
+    """a mod matrix slot's param (mtx1_src .. mtx8_depth): reached through the MATRIX page, never placed"""
+    return bool(MTX_RE.match(name))
+
+
+def is_retired(name):
+    """0.5.0: kept in the enum for old saves, read by nothing (EC_PF_RETIRED): the old mod dests, the macro depths"""
+    return name in RETIRED or bool(RETIRED_RE.match(name))
 
 
 class Gen:
@@ -150,6 +173,8 @@ class Gen:
             kind, cid, dl = SPECIAL[name]
             if kind == "EC_IT_RAZOR" and ctx.get("pic") != "razor":
                 self.err(where, "%s works on the RAZOR page only" % name)
+            if kind == "EC_IT_MTX" and ctx.get("pic") != "matrix":
+                self.err(where, "%s works on the MATRIX page only" % name)
             lb = label or dl
             if ctx.get("cells") and len(lb) > CELL_LABEL_WARN:
                 self.warn(where, "%s: the label %r is longer than %d (the panel's knob label is cut)" %
@@ -159,6 +184,10 @@ class Gen:
             self.err(where, "unknown item %r" % name)
             return ("EC_IT_BLANK", "0", 0, None, None)
         idx, sym, dl = self.params[name]
+        if is_mtx(name):
+            self.err(where, "%s is a mod matrix slot's: it is reached through the MATRIX page (MOD), not placed" % name)
+        elif is_retired(name):
+            self.warn(where, "%s is retired in 0.5.0: reads nothing (the mod matrix replaced it)" % name)
         if ctx.get("cells") and label and len(label) > CELL_LABEL_WARN:
             self.warn(where, "%s: the label %r is longer than %d (the panel's knob label is cut)" %
                       (name, label, CELL_LABEL_WARN))
@@ -270,6 +299,9 @@ class Gen:
             self.err(where, "\"macro\" is for the macro picture")
         if "note" in p and not isinstance(p["note"], str):
             self.err(where, "a note is a text")
+        if pic == "matrix" and (src.get("variants") or [slot_name(x) for l in (src.get("lanes") or [[]]) if
+                                                      isinstance(l, list) for x in l] != MATRIX_LANES[0]):
+            self.err(where, "the MATRIX page's knobs are fixed: lanes %s, no variants" % json.dumps(MATRIX_LANES))
         ctx = {"pic": pic, "cells": kind in ("page", "bus", "f3")}
         max_l = {"page": MAX_LANES, "bus": MAX_LANES, "setup": SETUP_LANES, "f3": 1}[kind]
         var0 = len(self.vars)
@@ -371,7 +403,10 @@ class Gen:
                                   "setup")
             self.cats.append((p0, len(self.pages) - p0 - (1 if setup >= 0 else 0), setup))
         for pic, cat in FIXED.items():
-            if pic != "mix" and fixed_count[pic] != 1:
+            if pic == "matrix" and fixed_count[pic] == 0:
+                self.warn(cat, "no MATRIX page (0.5.0): the mod matrix is reached by MOD KEYS only; add it as MOD's "
+                               "first page")
+            elif pic != "mix" and fixed_count[pic] != 1:
                 self.err(cat, "the %s page must be there once (%d)" % (pic, fixed_count[pic]))
             if pic == "mix" and fixed_count[pic] < 1:
                 self.err(cat, "the mix page is missing")
@@ -400,7 +435,7 @@ class Gen:
         if "f3" not in d:
             self.err("f3", "F3's lane is missing")
         self.f3 = self.page("F3", {"title": "F3", "lanes": d.get("f3", [])}, "PAT", "f3")
-        unplaced = sorted(n for n in self.params if n not in self.placed)
+        unplaced = sorted(n for n in self.params if n not in self.placed and not is_mtx(n) and not is_retired(n))
         if unplaced:
             self.warn("design", "not on any page: %s" % ", ".join(unplaced))
 
@@ -621,7 +656,7 @@ def check_desc(g, desc, design):
             g.err(where, "a description of an unknown item '%s'" % k)
         elif not isinstance(v, dict) or not str(v.get("name", "")).strip() or not str(v.get("desc", "")).strip():
             g.err(where, "item '%s': needs a name and a desc" % k)
-    missing = [k for k in known if k not in items]
+    missing = [k for k in known if k not in items and not is_mtx(k) and not is_retired(k)]
     if missing:
         g.warn(where, "no description for item(s) %s" % ", ".join(missing))
     cats = desc.get("cats", {})
@@ -664,7 +699,7 @@ def desc_docs(g, desc):
                 home.setdefault(it, n)
     rows = {n: [] for n in CATS + ["OTHER"]}
     for k in list(g.params) + list(SPECIAL):
-        if k in items:
+        if k in items and not is_mtx(k) and not is_retired(k):
             rows[home.get(k, "OTHER")].append(k)
     esc = lambda t: str(t).replace("|", "\\|")
     out = ["<!-- params:begin (generated by tools/layout/gen_layout.py from design/layout/descriptions.json: edit that, "

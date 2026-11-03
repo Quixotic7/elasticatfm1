@@ -231,4 +231,5 @@ void ec_app_labels(void)
     lower_labels();
     if (A->rec.open && !A->fn && !A->e5.naming && !A->e5.confirm)   /* E6: the REC pop-up's knobs and buttons */
         ec_rec_labels();
+    ec_mk_labels();                                                    /* 0.5.0: MOD KEYS */
 }

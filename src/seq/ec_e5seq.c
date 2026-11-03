@@ -677,3 +677,13 @@ void ec_e5_recall(ec_project_t *dst, const ec_project_t *memo)
     *dst = *memo;
     ec_scene_apply(dst, dst->e5.sc.pos);       /* the scene-locked params land where they were memorized */
 }
+
+int32_t ec_e5_memo_save(const ec_project_t *p, uint8_t *buf, uint32_t cap) { return ec_project_save(p, buf, cap); }
+
+int ec_e5_memo_recall(ec_project_t *dst, const uint8_t *memo, uint32_t n)
+{
+    if (!memo || n < 16 || ec_project_load(dst, memo, n) != 0)   /* (a known record whose checksum holds) */
+        return -1;
+    ec_scene_apply(dst, dst->e5.sc.pos);
+    return 0;
+}

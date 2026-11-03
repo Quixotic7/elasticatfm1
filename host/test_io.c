@@ -276,6 +276,38 @@ int main(int argc, char **argv)
     st = run_until(ec_load_step, EC_LD_DONE, EC_LD_ERROR, 100);
     CHECK(st == EC_LD_ERROR && !strcmp(ec_load_error(), "not found"), "missing: %d %s", st, ec_load_error());
 
+    /* 0.6.0: the pool meter's numbers, freeing in the middle, compaction, the handles for 128 slots + a take */
+    {
+        static const uint32_t fr[5] = {1000, 2000, 3000, 4000, 500};
+        int h[5], k, ok = 1;
+        uint32_t f;
+        ec_ss_reset();
+        for (k = 0; k < 5; k++) {
+            h[k] = ec_ss_alloc(fr[k]);
+            for (f = 0; f < fr[k] * 2u; f++)
+                ec_ss_get(h[k])->data[f] = (int16_t)(k * 1000 + (int)(f % 997));
+        }
+        CHECK(ec_ss_live_bytes() == 10500u * 4u && ec_ss_used_bytes() == 10500u * 4u && ec_ss_count() == 5,
+              "live %u used %u", ec_ss_live_bytes(), ec_ss_used_bytes());
+        ec_ss_free(h[1]);
+        ec_ss_free(h[3]);
+        CHECK(ec_ss_live_bytes() == 4500u * 4u && ec_ss_hole_bytes() == 6000u * 4u && ec_ss_count() == 3,
+              "holes %u", ec_ss_hole_bytes());
+        CHECK(ec_ss_compact() == 6000u * 4u && ec_ss_used_bytes() == 4500u * 4u && ec_ss_hole_bytes() == 0,
+              "compacted to %u", ec_ss_used_bytes());
+        for (k = 0; k < 5; k += 2)
+            for (f = 0; f < fr[k] * 2u; f++)
+                ok &= ec_ss_get(h[k])->data[f] == (int16_t)(k * 1000 + (int)(f % 997));
+        CHECK(ok && ec_ss_get(h[4])->data == ec_ss_get(h[2])->data + 6000, "the samples kept, packed in order");
+        CHECK(ec_ss_free_frames() == ec_ss_capacity_bytes() / 4u - 4500u, "free frames after compaction");
+        ec_ss_reset();
+        for (k = 0; k < EC_SS_MAX; k++)
+            ok &= ec_ss_alloc(10) >= 0;
+        CHECK(ok && EC_SS_MAX >= 130 && ec_ss_alloc(10) == -1, "%d handles", EC_SS_MAX);
+        CHECK(ec_ss_capacity_bytes() == (uint32_t)EC_SS_ARENA_MIB << 20, "the arena: %d MiB", EC_SS_ARENA_MIB);
+        ec_ss_reset();
+    }
+
     printf(g_fail ? "ec_test_io: FAILED\n" : "ec_test_io: all passed\n");
     return g_fail;
 }

@@ -288,6 +288,34 @@ static void test_full_roundtrip(void)
     CHECK(!memcmp(&Q.rec, &P.rec, sizeof P.rec), "the record settings survive");
 }
 
+/* memorize as a record: recall gives what a whole copy gave */
+static ec_project_t M;
+static void test_memo(void)
+{
+    int32_t n;
+    dense(&P, 1);
+    P.e5.sc.pos = 0.3f;
+    ec_scene_apply(&P, P.e5.sc.pos);
+    P.current = 40;
+    P.rec.countin = 2;
+    M = P;                                        /* the 0.5.0 way, for comparison */
+    n = ec_e5_memo_save(&P, buf2, sizeof buf2);
+    CHECK(n > 0 && n < (int32_t)(1u << 20) / 2, "memorized in %d bytes (a copy: %u)", n, (unsigned)sizeof P);
+    P.pat[3].tr[2].steps[7].trig ^= 1;
+    P.bpm = 99;
+    P.current = 2;
+    ec_scene_set(&P, 0, 1, EC_P_PAN, 5);
+    CHECK(ec_e5_memo_recall(&P, buf2, (uint32_t)n) == 0, "recalled");
+    ec_e5_recall(&Q, &M);
+    CHECK(!memcmp(P.pat, Q.pat, sizeof P.pat) && !memcmp(P.slot, Q.slot, sizeof P.slot) &&
+              !memcmp(P.pe5, Q.pe5, sizeof P.pe5) && !memcmp(&P.e5, &Q.e5, sizeof P.e5) &&
+              !memcmp(P.bus, Q.bus, sizeof P.bus) && !memcmp(P.razor, Q.razor, sizeof P.razor) &&
+              !memcmp(&P.rec, &Q.rec, sizeof P.rec) && P.current == 40 && P.bpm == Q.bpm && P.swing == Q.swing &&
+              P.glen == Q.glen && P.quant == Q.quant && P.rtn == Q.rtn,
+          "the recalled record = the recalled copy (scenes' morph included)");
+    CHECK(ec_e5_memo_recall(&P, buf2, 8) == -1, "a bad memo: -1");
+}
+
 /* ------------------------------------------------------------------------------------------- the sequencer --- */
 typedef struct {
     uint64_t at;
@@ -538,6 +566,7 @@ int main(int argc, char **argv)
     test_v05(dir);
     test_old(dir);
     test_full_roundtrip();
+    test_memo();
     test_micro();
     test_micro_switch();
     test_ghost_locks();

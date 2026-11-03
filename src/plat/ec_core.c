@@ -47,9 +47,7 @@ typedef struct {
 
 /* ------------------------------------------------------------------------------------------- state --- */
 static fm1panel_t g_panel;
-static uint8_t g_flash[EC_FLASH_SIZE];
-static uint8_t g_staged[EC_FLASH_SIZE];
-static uint32_t g_staged_n;
+static uint8_t g_flash[EC_FLASH_SIZE];   /* 0.6.0: flash_stage() writes straight into it (no second 1 MiB copy) */
 static int g_use_staged;
 static uint32_t g_flash_dirty;
 static int g_fresh;
@@ -292,21 +290,19 @@ static int flash_valid(void)
 }
 static void flash_load(void)
 {
-    memset(g_flash, 0xFF, sizeof g_flash);
-    if (g_use_staged) {
-        if (g_staged_n)
-            memcpy(g_flash, g_staged, g_staged_n);
-    }
+    if (!g_use_staged) {   /* (staged: the bytes are in g_flash already, padded with 0xFF: c_flash_stage) */
+        memset(g_flash, 0xFF, sizeof g_flash);
 #ifndef __wasm__
-    else if (g_flash_path[0] && !g_no_flash) {
-        FILE *f = fopen(g_flash_path, "rb");
-        if (f) {
-            size_t n = fread(g_flash, 1, sizeof g_flash, f);
-            (void)n;
-            fclose(f);
+        if (g_flash_path[0] && !g_no_flash) {
+            FILE *f = fopen(g_flash_path, "rb");
+            if (f) {
+                size_t n = fread(g_flash, 1, sizeof g_flash, f);
+                (void)n;
+                fclose(f);
+            }
         }
-    }
 #endif
+    }
     g_fresh = !flash_valid();
     if (g_fresh)
         flash_format();
@@ -484,13 +480,17 @@ static void c_shutdown(void)
     flash_save();
 }
 static int c_halted(void) { return 0; }
+/* the image itself is the staging buffer: the bytes (short: padded with 0xFF; NULL / 0: erased) land in g_flash,
+ * which only init() reads (flash_load). A host that stages the live image (C->flash()) keeps it as it is */
 static int c_flash_stage(const uint8_t *bytes, uint32_t n)
 {
+    if (!bytes)
+        n = 0;
     if (n > EC_FLASH_SIZE)
         n = EC_FLASH_SIZE;
-    g_staged_n = bytes ? n : 0;
-    if (g_staged_n)
-        memcpy(g_staged, bytes, g_staged_n);
+    if (n && bytes != g_flash)
+        memmove(g_flash, bytes, n);
+    memset(g_flash + n, 0xFF, EC_FLASH_SIZE - n);
     return 1;
 }
 static uint8_t *c_flash(void) { return g_flash; }

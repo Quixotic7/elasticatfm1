@@ -664,3 +664,14 @@ them:
 - The music still drives it: faster drift while playing, the beat pulse and bar accents as now. Stopped: slow drift.
 - Same rules as before: the theme's greys only, 2-unit cells, never over the cat, cheap enough to cost audio nothing
   measurable.
+
+**FX layout: one effects page, a MASTER page** (owner, 2026-11-03; replaces the INSERT / bus pages and B1-B5 above)
+- **The EFFECTS page** lists four rows, drawn like today's FX/SEND page: INSERT 1, INSERT 2, SEND 1 (S1's effect),
+  SEND 2 (S2's effect). Each row shows its effect's name and level bar; the selected row is highlighted. The knob page
+  boxes (P1 / P2 ..) show for every row, as on FX/SEND today.
+- **B1 = INSERT 1, B2 = INSERT 2, B3 = SEND 1, B4 = SEND 2.** A tap selects that row; tapping it again steps its
+  knob pages (P1, P2 ..). Holding it opens that slot's type menu.
+- **B5 toggles SENDS / MASTER.** SENDS is the track's send levels (the old B2 page). **MASTER** is its own page: the
+  master effect (COMP) and its knob pages, and **the load meter** (moved here from the INSERT page).
+- B11 stays FX MIX. K4 is MIX on every effect (inserts, sends, master).
+- SEL walks the one page list: INSERT 1 P1.., INSERT 2 P1.., SEND 1 P1.., SEND 2 P1.., SENDS, MASTER P1.., FX MIX.

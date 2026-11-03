@@ -82,7 +82,7 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **E6**: audio input (the `.rfm1` capability `ain1`, FM1VST docs/VIRTUAL-CARTS.md 8; the native ABI later), the
   INPUT machine, REC (sampling).
 
-## Status (0.6.0, 2026-11-03)
+## Status (0.6.1, 2026-11-03)
 
 - **E0-E2** done (0.1.0): the pipe, the core loop, the playable instrument; web player e2e.
 - **E3** done: RAZOR / R.POLY + the FILE / RAZOR page (Auto-Chop, snaps, split / delete, per-slice settings), every
@@ -150,6 +150,21 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
   real time in wasm3 at 256 MiB (its chord section 2.1x). The real screens vs the mockups: host/render_ux2_real.sh ->
   results/ux-v2-real/.
 
+- **0.6.1** (2026-11-03, docs/UX-V2.md 9 + 10, the build's decisions in its §11): projects are files in
+  /data/projects (fs1, non-blocking, a hidden copy first so a failed write keeps a whole one; the flash keeps APP
+  SETTINGS and the last name; 0.6.0 flash projects load once; FILE's PROJECTS/ folder; no size limit but memory: an
+  11 MiB pack buffer), two inserts per track (INS 2 on generic params mapped onto its machine, K4 = MIX on every type,
+  P1/P2/P3 knob pages), the counted load meter on FX's INSERT page (weights measured in wasm3), one hold menu (FX's
+  type menus, LOOP ENGINE's B1-B5 quick settings), one list component for every settings list, the owner's play-test
+  fixes (no pop-ups, messages and every held key in the header, source keys keep the mode on a blue SRC header, NOT
+  MODDABLE, the three step-lock cell states, no 1-grid-unit detail on any screen, pure black BG, KEYBOARD auditions
+  while stopped and its pitch direction, CAPTURE, held SHIFT = sticky SHIFT, the EDITOR's F1 START / F2 END trim, SEL
+  turns FILE's pages, ALGO = RAZOR's slice, the POOL page on B6, MIX's pans, the full-screen CAT stage). The arena is
+  200 MiB at MEMORY_MIB 256. Tests: ctest 34 (new: v61ux 308, cells 19, fx2 48, proj 40, v61list 45, v61gfx 16; file
+  139; grid 6996 frames with a 1-unit-run check on every frame), the DSP suites + test_v61 (18), the designer (67), the
+  web e2e (20, RemoteFM1 main). CPU: the heavy project 2.2x real time in wasm3 at 256 MiB (chord 2.1x); every track
+  with two heavy inserts (BLACKHOLE + REVERB) 1.6x (chord 1.5x).
+
 Remaining / open:
 - **E6 in the hosts**: the web player first (then iOS incl. the AUv3 input bus, Android, FM1VST); the native ABI's
   descriptor fields at the next bump. Untried with a real microphone. The REC settings are runtime only; a take with
@@ -157,7 +172,9 @@ Remaining / open:
 - The bus lanes (p-locks of the S1 / S2 / MST params) are not ported; bus params are global (they do morph).
 - Two slice stores coexist (the razor table per track, the pattern's slice program); merging them into one would
   change the save format. Hold-anchor + turn on a bus page does not write the bus param into a scene (capture does).
-- CPU headroom for the worst case is thin (2.1x); the next CPU work would be the spectral / harmonizer stages.
+- CPU headroom for the worst case is thin (2.1x); the next CPU work would be the spectral / harmonizer stages. Two heavy
+  inserts on every track run at 1.5-1.6x (the load meter shows it above 100 %).
+- Memorize holds at most 1 MiB (MEMO FULL on a bigger project).
 
 ## How the work is done
 

@@ -2,7 +2,7 @@
 
 The owner proposed this on 2026-11-03 and settled it in six rounds of questions, with one mockup per mode.
 **Status: built in 0.6.0** (2026-11-03); what the build decided where this spec is silent or could not be followed is
-in §8. The panel as built: docs/FM1-CONTROLS.md.
+in §8. Sections 9 and 10 are **built in 0.6.1** (2026-11-03); that build's own decisions are in §11. The panel as built: docs/FM1-CONTROLS.md.
 
 It replaces 0.3.0's category / lane model (docs/UX-REDESIGN.md) and 0.5.0's MOD KEYS mode (docs/MOD-MATRIX.md §3).
 The 0.5.0 matrix itself stays.
@@ -479,3 +479,126 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
 **SHIFT held = SHIFT sticky** (owner bug, 2026-11-03)
 - Holding GLO shows the SHIFT screen and everything on it (BPM, SWING, TRACK, the shortcut keys, the knobs) works
   exactly as with sticky SHIFT, for as long as GLO is held. Letting go returns to the mode.
+
+## 11. Built in 0.6.1
+
+Sections 9 and 10 are built as written. Where they were silent, the build chose the simplest thing consistent with
+them:
+
+**Header, pop-ups, held keys**
+- The mode pop-up and its APP SETTINGS row are gone. The APP SETTINGS record keeps its layout and version 1 (the old
+  pop-up byte is ignored and written 0), so a 0.6.0 record loads with every other value.
+- Every message is the header's line for 1.2 s (alerts on ALERT). A message newer than the last key press wins over a
+  held key's text; an older one gives way. Value takeovers (PRESETS' slot, TAP, a knob whose value is off screen) stay:
+  they show a value, not a message.
+- A held key's text appears 150 ms into the hold (a tap shows nothing); sticky SHIFT / F1 / F2 show at once. Bars:
+  sources SRC, held steps LOCK, alerts ALERT, the rest the plain bar. Texts: the source's name; STEP n / n STEPS;
+  COPY / CLR LOCK and CUT / CLR MOD (PASTE once the buffer is full; COPY PAGE / PATTERN in PAGES / PATTERN LAUNCH);
+  SHIFT; FILL; FX SETUP, FILTER SETUP, AMP SETUP, PROJECT SETUP, LOOP SETUP, RECORDER SETUP, F3, REC SETUP for the
+  settings holds; CAPTURE, SCENE A / B, GLIDE TO n in CROSSFADER; NOTE C4 / SLICE n in KEYBOARD; LOOP KEY n / PAD n;
+  LOOP PAGE n; MUTE / UNMUTE Tn; the hold menus' INS 1 TYPE, S1 TYPE, LOOP MODE, MACHINE, WARP MODE, VOICE MODE,
+  ADVANCE; START + KEY = END in the EDITOR. Keys whose hold does nothing beyond the tap say nothing.
+- Source keys never change the mode. A tap opens the source's page only when it is in the mode shown (MODULATION: LFO
+  1, LFO 2, VEL, AT = the MATRIX, M1-M4 = that macro; AMP: MOD ENV); elsewhere a tap does nothing. F2 on an
+  unmoddable param also says NOT MODDABLE; F2 on a moddable param with no route says NO MOD; a full matrix is the
+  alert MATRIX FULL.
+- Held SHIFT is sticky SHIFT for the whole hold: its screen shows from the press, its knobs and shortcuts work; a used
+  hold never turns sticky, an unused tap does. The SHIFT knobs stay as §1 says (SEL = BPM, ALGO = swing, PRESETS =
+  the track); K1..K4 with SHIFT snap.
+
+**Graphics**
+- SRC is each theme's blue: CREAM 3F8CFF, AMBER 5A96FF, PHOSPHOR 4A86FF, DMG 5890E8, ICE 3C64FF, PAPER 1F4FD0 (at
+  least 150 from ACC, LOCK and ALERT in RGB distance; a test checks it).
+- **BG is pure black: the FM-1 LCD lifts near-black.** Every colour with R, G and B all <= 0x20 is 0x000000 (CREAM,
+  AMBER, PHOSPHOR and ICE BG and SHADE, PAPER L15, DMG BLACK; ICE's SHADE 0B1A2E too). The pop-up dim map now dims to
+  L3, and the CAT's ground is a transparent key, the two places SHADE was drawn. A test checks no colour has all
+  channels in 1..0x20.
+- No detail on any screen is one grid unit: every bar, line, marker, tick, outline, rule and gap is >= 2 units (text
+  and the owner's sprite art excepted). Cell bars sit on a 2-unit lattice (27 cells); a tiny depth is one 2x2 cell.
+  The cell rules are 2 units, the row-98 rule is a 2-unit gap, the boxes are 61 x 23. Filter / envelope pictures are
+  29 bars with 2-unit gaps (was 38 with 1-unit gaps), waveforms 2-unit columns, playheads 2 wide; PATTERN LAUNCH, the
+  SHIFT keys and ghost steps became filled blocks where a 2-unit frame would cut the name.
+- Why `grid` missed the 1-unit bar: it checked that every 2x2 LCD block is one colour, which a 1-grid-unit bar passes
+  by construction, and no frame had a route, a held source or a depth lock. It now checks every frame for any
+  non-ground run exactly 1 unit thick and >= 3 long (text and sprites masked by draw-call tracking), with frames for
+  modulation, held sources, the three lock states, the hold menus, the lists, POOL, MIX's pans and the CAT's beams;
+  `check_png.py --survey [--strict]` lists hairlines in PNGs.
+- Lock cells: with several steps held, the lock of the first held step that has one; a held step without the lock
+  shows the plain track value (no outline); a filled cell draws its label and value a unit higher, so 2 units of LOCK
+  separate the value from the bar. A held source's depth cell uses the same three states for its depth param. While
+  a source is held its depth bars are SRC on the param cells, the MATRIX rows, MDEP cells and single-macro rows.
+- MIX: a pan track (10 x 2, centre marked in the track) under each strip, the 2 x 6 marker in 4 steps a side, the live
+  value (the playing lock and the crossfader plus the live modulation); the selected marker ACC, muted L5. S1 / S2 have
+  no pan in the engine: their marker rests at the centre in L5; MST shows none.
+- CAT: full screen, the cat at 1x centred (its art spans 64 x 61 units, so 2x does not fit), its outline in BLACK so it
+  reads on PAPER and DMG too. Four beams from the top corners sweep 15-70 degrees and back once per bar (the second
+  pair half a bar behind), colours ACC / SPECIAL / ACTION / SRC turning on each beat, from the transport's beats only;
+  stopped they rest in ACC_DIM. While playing the dance follows the beats (5 frames a beat). The cat art's own
+  8-unit joystick stroke is left as drawn.
+
+**FX**
+- INS 2 = new params `ec_fx_wet` (227), INS2 MACHINE (228), INS2 MIX (229) and INS2 P1..P8 (230..237), mapped by index
+  onto the machine's params in the layout's FX/INSERT order; stored in the mapped param's units, reset to the
+  machine's defaults on a type change. EC_NP is 238 (ids stay u8).
+- K4 = MIX on every type: DESTROY, DJ EQ, DUCK, MOTION and LIMIT had no dry / wet, so K4 is the new `fx_wet` (default
+  fully wet: old projects sound the same).
+- The INSERT page: SEL picks INS 1 / INS 2; a tap on B1 there turns the knob page (P1 / P2 / P3 in the header box). The
+  slot and the knob page are global (not per track); the page goes back to P1 when the slot or type changes.
+- An empty slot is skipped whole (no processing, its state untouched); the POST send tap is after both inserts.
+- The engine is 25.6 MiB (EC_DSP_MEM_MAX 26), the project file's pack buffer 11 MiB: the arena is **200 MiB** (~19.8
+  min of stereo) at MEMORY_MIB 256.
+- The load meter (FX INSERT page only, a bar and a percentage): counted from the engine's own state after each block
+  (the base, voices by warp mode, slice voices, grains, harmonizer voices, the mod engine, every running FX by
+  machine, both inserts, the buses), weights measured in wasm3 with rfm1_run (src/dsp/ec_load.c), smoothed over
+  ~0.25 s; 100 % = 2x real time. It reads 0.95 on the heavy project (measured 0.98-1.03) and 1.31 with two heavy
+  inserts on every track (measured 1.33).
+
+**Hold menus** (one component, src/app/ec_holdmenu.c)
+- Shows after 400 ms, or at once when SEL or K1 turns; SEL or K1 moves; the release picks, only if the cursor moved;
+  each pick is its own undo step. FX: B1 = the selected insert's type, B3 / B4 / B5 = the S1 / S2 / MST type.
+- LOOP ENGINE: B1 = loop mode (the slice play mode on slice machines, else the chop loop mode); B2 = machine (NEIGHBOR
+  skipped on T1); B3 = warp mode (STOP FIRST while playing, as the knob); **B4 = voice mode, mapped to
+  `trig_polyphony`**, the param LOOP ENGINE's setup already calls VOICE MODE; B5 = ADVANCE, hold only (a tap does
+  nothing).
+
+**Lists**
+- One list (ec_kit_list): the selected row is an L3 band with a 2-unit ACC edge; rows 14 units, two-line rows 24 (the
+  value right-aligned on line 2); the window keeps the selected row and the next in view. K2..K4 do nothing in a
+  list; the live labels say SEL = ROW, K1 = the row's name. The recorder setup is a list too (SOURCE, LENGTH,
+  THRESHOLD, SYNC, SLOT); while a take is armed or running only THRESHOLD changes. A list opens on its first row.
+  F3 stays a cells page.
+
+**FILE**
+- Page order BROWSE, EDITOR, RAZOR, POOL. SEL turns the page in the EDITOR and RAZOR, both ways (it first steps
+  through their two knob lanes); in BROWSE and POOL SEL scrolls the list, and the page keys leave them (B3 BROWSE, B4
+  EDITOR, B5 RAZOR, B6 POOL). A tap on FILE still goes to the SAMPLER.
+- EDITOR: F1 START / F2 END (the header shows which, the chosen marker in ACC). Each tap is one undo step, a two-key
+  gesture one too; the START / END knobs are undoable now. Swaps keep a gap of 0.005.
+- **POOL is on B6.** 12 rows (no knob cells). Track marks T1..T6 are for the playing pattern's tracks; the lock-only
+  mark covers step locks in any pattern. MOVE picks up only used slots; dropping on an empty slot moves it; it
+  rewrites the tracks' slot params, slot and slice locks in all 64 patterns and the runtime slots, one undo step.
+  Memorize is not rewritten (a recall restores its own pool layout); scenes hold no slots.
+
+**Projects as files**
+- A project is `/data/projects/PROJ-nnn.ecp`: exactly the version 2 record (magic, version, length, checksum, then the
+  record). "Next free" is the lowest unused number; a new project is named at its first save (the autosave included).
+- No rename in fs1, so a save writes a hidden `.NAME.ecp`, then `NAME.ecp`, then deletes the hidden copy; a load takes
+  the main file if its checksum holds, else the hidden copy. A failed write leaves one whole copy and says NOT SAVED:
+  DISK FULL / IO ERROR / NO FOLDER in ALERT. A save packs in one tick into a static 11 MiB buffer (the largest
+  possible project measures 11.25 MB) and writes 256 KiB a tick; SHIFT + SAVE shows SAVING, then SAVED; autosaves are
+  quiet.
+- The flash keeps APP SETTINGS and an "ECLP" record (the last name), written once a file save lands or after a LOAD;
+  power-on reads the named file (waiting for the folder if it isn't allowed yet; PROJECT MISSING / DAMAGED starts a
+  fresh project). With no folder and no name, a save falls back to the 0.6.0 flash record (<= 1 MiB). The flash image
+  stays 1 MiB, so old images load; a 0.6.0 or 0.5 record loads once and the next save makes the file.
+- FILE opens in /audio; B1 from /audio goes to a top level with AUDIO/ and PROJECTS/. PROJECTS/ lists the .ecp files
+  (the open one marked); LOAD saves unsaved edits first (a failed save cancels it), releases every sample, reloads the
+  slots, clears undo and goes to LOOP ENGINE. Project files never preview. The E5 project name stays inside the file.
+
+**KEYBOARD**
+- Stopped, a key plays the whole loop region from its start at its pitch until the last key is let go (slice tracks:
+  the slice, as before); the lit key is the note sounding (key + PITCH), and PITCH turned while a key is held is heard.
+
+**Not done**
+- Memorize still holds at most 1 MiB (MEMO FULL on a bigger project).
+- The intro logo's art has 1-unit streaks of its own; the CAT's joystick stroke too. Both are the norns art as drawn.

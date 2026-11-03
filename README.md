@@ -5,17 +5,17 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (the remotefm1.com web player first), with the FM-1 as its panel and samples from the shared RemoteFM1 folder
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
-**Status: 0.6.0, the panel by modes** ([docs/UX-V2.md](docs/UX-V2.md)): each button opens a mode (FX, FILTER, AMP,
+**Status: 0.6.1, the panel by modes** ([docs/UX-V2.md](docs/UX-V2.md); 0.6.1: projects are files in `/data/projects/`, two inserts per track, a counted load meter on FX's INSERT page, no pop-ups, messages and held keys in the header, the owner's play-test fixes, UX-V2 sections 9-11): each button opens a mode (FX, FILTER, AMP,
 MODULATION, MIX / PAGES, LOOP ENGINE / TRIG / KEYBOARD, FILE / SAMPLER, CROSSFADER, PATTERN LAUNCH) with its pages,
 the white keys are steps, the black keys the mode's pages and the modulation sources, SHIFT a layer, F1 / F2 copy /
 cut / paste, REC live recording, 64 patterns and 128 pool slots, and every screen on a 120x120 16-colour grid shown
 at 2x (six themes). Six tracks, each with a sample from `/audio`, a machine (loop, loop_trig, grid_slice,
 slice_poly, razor_slice, razor_poly with the RAZOR slice editor, neighbor, input), one of thirteen warp modes, a filter
-machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan, an insert FX (18 machines), sends
+machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan, two insert FX in series (18 machines each), sends
 to S1 / S2 and MOD (2 LFOs, mod env, velocity, macros); the master insert; 16 patterns of up to 256 steps per track
 with trigs, ghost trigs, p-locks of any param, trig conditions, chance, ratchets and FILL; scenes A / B with a
 crossfader and glides; copy / clear / paste, the PAGE overlay, memorize / recall, undo, names; the live loop-key
-scrub and slice pads; sample-accurate clock; the project saved in the flash image. E6 (0.4.0): the host's live
+scrub and slice pads; sample-accurate clock; the project saved as a file in `/data/projects/` (the flash keeps the app settings and its name). E6 (0.4.0): the host's live
 audio input (capability `ain1`: no RemoteFM1 host feeds it yet, the cart runs without) as the **INPUT** machine, and
 **REC** sampling of the input or the master into a pool slot (synced on PLAY / the bar / a threshold, latency
 compensated, saved as a WAV in `/data/rec`). The panel: [docs/FM1-CONTROLS.md](docs/FM1-CONTROLS.md). With no folder (or no audio files) a built-in loop plays on T1.
@@ -76,7 +76,7 @@ results/    proof files: e0/ .. e6/, v020/, ux/ (the screens; WAVs stay untracke
 - **io:** `ec_fs_start / ec_fs_update / ec_fs_cancel` on a caller-owned `ec_fsreq_t` (never blocks, at most 32 in
   flight, at most 1 MiB per request). `ec_browse_start("/audio")` + `ec_browse_step()` per tick. `ec_load_start(path)`
   + `ec_load_step()` per tick: STAT, header reads, then data in ≤ 1 MiB reads, decoded 4096 frames per tick into the
-  store. `ec_ss_alloc / get / ready / reset`: int16 stereo (mono doubled) in a 219 MiB static arena (0.6.0), with rate,
+  store. `ec_ss_alloc / get / ready / reset`: int16 stereo (mono doubled) in a 200 MiB static arena (0.6.1), with rate,
   channels, bpm (`ec_bpm_from_name`, Elasticat's rule) and a 128-column overview.
 - **ui:** `ec_gfx_begin(lcd)`, `ec_gfx_rect / line / dots_h / text_al` in physical pixels; the mockup's 120x120 grid
   is scale `EC_U` = 2. Palette `EC_C_BG, L3, L5, L8, L12, L15, ACC`. `ec_screens_draw(app)`.
@@ -130,7 +130,7 @@ ctest --test-dir build-rfm1 -R rfm1_elasticat -V        # rfm1_check + rfm1_run 
 CPU in wasm3 (must stay >= 2x real time): `build/ec_make_heavy heavy.flash` writes the worst-case project for
 `build/demo_folder` (six busy tracks across the E3 modes, every insert, both sends, master COMP, LFOs), then
 `rfm1_run --folder build/demo_folder --flash-in heavy.flash --settle 3000 --seconds 10 --press PLAY@1500 <the .rfm1>`:
-2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0, 2.3x in 0.4.0, 2.3x in 0.6.0 at MEMORY_MIB 256 (chord 2.1x) (the same with `--audio-in` fed);
+2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0, 2.3x in 0.4.0, 2.3x in 0.6.0 at MEMORY_MIB 256 (chord 2.1x), 2.2x in 0.6.1 (chord 2.1x; every track with two heavy inserts, `ec_make_heavy out --ins1 8 --ins2 3`: 1.6x) (the same with `--audio-in` fed);
 the v020 demo's project 5.9x.
 
 ## Trying it in the RemoteFM1 web player
@@ -141,7 +141,7 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    `testloop_bpm120.wav` from FM1VST's `core-glue/elasticat/test_folder/audio/`).
 2. Open https://remotefm1.com in Chrome or Edge (they can keep a picked folder; Safari and Firefox copy the files
    into the site's own storage instead).
-3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.6.0.rfm1` (or drop the file
+3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.6.1.rfm1` (or drop the file
    on the page). It goes into "Your firmware" with the Fantasy CFW badge.
 4. When the page asks **Pick your RemoteFM1 folder**, pick the `RemoteFM1/` folder. On a later visit, click
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
@@ -157,7 +157,7 @@ and is saved; on a site without ain1 those checks are skipped.
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open
-`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.6.0.rfm1&rfm1id=elasticat`. That is what its
+`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.6.1.rfm1&rfm1id=elasticat`. That is what its
 **Test in RemoteFM1** link does, but the link only lists firmwares in its catalog.
 
 ## Licence

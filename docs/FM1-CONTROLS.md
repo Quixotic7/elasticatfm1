@@ -1,11 +1,11 @@
-# Elasticat on the FM-1: controls (0.6.0)
+# Elasticat on the FM-1: controls (0.6.1)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
 step pages; two send buses **S1**, **S2** and the master insert **MST**; 64 patterns (4 banks of 16); a pool of 128
 sample slots; two scenes **A / B** with a crossfader.
 
-0.6.0 works by **modes**. Each mode button opens a mode, every mode is a main view, and the keys change with the
+0.6.0 introduced **modes** and 0.6.1 kept them (no pop-ups, messages in the header, two inserts per track, projects as files). Each mode button opens a mode, every mode is a main view, and the keys change with the
 mode. The design is docs/UX-V2.md; this file follows the code. Where the two differ, see "Differences from
 docs/UX-V2.md" at the end.
 
@@ -1152,7 +1152,7 @@ OK, F1 back, HOME closes.
 ## The sample pool
 
 - **128 slots.** A track plays its slot (PRESETS); a step can lock another slot (hold the step + PRESETS).
-- **No per-sample length limit.** The samples share one memory arena of 208 MiB (about 20.6 minutes of stereo at
+- **No per-sample length limit.** The samples share one memory arena of 200 MiB (about 19.8 minutes of stereo at
   44.1 kHz; 0.6.1 keeps 11 MiB for packing the project file).
 - Fill it from FILE (B10 LOAD, the next free slot) or the SAMPLER. Free slots with F2 in FILE's browser or POOL, or
   SHIFT + B11 (purge) for every slot no pattern uses. FILE / POOL lists every slot, assigns one to the track and moves
@@ -1245,7 +1245,7 @@ survive project loads and new projects.
 | The scene row on the lower keys (MST > SCENE): hold A / B + PLAY clears, SHIFT + A / B captures | CROSSFADER: SHIFT + A / B clears, B11 + A / B captures; the fader on W1-W12 with pressure |
 | SCN A / SCN B on MOD KEYS | CROSSFADER's A / B held |
 | RAZOR: SHIFT + a pad mutes the slice | gone (see the differences) |
-| 16 patterns, 16 pool slots, a 96 MiB store | 64 patterns (4 banks), 128 slots, 219 MiB (0.6.1: 208) |
+| 16 patterns, 16 pool slots, a 96 MiB store | 64 patterns (4 banks), 128 slots, 219 MiB (0.6.1: 200) |
 
 The 0.5.0 and older controls (and the 0.3.0 "What moved" table) are in git history: this file before 0.6.0, and
 docs/UX-REDESIGN.md, docs/MOD-MATRIX.md.
@@ -1300,6 +1300,6 @@ What the code does where the spec says otherwise (or says nothing):
   saved with the project. COUNT-IN applies to FIXED and OVERDUB started from stop (CAPTURE has none).
 - **APP SETTINGS** adds INTRO; KNOB SPEED is SLOW / MED / FAST; METRO SOUND is WOOD / BEEP / CLICK / COWBELL. Any
   other button closes it (keeping the values).
-- **The arena** is 219 MiB (the spec said about 224), so about 21.7 minutes of stereo. (0.6.1: 208 MiB, about 20.6
-  minutes, beside the project file's 11 MiB pack buffer.)
+- **The arena** is 219 MiB (the spec said about 224), so about 21.7 minutes of stereo. (0.6.1: 200 MiB, about 19.8
+  minutes, beside the project file's 11 MiB pack buffer and the second inserts' 8 MiB of engine.)
 - **CROSSFADER's A / B held** shows the page of the mode you came from (FILTER's when that mode has no template).

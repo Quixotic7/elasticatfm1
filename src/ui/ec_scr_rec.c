@@ -65,14 +65,6 @@ void ec_scr_input(const ec_app_t *a, int top, int bot)
 }
 
 /* ------------------------------------------------------------------------------------------- the REC pop-up --- */
-static void cell(ec_kit_cell_t *c, const char *label, const char *val, float frac, int dim)
-{
-    c->label = label;
-    c->value = val;
-    c->frac = frac;
-    c->flags = dim ? EC_KC_DIM : 0;
-}
-
 /* the take's waveform from the store (each column's peak, a few hundred frames read) up to the head */
 static void take_wave(const int16_t *d, uint32_t n, uint32_t total, int x0, int cols, int top, int bot)
 {
@@ -99,7 +91,6 @@ static void take_wave(const int16_t *d, uint32_t n, uint32_t total, int x0, int 
 void ec_scr_rec(const ec_app_t *a)
 {
     static const char *const SRC[] = {"IN", "MST"}, *const SYNC[] = {"PLAY", "BAR", "FREE"};
-    static const char *const LEN[] = {"FREE", "1 BAR", "2 BAR", "4 BAR", "8 BAR", "16 BAR"};
     const ec_rec_t *r = &a->rec;
     const int x0 = 2, x1 = W - 2, cols = x1 - x0, top = 24, bot = 56;
     const int live = ec_plat_ain_state() == EC_AIN_LIVE;
@@ -192,19 +183,17 @@ void ec_scr_rec(const ec_app_t *a)
         T(EC_C_L5, b, W - 2, 66, EC_AL_RIGHT);
     }
 
-    /* the cells */
+    /* 0.6.1: the settings, a list menu (SEL the row, K1 its value) */
     {
-        ec_kit_cell_t c[4];
-        char thr[16];
-        memset(c, 0, sizeof c);
-        if (r->thr)
-            snprintf(thr, sizeof thr, "%dDB", ec_rec_thr_db(r->thr));
-        else
-            snprintf(thr, sizeof thr, "OFF");
-        cell(&c[0], "SRC", SRC[r->src], (float)r->src, 0);
-        cell(&c[1], "LEN", LEN[r->len], (float)r->len / (EC_REC_NLEN - 1), 0);
-        cell(&c[2], "THR", thr, (float)r->thr / (EC_REC_NTHR - 1), r->sync != EC_RSYNC_FREE);
-        cell(&c[3], "SYNC", SYNC[r->sync], (float)r->sync / (EC_NRSYNC - 1), 0);
-        ec_kit_cells(c, 1, 0);
+        static char val[EC_REC_NROW][16];
+        ec_kit_row_t rows[EC_REC_NROW];
+        memset(rows, 0, sizeof rows);
+        for (i = 0; i < EC_REC_NROW; i++) {
+            ec_rec_row_value(i, val[i], sizeof val[i]);
+            rows[i].label = ec_rec_row_label(i);
+            rows[i].value = val[i];
+            rows[i].dim = (uint8_t)ec_rec_row_dim(i);
+        }
+        ec_kit_list(rows, EC_REC_NROW, r->row, 78, H, 0);
     }
 }

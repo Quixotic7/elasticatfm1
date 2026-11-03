@@ -71,7 +71,7 @@ static void open_lane(int c, int page, int setup, int lane)
     ec_app_goto(c, page);
     if (setup) {
         A->settings = 1;
-        A->ux.set_lane = lane;
+        A->ux.set_row = lane;                        /* 0.6.1: a list menu: the selected row */
     } else
         A->ux.lane[c] = lane;
     A->redraw = 1;
@@ -104,9 +104,14 @@ static void check_lane(uint8_t *found, int where_cat)
     snprintf(name, sizeof name, "%s/%s lane %d", ec_cat_name(where_cat), A->settings ? "SETUP" : pg.title, lane + 1);
     run(20);
     for (k = 0; k < 4; k++) {
-        const int c = lane * 4 + k;
-        const ec_item_t *it = c < pg.n ? &pg.it[c] : 0;
+        const int c = A->settings && !A->ux.f3 ? (k ? -1 : ec_app_set_item(A, &pg)) : lane * 4 + k;
+        const ec_item_t *it = c >= 0 && c < pg.n ? &pg.it[c] : 0;
         const char *lb;
+        if (A->settings && k) {                      /* 0.6.1: a list: K2..K4 have no label */
+            lb = fm1core_label(EC_LBL_KNOB0 + EC_E_K1 + k);
+            CHECK(!lb || !lb[0], "%s [%s] KNOB %d: a list's K%d is labelled %s", name, ctxname, k + 1, k + 1, lb);
+            continue;
+        }
         if (!it || it->kind == EC_IT_BLANK)
             continue;
         lb = fm1core_label(EC_LBL_KNOB0 + EC_E_K1 + k);
@@ -152,12 +157,12 @@ static void walk(int c, int setup, uint8_t *found)
         ec_app_page(A, &pg);
         CHECK(A->cat == c && (setup ? A->settings : A->page[c] == p && !A->settings), "[%s] %s page %d does not open",
               ctxname, ec_cat_name(c), p + 1);
-        for (lane = 0; lane < ec_ux_lanes(pg.n); lane++) {
+        for (lane = 0; lane < (setup ? ec_app_set_rows(&pg, 0) : ec_ux_lanes(pg.n)); lane++) {
             if (lane)
                 open_lane(c, p, setup, lane);
-            CHECK(ec_app_lane(A, &pg) == lane, "[%s] %s page %d lane %d does not open", ctxname, ec_cat_name(c),
-                  p + 1, lane + 1);
-            check_lane(found, c);
+            CHECK(setup || ec_app_lane(A, &pg) == lane, "[%s] %s page %d lane %d does not open", ctxname,
+                  ec_cat_name(c), p + 1, lane + 1);
+            check_lane(found, c);                    /* (a setup list: row `lane` on K1) */
         }
         if (c == EC_CAT_FX && !setup && ec_src_insert_page()) {   /* 0.6.1: INSERT's knob pages (the insert key's
                                                                     * taps), INS 1's, then INS 2's on the same machine */

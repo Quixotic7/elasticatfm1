@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.6.0 APP SETTINGS (docs/UX-V2.md §3, SHIFT + HOME): everything global, in its own record of the flash image
- * (ec_plat_settings: survives project loads and new projects). A pop-up: SEL the row, K1..K4 the values of the rows
- * in the cursor's lane (row i is on K(i % 4 + 1)), F1 back (every change undone), F2 OK, HOME closes (keeps). THEME
+ * (ec_plat_settings: survives project loads and new projects). A pop-up: a list menu (0.6.1, ec_kit_list): SEL the
+ * row, K1 its value (K2..K4 nothing), F1 back (every change undone), F2 OK, HOME closes (keeps). THEME
  * changes the palette as it scrolls. KEYBOARD's ADVANCE and CROSSFADER's glide time live in the same record (set in
  * HOME's settings and on W13..W16). 0.6.1: the MODE POP-UP row is gone; its byte stays in the record (unused0, written
  * 0), so a 0.6.0 record (version 1) loads with every other value as it was. */
@@ -141,14 +141,7 @@ static void edit(int row, int d)
 
 void ec_as_knob(int role, int det)
 {
-    if (role == EC_E_SELECT)
-        P->as_row = clampi(P->as_row + (det > 0 ? 1 : -1), 0, EC_AS_NROW - 1);
-    else if (role >= EC_E_K1) {
-        const int row = P->as_row / 4 * 4 + (role - EC_E_K1);
-        if (row < EC_AS_NROW) {
-            edit(row, det);
-            P->as_row = row;
-        }
-    }
+    if (ec_app_list_knob(role, det > 0 ? 1 : -1, &P->as_row, EC_AS_NROW))
+        edit(P->as_row, det);
     A->redraw = 1;
 }

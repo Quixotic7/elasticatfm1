@@ -73,6 +73,10 @@ These hold in every mode unless the mode says otherwise.
 
 - **K1-K4** change the page's four values. A page with more than four has **lanes**: SEL steps the lanes and runs on
   into the next page, so SEL alone reaches everything in a mode.
+- **Lists** (0.6.1: APP SETTINGS, the record settings, every mode's settings, the recorder's setup): **SEL moves the
+  one selected row, K1 changes its value**; K2-K4 do nothing there. The SETUP rows in the tables below are the list's
+  rows in order (their KNOB columns are the 0.6.0 layout). A row whose label and value don't fit on one line shows the
+  value on a second line (THEME always does).
 - **Knobs accelerate:** turned slowly a click is the finest step; spun, the steps grow. Lists are one item a click.
   APP SETTINGS > KNOB SPEED sets how fast.
 - **SHIFT + a value knob snaps** to useful values: the norns script's own snap lists where it has them (P/T -24 -12
@@ -102,6 +106,9 @@ These hold in every mode unless the mode says otherwise.
 
 - **Held** = SHIFT while held. **A quick tap = sticky SHIFT**: it stays on until GLO is tapped again or the mode
   changes. The GLO LED blinks while sticky.
+- 0.6.1: **held works exactly as sticky**: its screen shows from the press for as long as GLO is held, used or not,
+  and every SHIFT knob and key works; letting go returns to the mode. A hold that was used (a knob, a key) never turns
+  sticky on release; a quick unused tap does.
 - While SHIFT is on, only its keys light and the panel labels show what they do.
 
 | SHIFT + | Does |
@@ -1055,7 +1062,8 @@ the project. Split and delete renumber the slices after it; the track's steps fo
 - Like the rest of FILE, POOL can't open while playing. Memorized projects (SHIFT + B3) keep the pool as it was.
 
 **FILE held: the recorder's setup** (0.4's REC pop-up). It samples the live input or the master out into a pool
-slot: SEL the slot, K1 SOURCE (IN / MST), K2 LENGTH, K3 THRESHOLD (with SYNC FREE), K4 SYNC (PLAY / BAR / FREE).
+slot. Its settings are a list (0.6.1: SEL the row, K1 its value): SOURCE (IN / MASTER), LENGTH, THRESHOLD (with SYNC
+FREE), SYNC (PLAY / BAR / FREE), SLOT (the target pool slot). While a take is armed or running only THRESHOLD changes.
 **REC or F2** = arm, then record now, then stop; **F1** = close, disarm, or discard the take. HOME closes it. The
 take is saved as a WAV in `data/elasticat/rec/`.
 

@@ -24,6 +24,7 @@ enum { EC_RSYNC_PLAY, EC_RSYNC_BAR, EC_RSYNC_FREE, EC_NRSYNC };  /* when an arme
 typedef struct {
     /* the pop-up and its settings (runtime: not in the project) */
     int open;
+    int row;                     /* 0.6.1: the setup's list menu, its selected row (EC_REC_ROW_*) */
     int src, len, thr, sync;
     int slot;                    /* the target pool slot 0..15 */
     int slot_set;                /* SELECT moved it (else it follows the track's slot) */
@@ -60,6 +61,13 @@ void ec_rec_open(void);                     /* REC tapped with no scope: the pop
 void ec_rec_close(void);                    /* HOME (a take goes on) */
 int ec_rec_button(int b);                   /* the pop-up's buttons (REC, OCT-, OCT+); 1 = used */
 int ec_rec_knob(int role, int det);         /* the pop-up's knobs (SELECT, K1..K4); 1 = used */
+/* 0.6.1: the setup is a list menu (ec_kit_list): SEL the row, K1 its value, K2..K4 nothing. While a take is armed or
+ * running only THRESHOLD changes (the others dim); THRESHOLD is dim unless SYNC is FREE */
+/* (the rows in the order of 0.6.0's cells K1..K4, then the target slot SEL used to pick) */
+enum { EC_REC_ROW_SRC, EC_REC_ROW_LEN, EC_REC_ROW_THR, EC_REC_ROW_SYNC, EC_REC_ROW_SLOT, EC_REC_NROW };
+const char *ec_rec_row_label(int row);
+void ec_rec_row_value(int row, char *out, int cap);
+int ec_rec_row_dim(int row);
 void ec_rec_tick(void);                     /* lands an ended take, runs the writer */
 void ec_rec_frame(void);                    /* the meters' decay */
 /* the audio call (ec_app_audio): per rendered chunk, before (the sync points) and after (the capture). in: this

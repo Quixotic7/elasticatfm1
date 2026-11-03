@@ -306,8 +306,8 @@ static void test_app_settings(void)
     btn(FM1P_B_GLO, 0);
     run(20);
     turn(FM1P_E_K1, 2);
-    turn(FM1P_E_SELECT, 2);                                   /* row 2 = KNOB SPEED on K2 (0.6.1: no MODE POP-UP) */
-    turn(FM1P_E_K2, 1);
+    turn(FM1P_E_SELECT, 1);                                   /* row 2 = KNOB SPEED (0.6.1: a list menu, K1) */
+    turn(FM1P_E_K1, 1);
     run(20);
     press(FM1P_B_OCTUP, 40);
     rec = ec_plat_settings(&size);
@@ -323,8 +323,8 @@ static void test_app_settings(void)
     btn(FM1P_B_GLO, 0);
     run(20);
     turn(FM1P_E_K1, -2);
-    turn(FM1P_E_SELECT, 2);
-    turn(FM1P_E_K2, -1);
+    turn(FM1P_E_SELECT, 1);
+    turn(FM1P_E_K1, -1);
     press(FM1P_B_HOME, 40);
     CHECK(!A->pn.as_open && ec_gfx_theme() == 0 && A->pn.as.knob == 1, "HOME closes (keeps)");
 }

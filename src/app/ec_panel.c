@@ -122,7 +122,7 @@ static void settings_open(int cat)
     A->scr = 0;
     A->cat = cat;
     A->settings = 1;
-    UX->set_lane = 0;
+    UX->set_row = 0;
     A->redraw = 1;
 }
 
@@ -873,7 +873,7 @@ static void select_knob(int d)
     if (A->settings) {
         ec_page_t pg;
         ec_app_page(A, &pg);
-        UX->set_lane = clampi(ec_app_lane(A, &pg) + d, 0, ec_ux_lanes(pg.n) - 1);
+        ec_app_list_knob(EC_E_SELECT, d, &UX->set_row, ec_app_set_rows(&pg, 0));
         return;
     }
     switch (mode) {
@@ -1006,8 +1006,6 @@ static void holds_tick(void)
         P->hdr_late = 1;
         A->redraw = 1;
     }
-    if (P->shift_held && !UX->shift_used && A->ms - UX->shift_ms == EC_SHIFTMAP_MS)
-        A->redraw = 1;
 }
 
 /* any knob, key or button: the intro goes (what was pressed still acts) */

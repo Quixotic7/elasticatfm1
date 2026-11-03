@@ -238,13 +238,16 @@ static void test_popup(void)
     open_rec();
     CHECK(A->rec.open && ec_app_popup(A), "the SAMPLER, FILE held: the pop-up");
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "ARM") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "CLOSE") &&
-              lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "ARM") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K2, "LENGTH") &&
-              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "SLOT"),
-          "labels open: OCT+ %s OCT- %s REC %s K2 %s SELECT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP),
+              lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "ARM") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "SOURCE") &&
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K2, "") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "ROW"),
+          "labels open (0.6.1, a list menu: K1 the row): OCT+ %s OCT- %s REC %s K2 %s SELECT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP),
           L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN), L(FM1CORE_LBL_BTN0 + FM1P_B_REC), L(FM1CORE_LBL_KNOB0 + FM1P_E_K2),
           L(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT));
-    turn(FM1P_E_K2, -2);
-    CHECK(A->rec.len == 1, "K2: LEN 1 BAR (%d)", A->rec.len);
+    turn(FM1P_E_SELECT, 1);                        /* 0.6.1: SEL to LENGTH, K1 changes it */
+    run(40);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "LENGTH"), "SEL: K1 LENGTH (%s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    turn(FM1P_E_K1, -2);
+    CHECK(A->rec.len == 1, "K1: LEN 1 BAR (%d)", A->rec.len);
     press(FM1P_B_OCTUP, 40);
     CHECK(A->rec.state == EC_RS_ARMED && A->rec.handle >= 0, "OCT+: armed");
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "REC NOW") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "DISARM"),
@@ -408,7 +411,8 @@ static void test_resample(void)
     open_rec();
     turn(FM1P_E_K1, 1);
     dbg("resample K1");
-    turn(FM1P_E_K2, -2);
+    turn(FM1P_E_SELECT, 1);                        /* 0.6.1: a list menu: LENGTH on K1 */
+    turn(FM1P_E_K1, -2);
     CHECK(A->rec.src == EC_RSRC_MST && A->rec.len == 1, "K1: MST, 1 BAR");
     press(FM1P_B_OCTUP, 40);
     press(FM1P_B_PLAY, 40);
@@ -436,13 +440,15 @@ static void test_threshold(void)
     CHECK(A->rec.open, "(the pop-up stays open after a take)");
     press(FM1P_B_HOME, 40);
     open_rec();
-    turn(FM1P_E_K1, -1);
-    turn(FM1P_E_K4, 2);
-    turn(FM1P_E_K3, 7);
+    turn(FM1P_E_K1, -1);                           /* 0.6.1: a list menu: SOURCE, SYNC, THRESHOLD each on K1 */
+    turn(FM1P_E_SELECT, 3);
+    turn(FM1P_E_K1, 2);
+    turn(FM1P_E_SELECT, -1);
+    turn(FM1P_E_K1, 7);
     CHECK(A->rec.src == EC_RSRC_IN && A->rec.sync == EC_RSYNC_FREE && ec_rec_thr_db(A->rec.thr) == -24,
           "IN, FREE, THR %d dB", ec_rec_thr_db(A->rec.thr));
     run(20);
-    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K3, "THRESHOLD"), "K3's label: %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K3));
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "THRESHOLD"), "K1's label: %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
     at = frames + 44100u + 4321u;
     for (i = 0; i < 1000; i++) {                  /* a quiet hiss under the threshold (-40 dB), then the burst */
         inbuf[2 * (at - 1000 + i)] = (int16_t)(i % 2 ? 300 : -300);

@@ -49,16 +49,26 @@ void ec_kit_cell_box(int i, int *x, int *y, int *w, int *h);
 /* calls of ec_kit_cells so far (host/test_grid.c: the frames with param cells get the bar-area check) */
 extern unsigned ec_kit_cells_drawn;
 
-/* ------------------------------------------------------------------------------------------- settings --- */
+/* ------------------------------------------------------------------------------------------- the list --- */
 typedef struct {
     const char *label, *value;
     uint8_t dim;          /* the value dim */
-    const char *note;     /* replaces the K-tag, in ALERT ("STOP"), or NULL */
+    const char *note;     /* after the label, in ALERT ("STOP"), or NULL */
+    uint8_t two;          /* always two lines (THEME: the name on its own line) */
 } ec_kit_row_t;
-/* the settings list: 13-unit rows from y 14, label left, the value big right, the K-tag, a dotted rule. The rows of
- * `lane` (i / 4) are bright, `active` (-1 none) is the cursor row (L3 with an accent edge). More than 8 rows: the
- * window follows the active row (else the lane) */
-void ec_kit_settings(const ec_kit_row_t *r, int n, int lane, int active);
+/* 0.6.1, the list menu (docs/UX-V2.md §10 "List menus"): every list (APP SETTINGS, the record settings, the modes'
+ * settings, the recorder's setup) draws through this. One row is selected (an L3 band with a 2-unit accent edge);
+ * SEL moves it, K1 changes its value (ec_app_list_knob). A row is EC_KIT_LIST_H1 high with the label left and the
+ * value big at the right; when they don't fit on one line (or `two`) EC_KIT_LIST_H2: the label, then the value on
+ * the second line. No knob tags. Rows between y0 and y1 (the full-screen lists: from y 12), EC_KIT_LIST_GAP apart
+ * (none: only the selected row has a band, 2 units of it around its text); the window scrolls to keep `sel` (and
+ * the row after it) in view, a 2-unit mark at the right edge shows where when not all fit. ys (n entries, or NULL):
+ * each row's top y, -1 when not shown. */
+#define EC_KIT_LIST_H1 14
+#define EC_KIT_LIST_H2 24
+#define EC_KIT_LIST_GAP 0
+void ec_kit_list(const ec_kit_row_t *r, int n, int sel, int y0, int y1, int *ys);
+int ec_kit_list_row_h(const ec_kit_row_t *r);
 
 /* ------------------------------------------------------------------------------------------- the pop-up --- */
 /* the mode-entry pop-up (docs/UX-V2.md §3) over the dimmed screen: the name big, the page in the accent, the 11 black

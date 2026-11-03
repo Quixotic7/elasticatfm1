@@ -57,9 +57,10 @@ press PLAY@15400
 png 16600:Main_screen.png
 press PLAY@16800
 press HOME@17200+600
-turn K2@18000:1
-turn K2@18100:1
-turn K2@18200:1
+turn SELECT@17980:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@18000:1
+turn K1@18100:1
+turn K1@18200:1
 press HOME@18600
 upper 7@19000+1200
 turn K3@19300:-1
@@ -354,19 +355,29 @@ upper 2@136200+1000
 turn K1@136700:2
 png 137000:Loop_menu.png
 
+# ======== 0.6.1 (v61b-panel): the list menus. APP SETTINGS (SHIFT + HOME) with THEME selected: two lines, the
+# theme's name on the second; the record settings (REC held), SEL twice: COUNT-IN selected, K1 is that row
+press GLO@137600+400
+press HOME@137800
+png 138600:AppSettings_theme.png
+press OCT-@138800
+press REC@139400+700
+turn SELECT@140300:2
+png 140800:Record_settings.png
+press OCT-@141000
 # ======== 0.6.1 (v61b-file): FILE's EDITOR in END mode, the POOL page
 # ---- FILE (SAVE: its EDITOR, the page it showed last, still 4X): F1 START + W3, F2 END + W13: the header says END
-press SAVE@138000
-press OCT-@138600
-lower 2@138800
-press OCT+@139200
-lower 12@139400
-png 141400:FileEditor_end.png
+press SAVE@142000
+press OCT-@142600
+lower 2@142800
+press OCT+@143200
+lower 12@143400
+png 145400:FileEditor_end.png
 # ---- POOL (the EDITOR's black keys are its zoom: SEL back to BROWSE, then B6): SEL to slot 3, F1 picks it up (MOVE 3
 # in the header), SEL to slot 6 (the drop target on ACC)
-turn SELECT@141800:-1
-upper 5@142200
-turn SELECT@142800:2
-press OCT-@143400
-turn SELECT@144000:3
-png 146000:Pool.png
+turn SELECT@145800:-1
+upper 5@146200
+turn SELECT@146800:2
+press OCT-@147400
+turn SELECT@148000:3
+png 150000:Pool.png

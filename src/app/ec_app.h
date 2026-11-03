@@ -98,9 +98,15 @@ float *ec_app_bus_params(ec_app_t *a, int id);              /* E4: the bus recor
 /* 0.3.0 */
 int ec_app_lane(const ec_app_t *a, const ec_page_t *pg);     /* the active lane of the page shown (clamped) */
 float ec_app_move_param(int id, float x, int det, int mult); /* a knob turn: snap with SHIFT, else det x mult steps */
-int ec_app_cells_visible(const ec_app_t *a);                 /* the active lane's cells are on screen */
+int ec_app_cells_visible(const ec_app_t *a);
+/* 0.6.1, the list menus (docs/UX-V2.md §10): SEL moves *row (0..n-1); returns 1 when the knob is K1 (the caller
+ * changes row *row by det), 0 for SEL and K2..K4 (they don't edit rows). The setup list's rows: its items without the
+ * blanks (idx: their item indices, or NULL); the selected row's item (-1 none) */
+int ec_app_list_knob(int role, int det, int *row, int n);
+int ec_app_set_rows(const ec_page_t *pg, int *idx);
+int ec_app_set_item(const ec_app_t *a, const ec_page_t *pg);                 /* the active lane's cells are on screen */
 int ec_app_popup(const ec_app_t *a);                         /* a pop-up is open (F1 back / F2 OK; E6: REC) */
-int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held alone (or sticky): its screen shows */
+int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held or sticky: its screen shows */
 int ec_app_track_audible(const ec_app_t *a, int t);          /* not muted, not silenced by a solo */
 /* 0.5.0 (ec_modkeys.c) */
 void ec_app_edit_param(int id, int det, int mult);           /* a knob turn on a track param (locks, undo) */

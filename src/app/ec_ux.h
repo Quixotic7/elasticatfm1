@@ -18,7 +18,7 @@ enum { EC_TO_NONE, EC_TO_VALUE, EC_TO_SAMPLE, EC_TO_TRACKMUTE };
 typedef struct {
     /* lanes: the active lane of each category's page (reset by a page change), of the setup list */
     int lane[16];
-    int set_lane;
+    int set_row;                /* 0.6.1: the setup list's selected row (its items without the blanks) */
     /* F3 (F1 + F2, hold SEQ, SHIFT + SEQ) */
     int f3;
     uint16_t f3_keys, f3_used;  /* white keys held in F3 (tap: edit the page, hold: the page in / out of the loop) */

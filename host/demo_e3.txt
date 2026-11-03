@@ -65,14 +65,16 @@ press HOME@8000+60
 upper 2@8200+60
 # domino
 press HOME@8400+450
-turn K2@8900:2
+turn SELECT@8880:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@8900:2
 press OCT-@8950+40
 press PLAY@9200
 png 9900:e3_10_warp_domino.png
 press PLAY@10050+60
 # random_ola
 press HOME@10100+450
-turn K2@10600:2
+turn SELECT@10580:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@10600:2
 press OCT-@10650+40
 turn K1@10800:60
 press PLAY@10900
@@ -80,14 +82,16 @@ png 11600:e3_11_warp_random_ola.png
 press PLAY@11750+60
 # pitch_corrected
 press HOME@11800+450
-turn K2@12300:1
+turn SELECT@12280:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@12300:1
 press OCT-@12350+40
 press PLAY@12600
 png 13300:e3_12_warp_pitch_corrected.png
 press PLAY@13450+60
 # harmonizer
 press HOME@13500+450
-turn K2@14000:1
+turn SELECT@13980:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@14000:1
 press OCT-@14050+40
 turn K1@14200:60
 turn K3@14220:12
@@ -96,7 +100,8 @@ png 15000:e3_13_warp_harmonizer.png
 press PLAY@15150+60
 # wavetable
 press HOME@15200+450
-turn K2@15700:1
+turn SELECT@15680:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@15700:1
 press OCT-@15750+40
 turn K1@15900:40
 turn K4@15920:30
@@ -105,7 +110,8 @@ png 16700:e3_14_warp_wavetable.png
 press PLAY@16850+60
 # spectral_freeze
 press HOME@16900+450
-turn K2@17400:1
+turn SELECT@17380:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@17400:1
 press OCT-@17450+40
 turn K2@17600:40
 press PLAY@17700
@@ -113,7 +119,8 @@ png 18400:e3_15_warp_spectral_freeze.png
 press PLAY@18550+60
 # formant
 press HOME@18600+450
-turn K2@19100:1
+turn SELECT@19080:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@19100:1
 press OCT-@19150+40
 turn K1@19300:5
 press PLAY@19400
@@ -121,14 +128,16 @@ png 20100:e3_16_warp_formant.png
 press PLAY@20250+60
 # gstretch
 press HOME@20300+450
-turn K2@20800:1
+turn SELECT@20780:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@20800:1
 press OCT-@20850+40
 press PLAY@21100
 png 21800:e3_17_warp_gstretch.png
 press PLAY@21950+60
 # gstretch2
 press HOME@22000+450
-turn K2@22500:1
+turn SELECT@22480:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@22500:1
 press OCT-@22550+40
 press PLAY@22800
 png 23500:e3_18_warp_gstretch2.png

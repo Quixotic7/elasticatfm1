@@ -58,16 +58,19 @@ static void test_settings(void)
               !r0.hard,
           "the defaults: CAPTURE, 1 bar, no count-in, the metronome while recording, AUTOMATION, KEEP");
     press(FM1P_B_REC, 500);
-    CHECK(A->pn.rs_open && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "MODE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K3, "COUNT-IN"),
+    CHECK(A->pn.rs_open && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "MODE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K3, ""),
           "REC held: the record settings (K1 %s, K3 %s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1),
           L(FM1CORE_LBL_KNOB0 + FM1P_E_K3));
+    turn(FM1P_E_K1, 1);                            /* 0.6.1: a list menu: K1 the selected row, SEL the next */
+    turn(FM1P_E_SELECT, 1);
+    turn(FM1P_E_K1, 2);
+    turn(FM1P_E_SELECT, 1);
     turn(FM1P_E_K1, 1);
-    turn(FM1P_E_K2, 2);
-    turn(FM1P_E_K3, 1);
-    turn(FM1P_E_K4, 1);
+    turn(FM1P_E_SELECT, 1);
+    turn(FM1P_E_K1, 1);
     CHECK(A->proj.rec.mode == EC_REC_FIXED && A->proj.rec.bars == 4 && A->proj.rec.countin == 1 &&
               A->proj.rec.metro == EC_METRO_ALWAYS,
-          "K1 FIXED, K2 4 bars, K3 1 bar, K4 ALWAYS (%d %d %d %d)", A->proj.rec.mode, A->proj.rec.bars,
+          "FIXED, 4 bars, 1 bar, ALWAYS (%d %d %d %d)", A->proj.rec.mode, A->proj.rec.bars,
           A->proj.rec.countin, A->proj.rec.metro);
     press(FM1P_B_OCTDN, 40);                       /* F1: back, nothing kept */
     CHECK(!A->pn.rs_open && !memcmp(&A->proj.rec, &r0, sizeof r0), "F1: back (unchanged)");
@@ -79,9 +82,10 @@ static void test_settings(void)
     if (A->pn.shift_sticky)
         press(FM1P_B_GLO, 40);
     CHECK(A->pn.rs_open, "SHIFT + REC: the record settings");
-    turn(FM1P_E_SELECT, 4);                        /* lane 2: CLICK LVL, AUTOMATION, QUANTIZE */
-    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CLICK LVL") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K3, "QUANTIZE"),
-          "SEL: lane 2 (K1 %s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    turn(FM1P_E_SELECT, 4);                        /* row 5: CLICK LVL */
+    run(40);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CLICK LVL") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K3, ""),
+          "SEL: row 5 (K1 %s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
     turn(FM1P_E_K1, 1);
     {
         char b[16];
@@ -89,8 +93,11 @@ static void test_settings(void)
         CHECK(!strcmp(b, "-3DB") && fabsf(A->proj.rec.metro_level - 0.708f) < 0.01f, "CLICK LVL -6 -> -3 dB (%s)", b);
     }
     turn(FM1P_E_K1, -1);
-    turn(FM1P_E_K3, 1);
-    CHECK(A->proj.rec.hard, "K3: QUANTIZE HARD");
+    turn(FM1P_E_K3, 1);                            /* K3: nothing in a list */
+    CHECK(!A->proj.rec.hard, "K3 does nothing in a list");
+    turn(FM1P_E_SELECT, 2);
+    turn(FM1P_E_K1, 1);
+    CHECK(A->proj.rec.hard, "SEL to QUANTIZE, K1: HARD");
     press(FM1P_B_OCTUP, 40);                       /* F2: OK */
     CHECK(!A->pn.rs_open && A->dirty && A->proj.rec.hard, "F2: kept, the project dirty");
     A->proj.rec.hard = 0;

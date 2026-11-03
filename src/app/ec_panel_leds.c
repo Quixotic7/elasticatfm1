@@ -427,20 +427,16 @@ static void knob_labels(void)
         L(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");
         L(EC_LBL_KNOB0 + EC_E_ALGO, "");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, "");
-        for (k = 0; k < 4; k++) {
-            const int row = P->as_row / 4 * 4 + k;
-            L(EC_LBL_KNOB0 + EC_E_K1 + k, row < EC_AS_NROW ? ec_as_row_label(row) : "");
-        }
+        for (k = 0; k < 4; k++)                    /* 0.6.1: a list menu: K1 the selected row */
+            L(EC_LBL_KNOB0 + EC_E_K1 + k, k ? "" : ec_as_row_label(P->as_row));
         return;
     }
     if (P->rs_open) {                              /* the record settings */
         L(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");
         L(EC_LBL_KNOB0 + EC_E_ALGO, "");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, "");
-        for (k = 0; k < 4; k++) {
-            const int row = P->rs_row / 4 * 4 + k;
-            L(EC_LBL_KNOB0 + EC_E_K1 + k, row < EC_RS_NROW ? ec_rs_row_label(row) : "");
-        }
+        for (k = 0; k < 4; k++)
+            L(EC_LBL_KNOB0 + EC_E_K1 + k, k ? "" : ec_rs_row_label(P->rs_row));
         return;
     }
     if (UX->f3) {
@@ -458,7 +454,7 @@ static void knob_labels(void)
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
         else if (A->settings)
-            L(EC_LBL_KNOB0 + EC_E_SELECT, ec_ux_lanes(pg.n) > 1 ? "LANE" : "");
+            L(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");    /* 0.6.1: a list menu */
         else if (mode == EC_MODE_KEYBOARD || mode == EC_MODE_PAGES || mode == EC_CAT_XFD || mode == EC_MODE_SAMPLER)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "");
         else if (mode == EC_CAT_PAT)
@@ -476,8 +472,8 @@ static void knob_labels(void)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "PAGE");
     }
     for (k = 0; k < 4; k++) {
-        const int c = lane * 4 + k;
-        const ec_item_t *it = c < pg.n ? &pg.it[c] : 0;
+        const int c = A->settings && !UX->f3 ? (k ? -1 : ec_app_set_item(A, &pg)) : lane * 4 + k;   /* a list: K1 */
+        const ec_item_t *it = c >= 0 && c < pg.n ? &pg.it[c] : 0;
         const char *s = it && it->kind != EC_IT_BLANK ? ec_app_item_label(it) : "";
         if (P->cat)
             s = "";

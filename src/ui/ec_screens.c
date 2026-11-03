@@ -617,13 +617,16 @@ static void settings_screen(const ec_app_t *a, const ec_page_t *pg)
 {
     static char lab[EC_PAGE_ITEMS][24], val[EC_PAGE_ITEMS][24];
     ec_kit_row_t rows[EC_PAGE_ITEMS];
+    int idx[EC_PAGE_ITEMS];
     char t[32], r[16];
-    int i;
+    int i, n;
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
     header(a, t, 1, r);
-    for (i = 0; i < pg->n && i < EC_PAGE_ITEMS; i++) {
-        const ec_item_t *it = &pg->it[i];
+    n = ec_app_set_rows(pg, idx);                   /* 0.6.1: a list menu, the blanks left out */
+    memset(rows, 0, sizeof rows);
+    for (i = 0; i < n; i++) {
+        const ec_item_t *it = &pg->it[idx[i]];
         const int blocked = (it->flags & EC_IF_STOPPED) && a->seq.playing;
         ec_app_item_format(a, it, ec_app_item_value(a, it, 0), val[i], sizeof val[i]);
         snprintf(lab[i], sizeof lab[i], "%s", ec_app_item_label(it));
@@ -632,7 +635,7 @@ static void settings_screen(const ec_app_t *a, const ec_page_t *pg)
         rows[i].dim = (uint8_t)blocked;
         rows[i].note = blocked ? "STOP" : 0;
     }
-    ec_kit_settings(rows, i, ec_app_lane(a, pg), -1);
+    ec_kit_list(rows, n, a->ux.set_row, 12, H, 0);
 }
 
 /* ------------------------------------------------------------------------------------------- MIX --- */

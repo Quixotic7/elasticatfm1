@@ -42,7 +42,8 @@ press SAVE@4200+60
 turn SELECT@4300:1
 upper 9@4400+60
 press HOME@4700+450
-turn K2@5250:6
+turn SELECT@5230:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@5250:6
 press OCT-@5350+60
 press HOME@5450+60
 turn SELECT@5550:3

@@ -1071,11 +1071,9 @@ void ec_app_clear_mutes(void)
 /* SHIFT's screen: SHIFT held alone a moment, or sticky */
 int ec_app_shift_map(const ec_app_t *a)
 {
-    if (a->e5.naming || a->pn.as_open || a->ux.f3)
-        return 0;
-    if (a->pn.shift_sticky)
-        return 1;
-    return a->pn.shift_held && !a->ux.shift_used && a->ms - a->ux.shift_ms >= EC_SHIFTMAP_MS;
+    if (a->e5.naming || a->pn.as_open || a->pn.rs_open || a->rec.open || a->ux.f3)
+        return 0;                                    /* (a list SHIFT + a key opened shows over it) */
+    return a->pn.shift_sticky || a->pn.shift_held;   /* 0.6.1: held = sticky, from the press, used or not */
 }
 
 /* ------------------------------------------------------------------------------------------- ec_app_* --- */

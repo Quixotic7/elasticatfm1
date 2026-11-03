@@ -994,8 +994,6 @@ static void holds_tick(void)
         P->hdr_late = 1;
         A->redraw = 1;
     }
-    if (P->shift_held && !UX->shift_used && A->ms - UX->shift_ms == EC_SHIFTMAP_MS)
-        A->redraw = 1;
 }
 
 /* any knob, key or button: the intro goes (what was pressed still acts) */

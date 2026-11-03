@@ -106,7 +106,7 @@ int ec_app_list_knob(int role, int det, int *row, int n);
 int ec_app_set_rows(const ec_page_t *pg, int *idx);
 int ec_app_set_item(const ec_app_t *a, const ec_page_t *pg);                 /* the active lane's cells are on screen */
 int ec_app_popup(const ec_app_t *a);                         /* a pop-up is open (F1 back / F2 OK; E6: REC) */
-int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held alone (or sticky): its screen shows */
+int ec_app_shift_map(const ec_app_t *a);                     /* SHIFT held or sticky: its screen shows */
 int ec_app_track_audible(const ec_app_t *a, int t);          /* not muted, not silenced by a solo */
 /* 0.5.0 (ec_modkeys.c) */
 void ec_app_edit_param(int id, int det, int mult);           /* a knob turn on a track param (locks, undo) */

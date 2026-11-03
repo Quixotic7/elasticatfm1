@@ -105,6 +105,9 @@ These hold in every mode unless the mode says otherwise.
 
 - **Held** = SHIFT while held. **A quick tap = sticky SHIFT**: it stays on until GLO is tapped again or the mode
   changes. The GLO LED blinks while sticky.
+- 0.6.1: **held works exactly as sticky**: its screen shows from the press for as long as GLO is held, used or not,
+  and every SHIFT knob and key works; letting go returns to the mode. A hold that was used (a knob, a key) never turns
+  sticky on release; a quick unused tap does.
 - While SHIFT is on, only its keys light and the panel labels show what they do.
 
 | SHIFT + | Does |

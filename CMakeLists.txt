@@ -86,6 +86,9 @@ target_compile_options(ec_test_e5 PRIVATE -Wall -Wextra)
 add_executable(ec_test_ux host/test_ux.c)   # 0.3.0: the panel along ChoralRoot / FIZZ, the live labels
 target_link_libraries(ec_test_ux PRIVATE elasticat)
 target_compile_options(ec_test_ux PRIVATE -Wall -Wextra)
+add_executable(ec_test_v61ux host/test_v61ux.c)   # 0.6.1: the owner's play-test fixes (docs/UX-V2.md §10)
+target_link_libraries(ec_test_v61ux PRIVATE elasticat)
+target_compile_options(ec_test_v61ux PRIVATE -Wall -Wextra)
 
 add_executable(ec_test_e6 host/test_e6.c)   # E6: audio input, the INPUT machine, sampling (REC)
 target_link_libraries(ec_test_e6 PRIVATE elasticat)
@@ -121,6 +124,8 @@ add_test(NAME v020 COMMAND ec_test_v020)
 add_test(NAME ux_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_ux.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/ux)
 # 0.3.0: lanes, setup, PRESETS = the sample, knob speed / snap, F3, pop-ups, track keys, lock clear, SHIFT, labels
 add_test(NAME ux COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/ux_folder >/dev/null && $<TARGET_FILE:ec_test_ux> ${CMAKE_BINARY_DIR}/ux_folder")
+# 0.6.1: no pop-ups, messages and held keys in the header, source keys keep the mode, KEYBOARD's audition / pitch
+add_test(NAME v61ux COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/v61ux_folder >/dev/null && $<TARGET_FILE:ec_test_v61ux> ${CMAKE_BINARY_DIR}/v61ux_folder")
 # 0.2.0: the seams demo through panel input + a reboot from its flash (host/render_v020.sh)
 add_test(NAME v020_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_v020.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/v020)
 # E6: the INPUT machine's alignment, no input, the REC pop-up, a synced take through a latency, resample, threshold,

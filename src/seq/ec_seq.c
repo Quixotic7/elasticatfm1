@@ -156,12 +156,12 @@ static int condition_result(const ec_seq_t *s, int t, const ec_step_t *rec, int 
     const ec_trigcond_t *c = &EC_TRIGCOND[idx - 1];
     *kind = c->kind;
     switch (c->kind) {
-    case EC_TC_AB: return ((st->pass - 1) % c->b) + 1 == c->a;
+    case EC_TC_AB: return ((st->fire_pass - 1) % c->b) + 1 == c->a;
     case EC_TC_FILL: return ec_seq_fill_active(s);
     case EC_TC_NFILL: return !ec_seq_fill_active(s);
     case EC_TC_PRE: return st->last_cond == 1;
     case EC_TC_NPRE: return st->last_cond != 1;
-    case EC_TC_FIRST: return st->pass == 1;
+    case EC_TC_FIRST: return st->fire_pass == 1;
     default: return 1;          /* none; NEI / !NEI: always true until the neighbor machine (as the original) */
     }
 }
@@ -246,23 +246,47 @@ static void mod_trig(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note, in
     emit(s, &e);
 }
 
-/* THE step routine (TrackSequencer:enter_step) */
-static void enter_step(ec_seq_t *s, int t, int reset)
+/* 0.6.0: a lock-only step (no trig, no slices: the "ghost locks" live recording writes from knob moves) applies
+ * its locks as the playhead passes, without a voice: each is held until the step ends (or longer, while a trig's
+ * own window for the same param lasts). Region, sequencer and trigger-time locks need a trig: skipped. */
+static void ghost_locks(ec_seq_t *s, int t, const ec_step_t *rec, int64_t pos)
+{
+    ec_seq_track_t *st = &s->tr[t];
+    const uint64_t end = sample_at(s, ec_seq_boundary_beats(s, t, pos + 1));
+    int k;
+    for (k = 0; k < rec->nlock; k++) {
+        const int id = rec->lock_id[k];
+        if (id >= EC_NP || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)))
+            continue;
+        if (!st->hold_on[id] || st->hold_exp[id] < end)
+            st->hold_exp[id] = end;
+        st->hold_on[id] = 1;
+        st->hold_val[id] = rec->lock_val[k];
+    }
+    hold_min_update(st);
+    st->dirty = 1;
+}
+
+/* THE step routine (TrackSequencer:enter_step): the step at index idx (pattern pass `pass`) of clock position pos
+ * fires now (0.6.0: at its grid boundary shifted by its micro timing) */
+static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t pos)
 {
     ec_seq_track_t *st = &s->tr[t];
     ec_ptrack_t *tr = ptr(s, t);
     const float *v = tr->v;
     const int m = iv(v, EC_P_MACHINE);
-    const ec_step_t *rec = st->play_index >= 0 && st->play_index < EC_MAXSTEPS ? &tr->steps[st->play_index] : 0;
+    const ec_step_t *rec = idx >= 0 && idx < EC_MAXSTEPS ? &tr->steps[idx] : 0;
     int active, fires, ghost, had_region = 0, k;
     uint64_t note;
 
     if (reset) {
         holds_clear(st);
-        st->pass = 1;
         st->last_cond = -1;
     }
+    st->fire_pass = pass;
     active = rec && (is_slice(m) ? (rec->slices != 0 || rec->trig) : rec->trig);
+    if (rec && !active && rec->nlock)
+        ghost_locks(s, t, rec, pos);
     fires = active && evaluate_trig(s, t, rec);
     ghost = fires && ec_step_is_ghost(rec, v);
     if (fires)
@@ -352,7 +376,7 @@ static void enter_step(ec_seq_t *s, int t, int reset)
             st->rat_k = 1;
             st->rat_t0 = s->now;
             st->rat_iv = ec_seq_step_samples(s, t) / hits;
-            st->rat_index = st->play_index;
+            st->rat_index = idx;
         }
     }
 }
@@ -416,10 +440,56 @@ static void anchor(ec_seq_t *s, int t, int64_t pos)
     st->play_index = ec_e5_play_index(s->proj, t, steps, pos, &st->pass);   /* E5: PAGE > LOOP */
 }
 
-static void enter_position(ec_seq_t *s, int t, int64_t pos)
+/* ---- 0.6.0: micro timing. The grid (position, play_index, pass: what the screens show) moves on the step
+ * boundaries as before; the firing has its own cursor, fpos, the next position to fire. Position n fires at its
+ * boundary + its step's EC_P_MICRO (lock, else the track value) in 1/EC_MICRO_DIV of a step, so up to half a step
+ * early: the cursor may run one position ahead of the grid (the lookahead reads position n + 1's step through the
+ * pattern length and the page loop, so the loop's first step can fire early at the loop's end) or one behind (a late
+ * step). Positions fire in order; one that is due late fires at once. An early step never fires before a queued
+ * pattern switch at the global boundary (the new pattern's first step fires on the boundary instead), nor before the
+ * transport starts. */
+static int micro_of(const ec_seq_t *s, int t, int idx)
 {
-    anchor(s, t, pos);
-    enter_step(s, t, 0);
+    const ec_ptrack_t *tr = ptr(s, t);
+    const ec_step_t *rec = idx >= 0 && idx < EC_MAXSTEPS ? &tr->steps[idx] : 0;
+    return clampi((int)floorf(field(rec, tr->v, EC_P_MICRO) + 0.5f), -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2);
+}
+
+static int switch_pending(const ec_seq_t *s) { return s->pending >= 0 || s->temp_return >= 0; }
+static double global_boundary_beats(const ec_seq_t *s)
+{
+    return (double)(s->global_cycle + 1) * clampi(s->proj->glen, 1, 256) * 0.25;
+}
+
+static uint64_t fire_time(const ec_seq_t *s, int t, int64_t n)
+{
+    const ec_seq_track_t *st = &s->tr[t];
+    const double b = ec_seq_boundary_beats(s, t, n);
+    int pass, idx, mu;
+    if (st->fpos < 0 || st->position < 0 || n > st->position + 1)
+        return NEVER;
+    idx = ec_e5_play_index(s->proj, t, ec_seq_pattern_steps(s, t), n, &pass);
+    mu = micro_of(s, t, idx);
+    if (mu < 0 && switch_pending(s) && b >= global_boundary_beats(s) - BEAT_EPS)
+        mu = 0;
+    return sample_at(s, b + (double)mu * bps(s, t) / EC_MICRO_DIV);
+}
+static uint64_t fire_next(const ec_seq_t *s, int t) { return fire_time(s, t, s->tr[t].fpos); }
+
+static void fire(ec_seq_t *s, int t)
+{
+    ec_seq_track_t *st = &s->tr[t];
+    const int64_t n = st->fpos;
+    int pass, idx;
+    const int reset = st->fire_reset;
+    st->fpos = n + 1;
+    st->fire_reset = 0;
+    if (n == st->skip_pos) {               /* recorded live: already heard (ec_seq_rec_consume) */
+        st->skip_pos = -1;
+        return;
+    }
+    idx = ec_e5_play_index(s->proj, t, ec_seq_pattern_steps(s, t), n, &pass);
+    enter_step(s, t, reset, idx, pass, n);
 }
 
 static void reset_track(ec_seq_t *s, int t)
@@ -427,6 +497,10 @@ static void reset_track(ec_seq_t *s, int t)
     ec_seq_track_t *st = &s->tr[t];
     holds_clear(st);
     st->position = -1;
+    st->fpos = -1;
+    st->skip_pos = -1;
+    st->fire_reset = 0;
+    st->fire_pass = 1;
     st->play_index = 0;
     st->pass = 1;
     st->last_cond = -1;
@@ -468,6 +542,7 @@ static void restart_clock(ec_seq_t *s)
 {
     int t;
     ec_event_t e;
+    s->song_base += ec_seq_beats(s);       /* 0.6.0: ec_seq_song_beats keeps counting across pattern restarts */
     s->beat_base = 0;
     s->sample_base = s->now;
     s->global_cycle = 0;
@@ -479,7 +554,10 @@ static void restart_clock(ec_seq_t *s)
     for (t = 0; t < EC_NTRACK; t++) {
         reset_track(s, t);
         anchor(s, t, 0);
-        enter_step(s, t, 1);
+        s->tr[t].fpos = 0;
+        s->tr[t].fire_reset = 1;
+        if (fire_next(s, t) <= s->now)     /* (no micro: the first step fires at once, as before 0.6.0) */
+            fire(s, t);
     }
 }
 
@@ -571,6 +649,9 @@ static uint64_t next_due(const ec_seq_t *s)
         x = track_next(s, t);
         if (x < n)
             n = x;
+        x = fire_next(s, t);
+        if (x < n)
+            n = x;
         x = rat_next(st);
         if (x < n)
             n = x;
@@ -593,8 +674,14 @@ static void handle_due(ec_seq_t *s)
     }
     for (t = 0; t < EC_NTRACK; t++) {
         ec_seq_track_t *st = &s->tr[t];
-        if (st->position >= 0 && track_next(s, t) <= s->now)
-            enter_position(s, t, st->position + 1);
+        int guard;
+        if (st->position >= 0 && track_next(s, t) <= s->now) {
+            anchor(s, t, st->position + 1);
+            while (st->fpos >= 0 && st->fpos < st->position)   /* (a late step overtaken by the grid: now) */
+                fire(s, t);
+        }
+        for (guard = 0; guard < 2 && fire_next(s, t) <= s->now; guard++)
+            fire(s, t);
     }
     for (t = 0; t < EC_NTRACK; t++) {
         ec_seq_track_t *st = &s->tr[t];
@@ -653,12 +740,58 @@ static void flush(ec_seq_t *s)
     }
 }
 
+/* 0.6.0: the metronome's beats in [now, now + n) (the clock is linear inside a piece: rebased only between pieces) */
+static void add_beat(ec_seq_t *s, uint64_t t, uint64_t block0, int32_t beat, int accent, int countin)
+{
+    ec_seq_beat_t *b;
+    if (s->nbeat >= EC_SEQ_BEATS_MAX)
+        return;
+    b = &s->beat[s->nbeat++];
+    b->offset = (uint32_t)(t - block0);
+    b->beat = beat;
+    b->accent = (uint8_t)(accent ? 1 : 0);
+    b->countin = (uint8_t)(countin ? 1 : 0);
+}
+static void collect_beats(ec_seq_t *s, uint64_t block0, int n)
+{
+    const uint64_t a = s->now, z = s->now + (uint64_t)n;
+    if (s->start_at != NEVER && s->ci_n > 0) {          /* count-in beats */
+        int j;
+        for (j = 0; j < s->ci_n; j++) {
+            const uint64_t t = s->ci_t0 + (uint64_t)llround(j * s->ci_spb);
+            if (t >= a && t < z)
+                add_beat(s, t, block0, (int32_t)(j - s->ci_n), j % 4 == 0, 1);
+        }
+    }
+    if (s->playing) {
+        const double sp = spb(s);
+        int64_t k = (int64_t)floor(s->beat_base + (double)(a - s->sample_base) / sp) - 1;
+        for (;; k++) {
+            const double d = ((double)k - s->beat_base) * sp;
+            uint64_t t;
+            if (d < -1e-6)
+                continue;                                    /* (before this clock's origin: the last segment's) */
+            t = s->sample_base + (uint64_t)ceil(d - 1e-6);
+            if (t >= z)
+                break;
+            if (t >= a)
+                add_beat(s, t, block0, (int32_t)k, k % 4 == 0, 0);
+        }
+    }
+}
+
+static void start_now(ec_seq_t *s);
+
 void ec_seq_render(ec_seq_t *s, float *out, int frames)
 {
     int done = 0;
+    const uint64_t block0 = s->now;
+    s->nbeat = 0;
     while (done < frames) {
         uint64_t next = NEVER;
         int n = frames - done;
+        if (s->start_at != NEVER && s->start_at <= s->now)   /* 0.6.0: an armed start (count-in, start_at) */
+            start_now(s);
         if (s->playing) {
             int guard;
             for (guard = 0; guard < 64; guard++) {
@@ -675,8 +808,11 @@ void ec_seq_render(ec_seq_t *s, float *out, int frames)
             if (s->tr[t].mtx_gen)
                 s->tr[t].dirty = 1;
         flush(s);
+        if (s->start_at != NEVER && s->start_at > s->now && (next == NEVER || s->start_at < next))
+            next = s->start_at;
         if (next != NEVER && next - s->now < (uint64_t)n)
             n = (int)(next - s->now);
+        collect_beats(s, block0, n);
         if (s->sink.process)
             s->sink.process(s->sink.ctx, out ? out + 2 * done : 0, n);
         s->now += (uint64_t)n;
@@ -696,6 +832,7 @@ void ec_seq_init(ec_seq_t *s, ec_project_t *proj, const ec_seq_sink_t *sink, dou
     s->bpm = proj->bpm;
     s->pending = s->temp_return = -1;
     s->rng = 0x2545F491u;
+    s->start_at = NEVER;
     for (t = 0; t < EC_NTRACK; t++) {
         reset_track(s, t);
         s->tr[t].dirty = 1;
@@ -706,6 +843,8 @@ void ec_seq_start(ec_seq_t *s)
 {
     int t;
     ec_event_t e;
+    s->start_at = NEVER;                          /* (an armed start is replaced) */
+    s->ci_n = 0;
     if (s->playing)
         return;
     s->stops = 0;
@@ -725,6 +864,9 @@ void ec_seq_start(ec_seq_t *s)
     e.value = (float)s->bpm;
     emit(s, &e);
     s->playing = 1;
+    s->beat_base = 0;                             /* 0.6.0: the song's beats count from here */
+    s->sample_base = s->now;
+    s->song_base = 0;
     restart_clock(s);
     /* a loop track with no trigs at all drones from the start (start_sequence's note_on) */
     for (t = 0; t < EC_NTRACK; t++) {
@@ -757,6 +899,9 @@ void ec_seq_stop(ec_seq_t *s)
     ec_event_t e;
     s->playing = 0;
     s->paused = 0;
+    s->start_at = NEVER;                          /* 0.6.0: an armed start is cancelled */
+    s->ci_n = 0;
+    s->song_base = 0;
     s->pending = s->temp_return = -1;
     s->global_cycle = 0;
     s->global_pos = 0;
@@ -776,6 +921,100 @@ void ec_seq_stop(ec_seq_t *s)
         e = ev0(EC_EV_PANIC, -1);
         emit(s, &e);
     }
+}
+
+/* 0.6.0: armed starts */
+static void start_now(ec_seq_t *s)
+{
+    s->start_at = NEVER;
+    s->ci_n = 0;
+    s->paused = 0;                                /* (from the top) */
+    ec_seq_start(s);
+}
+
+void ec_seq_count_in(ec_seq_t *s, int beats)
+{
+    if (beats <= 0) {
+        start_now(s);
+        return;
+    }
+    if (s->playing)
+        return;
+    s->ci_n = beats;
+    s->ci_spb = 60.0 * s->fs / (s->proj->bpm > 1.0f ? s->proj->bpm : 1.0f);
+    s->ci_t0 = s->now;
+    s->start_at = s->now + (uint64_t)llround(beats * s->ci_spb);
+}
+
+void ec_seq_start_at(ec_seq_t *s, uint32_t frame)
+{
+    if (s->playing)
+        return;
+    s->ci_n = 0;
+    s->start_at = s->now + frame;
+}
+
+int ec_seq_counting_in(const ec_seq_t *s)
+{
+    int j, left = 0;
+    if (s->start_at == NEVER || s->ci_n <= 0)
+        return 0;
+    for (j = 0; j < s->ci_n; j++)
+        left += s->ci_t0 + (uint64_t)llround(j * s->ci_spb) >= s->now;
+    return left;
+}
+
+int ec_seq_block_beats(const ec_seq_t *s, ec_seq_beat_t *out, int max)
+{
+    int n = s->nbeat < max ? s->nbeat : max;
+    if (n > 0 && out)
+        memcpy(out, s->beat, (size_t)n * sizeof *out);
+    return n < 0 ? 0 : n;
+}
+
+double ec_seq_song_beats(const ec_seq_t *s)
+{
+    if (!s->playing && !s->paused)
+        return 0;
+    return s->song_base + ec_seq_beats(s);
+}
+
+int ec_seq_rec_quantize(const ec_seq_t *s, int t, int *step, float *offset)
+{
+    double beats, b0, b1, off;
+    int64_t p, n;
+    int pass, idx;
+    if (t < 0 || t >= EC_NTRACK || !s->playing)
+        return -1;
+    beats = ec_seq_beats(s);
+    p = ec_seq_position_at(s, t, beats);
+    b0 = ec_seq_boundary_beats(s, t, p);
+    b1 = ec_seq_boundary_beats(s, t, p + 1);
+    if (beats - b0 <= b1 - beats) {
+        n = p;
+        off = (beats - b0) / bps(s, t);
+    } else {
+        n = p + 1;
+        off = (beats - b1) / bps(s, t);
+    }
+    idx = ec_e5_play_index(s->proj, t, ec_seq_pattern_steps(s, t), n, &pass);
+    if (step)
+        *step = idx;
+    if (offset)
+        *offset = (float)(off < -0.5 ? -0.5 : off > 0.5 ? 0.5 : off);
+    return 0;
+}
+
+void ec_seq_rec_consume(ec_seq_t *s, int t, int step)
+{
+    ec_seq_track_t *st;
+    int pass;
+    if (t < 0 || t >= EC_NTRACK)
+        return;
+    st = &s->tr[t];
+    if (st->fpos >= 0 && st->position >= 0 && st->fpos <= st->position + 1 &&
+        ec_e5_play_index(s->proj, t, ec_seq_pattern_steps(s, t), st->fpos, &pass) == step)
+        st->skip_pos = st->fpos;
 }
 
 void ec_seq_toggle(ec_seq_t *s)
@@ -823,8 +1062,10 @@ void ec_seq_timing_changed(ec_seq_t *s)
     if (!s->playing && !s->paused)
         return;
     for (t = 0; t < EC_NTRACK; t++)
-        if (s->tr[t].position >= 0)
+        if (s->tr[t].position >= 0) {
             anchor(s, t, ec_seq_position_at(s, t, ec_seq_beats(s)));
+            s->tr[t].fpos = s->tr[t].position + 1;   /* (the step under the playhead counts as played) */
+        }
     global_rederive(s);
 }
 

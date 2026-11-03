@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "ec_params.h"
+#include "ec_project.h"   /* (EC_NSLOT) */
 
 static const char *const O_MACH[] = {"LOOP", "TRIG", "SLICE", "RAZOR", "S.POLY", "R.POLY", "NEIGH", "INPUT"};
 static const char *const O_WARP[] = {"TAPE", "VARI", "DOMINO", "GRAIN", "OLA", "PITCH", "HARM",
@@ -61,7 +62,7 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MUTE] = BIN("mute", "MUTE", 0, 0),
     [EC_P_MACHINE] = OPT("machine", "MACH", 1, 0, O_MACH),
     [EC_P_PITCH] = NUM("pitch", "P/T", -24, 24, 1, 0, EC_PF_PITCH, L),
-    [EC_P_SLOT] = NUM("sample_slot", "SLOT", 1, 16, 1, 1, EC_PF_INT, 0),
+    [EC_P_SLOT] = NUM("sample_slot", "SLOT", 1, EC_NSLOT, 1, 1, EC_PF_INT, 0),   /* (0.6.0: 16 -> 128) */
     [EC_P_LOOP_START] = NUM("loop_start", "STRT", 0, 128, 1, 0, EC_PF_INT, L | EC_PF_REGION),
     [EC_P_LOOP_END] = NUM("loop_end", "END", 0, 128, 1, 128, EC_PF_INT, L | EC_PF_REGION),
     [EC_P_RANGE_START] = NUM("range_start", "R-ST", 0, 128, 1, 0, EC_PF_INT, L | EC_PF_REGION),
@@ -278,6 +279,8 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MTX8_SRC] = OPT("mtx8_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX8_DST] = MDST("mtx8_dst", "DST"),
     [EC_P_MTX8_DEPTH] = NUM("mtx8_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    /* 0.6.0: micro timing (sequencer domain: never sent to the engine, never morphed or modulated) */
+    [EC_P_MICRO] = NUM("micro_timing", "MICRO", -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2, 1, 0, EC_PF_INT, L | EC_PF_SEQ),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {

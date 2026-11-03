@@ -158,3 +158,9 @@ add_test(NAME e0_nofolder
 # E4: FX on every slot, the sends, the master insert and MOD through panel input (results/e4); the model side
 add_test(NAME seq_e4 COMMAND ec_test_seq_e4)
 add_test(NAME e4_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e4.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e4)
+# 0.6.0 (data): the project record version 2 (sizes, old records, 64 patterns / 128 slots), micro timing, lock-only
+# steps, the live-recording timing (quantize, beats, count-in)
+add_executable(ec_test_rec host/test_rec.c)
+target_link_libraries(ec_test_rec PRIVATE elasticat)
+target_compile_options(ec_test_rec PRIVATE -Wall -Wextra)
+add_test(NAME rec COMMAND ec_test_rec ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures)

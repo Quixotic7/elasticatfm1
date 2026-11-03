@@ -29,8 +29,9 @@
 #define EC_GATED ((const char *)0)
 #endif
 
-#define EC_FLASH_SIZE 0x100000u      /* 1 MiB image */
+#define EC_FLASH_SIZE EC_PLAT_FLASH_SIZE   /* (ec_plat.h) */
 #define EC_FLASH_HDR 4096u           /* the header's sector; the record follows */
+_Static_assert(EC_FLASH_SIZE - EC_FLASH_HDR == EC_PLAT_RECORD_MAX, "the record follows the header's sector");
 #define EC_FLASH_MAGIC 0x54414345u   /* "ECAT" little-endian */
 #define EC_FLASH_FORMAT 1u           /* bump when the record's layout changes */
 

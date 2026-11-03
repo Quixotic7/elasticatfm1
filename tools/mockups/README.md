@@ -7,6 +7,9 @@ firmware.
 sh tools/mockups/make_mockups.sh            # build/ec_mock_ux2 -> results/ux-v2-mockups/ (not committed)
 ```
 
+The norns sprites are read from `../Elasticat/images/` (or `ELASTICAT_NORNS=<path>`), never copied into this repo;
+`sprite_to_c.py --c out.h` turns a sheet into the C array (4-bit palette indices) the firmware build can include.
+
 It needs a configured `build/` (`cmake -S . -B build`), node, python3 and Chromium at
 `/Applications/Chromium.app` (or `CHROMIUM=...`); Chromium runs headless with a fresh profile, never a window.
 
@@ -16,6 +19,9 @@ It needs a configured `build/` (`cmake -S . -B build`), node, python3 and Chromi
 | `<Mode>_popup.png` | the mode-entry pop-up over the dimmed screen: the name, the page, the 11 black keys in their roles | `host/mock_ux2.c` |
 | `<Mode>_panel.png` | the FM-1 as RemoteFM1 draws it (desktop layout), with the mode's live labels, lit button and key LEDs, and its screen in the LCD, 2184x1418 | `render_panels.mjs` + `panel.html` |
 | `AppSettings_*` | SHIFT + HOME's APP SETTINGS (THEME active) | both |
+| `Filter_env_screen.png`, `Mod_env_screen.png` | the FILTER ENV and MOD ENV pages (FILTER, FILTER ENV, AMP ENV, MOD ENV use norns Elasticat's bar renders: 38 bars on the 120 grid where norns has 42 on 128) | `host/mock_ux2.c` |
+| `Intro_screen.png`, `Intro_frames.png`, `Intro.gif` | norns Elasticat's launch logo (55 frames, 10 fps), on the palette | `sprite_to_c.py` + `host/mock_ux2.c` |
+| `Cat_screen.png`, `Cat_frames.png`, `Cat.gif` | MIX's B11 CAT (norns' Visualizer sprite, 12 frames) | `sprite_to_c.py` + `host/mock_ux2.c` |
 | `_palette.png` | the 16 palette slots of the default theme | `host/mock_ux2.c` |
 | `_themes.png` | the MATRIX screen in all six themes, with their swatches | `host/mock_ux2.c` |
 | `palette.json` | the theme tables, for the check | `host/mock_ux2.c` |

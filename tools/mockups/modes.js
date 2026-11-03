@@ -31,7 +31,8 @@ export const MODES = [
   { file: "Mod", lit: ["LFO"], sel: "ROW", k: ["SRC", "DST", "DEPTH", ""], white: steps(),
     black: [["MATRIX", "P"], ["M1", "S"], ["M2", "S"], ["M3", "S"], ["M4", "S"], ...SRC, ["MACROS", "X"]] },
   { file: "Mix", lit: ["EDIT"], k: ["LEVEL", "PAN", "SEND1", "SEND2"], white: [...TRACKS, ...off(7)],
-    black: [...["1/8", "1/4", "1/2", "3/4", "1X", "3/2", "2X", "3X", "4X"].map((t) => [t, "A"]), ["SLOWER", "A"], ["FASTER", "A"]] },
+    // B1..B8 the rate list, B9 / B10 slower / faster, B11 the CAT (docs/UX-V2.md MIX)
+    black: [...["1/8", "1/4", "1/2", "3/4", "1X", "3/2", "2X", "4X"].map((t) => [t, "A"]), ["SLOWER", "A"], ["FASTER", "A"], ["CAT", "X"]] },
   { file: "Pages", lit: ["EDIT"], btn: { EDIT: "PAGES" }, k: ["LENGTH", "RATE", "LOOP", ""], f1: "COPY PG", f2: "CUT PG",
     white: steps(), black: [["PAGE1", "P"], ["PAGE2", "P"], ["PAGE3", "P"], ["PAGE4", "P"], ...off(7)] },
   { file: "Loop", lit: ["HOME"], k: ["GDEN", "GSIZ", "SPRD", "RATE"],

@@ -108,6 +108,22 @@ def check_dir(d):
                 msgs.append(f"{len(cs)} colours, {len(extra)} outside {theme}'s 16")
         print(("FAIL " if msgs else "ok   ") + fn + (": " + "; ".join(msgs) if msgs else f" {w}x{h}"))
         fails += bool(msgs)
+    for fn in sorted(os.listdir(d)):                # GIFs: exempt from the block check, but only palette colours
+        if not fn.endswith(".gif"):
+            continue
+        try:
+            from PIL import Image, ImageSequence
+        except ImportError:
+            print("skip " + fn + ": no Pillow")
+            continue
+        im = Image.open(os.path.join(d, fn))
+        cs = set()
+        for fr in ImageSequence.Iterator(im):
+            cs |= {c for _, c in fr.convert("RGB").getcolors(1 << 16)}
+        extra = cs - themes["CREAM"]
+        bad = len(cs) > 16 or extra
+        print(("FAIL " if bad else "ok   ") + fn + (f": {len(cs)} colours, {len(extra)} outside CREAM's 16" if bad else f" {im.n_frames} frames"))
+        fails += bool(bad)
     print(f"{fails} failing" if fails else "all ok")
     return 1 if fails else 0
 

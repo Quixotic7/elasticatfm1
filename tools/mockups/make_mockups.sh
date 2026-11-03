@@ -9,6 +9,12 @@ BUILD=${1:-$REPO/build}
 OUT=${2:-$REPO/results/ux-v2-mockups}
 mkdir -p "$OUT"
 cmake --build "$BUILD" --target ec_mock_ux2 >/dev/null
-"$BUILD/ec_mock_ux2" "$OUT"
+# the norns sprites (Elasticat for norns, read-only beside this repo): the intro logo and the CAT
+ART=${ELASTICAT_NORNS:-$REPO/../Elasticat}/images
+python3 -I "$REPO/tools/mockups/sprite_to_c.py" --bin "$BUILD/intro.bin" "$ART/q7logoanim.png"
+python3 -I "$REPO/tools/mockups/sprite_to_c.py" --bin "$BUILD/cat.bin" "$ART/dancingcat.png"
+"$BUILD/ec_mock_ux2" "$OUT" --intro "$BUILD/intro.bin" --cat "$BUILD/cat.bin"
+python3 -I "$REPO/tools/mockups/sprite_to_c.py" --gif "$OUT/Intro.gif" --fps 10 --palette "$OUT/palette.json" "$ART/q7logoanim.png"
+python3 -I "$REPO/tools/mockups/sprite_to_c.py" --gif "$OUT/Cat.gif" --fps 10 --cat --palette "$OUT/palette.json" "$ART/dancingcat.png"
 node "$REPO/tools/mockups/render_panels.mjs" --out="$OUT"
 python3 "$REPO/tools/mockups/check_png.py" "$OUT"

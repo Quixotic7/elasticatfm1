@@ -195,17 +195,6 @@ static void wave(int x0, int x1, int top, int bot, int per, uint32_t seed, int c
 }
 static void playhead(int x, int top, int bot) { R(PX_ACC, x, top, 1, bot - top); }
 
-/* a filled curve: L3 under it, the edge in L15, joined between columns */
-static void fill_curve(const int *ys, int x0, int n, int bot)
-{
-    int i;
-    for (i = 0; i < n; i++) {
-        const int y = ys[i], p = i ? ys[i - 1] : y, lo = y < p ? y : p, hi = y > p ? y : p;
-        R(PX_L3, x0 + i, y, 1, bot - y);
-        R(PX_L15, x0 + i, lo, 1, hi - lo + 1);
-    }
-}
-
 /* a strip of 16 steps (TRIG's picture): trig bars, dashes for empty steps, the held one framed, lock dots */
 static void step_bars(const char *pat, int top, int bot, int held, const char *locks)
 {
@@ -291,54 +280,158 @@ static void scr_fx(void)
     cells(c, 0, 0);
 }
 
+/* ---- the norns bar renders (Elasticat/lib/ui/page_render.lua: draw_filter_bars, env_bars, draw_envelope_bars) ----
+ * norns draws 42 bars of 2 px + a 1 px gap across 128 px; on the 120 grid that rhythm fits 38 bars (x 3..116). The
+ * rest is the norns logic: bar heights from the same response / stage maths, dim bars at level 6 (L5), the bright
+ * ones at level 12 (L15). */
+#define NBARS 38
+#define BAR_X(i) (3 + 3 * (i))
+
+static float resp_lp(float u, float fc, float q)
+{
+    const float d = u - fc;
+    float base = d <= 0 ? 1.0f : 1.0f - d * 3.5f;
+    if (base < 0)
+        base = 0;
+    return base + q * 1.05f * expf(-(d * d) / 0.005f);
+}
+
+/* the filter's magnitude as bars from the bottom; stopped: the envelope-depth band from the cutoff bright, else the
+ * cutoff's bar alone */
+static void filter_bars(int top, int bot, float cut, float res_raw, float depth, int playing)
+{
+    const float res = res_raw / 127.0f, fc = 0.06f + cut / 127.0f * 0.88f;
+    const float reach = playing ? 0 : depth * 0.42f, lo = reach >= 0 ? fc : fc + reach, hi = reach >= 0 ? fc + reach : fc;
+    const int nearest = (int)floorf(fc * (NBARS - 1) + 0.5f);
+    const float scale = (float)(bot - top - 1) / 1.5f;
+    int i;
+    for (i = 0; i < NBARS; i++) {
+        const float u = (float)i / (NBARS - 1);
+        float g = resp_lp(u, fc, res);
+        int bh, bright;
+        g = g < 0 ? 0 : g > 1.5f ? 1.5f : g;
+        bh = (int)floorf(g * scale + 0.5f);
+        if (bh < 1)
+            continue;
+        bright = fabsf(reach) > 0 ? (u >= lo && u <= hi) : i == nearest;
+        R(bright ? PX_L15 : PX_L5, BAR_X(i), bot - bh, 2, bh);
+    }
+}
+
+/* env_bars(): the envelope as one amplitude per bar, by bar counts (attack >= 1 bar, attack + decay <= half,
+ * release <= half, sustain >= 1 bar, a 0 stage = 0 bars = a cliff); mode 1 ADSR, 2 AHR; >= 128 = INF */
+enum { ST_A = 1, ST_D = 2, ST_S = 4, ST_R = 8, ST_H = 16 };
+static int env_bars(int mode, float a, float d, float s, float hd, float r, int n, float *amp, int *st)
+{
+    const int half = n / 2;
+    const float sus = s / 127.0f < 0 ? 0 : s / 127.0f > 1 ? 1 : s / 127.0f;
+    int m = 0;
+#define SPAN(v, mx) ((int)floorf((v) / (mx) * half + 0.5f))
+#define PUSH(cnt, from, to, stg)                                                                                      \
+    do {                                                                                                               \
+        int _i;                                                                                                        \
+        for (_i = 1; _i <= (cnt) && m < n; _i++)                                                                       \
+            amp[m] = (from) + ((to) - (from)) * (float)_i / (float)(cnt), st[m++] = (stg);                             \
+    } while (0)
+    if (mode == 1) {
+        int ab = SPAN(a, 127), db = SPAN(d, 127), rb, sb;
+        if (ab + db > half) {
+            const float sc = (float)half / (float)(ab + db);
+            ab = (int)floorf(ab * sc), db = (int)floorf(db * sc);
+        }
+        ab = ab < 1 ? 1 : ab;
+        rb = r >= 128 ? 0 : SPAN(r, 127) < half ? SPAN(r, 127) : half;
+        sb = n - ab - db - rb;
+        if (sb < 1) {
+            int need = 1 - sb, take = need < rb ? need : rb;
+            rb -= take, need -= take;
+            if (need > 0)
+                take = need < db ? need : db, db -= take, need -= take;
+            if (need > 0)
+                ab = ab - need < 1 ? 1 : ab - need;
+            sb = n - ab - db - rb;
+        }
+        PUSH(ab, 0.0f, 1.0f, ST_A);
+        PUSH(db, 1.0f, sus, ST_D);
+        PUSH(sb, sus, sus, ST_S);
+        PUSH(rb, sus, 0.0f, ST_R);
+    } else {
+        int ab = SPAN(a, 127);
+        ab = ab < 1 ? 1 : ab > half ? half : ab;
+        if (hd >= 128) {
+            PUSH(ab, 0.0f, 1.0f, ST_A);
+            PUSH(n - ab, 1.0f, 1.0f, ST_H);
+        } else if (r >= 128) {
+            const int hb = SPAN(hd, 128) < n - ab ? SPAN(hd, 128) : n - ab;
+            PUSH(ab, 0.0f, 1.0f, ST_A);
+            PUSH(hb, 1.0f, 1.0f, ST_H);
+            PUSH(n - ab - hb, 1.0f, 1.0f, ST_R);
+        } else {
+            const int hb = SPAN(hd, 128) < half ? SPAN(hd, 128) : half, rb = SPAN(r, 128) < half ? SPAN(r, 128) : half;
+            PUSH(ab, 0.0f, 1.0f, ST_A);
+            PUSH(hb, 1.0f, 1.0f, ST_H);
+            PUSH(rb, 1.0f, 0.0f, ST_R);
+        }
+    }
+#undef SPAN
+#undef PUSH
+    return m;
+}
+
+/* draw_envelope_bars(): the stages the selected knob pair edits are bright */
+static void envelope_bars(int top, int bot, int mode, float a, float d, float s, float hd, float r, int hot)
+{
+    float amp[NBARS];
+    int st[NBARS], n = env_bars(mode, a, d, s, hd, r, NBARS, amp, st), i;
+    for (i = 0; i < n; i++) {
+        const int bh = (int)floorf((amp[i] < 0 ? 0 : amp[i] > 1 ? 1 : amp[i]) * (bot - top - 1) + 0.5f);
+        if (bh >= 1)
+            R(st[i] & hot ? PX_L15 : PX_L5, BAR_X(i), bot - bh, 2, bh);
+    }
+}
+
 static void scr_filter(void)
 {
     static const cell_t c[4] = {{"CUTOFF", "2.4K", 0.62f, 0, "LFO1"}, {"RESO", "35", 0.35f, 0, 0},
                                 {"TYPE", "LP", 0, 0, 0}, {"DRIVE", "0", 0, 0, 0}};
-    int ys[116], i;
     header("T1", "FILTER/FILTER", "1", "P01", 0, 0);
     TL(PX_L15, "CLASSC", 2, 13);
     TR(PX_L8, "LP", W - 2, 13);
-    for (i = 0; i < 116; i++) {
-        const float x = (float)i;
-        float y = 40;
-        if (x > 52 && x <= 70)
-            y = 40 - 14 * expf(-(70 - x) * (70 - x) / 30.0f);
-        else if (x > 70)
-            y = 26 + (x - 70) * 1.25f;
-        ys[i] = (int)(y > 74 ? 74 : y);
-    }
-    fill_curve(ys, 2, 116, 75);
-    for (i = 18; i < 75; i += 2)                     /* the LFO's sweep around the cutoff */
-        R(PX_ACC_DIM, 60, i, 1, 1), R(PX_ACC_DIM, 80, i, 1, 1);
-    playhead(72, 18, 75);
+    filter_bars(20, 75, 80, 35, 0.25f, 0);           /* stopped: the env depth (+25 %) band bright */
     cells(c, 0, 0);
+}
+
+static void scr_filter_env(void)
+{
+    static const cell_t c[4] = {{"ATTACK", "12MS", 0.08f, 0, 0}, {"HOLD", "80MS", 0.23f, 0, 0},
+                                {"RELEASE", "300MS", 0.55f, 0, 0}, {"DEPTH", "+25%", 0.25f, "D", 0}};
+    header("T1", "FILTER/FILTER ENV", "2", "", 0, 0);
+    TL(PX_L15, "CLASSC", 2, 13);
+    TR(PX_L8, "AHR", W - 2, 13);
+    envelope_bars(20, 75, 2, 10, 0, 127, 30, 70, ST_R);   /* K3 / K4 selected: RELEASE (and DEPTH) */
+    cells(c, 2, 1);
 }
 
 static void scr_amp(void)
 {
     static const cell_t c[4] = {{"ATTACK", "4MS", 0.05f, 0, 0}, {"DECAY", "220MS", 0.35f, 0, 0},
                                 {"SUST", "70%", 0.7f, 0, 0}, {"RELEASE", "380MS", 0.45f, 0, 0}};
-    int ys[116], i;
     header("T1", "AMP/AMP ENV", "2", "P01", 0, 0);
     TL(PX_L15, "ADSR", 2, 13);
     TR(PX_L8, "VEL 100", W - 2, 13);
-    for (i = 0; i < 116; i++) {
-        float y;
-        if (i < 6)
-            y = 74 - (74 - 22) * i / 6.0f;
-        else if (i < 34)
-            y = 37 - 15 * expf(-(i - 6) / 7.0f);
-        else if (i < 78)
-            y = 37;
-        else
-            y = 74 - (74 - 37) * expf(-(i - 78) / 9.0f);
-        ys[i] = (int)y;
-    }
-    fill_curve(ys, 2, 116, 75);
-    for (i = 18; i < 75; i += 3)                     /* the stage boundaries */
-        R(PX_L5, 8, i, 1, 1), R(PX_L5, 36, i, 1, 1), R(PX_L5, 80, i, 1, 1);
-    cells(c, 3, 1);
+    envelope_bars(20, 75, 1, 2, 40, 89, 0, 60, ST_A | ST_D);   /* K1 / K2 selected: ATTACK, DECAY */
+    cells(c, 2, 0);
+}
+
+static void scr_mod_env(void)
+{
+    static const cell_t c[4] = {{"ATTACK", "30MS", 0.19f, 0, 0}, {"DECAY", "0MS", 0, 0, 0},
+                                {"SUST", "55%", 0.55f, 0, 0}, {"RELEASE", "160MS", 0.39f, 0, 0}};
+    header("T1", "AMP/MOD ENV", "3", "P01", 0, 0);
+    TL(PX_L15, "ADSR", 2, 13);
+    TR(PX_L8, "DECAY 0", W - 2, 13);
+    envelope_bars(20, 75, 1, 24, 0, 70, 0, 50, ST_S | ST_R);   /* DECAY 0 = the cliff; K3 / K4: SUST, RELEASE */
+    cells(c, 2, 1);
 }
 
 static void scr_mod(void)
@@ -635,6 +728,72 @@ static void scr_app_settings(void)
         R(i == 0 ? PX_L15 : PX_L5, 26 + i * 4, 21, 3, i == 0 ? 3 : 2);
 }
 
+/* ------------------------------------------------------------------------------------------- sprites --- */
+/* norns sprite sheets converted by tools/mockups/sprite_to_c.py --bin: 120x64 frames of palette indices */
+#define SPR_W 120
+#define SPR_H 64
+typedef struct {
+    uint8_t *px;
+    int n;
+} sprite_t;
+static sprite_t g_intro, g_cat;
+
+static void load_sprite(sprite_t *sp, const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    long n;
+    if (!f) {
+        fprintf(stderr, "%s: cannot open\n", path);
+        exit(1);
+    }
+    fseek(f, 0, SEEK_END);
+    n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    sp->px = malloc((size_t)n);
+    if (!sp->px || fread(sp->px, 1, (size_t)n, f) != (size_t)n)
+        exit(1);
+    fclose(f);
+    sp->n = (int)(n / (SPR_W * SPR_H));
+}
+static void blit(const sprite_t *sp, int frame, int x0, int y0)
+{
+    int x, y;
+    for (y = 0; y < SPR_H; y++)
+        for (x = 0; x < SPR_W; x++)
+            R(sp->px[(size_t)frame * SPR_W * SPR_H + y * SPR_W + x], x0 + x, y0 + y, 1, 1);
+}
+
+/* the launch intro (norns draw_intro_screen): the logo frame centred on the whole screen, nothing else */
+static void scr_intro(void)
+{
+    if (g_intro.n)
+        blit(&g_intro, 42, 0, 28);
+}
+
+/* MIX's B11: the CAT (norns' Visualizer page): the frame on SHADE (the art's own dark grey), the header and the track
+ * keys kept (they still work while it shows) */
+static void scr_cat(void)
+{
+    static const char *const N[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
+    int i;
+    R(PX_SHADE, 0, 10, W, H - 10);
+    header("T2", "MIX/CAT", "", "120 BPM 1X", 0, 0);
+    if (g_cat.n)
+        blit(&g_cat, 3, 0, 22);
+    for (i = 0; i < 9; i++) {
+        const int x = 3 + i * 13;
+        if (i == 1) {
+            R(PX_L15, x, 99, 12, 11);
+            T(PX_BG, N[i], x + 6, 102, 1, EC_AL_CENTER);
+        } else
+            T(PX_L8, N[i], x + 6, 102, 1, EC_AL_CENTER);
+    }
+}
+
+/* a contact sheet of every frame, 2-unit L3 gaps */
+static uint8_t g_sheetpx[1000 * 500];
+static void sheet(const char *dir, const char *name, const sprite_t *sp, int cols);
+
 /* ------------------------------------------------------------------------------------------- the pop-up --- */
 /* docs/UX-V2.md §3 "Entering a mode": the mode's name big, its current page, the 11 black keys in their roles, over
  * the dimmed screen. Roles: P page, S source, X special, A action, O unused; cur = the current page's key or -1 */
@@ -673,7 +832,7 @@ static void popup(const char *name, const char *page, const char *roles, int cur
 }
 
 /* ------------------------------------------------------------------------------------------- output --- */
-static uint16_t g_lcd[1488 * 320 * 4];
+static uint16_t g_lcd[2000 * 1000];
 
 /* the index buffer through a theme -> RGB565 (LCD order) at 2x; then the 2x2 rule checked on the result */
 static int expand(const uint8_t *px, int w, int h, const uint32_t *pal, uint16_t *out)
@@ -717,9 +876,11 @@ static const mmode_t MODES[] = {
     {"Shift", "SHIFT", "STICKY", "AAAAOOOOOOA", -1, scr_shift},
     {"Fx", "FX", "INSERT 1", "PPPPPSSSSSX", 0, scr_fx},
     {"Filter", "FILTER", "FILTER", "PPPOOSSSSSX", 0, scr_filter},
+    {"Filter_env", 0, 0, 0, 0, scr_filter_env},
     {"Amp", "AMP", "AMP ENV", "PPPOOSSSSSO", 1, scr_amp},
+    {"Mod_env", 0, 0, 0, 0, scr_mod_env},
     {"Mod", "MODULATION", "MATRIX", "PSSSSSSSSSX", 0, scr_mod},
-    {"Mix", "MIX", "T2  1X", "AAAAAAAAAAA", 4, scr_mix},
+    {"Mix", "MIX", "T2  1X", "AAAAAAAAAAX", 4, scr_mix},
     {"Pages", "PAGES", "PAGE 2", "PPPPOOOOOOO", 1, scr_pages},
     {"Loop", "LOOP ENGINE", "WARP", "PPPPPSSSSSX", 2, scr_loop},
     {"Trig", "TRIG", "COND", "PPPOOSSSSSO", 1, scr_trig},
@@ -730,11 +891,25 @@ static const mmode_t MODES[] = {
     {"Crossfader", "CROSSFADER", "GLIDE MED", "XXOOOOOOOOX", -1, scr_crossfader},
     {"Patterns", "PATTERNS", "BANK A", "PPPPOOOOOOO", 0, scr_patterns},
     {"Record", "RECORD", "CAPTURE", "OOOOOOOOOOO", -1, scr_record},
-    {"AppSettings", "SETTINGS", "THEME", "OOOOOOOOOOO", -1, scr_app_settings},
+    {"AppSettings", 0, 0, 0, 0, scr_app_settings},   /* a pop-up itself */
+    {"Intro", 0, 0, 0, 0, scr_intro},
+    {"Cat", 0, 0, 0, 0, scr_cat},
 };
 #define NMODE ((int)(sizeof MODES / sizeof MODES[0]))
 
 static uint8_t g_sheet[744 * 168];
+
+static void sheet(const char *dir, const char *name, const sprite_t *sp, int cols)
+{
+    const int rows = (sp->n + cols - 1) / cols, w = 2 + cols * (SPR_W + 2), h = 2 + rows * (SPR_H + 2);
+    int f;
+    canvas(g_sheetpx, w, h);
+    memset(g_sheetpx, PX_L3, (size_t)w * h);
+    for (f = 0; f < sp->n; f++)
+        blit(sp, f, 2 + (f % cols) * (SPR_W + 2), 2 + (f / cols) * (SPR_H + 2));
+    save(dir, name, g_sheetpx, w, h, PX_THEME_DEFAULT);
+    canvas(g_screen, W, H);
+}
 
 int main(int argc, char **argv)
 {
@@ -742,17 +917,19 @@ int main(int argc, char **argv)
     int m, t, i;
     FILE *f;
     if (argc < 2) {
-        fprintf(stderr, "usage: ec_mock_ux2 <out dir>\n");
+        fprintf(stderr, "usage: ec_mock_ux2 <out dir> [--intro intro.bin] [--cat cat.bin]\n");
         return 2;
     }
+    for (i = 2; i + 1 < argc; i += 2)
+        load_sprite(!strcmp(argv[i], "--cat") ? &g_cat : &g_intro, argv[i + 1]);
     for (m = 0; m < NMODE; m++) {
         canvas(g_screen, W, H);
         memset(g_screen, PX_BG, sizeof g_screen);
         MODES[m].draw();
         snprintf(name, sizeof name, "%s_screen.png", MODES[m].file);
         save(argv[1], name, g_screen, W, H, PX_THEME_DEFAULT);
-        if (!strcmp(MODES[m].file, "AppSettings"))
-            continue;                                /* a pop-up itself: no mode-entry pop-up */
+        if (!MODES[m].name)
+            continue;                                /* a page, a pop-up or a sprite: no mode-entry pop-up */
         popup(MODES[m].name, MODES[m].page, MODES[m].roles, MODES[m].cur);
         snprintf(name, sizeof name, "%s_popup.png", MODES[m].file);
         save(argv[1], name, g_screen, W, H, PX_THEME_DEFAULT);
@@ -772,6 +949,10 @@ int main(int argc, char **argv)
         TL(PX_L12, PX_NAME[i], x, y + 19);
     }
     save(argv[1], "_palette.png", g_screen, W, H, PX_THEME_DEFAULT);
+    if (g_intro.n)
+        sheet(argv[1], "Intro_frames.png", &g_intro, 8);
+    if (g_cat.n)
+        sheet(argv[1], "Cat_frames.png", &g_cat, 4);
 
     /* _themes.png: the MATRIX screen in each theme, its name and its 16 swatches; each column drawn in its own theme
      * (the sheet alone has more than 16 colours: 16 per column) */

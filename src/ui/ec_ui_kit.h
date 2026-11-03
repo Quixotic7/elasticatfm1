@@ -126,15 +126,19 @@ void ec_kit_track_keys(int y, int sel, uint16_t muted);
 /* ------------------------------------------------------------------------------------------- sprites --- */
 /* norns Elasticat's sprites on the palette (tools/mockups/sprite_to_c.py --c -> src/ui/ec_spr_*.h): 120x64 frames,
  * 10 fps. The intro (q7logoanim, 55 frames, played once at power-on): the whole screen, the frame at y 28. The CAT
- * (dancingcat, 12 frames, looping at a speed that follows the tempo): y 10..119 on SHADE, the frame at y 22; the
- * caller draws the header and the track keys (ec_kit_track_keys(99, ..)) over it */
+ * (dancingcat, 12 frames, looping at a speed that follows the tempo), 0.6.1 (docs/UX-V2.md §10 "CAT stage"): the
+ * whole screen, no header or track keys: a BG stage, the stage light beams (from beats, the transport's clock, never
+ * the host's), the cat at 1x (its art is 64x61 units: 2x would not fit the 120 grid) with the frame at y EC_KIT_CAT_Y
+ * (the cat centred), its ground keyed out and its outline in BLACK (readable on PAPER's light stage) */
 #define EC_KIT_SPR_W 120
 #define EC_KIT_SPR_H 64
 #define EC_KIT_SPR_FPS 10
 int ec_scr_intro_frames(void);   /* 55 */
 int ec_scr_cat_frames(void);     /* 12 */
 void ec_scr_intro(int frame);    /* frame clamped */
-void ec_scr_cat(int frame);      /* frame modulo the frames */
+#define EC_KIT_CAT_Y 26
+void ec_scr_cat(int frame, double beats, int playing);   /* frame modulo the frames; beats: the transport's clock */
+int ec_scr_cat_beam_colour(double beats, int playing, int k);   /* beam k's slot (0..3) */
 void ec_kit_sprite(const uint8_t *packed, int w, int h, int x, int y);   /* = ec_gfx_blit4, opaque */
 
 #endif

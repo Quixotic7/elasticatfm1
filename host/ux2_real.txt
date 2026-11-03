@@ -381,3 +381,22 @@ turn SELECT@146800:2
 press OCT-@147400
 turn SELECT@148000:3
 png 150000:Pool.png
+# ======== 0.6.1 (v61b-gfx): MIX's pan tracks and the CAT stage
+# ---- MIX (EDIT: from LOOP ENGINE, EDIT shows MIX, its last): T1 PAN (K2) hard left, T2 hard right, T4 a little right,
+# T3 selected (its marker in ACC)
+press EDIT@151000
+lower 0@151600
+turn K2@151900:-64
+lower 1@152300
+turn K2@152600:64
+lower 3@153000
+turn K2@153300:20
+lower 2@153700
+png 154400:Mix_pan.png
+# ---- playing: the CAT (B11) at two beats (500 ms apart at 120 BPM: the beams' colours turn), then B11 out, stopped
+press PLAY@154800
+upper 10@155200
+png 156000:Cat_beat1.png
+png 156500:Cat_beat2.png
+upper 10@157000
+press PLAY@157400

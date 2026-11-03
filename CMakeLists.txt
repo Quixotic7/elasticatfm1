@@ -89,6 +89,9 @@ target_compile_options(ec_test_ux PRIVATE -Wall -Wextra)
 add_executable(ec_test_v61ux host/test_v61ux.c)   # 0.6.1: the owner's play-test fixes (docs/UX-V2.md §10)
 target_link_libraries(ec_test_v61ux PRIVATE elasticat)
 target_compile_options(ec_test_v61ux PRIVATE -Wall -Wextra)
+add_executable(ec_test_v61gfx host/test_v61gfx.c)   # 0.6.1: MIX's pan tracks, the CAT stage (docs/UX-V2.md §10)
+target_link_libraries(ec_test_v61gfx PRIVATE elasticat)
+target_compile_options(ec_test_v61gfx PRIVATE -Wall -Wextra)
 
 add_executable(ec_test_e6 host/test_e6.c)   # E6: audio input, the INPUT machine, sampling (REC)
 target_link_libraries(ec_test_e6 PRIVATE elasticat)
@@ -125,6 +128,7 @@ add_test(NAME ux_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_ux.sh $
 # 0.3.0: lanes, setup, PRESETS = the sample, knob speed / snap, F3, pop-ups, track keys, lock clear, SHIFT, labels
 add_test(NAME ux COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/ux_folder >/dev/null && $<TARGET_FILE:ec_test_ux> ${CMAKE_BINARY_DIR}/ux_folder")
 # 0.6.1: no pop-ups, messages and held keys in the header, source keys keep the mode, KEYBOARD's audition / pitch
+add_test(NAME v61gfx COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/v61gfx_folder >/dev/null && $<TARGET_FILE:ec_test_v61gfx> ${CMAKE_BINARY_DIR}/v61gfx_folder")
 add_test(NAME v61ux COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/v61ux_folder >/dev/null && $<TARGET_FILE:ec_test_v61ux> ${CMAKE_BINARY_DIR}/v61ux_folder")
 # 0.2.0: the seams demo through panel input + a reboot from its flash (host/render_v020.sh)
 add_test(NAME v020_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_v020.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/v020)

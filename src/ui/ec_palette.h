@@ -23,7 +23,7 @@ enum {
     EC_C_LOCK,     /* a parameter lock (a step-locked cell fills with it) */
     EC_C_ALERT,    /* errors, STOP FIRST, FULL */
     EC_C_ACC_DIM,  /* the accent behind a pop-up */
-    EC_C_SHADE,    /* rules behind a pop-up; the CAT's ground */
+    EC_C_SHADE,    /* 0.6.1: black in most themes (= BG); the CAT sprite's ground (a key, not drawn) */
     EC_C_OK,       /* good / armed-ok */
     EC_NPAL
 };

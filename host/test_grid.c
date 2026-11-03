@@ -264,12 +264,9 @@ static void k_settings(int i)
     ec_kit_list(r, 11, i, 12, EC_GH, 0);     /* 0.6.1: the list menu */
 }
 static void k_intro(int f) { ec_scr_intro(f); }
-static void k_cat(int f)
-{
-    ec_scr_cat(f);
-    ec_kit_header("T2", "MIX/CAT", "", "120 BPM 1X", 0, 0);
-    ec_kit_track_keys(99, 1, 0x10);
-}
+/* 0.6.1: the CAT stage, f = 0..23: the frame f / 2, playing at beat 0.5 + f * 0.7 (beam sweeps and colours), the
+ * last four stopped */
+static void k_cat(int f) { ec_scr_cat(f / 2, 0.5 + f * 0.7, f < 20); }
 static void k_misc(int i)
 {
     ec_kit_header("MST", "SEQ/PAT", "A", "Q 1 BAR", 0, i);
@@ -296,7 +293,7 @@ static void test_kit(void)
         kit_shot("kit_settings", k_settings, i);
     for (i = 0; i < ec_scr_intro_frames(); i++)
         kit_shot("kit_intro", k_intro, i);
-    for (i = 0; i < ec_scr_cat_frames(); i++)
+    for (i = 0; i < 2 * ec_scr_cat_frames(); i++)
         kit_shot("kit_cat", k_cat, i);
     for (i = 0; i < 2; i++)
         kit_shot("kit_misc", k_misc, i);
@@ -320,6 +317,12 @@ static void test_palette(void)
         const uint32_t *p = ec_themes[t], s = p[EC_C_SRC];
         const int r = s >> 16 & 255, g = s >> 8 & 255, b = s & 255;
         CHECK(b > r && b > g, "%s: SRC %06X is blue", ec_theme_names[t], (unsigned)s);
+        for (k = 0; k < EC_NPAL; k++) {                /* 0.6.1 (owner): pure black, never a near-black */
+            const uint32_t c = p[k];
+            const int cr = c >> 16 & 255, cg = c >> 8 & 255, cb = c & 255;
+            CHECK(!c || cr > 0x20 || cg > 0x20 || cb > 0x20, "%s: %s %06X is near-black (all channels <= 0x20)",
+                  ec_theme_names[t], ec_pal_names[k], (unsigned)c);
+        }
         for (k = 0; k < EC_NPAL; k++) {
             const double min = k == EC_C_ACC || k == EC_C_LOCK || k == EC_C_ALERT ? 150 : k == EC_C_BG ? 120 : 60;
             if (k != EC_C_SRC)
@@ -507,6 +510,28 @@ static void test_modes(void)
     A->pn.bank = 2;
     shot("patterns_c");
     A->pn.bank = 0;
+    A->cat = EC_CAT_MASTER;                                /* 0.6.1: MIX with varied pans, T3 / S1 selected */
+    {
+        static const float PAN[EC_NTRACK] = {0, 128, 64, 32, 96, 70};
+        float p0[EC_NTRACK];
+        const int mpg0 = A->page[EC_CAT_MASTER];
+        for (f = 0; f < EC_NTRACK; f++) {
+            p0[f] = A->proj.pat[A->proj.current].tr[f].v[EC_P_PAN];
+            A->proj.pat[A->proj.current].tr[f].v[EC_P_PAN] = PAN[f];
+        }
+        for (f = 0; f < ec_cat_pages(EC_CAT_MASTER, v); f++)
+            if (ec_page_pic(EC_CAT_MASTER, f, 0) == EC_PIC_MIX)
+                A->page[EC_CAT_MASTER] = f;
+        A->track = 2;
+        shot("mix_pans");
+        A->bus = 1;
+        shot("mix_pans_s1");
+        A->bus = 0;
+        A->track = 0;
+        A->page[EC_CAT_MASTER] = mpg0;
+        for (f = 0; f < EC_NTRACK; f++)
+            A->proj.pat[A->proj.current].tr[f].v[EC_P_PAN] = p0[f];
+    }
     A->cat = EC_CAT_MASTER;                                /* MIX's CAT, a few frames */
     A->pn.cat = 1;
     for (f = 0; f < 12; f += 5) {

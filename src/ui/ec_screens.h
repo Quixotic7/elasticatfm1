@@ -16,6 +16,10 @@ void ec_scr_neighbor(const ec_app_t *a, int top, int bot);
 void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, const char *right);   /* page as text */
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
+/* 0.6.1: MIX's pan tracks: track t's pan now (-1..1: the resolved value incl. a playing lock, plus the modulation),
+ * and the marker's x (2 wide) on the track of the strip at x (strip i: x = 2 + 13 i) */
+float ec_scr_mix_pan_now(const ec_app_t *a, int t);
+int ec_scr_mix_pan_x(int x, float pan);
 
 /* 0.6.0: ec_scr_file.c (FILE's browser and editor, the SAMPLER, the record settings) */
 void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg);

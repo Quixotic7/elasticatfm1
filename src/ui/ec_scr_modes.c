@@ -30,21 +30,16 @@ static void pat_name(int p, char *b, size_t cap)
 }
 
 /* ------------------------------------------------------------------------------------------- the CAT --- */
+/* 0.6.1 (docs/UX-V2.md §10 "CAT stage"): the whole screen is the stage (no header, no track keys). Playing, the cat
+ * and the beams follow the transport's clock (5 frames a beat = 10 fps at 120 BPM); stopped, the cat dances on the
+ * app's clock at the tempo and the beams rest */
 static void cat_screen(const ec_app_t *a)
 {
-    char t[24], r[24];
-    uint16_t muted = 0;
-    int i;
-    const int frame = (int)((float)a->ms * 0.001f * (float)EC_KIT_SPR_FPS * a->proj.bpm / 120.0f);
-    ec_scr_cat(frame);
-    snprintf(t, sizeof t, "%s/CAT", ec_cat_tag(EC_CAT_MASTER));
-    snprintf(r, sizeof r, "%d BPM %s", (int)floorf(a->proj.bpm + 0.5f),
-             a->bus ? "" : ec_rate_label(iv(tv(a), EC_P_RATE)));
-    ec_scr_header(a, t, 0, r);
-    for (i = 0; i < EC_NTRACK; i++)
-        if (!ec_app_track_audible(a, i))
-            muted |= (uint16_t)(1u << i);
-    ec_kit_track_keys(99, a->bus ? EC_NTRACK - 1 + a->bus : a->track, muted);
+    const int playing = a->seq.playing;
+    const double beats = ec_seq_beats(&a->seq);
+    const int frame = playing ? (int)floor(beats * EC_KIT_SPR_FPS / 2.0)
+                              : (int)((float)a->ms * 0.001f * (float)EC_KIT_SPR_FPS * a->proj.bpm / 120.0f);
+    ec_scr_cat(frame, beats, playing);
 }
 
 /* ------------------------------------------------------------------------------------------- PAGES --- */

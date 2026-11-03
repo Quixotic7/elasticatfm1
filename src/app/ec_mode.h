@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.6.0: the panel by modes (docs/UX-V2.md). Every button opens a mode (ec_button_modes: the layout's), each mode
  * remembers its page, a tap on the lit button turns the page (HOME / EDIT / FILE: the next sub-mode), a hold (400 ms)
- * or SHIFT + the button opens its settings, SHIFT + HOME the APP SETTINGS. Entering a mode shows its pop-up. The
- * global rules (§1: steps, F1 / F2, SHIFT, PLAY, REC), copy / cut / paste (§2) and every mode's keys (§3) are here:
- *   ec_panel.c      the input dispatch, the mode model, the holds, SHIFT, F1 / F2, the pop-up, the intro
+ * or SHIFT + the button opens its settings, SHIFT + HOME the APP SETTINGS. 0.6.1: entering a mode shows nothing extra
+ * (no pop-up), messages and held keys show in the header (ec_header.c). The global rules (§1: steps, F1 / F2,
+ * SHIFT, PLAY, REC), copy / cut / paste (§2) and every mode's keys (§3) are here:
+ *   ec_panel.c      the input dispatch, the mode model, the holds, SHIFT, F1 / F2, the intro
+ *   ec_header.c     0.6.1: the header's title line (a message > a held key's text > the screen's title)
  *   ec_srckeys.c    the source template (B1..B5 pages, B6..B10 sources, B11), FX's slot keys, the quick settings
  *   ec_clip.c       §2: the one-step buffer (steps, PAGES' pages, PATTERN LAUNCH's patterns)
  *   ec_mix.c        MIX (track keys, rates) and the CAT; PAGES
@@ -48,13 +50,13 @@ enum { EC_UX_TARGET,   /* KEYBOARD: the target step (0 = live) */
 /* APP SETTINGS (docs/UX-V2.md §3): the global record (ec_plat_settings), magic + version */
 #define EC_AS_MAGIC 0x53414345u   /* "ECAS" */
 #define EC_AS_VERSION 1
-enum { EC_AS_THEME, EC_AS_POPUP, EC_AS_KNOB, EC_AS_PREVIEW, EC_AS_AT, EC_AS_METRO, EC_AS_CC, EC_AS_INTRO,
-       EC_AS_NROW };
+/* 0.6.1: the MODE POP-UP row is gone; the record keeps its layout (and version 1), so older records load as they are */
+enum { EC_AS_THEME, EC_AS_KNOB, EC_AS_PREVIEW, EC_AS_AT, EC_AS_METRO, EC_AS_CC, EC_AS_INTRO, EC_AS_NROW };
 typedef struct {
     uint32_t magic;
     uint16_t version, size;
     uint8_t theme;     /* ec_gfx theme 0..EC_NTHEME-1 */
-    uint8_t popup;     /* the mode pop-up on */
+    uint8_t unused0;   /* 0.6.0's mode pop-up on / off (gone in 0.6.1; kept for the layout, written 0) */
     uint8_t knob;      /* knob speed: 0 slow, 1 medium, 2 fast */
     uint8_t preview;   /* FILE's auto-preview */
     uint8_t at;        /* aftertouch on */
@@ -79,9 +81,9 @@ typedef struct {
     int set_scr;               /* a settings list opened over a fixed screen: the screen to return to */
     int rec_down, rec_used;    /* REC: tap = live record, hold = its settings */
     uint32_t rec_ms;
-    /* the mode-entry pop-up */
-    int pop;                   /* the mode shown + 1, 0 none */
-    uint32_t pop_ms;
+    /* 0.6.1: the header */
+    uint32_t down_ms;          /* the last key or button press (a message older than it gives way to a held key's text) */
+    int hdr_late;              /* the redraw EC_HDR_MS after the last press (a held key's text shows) is done */
     /* the intro */
     int intro;                 /* 1: playing */
     uint32_t intro_ms;
@@ -111,6 +113,8 @@ typedef struct {
     int target;                /* the target step 1..; 0 = live */
     int kb_bank;               /* the slice bank (10 a bank) */
     int8_t kb_semis[32];       /* the note a key started (its release) */
+    uint32_t kb_held;          /* 0.6.1: the keys held (bit k), the last one pressed (the header) */
+    int kb_last;
     /* CROSSFADER */
     int xf_key;                /* the W key held gliding (0..11), -1 none */
     float xf_target;
@@ -157,13 +161,23 @@ enum { EC_PV_IDLE, EC_PV_WAIT /* a slot load first */, EC_PV_LOADING, EC_PV_READ
 void ec_pn_init(void);
 void ec_pn_tick(const void *in);              /* (const ec_input_t *): every edge, the holds, the glide */
 int ec_app_mode(void);                        /* the mode shown: A->scr, else A->cat */
-void ec_pn_enter(int mode);                   /* that mode (its pop-up), the settings closed */
-void ec_pn_goto(int cat, int page);           /* a page of a category (a source key's tap): the mode + its pop-up */
+void ec_pn_enter(int mode);                   /* that mode, the settings closed */
+void ec_pn_goto(int cat, int page);           /* a page of a category: the mode, that page */
 int ec_pn_f(int which);                       /* F1 (1) / F2 (2) on: held or sticky */
 void ec_pn_select_target(int i);              /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
-const char *ec_pn_roles(int mode, int *cur);  /* the pop-up's 11 black-key roles, the current page's key - 1 */
-const char *ec_pn_page_name(int mode);        /* the pop-up's page line */
-int ec_pn_popup_shows(void);                  /* the mode pop-up is up */
+const char *ec_pn_roles(int mode, int *cur);  /* the 11 black-key roles (the LEDs), the current page's key - 1 */
+/* ---- ec_header.c (0.6.1): the header's title line. Priority: a message (ec_app_message / ec_app_alert, for its time;
+ * one older than the last key press gives way while a held key has text) > a held key's text > the screen's title.
+ * A held key's text: a provider's (ec_hdr_provider, asked newest first), else the built-in ones (docs/FM1-CONTROLS.md
+ * "The header"). The bar's colour is a palette slot: EC_C_L12 the plain bar, EC_C_SRC a source key, EC_C_LOCK held
+ * steps, EC_C_ALERT an alert. ---- */
+#define EC_HDR_MS 150                         /* a held key's text shows this long after the last press (a tap: none) */
+typedef int (*ec_hdr_fn)(char *out, int cap); /* a held key's text into out: the bar's slot (EC_C_*), -1 nothing held */
+void ec_hdr_provider(ec_hdr_fn fn);           /* register (once; up to 4): asked before the built-in held keys */
+int ec_hdr_held(char *out, int cap);          /* the held keys' text now: the bar's slot, -1 none */
+int ec_hdr_title(const char *title, char *out, int cap);   /* the title line: its slot (EC_C_L12: plain) */
+int ec_hdr_custom(void);                      /* the title line shows a message or a held key's text */
+int ec_hdr_holding(void);                     /* EC_HDR_MS since the last key / button press (a provider may gate on it) */
 /* ---- ec_srckeys.c: the source template ---- */
 int ec_src_mode(int mode);                    /* FILTER AMP MODULATION LOOP ENGINE TRIG FX: the template */
 char ec_src_role(int mode, int key);          /* 'P' 'S' 'X' 'A' 'O' for B1..B11 (key 1..11) */
@@ -193,6 +207,8 @@ void ec_kb_oct(int d);
 void ec_kb_target(int det);                   /* ALGO */
 int ec_kb_slice_track(void);
 int ec_kb_semis(int k);                       /* key k's note in semitones from C4, the octave applied */
+int ec_kb_lit_key(void);                      /* the key lit as sounding (the note + PITCH), -1 none */
+const char *ec_kb_held_text(void);            /* the header's text for the last key held ("NOTE C#4", "SLICE 3"), 0 */
 /* ---- ec_xfd.c ---- */
 void ec_xfd_white(int i, int down, int lean);
 void ec_xfd_black(int key, int down);

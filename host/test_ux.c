@@ -169,25 +169,21 @@ static void test_modes(void)
 {
     to(EC_CAT_SRC);
     press(FM1P_B_FX, 40);
-    CHECK(mode() == EC_CAT_FX && A->pn.pop == EC_CAT_FX + 1, "FX: the mode, its pop-up");
-    run(500);
-    CHECK(A->pn.pop, "the pop-up still up at 0.5 s");
-    run(400);
-    CHECK(!A->pn.pop, "and gone after 0.8 s");
+    CHECK(mode() == EC_CAT_FX, "FX: the mode (0.6.1: no pop-up, host/test_v61ux.c)");
+    run(900);
     press(FM1P_B_FX, 40);
-    CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1 && !A->pn.pop, "FX again: the next page, no pop-up");
+    CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1, "FX again: the next page");
     press(FM1P_B_SEL, 40);
-    CHECK(mode() == EC_CAT_FILT && A->pn.pop, "SEL: FILTER");
+    CHECK(mode() == EC_CAT_FILT, "SEL: FILTER");
     turn(FM1P_E_K2, 1);
     run(5);
-    CHECK(!A->pn.pop, "a knob dismisses the pop-up");
     press(FM1P_B_FX, 40);
     CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1, "FX keeps its page");
     /* HOME: LOOP ENGINE -> TRIG -> KEYBOARD -> LOOP ENGINE */
     press(FM1P_B_HOME, 40);
     CHECK(mode() == EC_CAT_SRC, "HOME: LOOP ENGINE");
     press(FM1P_B_HOME, 40);
-    CHECK(mode() == EC_CAT_TRIG && A->pn.pop == EC_CAT_TRIG + 1, "HOME again: TRIG, with its pop-up");
+    CHECK(mode() == EC_CAT_TRIG, "HOME again: TRIG");
     press(FM1P_B_HOME, 40);
     CHECK(mode() == EC_MODE_KEYBOARD && A->scr == EC_MODE_KEYBOARD, "HOME again: KEYBOARD");
     press(FM1P_B_FX, 40);
@@ -218,11 +214,6 @@ static void test_modes(void)
           led_btn(FM1P_B_ENV), led_btn(FM1P_B_FX));
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "LOOP") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_EDIT, "MIX"),
           "button labels: HOME %s EDIT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_HOME), L(FM1CORE_LBL_BTN0 + FM1P_B_EDIT));
-    /* the pop-up setting off: no pop-up */
-    A->pn.as.popup = 0;
-    press(FM1P_B_FX, 40);
-    CHECK(mode() == EC_CAT_FX && !A->pn.pop, "MODE POP-UP off: none");
-    A->pn.as.popup = 1;
 }
 
 /* ------------------------------------------------------------------------------------------- settings --- */
@@ -315,8 +306,8 @@ static void test_app_settings(void)
     btn(FM1P_B_GLO, 0);
     run(20);
     turn(FM1P_E_K1, 2);
-    turn(FM1P_E_SELECT, 2);                                   /* row 3 = KNOB SPEED on K3 */
-    turn(FM1P_E_K3, 1);
+    turn(FM1P_E_SELECT, 2);                                   /* row 2 = KNOB SPEED on K2 (0.6.1: no MODE POP-UP) */
+    turn(FM1P_E_K2, 1);
     run(20);
     press(FM1P_B_OCTUP, 40);
     rec = ec_plat_settings(&size);
@@ -333,7 +324,7 @@ static void test_app_settings(void)
     run(20);
     turn(FM1P_E_K1, -2);
     turn(FM1P_E_SELECT, 2);
-    turn(FM1P_E_K3, -1);
+    turn(FM1P_E_K2, -1);
     press(FM1P_B_HOME, 40);
     CHECK(!A->pn.as_open && ec_gfx_theme() == 0 && A->pn.as.knob == 1, "HOME closes (keeps)");
 }
@@ -408,7 +399,7 @@ static void test_shift(void)
     tapkey(1, bkey(4), 40);
     btn(FM1P_B_GLO, 0);
     run(20);
-    CHECK(A->e5.toast_ms && strstr(A->e5.toast, "RECALL"), "SHIFT + B4: recalled (%s)", A->e5.toast);
+    CHECK(A->msg_ms && strstr(A->msg, "RECALL"), "SHIFT + B4: recalled (%s)", A->msg);
 }
 
 /* ------------------------------------------------------------------------------------------- PLAY, REC --- */
@@ -649,17 +640,20 @@ static void test_sources(void)
         CHECK(k >= 0 && ec_step_lock_get(step(1), ec_mtx_depth_id(k), &x), "B7 + a held step + K1: a depth lock");
     }
     clear_steps();
-    /* the taps: the source's page */
+    /* the taps (0.6.1): never another mode; the source's page when it is in the mode shown */
     tapkey(1, bkey(6), 40);
-    ec_app_page(A, &pg);
-    CHECK(mode() == EC_CAT_MOD && pg.pic == EC_PIC_LFO1 && A->pn.pop, "B6 tapped: MODULATION's LFO 1 (with the pop-up)");
-    to(EC_CAT_FILT);
+    CHECK(mode() == EC_CAT_FILT, "B6 tapped in FILTER: FILTER stays");
+    to(EC_CAT_AMP);
     tapkey(1, bkey(8), 40);
     ec_app_page(A, &pg);
-    CHECK(mode() == EC_CAT_AMP && pg.pic == EC_PIC_MENV, "B8 tapped: AMP's MOD ENV");
+    CHECK(mode() == EC_CAT_AMP && pg.pic == EC_PIC_MENV, "B8 tapped in AMP: AMP's MOD ENV");
+    to(EC_CAT_MOD);
+    tapkey(1, bkey(6), 40);
+    ec_app_page(A, &pg);
+    CHECK(mode() == EC_CAT_MOD && pg.pic == EC_PIC_LFO1, "B6 tapped in MODULATION: its LFO 1");
     tapkey(1, bkey(10), 40);
     ec_app_page(A, &pg);
-    CHECK(mode() == EC_CAT_MOD && pg.pic == EC_PIC_MATRIX, "B10 (AT) tapped: the MATRIX");
+    CHECK(mode() == EC_CAT_MOD && pg.pic == EC_PIC_MATRIX, "B10 (AT) tapped in MODULATION: the MATRIX");
     /* page keys, quick settings */
     to(EC_CAT_FILT);
     tapkey(1, bkey(2), 40);

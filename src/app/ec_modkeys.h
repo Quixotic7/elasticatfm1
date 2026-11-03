@@ -20,7 +20,7 @@ typedef struct {
     uint16_t created;            /* slots this hold created (bit k) */
     int hot_id;                  /* the param the hold turned last (-1) */
     int row;                     /* the MATRIX page's selected row 0..7 */
-    uint32_t bad_ms;             /* "NO MOD" / "FULL" shown since */
+    uint32_t bad_ms;             /* "NOT MODDABLE" / "MATRIX FULL" shown since */
     /* the live controls (0..1): aftertouch on the selected track, CC 1, CC 11 */
     float at, mw, expr;
 } ec_mk_t;

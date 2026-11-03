@@ -5,8 +5,9 @@
  *            insert's engine; FX's bus keys: that bus's engine), changed with K1 or SEL (FX: also a white key).
  *   B6..B10  the sources LFO 1, LFO 2, MOD ENV, VEL, AT (MODULATION: B2..B5 too, the macros M1..M4): hold one + turn a
  *            value knob = route that source to that param, its depth (ec_mk_turn, the 0.5.0 matrix; F2 while turning
- *            removes the route; held steps = depth locks). A tap opens the source's page (LFO 1 / LFO 2 / VELOCITY /
- *            a macro: MODULATION's, MOD ENV: AMP's MOD ENV page, AT: the MATRIX).
+ *            removes the route; held steps = depth locks). 0.6.1: a tap or hold never changes the mode (the header shows
+ *            the source on SRC while held, ec_header.c); a tap opens the source's page only when it is a page of the
+ *            mode shown (MODULATION: LFO 1, LFO 2, VEL, AT = the MATRIX, M1..M4 = the macro's page; AMP: MOD ENV).
  *   B11      the mode's special key: FX the MIX page, FILTER the filter envelope's mode, MODULATION the MACROS page,
  *            LOOP ENGINE the zoom (16 -> 32 first half -> 32 second half). */
 #include <math.h>
@@ -110,7 +111,7 @@ const char *ec_src_label(int mode, int key)
     return b;
 }
 
-/* a source key's tap: its page (in its mode: the pop-up when the mode changes) */
+/* a source key's tap: its page, when that page is in the mode shown (0.6.1: never another mode) */
 static void goto_source(int i)
 {
     int pic = EC_PIC_MATRIX, arg = -1, c, p;
@@ -122,10 +123,12 @@ static void goto_source(int i)
     case EC_MK_AT: break;
     default: pic = EC_PIC_MACRO, arg = i - EC_MK_M1; break;
     }
-    if (ec_page_find(pic, arg, &c, &p) || (pic == EC_PIC_MACRO && ec_page_find(EC_PIC_MACROS, -1, &c, &p))) {
+    if ((ec_page_find(pic, arg, &c, &p) || (pic == EC_PIC_MACRO && ec_page_find(EC_PIC_MACROS, -1, &c, &p))) &&
+        c == ec_app_mode() && !A->scr && !A->bus) {
         if (pic == EC_PIC_MATRIX && c == EC_CAT_MOD)
             A->mk.row = 0;
-        ec_pn_goto(c, p);
+        ec_app_set_page(c, p);
+        A->redraw = 1;
     }
 }
 

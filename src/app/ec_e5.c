@@ -32,20 +32,8 @@ static int is_slice_m(int m) { return m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RA
 static float *tv(void) { return ec_project_track(&A->proj, A->track)->v; }
 static ec_ptrack_t *tr(void) { return ec_project_track(&A->proj, A->track); }
 
-static void msg(const char *s)
-{
-    snprintf(A->msg, sizeof A->msg, "%s", s);
-    A->msg_ms = A->ms ? A->ms : 1;
-    A->redraw = 1;
-}
-
-static void toast(const char *s)
-{
-    snprintf(E->toast, sizeof E->toast, "%s", s);
-    E->toast_ms = A->ms ? A->ms : 1;
-    E->toast_keep = 0;
-    A->redraw = 1;
-}
+static void msg(const char *s) { ec_app_message(s); }
+static void toast(const char *s) { ec_app_message(s); }   /* 0.6.1: a message in the header (no box) */
 
 static void dirty(void)
 {

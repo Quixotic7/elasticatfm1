@@ -189,24 +189,6 @@ static void name_screen(const ec_app_t *a)
     }
 }
 
-/* ------------------------------------------------------------------------------------------- toasts --- */
-static void toast(const ec_app_t *a)
-{
-    const char *s = a->e5.toast;
-    const int big = (int)strlen(s) <= 13;
-    const int w = (big ? 2 * TW(s) : TW(s)) + 8, h = big ? 16 : 11;
-    const int x = (W - w) / 2, y = 54;
-    const int bg = a->e5.toast_keep ? EC_C_ACC : EC_C_L15;
-    R(EC_C_BG, x - 1, y - 1, w + 2, h + 2);
-    R(bg, x, y, w, h);
-    if (big)
-        T2(EC_C_BG, s, W / 2, y + 3, EC_AL_CENTER);
-    else
-        T(EC_C_BG, s, W / 2, y + 3, EC_AL_CENTER);
-    if (a->e5.toast_keep)                         /* 0.3.0: a question: OCT- no / OCT+ yes, as every pop-up */
-        ec_scr_arrows(W / 2 - 10, y + h + 3, EC_C_ACC);
-}
-
 /* ------------------------------------------------------------------------------------------- dispatch --- */
 int ec_scr_e5_full(const ec_app_t *a)
 {
@@ -229,7 +211,7 @@ void ec_scr_e5_overlay(const ec_app_t *a)
         fader(a, 12);
         R(EC_C_L3, 0, 40, W, 1);
     }
-    if (!full && (a->cat == EC_CAT_PAT && !a->scr) && !a->settings) {   /* the pattern's name */
+    if (!full && (a->cat == EC_CAT_PAT && !a->scr) && !a->settings && !ec_hdr_custom()) {   /* the pattern's name */
         const char *n = ec_e5_pattern_name(a->proj.current);
         if (n[0]) {
             char b[24];
@@ -238,6 +220,4 @@ void ec_scr_e5_overlay(const ec_app_t *a)
             T(EC_C_BG, b, 17, 3, EC_AL_LEFT);
         }
     }
-    if (a->e5.toast_ms)
-        toast(a);
 }

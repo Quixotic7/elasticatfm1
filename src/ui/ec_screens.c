@@ -49,26 +49,32 @@ static const char *target_name(const ec_app_t *a)
 }
 
 /* ------------------------------------------------------------------------------------------- header --- */
-/* the header: the target, the title (or a message), the right-hand info and, in the box at the right: a pop-up's
- * arrows (back / OK), the count of held steps (on LOCK: the knobs lock), else the page */
-static void header(const ec_app_t *a, const char *title, int page, const char *right)
+/* the header: the target, the title, the right-hand info and, in the box at the right: a pop-up's arrows (back / OK),
+ * the count of held steps (on LOCK: the knobs lock), else the page. 0.6.1: the title line shows a message (alerts on
+ * ALERT) or what a held key does (a source key on SRC, held steps on LOCK) instead (ec_hdr_title); then the line is
+ * that text alone, on its bar, without the right-hand info */
+void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, const char *right)
 {
-    char pg[8], buf[40];
+    char line[40], buf[40];
     const int popup = ec_app_popup(a);
     const int held = a->step_held && !a->bus && !popup ? __builtin_popcount(a->step_held) : 0;
-    if (a->msg_ms)
-        fit(buf, sizeof buf, a->msg, 17);
-    else
-        snprintf(buf, sizeof buf, "%s", title);
+    const int bar = ec_hdr_title(title, line, sizeof line);
+    fit(buf, sizeof buf, line, 17);
+    ec_kit_header(target_name(a), buf, page, ec_hdr_custom() ? "" : right, held, popup);
+    if (ec_hdr_custom()) {                         /* the message / held key's line on its bar */
+        R(bar, 14, 0, W - 14 - (popup ? 21 : 11), 10);
+        T(EC_C_BG, buf, 17, 3, EC_AL_LEFT);
+    }
+}
+
+static void header(const ec_app_t *a, const char *title, int page, const char *right)
+{
+    char pg[8];
     if (page > 0)
         snprintf(pg, sizeof pg, "%d", page);
     else
         pg[0] = 0;
-    ec_kit_header(target_name(a), buf, pg, right, held, popup);
-    if (a->msg_ms && a->msg_alert) {               /* 0.6.0: an alert (STOP FIRST, FULL): the title bar in ALERT */
-        R(EC_C_ALERT, 14, 0, W - 14 - (popup ? 21 : 11), 10);
-        T(EC_C_BG, buf, 17, 3, EC_AL_LEFT);
-    }
+    ec_scr_header_s(a, title, pg, right);
 }
 
 /* the default right-hand info: the held step, else the pattern (and the queued one) */
@@ -715,8 +721,7 @@ void ec_screens_draw(const ec_app_t *a)
         ec_scr_e5_full(a);
     else if (!ec_scr_ux_full(a) && !ec_scr_modes_full(a) && !ec_scr_e5_full(a))   /* F3; 0.6.0: the mode screens */
         draw_main(a);
-    ec_scr_e5_overlay(a);                         /* E5: toasts */
+    ec_scr_e5_overlay(a);                         /* E5: the pattern's name (0.6.1: no toasts) */
     ec_scr_ux_overlay(a);                         /* 0.3.0: the takeover, SHIFT's screen */
-    ec_scr_modes_overlay(a);                      /* 0.6.0: the mode pop-up */
     ec_gfx_present();                             /* the canvas through the theme to the LCD at 2x */
 }

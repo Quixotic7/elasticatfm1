@@ -845,6 +845,10 @@ static void clear_mod(int id)
     int k, n = 0;
     if (A->bus)
         return;
+    if (!ec_param_mod_dest(id)) {                    /* 0.6.1: in the header */
+        message("NOT MODDABLE");
+        return;
+    }
     for (k = 0; k < EC_MTX_SLOTS; k++)
         if (ec_mtx_src(v, k) != EC_MS_OFF && ec_mtx_dst(v, k) == id) {
             v[ec_mtx_src_id(k)] = EC_PARAMS[ec_mtx_src_id(k)].def;
@@ -1251,9 +1255,9 @@ void ec_app_ui_info(char *buf, uint32_t n)
         l = (uint32_t)strlen(buf);   /* 0.6.0 */
         if (l < n)
             snprintf(buf + l, n - l,
-                     " mode:%d scr:%d pop:%d shift:%d f:%d/%d clip:%d target:%d oct:%d bank:%d zoom:%d cat_on:%d "
+                     " mode:%d scr:%d shift:%d f:%d/%d clip:%d target:%d oct:%d bank:%d zoom:%d cat_on:%d "
                      "appset:%d theme:%d intro:%d stepp:%d",
-                     ec_app_mode(), A->scr, A->pn.pop ? A->pn.pop - 1 : -1, A->pn.shift_sticky ? 2 : A->pn.shift_held,
+                     ec_app_mode(), A->scr, A->pn.shift_sticky ? 2 : A->pn.shift_held,
                      A->pn.f_held, A->pn.f_sticky, A->pn.clip_state, A->pn.target, A->pn.oct, A->pn.bank,
                      A->pn.zoom_half, A->pn.cat, A->pn.as_open, ec_gfx_theme(), A->pn.intro, A->step_page + 1);
         l = (uint32_t)strlen(buf);   /* 0.6.0 part 2: live REC, FILE */
@@ -1261,6 +1265,15 @@ void ec_app_ui_info(char *buf, uint32_t n)
             snprintf(buf + l, n - l, " lrec:%d lwait:%d lwrites:%d fdir:%s pv:%d/%d edzoom:%d pool:%d",
                      A->pn.lr_on, A->pn.lr_wait || A->pn.lr_ci, A->pn.lr_writes, A->pn.fdir, A->pn.pv_state,
                      A->pn.pv_play, 1 << A->pn.ed_zoom, ec_file_slots_used());
+        l = (uint32_t)strlen(buf);   /* 0.6.1: the header's title line when it shows a message / a held key ('_' for ' ') */
+        if (l < n) {
+            char h[40], *c;
+            const int bar = ec_hdr_title("", h, sizeof h);
+            for (c = h; *c; c++)
+                if (*c == ' ')
+                    *c = '_';
+            snprintf(buf + l, n - l, " hdr:%s hdrbar:%d", ec_hdr_custom() ? h : "-", bar);
+        }
     }
 }
 

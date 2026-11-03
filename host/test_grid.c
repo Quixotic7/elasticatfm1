@@ -120,7 +120,6 @@ static void reset_state(void)
     A->fn = 0;
     A->msg_ms = 0;
     A->scr = 0;                                    /* 0.6.0: the modes */
-    A->pn.pop = 0;
     A->pn.intro = 0;
     A->pn.cat = 0;
     A->pn.as_open = 0;
@@ -248,17 +247,12 @@ static void test_modes(void)
     char name[48];
     int m, f;
     reset_state();
-    for (m = 0; m < EC_NMODE; m++) {                       /* every mode's pop-up over its screen */
+    for (m = 0; m < EC_NMODE; m++) {                       /* every mode's screen (0.6.1: no mode pop-up) */
         if (m < EC_NCAT) {
             A->scr = 0;
             A->cat = m;
         } else
             A->scr = m;
-        A->pn.pop = m + 1;
-        A->pn.pop_ms = A->ms ? A->ms : 1;
-        snprintf(name, sizeof name, "popup_%d", m);
-        shot(name);
-        A->pn.pop = 0;
         snprintf(name, sizeof name, "mode_%d", m);
         shot(name);
     }

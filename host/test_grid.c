@@ -319,6 +319,12 @@ static void test_palette(void)
         const uint32_t *p = ec_themes[t], s = p[EC_C_SRC];
         const int r = s >> 16 & 255, g = s >> 8 & 255, b = s & 255;
         CHECK(b > r && b > g, "%s: SRC %06X is blue", ec_theme_names[t], (unsigned)s);
+        for (k = 0; k < EC_NPAL; k++) {                /* 0.6.1 (owner): pure black, never a near-black */
+            const uint32_t c = p[k];
+            const int cr = c >> 16 & 255, cg = c >> 8 & 255, cb = c & 255;
+            CHECK(!c || cr > 0x20 || cg > 0x20 || cb > 0x20, "%s: %s %06X is near-black (all channels <= 0x20)",
+                  ec_theme_names[t], ec_pal_names[k], (unsigned)c);
+        }
         for (k = 0; k < EC_NPAL; k++) {
             const double min = k == EC_C_ACC || k == EC_C_LOCK || k == EC_C_ALERT ? 150 : k == EC_C_BG ? 120 : 60;
             if (k != EC_C_SRC)

@@ -475,3 +475,7 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
   SPECIAL, ACTION, SRC) in 2-unit steps, never over the cat. Stopped: the beams rest, dimmed.
 - **Full screen**: the CAT has no header, track strip or knob cells around it; just the stage, the beams and the
   cat, scaled as large as the 120 grid allows. B11 again (or any mode button) leaves it.
+
+**SHIFT held = SHIFT sticky** (owner bug, 2026-11-03)
+- Holding GLO shows the SHIFT screen and everything on it (BPM, SWING, TRACK, the shortcut keys, the knobs) works
+  exactly as with sticky SHIFT, for as long as GLO is held. Letting go returns to the mode.

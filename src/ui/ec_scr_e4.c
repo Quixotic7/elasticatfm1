@@ -129,7 +129,7 @@ static void master_page(const ec_app_t *a)
 
 /* SENDS (§10): the track's routing, FILT -> I 1 -> I 2 -> AMP -> MIX, the send tap (ACC) where the send mode puts it
  * (PRE: after the filter; POST: after AMP), down to S 1 / S 2 and on to MST; then K1-K4's levels: I1 / I2 (the
- * inserts' MIX), S1 / S2 (the sends), each with its effect's name. 0.6.4: the boxes say only I 1, I 2, S 1, S 2; a
+ * inserts' MIX), S1 / S2 (the sends), each with its effect's name. 0.6.4: the boxes say only FX 1, FX 2, SEND 1, SEND 2; a
  * held B1-B4 raises its box (lifted 2 units, bright, a shadow under it) and K1 moves it left / right */
 static void block(int x, int w, int y, int c, const char *s)
 {
@@ -152,9 +152,12 @@ static const char *mach_name(const ec_app_t *a, int slot)
 }
 static void sends_page(const ec_app_t *a)
 {
-    static const char *const N[4] = {"I1", "I2", "S1", "S2"}, *const BOX[4] = {"I 1", "I 2", "S 1", "S 2"};
+    static const char *const N[4] = {"FX1", "FX2", "S1", "S2"},
+                            *const BOX[4] = {"FX 1", "FX 2", "SEND 1", "SEND 2"};
     const int post = opt(a, EC_P_SEND_TAP) == 2, y = 12, yb = 32, up = ec_hm_raised();
-    const int tx = post ? 98 : 18, x0 = post ? 38 : tx, x1 = post ? tx + 2 : 80;
+    /* the tap's drop: centred in the gap it leaves the chain from (PRE: FILT | FX 1, POST: AMP | MIX) */
+    const int vx = post ? 99 : 19, s1x = 38, s2x = 78;
+    const int hx0 = vx < s1x ? vx : s1x, hx1 = (vx > s2x ? vx : s2x) + 2;
     char b[16];
     int i;
     /* the chain, left to right; MIX down to MST */
@@ -167,11 +170,11 @@ static void sends_page(const ec_app_t *a)
     /* the sends on to MST */
     block(102, 16, yb, EC_C_L5, "MST");
     R(EC_C_L8, 56, yb + 4, 6, 2), R(EC_C_L8, 96, yb + 4, 6, 2);
-    /* the tap (the send mode): down from the chain, along, down into S 1 and S 2 */
-    R(EC_C_ACC, tx, y + 4, 4, 2);
-    R(EC_C_ACC, tx + 1 - (tx & 1), y + 6, 2, 8);
-    R(EC_C_ACC, x0 < x1 ? x0 : x1, y + 12, (x0 < x1 ? x1 - x0 : x0 - x1) + 2, 2);
-    R(EC_C_ACC, 38, y + 12, 2, yb - (y + 12)), R(EC_C_ACC, 78, y + 12, 2, yb - (y + 12));
+    /* the tap (the send mode), one 2-unit path with square corners: down from the chain's line, along, and down into
+     * SEND 1 and SEND 2; the run ends flush with the outer drops, so no corner sticks out */
+    R(EC_C_ACC, vx, y + 4, 2, 10);
+    R(EC_C_ACC, hx0, y + 12, hx1 - hx0, 2);
+    R(EC_C_ACC, s1x, y + 12, 2, yb - (y + 12)), R(EC_C_ACC, s2x, y + 12, 2, yb - (y + 12));
     /* the four slots last, so a raised one sits on top */
     slot_block(22, 26, y, EC_C_L12, BOX[0], up == 0);
     slot_block(52, 26, y, EC_C_L12, BOX[1], up == 1);

@@ -765,7 +765,9 @@ them:
   v61list (keys, headers, the settings list), real screens Fx_send1, Fx_sends, Fx_sends_post, Fx_master, Fx_setup.
 
 **SENDS: short boxes, raise and move** (owner, 2026-11-03; replaces "holding a black key on SENDS swaps")
-- The routing boxes say only **I 1, I 2, S 1, S 2** (the effect names stay on the level bars below).
+- The routing boxes say **FX 1, FX 2, SEND 1, SEND 2** (owner, second pass; the effect names stay on the level bars
+  below, labelled FX1 / FX2 / S1 / S2). The orange send path is one 2-unit line with square corners, its run ending
+  flush with the outer drops.
 - Holding B1-B4 on SENDS **raises** that box (lifted 2 units, bright, a shadow where it sat) without moving it; the
   header says MOVE and the effect's name. **K1, still holding, moves it** left or right; each step swaps the pair
   (inserts: everything on them; sends: the buses and every track's send levels, the sound unchanged). Letting go puts

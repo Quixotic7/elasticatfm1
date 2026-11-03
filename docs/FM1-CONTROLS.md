@@ -262,8 +262,8 @@ patterns (PATTERN LAUNCH's white keys).
   tap in accent where the send mode puts it, down to S1 and S2's effects and on to MST) and the four levels; its knobs
   are **K1 INSERT 1's MIX, K2 INSERT 2's MIX, K3 SEND 1, K4 SEND 2**, and **ALGO is the send mode PRE / POST**
   (p-lockable, undoable). PRE taps after the filter and the track's level and pan (the AMP block: applied at the
-  filter's output), before the inserts; POST taps after both inserts. The routing boxes say only **I 1, I 2, S 1,
-  S 2**. **Moving an effect: hold its key on SENDS** (B1 I 1, B2 I 2, B3 S 1, B4 S 2): after 400 ms its box is
+  filter's output), before the inserts; POST taps after both inserts. The routing boxes say only **FX 1, FX 2, SEND 1,
+  SEND 2**, joined by one orange send path with square corners. **Moving an effect: hold its key on SENDS** (B1 FX 1, B2 FX 2, B3 SEND 1, B4 SEND 2): after 400 ms its box is
   **raised** (lifted, bright, a shadow under it) and the header says MOVE and the effect's name; nothing has moved
   yet. **Turn K1 while holding** to move it right or left: moving an insert swaps INSERT 1 and INSERT 2 (machines,
   params, MIX, the step and slice locks and matrix routes on them, every pattern); moving a send swaps SEND 1 and

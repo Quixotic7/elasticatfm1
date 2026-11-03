@@ -42,10 +42,6 @@ typedef struct {
     uint32_t preview_bits;
     int preview_track;
     uint32_t key_hi;             /* lower keys (bit k) pressed as loop keys / pads 17-32 */
-    /* toast */
-    char toast[28];
-    uint32_t toast_ms;
-    int toast_keep;              /* stays until cleared (the clear prompt) */
 } ec_e5app_t;
 
 /* the hooks (ec_app.c) */

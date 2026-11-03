@@ -3,7 +3,7 @@
  * static 120x120 canvas, in grid units; ec_gfx_present() expands it through the current theme to the 240x240 RGB565
  * LCD (ec_plat_lcd(): the panel's byte order, high byte first) at exactly 2x. So no detail finer than one grid unit
  * (2 physical pixels) can exist, and nothing outside the theme's 16 colours.
- * Primitives: rects, one-unit frames, lines, dotted rules, the mockup's 3x5 font at any integer scale, packed 4-bit
+ * Primitives: rects, two-unit frames, lines and dotted rules (0.6.1), the mockup's 3x5 font at any integer scale, packed 4-bit
  * sprites, and the pop-up dim. Everything is clipped to the canvas. */
 #ifndef EC_GFX_H
 #define EC_GFX_H
@@ -38,14 +38,16 @@ uint16_t ec_gfx_lcd_colour(int theme, int c); /* slot c of a theme as the LCD st
 /* grid units, c = a palette slot EC_C_* */
 void ec_gfx_fill(int c);
 void ec_gfx_rect(int x, int y, int w, int h, int c);
-void ec_gfx_frame(int x, int y, int w, int h, int c);            /* a one-unit outline */
-void ec_gfx_line(int x0, int y0, int x1, int y1, int c);         /* Bresenham, one unit */
-void ec_gfx_dots_h(int x0, int x1, int y, int step, int c);      /* a dotted rule of one-unit dots */
+/* 0.6.1 (docs/UX-V2.md §10): no detail finer than 2 units, so the outline, the line's brush and the dots are 2 units */
+void ec_gfx_frame(int x, int y, int w, int h, int c);            /* a two-unit outline */
+void ec_gfx_line(int x0, int y0, int x1, int y1, int c);         /* Bresenham with a 2x2 brush (from x0, y0 down-right) */
+void ec_gfx_dots_h(int x0, int x1, int y, int step, int c);      /* a dotted rule of 2x2 dots, step >= 4 */
 void ec_gfx_dots_v(int x, int y0, int y1, int step, int c);
 void ec_gfx_pixel(int x, int y, int c);
 void ec_gfx_dim(void);                        /* every slot to its darker one (ec_pal_dim): behind a pop-up */
 /* a sprite of w x h palette indices packed two per byte (high nibble first, rows top-down: sprite_to_c.py --c) at
  * (x, y); key >= 0: that index is transparent */
+void ec_gfx_art(int on);   /* 0.6.1: pixels drawn between ec_gfx_art(1) and (0) count as sprite art (the tests' mask) */
 void ec_gfx_blit4(const uint8_t *packed, int w, int h, int x, int y, int key);
 
 /* the 3x5 font: 4 * scale units per character (one column of space), 5 * scale high. Lower case is drawn as upper
@@ -54,5 +56,10 @@ int ec_gfx_text(int x, int y, const char *s, int scale, int c);
 int ec_gfx_text_al(int x, int y, const char *s, int scale, int c, int align);
 int ec_gfx_text_w(const char *s, int scale);  /* width in units (no trailing space column) */
 int ec_gfx_glyph(char c);                     /* the 15-bit glyph (rows top-down, 3 bits each, MSB left), 0 none */
+#ifdef EC_GFX_TEXT_MASK
+/* test builds: per canvas unit, 1 where the last thing drawn there was text or a sprite (host/test_grid.c's hairline
+ * check exempts them) */
+const uint8_t *ec_gfx_text_mask(void);
+#endif
 
 #endif

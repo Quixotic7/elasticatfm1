@@ -52,7 +52,7 @@ static void fader(const ec_app_t *a, int y0)
     for (g = 0; g < 6; g++) {                                     /* the glide keys */
         const int gx = x0 + g * span / 5;
         const int held = a->e5.glide_held >> g & 1u;
-        R(held ? EC_C_L15 : EC_C_L5, gx, y0 + (held ? 2 : 4), 1, held ? 12 : 8);
+        R(held ? EC_C_L15 : EC_C_L5, gx, y0 + (held ? 2 : 4), 2, held ? 12 : 8);   /* 0.6.1: 2 units */
     }
     if (a->e5.gliding) {                                          /* where the glide is heading */
         const int tx = x0 + (int)(a->e5.glide_target * (float)span + 0.5f);
@@ -94,10 +94,10 @@ static void morph_list(const ec_app_t *a, int y0, int rows)
             xa = 36 + (int)(ec_param_frac(i, va) * 56.0f + 0.5f);
             xb = 36 + (int)(ec_param_frac(i, vb) * 56.0f + 0.5f);
             xc = 36 + (int)(ec_param_frac(i, cur) * 56.0f + 0.5f);
-            R(EC_C_L3, 36, y + 2, 57, 1);
-            R(EC_C_L5, xa < xb ? xa : xb, y + 2, abs(xb - xa) + 1, 1);
-            R(EC_C_L8, xa, y, 1, 5);
-            R(EC_C_L12, xb, y, 1, 5);
+            R(EC_C_L3, 36, y + 2, 58, 2);                         /* 0.6.1: 2 units */
+            R(EC_C_L5, xa < xb ? xa : xb, y + 2, abs(xb - xa) + 2, 2);
+            R(EC_C_L8, xa, y, 2, 5);
+            R(EC_C_L12, xb, y, 2, 5);
             R(EC_C_ACC, xc - 1 < 36 ? 36 : xc - 1, y, 2, 5);
             ec_param_format(i, cur, iv(v, EC_P_ENV_RANGE), b, sizeof b);
             T(EC_C_L15, b, W - 2, y, EC_AL_RIGHT);
@@ -120,7 +120,7 @@ static void scene_screen(const ec_app_t *a)
     snprintf(r, sizeof r, "XFD %d", (int)floorf(a->proj.e5.sc.pos * 128.0f + 0.5f));
     ec_screens_header(a, "MST/SCENE", 3, r);
     fader(a, 13);
-    R(EC_C_L3, 0, 38, W, 1);
+    R(EC_C_L3, 0, 37, W, 2);
     morph_list(a, 41, 4);
     ec_screens_cells(a, &pg);
 }
@@ -146,7 +146,7 @@ static void name_screen(const ec_app_t *a)
         if (cur)
             R(EC_C_L3, x - 1, 21, 7, 14);
         ec_gfx_text_al(x + 3, 23, b, 2, cur ? EC_C_ACC : EC_C_L15, EC_AL_CENTER);
-        R(cur ? EC_C_ACC : EC_C_L3, x, 35, 5, cur ? 2 : 1);
+        R(cur ? EC_C_ACC : EC_C_L3, x, 35, 5, 2);
     }
     p = strchr(set, e->name[e->name_cur]);
     ci = p && e->name[e->name_cur] ? (int)(p - set) : 0;
@@ -162,9 +162,8 @@ static void name_screen(const ec_app_t *a)
             T2(abs(k) == 1 ? EC_C_L8 : abs(k) == 2 ? EC_C_L5 : EC_C_L3, b, x, 47, EC_AL_CENTER);
     }
     /* the four cells: POS, CHAR, NAME (namesizer), DEL */
-    R(EC_C_L3, 0, 76, W, 1);
-    R(EC_C_L3, 60, 76, 1, 44);
-    R(EC_C_L3, 0, 98, W, 1);
+    R(EC_C_L3, 0, 76, W, 2);                                      /* the kit's rules (ec_kit_cells) */
+    R(EC_C_L3, 59, 76, 2, 44);
     {
         static const char *const LB[4] = {"POS", "CHAR", "RAND", "DEL"};
         for (k = 0; k < 4; k++) {
@@ -179,10 +178,10 @@ static void name_screen(const ec_app_t *a)
             } else if (k == 1) {
                 snprintf(val, sizeof val, "%s", e->name[e->name_cur] == ' ' ? "SPC" : (char[2]){e->name[e->name_cur], 0});
                 T2(EC_C_L15, val, x, y + 7, EC_AL_LEFT);
-            } else if (k == 2) {                                  /* a die */
-                F(EC_C_L15, x, y + 7, 11, 11);
-                R(EC_C_L15, x + 2, y + 9, 2, 2), R(EC_C_L15, x + 7, y + 9, 2, 2), R(EC_C_L15, x + 4, y + 11, 3, 3);
-                R(EC_C_L15, x + 2, y + 14, 2, 2), R(EC_C_L15, x + 7, y + 14, 2, 2);
+            } else if (k == 2) {                                  /* a die: dark pips on a block (0.6.1) */
+                R(EC_C_L15, x, y + 6, 12, 12);
+                R(EC_C_BG, x + 2, y + 8, 2, 2), R(EC_C_BG, x + 8, y + 8, 2, 2), R(EC_C_BG, x + 5, y + 11, 2, 2);
+                R(EC_C_BG, x + 2, y + 14, 2, 2), R(EC_C_BG, x + 8, y + 14, 2, 2);
             } else
                 T2(EC_C_L15, "< >", x, y + 7, EC_AL_LEFT);
         }
@@ -209,7 +208,7 @@ void ec_scr_e5_overlay(const ec_app_t *a)
     if (!full && !a->settings && ec_e5_scene_layer()) {           /* the scene strip over any page */
         R(EC_C_BG, 0, 10, W, 31);
         fader(a, 12);
-        R(EC_C_L3, 0, 40, W, 1);
+        R(EC_C_L3, 0, 39, W, 2);
     }
     if (!full && (a->cat == EC_CAT_PAT && !a->scr) && !a->settings && !ec_hdr_custom()) {   /* the pattern's name */
         const char *n = ec_e5_pattern_name(a->proj.current);

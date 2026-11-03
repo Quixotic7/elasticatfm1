@@ -64,8 +64,8 @@ static void fx_page(const ec_app_t *a, const ec_page_t *pg)
         const float mix = i == 0 ? tv[EC_P_FX_MIX] : i < 3 ? tv[i == 1 ? EC_P_SEND1 : EC_P_SEND2]
                                                            : a->proj.bus[2][EC_P_FX_MIX];
         int running = m;
-        if (on)
-            R(EC_C_L3, 0, y, W, 13);
+        if (on)                                    /* 0.6.1: 2 units round the name */
+            R(EC_C_L3, 0, y, W, 14);
         T(on ? EC_C_L15 : EC_C_L8, SLOT[i], 3, y + 4, EC_AL_LEFT);
         T2(m == EC_FX_NONE ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, m == EC_FX_NONE ? "--" : ec_fx_short_name(m), 34,
            y + 2, EC_AL_LEFT);
@@ -81,8 +81,8 @@ static void fx_page(const ec_app_t *a, const ec_page_t *pg)
             }
         }
         if (running != m)                          /* the swap fade in progress */
-            R(EC_C_ACC, 34, y + 12, 6, 1);
-        R(EC_C_L5, 100, y + 6, 17, 1);
+            R(EC_C_ACC, 34, y + 11, 6, 2);
+        R(on ? EC_C_L5 : EC_C_L3, 100, y + 5, 17, 3);   /* 0.6.1: the track as tall as the bar */
         R(on ? EC_C_ACC : EC_C_L12, 100, y + 5, (int)(17.0f * clampf(mix / 127.0f, 0, 1) + 0.5f), 3);
     }
 }
@@ -140,11 +140,11 @@ static void sends_page(const ec_app_t *a)
     R(EC_C_L5, 4, y, 22, 9), T(EC_C_BG, "FILT", 15, y + 2, EC_AL_CENTER);
     R(EC_C_L12, 46, y, 22, 9), T(EC_C_BG, "FX", 57, y + 2, EC_AL_CENTER);
     R(EC_C_L5, 88, y, 22, 9), T(EC_C_BG, "MIX", 99, y + 2, EC_AL_CENTER);
-    R(EC_C_L8, 26, y + 4, 20, 1), R(EC_C_L8, 68, y + 4, 20, 1);
+    R(EC_C_L8, 26, y + 3, 20, 2), R(EC_C_L8, 68, y + 3, 20, 2);   /* 0.6.1: 2 units */
     {
         const int tx = post ? 78 : 36;
-        R(EC_C_ACC, tx, y + 4, 1, 14);
-        R(EC_C_ACC, tx - 2, y + 4, 5, 2);
+        R(EC_C_ACC, tx, y + 3, 2, 15);
+        R(EC_C_ACC, tx - 2, y + 3, 6, 2);
     }
     for (i = 0; i < 2; i++) {
         const float lv = i ? s2 : s1;
@@ -219,10 +219,10 @@ static void routes(const ec_app_t *a, int src, int small)
             const int h = (int)(clampf(x, -1, 1) * (bot - top) / 2);
             R(EC_C_L3, mx, top, 2, bot - top);
             if (h > 0)
-                R(EC_C_ACC, mx, mid - h, 2, h);
-            else
+                R(EC_C_ACC, mx, mid - h - 1, 2, h + 1);
+            else if (h < 0)
                 R(EC_C_ACC, mx, mid, 2, -h + 1);
-            R(EC_C_L8, mx - 1, mid, 4, 1);
+            R(EC_C_L8, mx - 2, mid - 1, 6, 2);         /* the centre: 2 units (0.6.1) */
         }
     }
 }
@@ -245,7 +245,7 @@ static void lfo_page(const ec_app_t *a, int k)
     }
     ec_gfx_dots_h(VX0, VX1, (int)mid, 2, EC_C_L3);
     if (mode == 2 || mode == 3)                 /* TRIG / ONE: the reset at the note */
-        R(EC_C_L8, VX0, VT - 6, 1, VB - VT + 6);
+        R(EC_C_L8, VX0, VT - 6, 2, VB - VT + 6);
     trace(y, 104, VX0, VX1, d == 0 ? EC_C_L5 : EC_C_L12);
 }
 
@@ -331,8 +331,8 @@ static void matrix_page(const ec_app_t *a)
         const int c = sel ? EC_C_L15 : used ? EC_C_L12 : EC_C_L5;
         char n[4], nm[16], dp[12];
         int w;
-        if (sel)
-            R(EC_C_L3, 0, y, W, 8);
+        if (sel)                                    /* 0.6.1: 2 units round the text (over the gap below) */
+            R(EC_C_L3, 0, y, W, 9);
         snprintf(n, sizeof n, "%d", k + 1);
         T(sel ? EC_C_L15 : EC_C_L5, n, 2, y + 2, EC_AL_LEFT);
         T(c, src ? ec_mtx_src_name(src) : "--", 9, y + 2, EC_AL_LEFT);

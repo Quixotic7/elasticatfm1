@@ -16,7 +16,7 @@
  * before the box), and the box at the right: arrows (a pop-up's back / OK, a wider box), else held > 0 (the count
  * of held steps on LOCK), else page ("1", "A"; NULL / "" none) */
 void ec_kit_header(const char *target, const char *title, const char *page, const char *right, int held, int arrows);
-/* a pop-up's two arrows (back, OK), 13 x 7 units from (x, y) */
+/* a pop-up's two arrows (back, OK), 18 x 6 units from (x, y), in 2-unit steps */
 void ec_kit_arrows(int x, int y, int c);
 
 /* ------------------------------------------------------------------------------------------- cells --- */
@@ -37,14 +37,14 @@ typedef struct {
     const char *mark;     /* a matrix destination's source tag ("LFO1", "2 MOD") beside an accent dot, or NULL */
     float actual;         /* EC_KC_ACTUAL */
 } ec_kit_cell_t;
-/* the rules and the four cells (K1..K4) y 76..119; lanes > 1: the lane marks at y 72, the active one bright.
+/* the rules and the four cells (K1..K4) y 76..119; lanes > 1: the lane marks at y 73..74, the active one bright.
  * 0.6.1: no 1-unit detail: the bar is 2 units high at the box's y + 2 + EC_KIT_BAR_DY, on a lattice of
  * EC_KIT_BAR_CELLS 2-unit cells from the box's x + 3 */
 #define EC_KIT_BAR_DY 17
 #define EC_KIT_BAR_CELLS 27
 void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane);
-/* cell i's box (0..3: K1..K4), 23 rows: top cells y 76..98, bottom 97..119; a step lock fills it, EC_KC_SOME
- * outlines it (2 units) */
+/* cell i's box (0..3: K1..K4), 61 x 23: left x 0..60, right 59..119, top y 76..98, bottom 97..119; a step lock fills
+ * it, EC_KC_SOME outlines it (2 units) */
 void ec_kit_cell_box(int i, int *x, int *y, int *w, int *h);
 /* calls of ec_kit_cells so far (host/test_grid.c: the frames with param cells get the bar-area check) */
 extern unsigned ec_kit_cells_drawn;
@@ -70,24 +70,17 @@ typedef struct {
 void ec_kit_list(const ec_kit_row_t *r, int n, int sel, int y0, int y1, int *ys);
 int ec_kit_list_row_h(const ec_kit_row_t *r);
 
-/* ------------------------------------------------------------------------------------------- the pop-up --- */
-/* the mode-entry pop-up (docs/UX-V2.md §3) over the dimmed screen: the name big, the page in the accent, the 11 black
- * keys B1..B11 in their roles: 'P' page, 'S' source, 'X' special, 'A' action, 'O' unused; cur = the current page's
- * key (0..10) underlined, -1 none */
-void ec_kit_popup(const char *name, const char *page, const char roles[11], int cur);
-int ec_kit_role_colour(char role);
-
 /* ------------------------------------------------------------------------------------------- pictures --- */
-/* a waveform from an overview (n columns of peak 0..255) over grid columns x0..x1-1, centred in top..bot: columns in
- * [rs, re) in c_in, the rest c_out */
+/* a waveform from an overview (n columns of peak 0..255) over grid columns x0..x1-1, centred in top..bot, in 2-unit
+ * columns at least 2 high (0.6.1): columns in [rs, re) in c_in, the rest c_out */
 void ec_kit_wave(const uint8_t *ov, int n, int x0, int x1, int top, int bot, int c_in, int c_out, int rs, int re);
-void ec_kit_playhead(int x, int top, int bot);      /* one accent column */
+void ec_kit_playhead(int x, int top, int bot);      /* an accent column, 2 units wide */
 
-/* norns Elasticat's filter render (lib/ui/page_render.lua draw_filter_bars): 38 bars of 2 units + a 1-unit gap from
- * x 3 (norns: 42 on 128 px), growing up from bot. cut, res: the raw 0..127 values; type 1..4 LP HP BP NOTCH when
+/* norns Elasticat's filter render (lib/ui/page_render.lua draw_filter_bars): 29 bars of 2 units + a 2-unit gap from
+ * x 3 (norns: 42 on 128 px; 0.6.1: no 1-unit gaps), growing up from bot, at least 2 high. cut, res: the raw 0..127 values; type 1..4 LP HP BP NOTCH when
  * morph < 0, else the morph 0..1 (LP > notch > HP); depth -1..1 (the filter envelope): stopped, the band from the
  * cutoff toward where the envelope takes it is bright, else (or depth 0) the cutoff's bar alone */
-#define EC_KIT_NBARS 38
+#define EC_KIT_NBARS 29
 void ec_kit_filter_bars(int top, int bot, float cut, float res, int type, float morph, float depth, int playing);
 
 /* norns' env_bars / draw_envelope_bars: one amplitude per bar by bar counts (attack >= 1 bar, attack + decay <= half,
@@ -106,16 +99,16 @@ typedef struct {
 } ec_grain_view_t;
 #define EC_GRAIN_VIEW_MAX 16
 #endif
-/* each grain a block centred on its read position, as wide as its length, 3 units high, in a lane of its own (9
+/* each grain a block centred on its read position, as wide as its length (>= 2), 2 units high, in a lane of its own (9
  * lanes 4 units apart from top: the scatter), shaded by level through the grey ramp, the newest in the accent;
  * x0..x1 = the sample's 0..1 (the mock's scr_loop) */
 void ec_kit_grains(const ec_grain_view_t *g, int n, int x0, int x1, int top);
-/* the grain view's frame (L8, one unit) round x, y, w, h and the emitter's accent notches at ex (< 0 none) */
+/* the grain view's frame (L8, 2 units) round x, y, w, h and the emitter's accent notches (2 x 4) at ex (< 0 none) */
 void ec_kit_grain_frame(int x, int y, int w, int h, int ex);
 
-/* a strip of 16 steps (x 3 + 7i, 5 wide) from top to bot: trigs filled (L12, the held one L15 and framed), empty
- * steps a dash, ghost trigs outlined; lock dots (LOCK) under the steps in locks; the playing step's accent bar over
- * it (play < 0 none). Bit i of each mask = step i */
+/* a strip of 16 steps (x 3 + 7i, 5 wide) from top to bot: trigs filled (L12, the held one L15 with an L15 cap over
+ * it), empty steps a dash, ghost trigs a dim (L5) block; lock dots (LOCK) under the steps in locks; the playing step's
+ * accent bar over it (play < 0 none), 2 units, 2 above top. Bit i of each mask = step i */
 void ec_kit_steps(int top, int bot, uint16_t trigs, uint16_t ghosts, uint16_t locks, uint16_t beyond, int held,
                   int play);
 /* the 16 white keys as a ruler (x 3 + 7i): lit (L15, tall), in range (L8), else L3 / every 4th L5 */

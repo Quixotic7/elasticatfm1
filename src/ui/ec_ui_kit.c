@@ -15,17 +15,18 @@
 #define TW(s, sc) ec_gfx_text_w((s), (sc))
 
 /* ------------------------------------------------------------------------------------------- header --- */
+/* a 6x6 head of 2-unit columns (2, 4, 6 high) pointing left or right (0.6.1: no 1-unit tip) */
 static void tri(int x, int y, int left, int c)
 {
     int k;
-    for (k = 0; k < 4; k++)
-        R(c, left ? x + k : x + 3 - k, y + 3 - k, 1, 1 + 2 * k);
+    for (k = 0; k < 3; k++)
+        R(c, left ? x + 2 * k : x + 4 - 2 * k, y + 2 - k, 2, 2 + 2 * k);
 }
 
 void ec_kit_arrows(int x, int y, int c)
 {
-    tri(x, y, 1, c), R(c, x + 3, y + 2, 3, 1);           /* back: an arrow left */
-    tri(x + 11, y, 0, c), R(c, x + 8, y + 2, 3, 1);      /* OK: an arrow right */
+    tri(x, y, 1, c), R(c, x + 6, y + 2, 2, 2);           /* back: an arrow left */
+    tri(x + 12, y, 0, c), R(c, x + 10, y + 2, 2, 2);     /* OK: an arrow right */
 }
 
 void ec_kit_header(const char *target, const char *title, const char *page, const char *right, int held, int arrows)
@@ -37,7 +38,7 @@ void ec_kit_header(const char *target, const char *title, const char *page, cons
     T(EC_C_BG, title ? title : "", 17, 3, 1, EC_AL_LEFT);
     R(held && !arrows ? EC_C_LOCK : EC_C_BG, W - box, 0, box, 10);
     if (arrows)
-        ec_kit_arrows(W - 18, 2, EC_C_L15);
+        ec_kit_arrows(W - 19, 2, EC_C_L15);
     else if (held) {
         char b[8];
         snprintf(b, sizeof b, "%d", held);
@@ -52,13 +53,15 @@ void ec_kit_header(const char *target, const char *title, const char *page, cons
 /* 0.6.1 (owner, docs/UX-V2.md §10): no 1-unit details in a cell. The bar is 2 units high and lives on a lattice of
  * 2-unit cells (27 across its 54 units), so every fill, tick, mark and gap in it is a multiple of 2 units wide; a
  * tiny non-zero depth still draws one lattice cell (2 units). The cell's box (ec_kit_cell_box): a step lock fills
- * it, "locked on some step" outlines it 2 units thick. Top cells y 76..98 (the rules at 76 and 98 are their outline's
- * outer rows), bottom cells y 97..119 (they share rows 97..98): from the box's top, 2 rows (outline), the label (5),
- * a gap, the value (10), a gap, the bar (2), 2 rows (outline). */
+ * it, "locked on some step" outlines it 2 units thick. Top cells y 76..98, bottom cells y 97..119 (they share rows
+ * 97..98); left cells x 0..60, right cells x 59..119 (they share columns 59..60): from the box's top, 2 rows
+ * (outline), the label (5), a gap, the value (10), a gap, the bar (2), 2 rows (outline). The rules (2 units, L3):
+ * row 76..77 across (the top cells' outline rows) and columns 59..60 down (the shared outline columns); no rule
+ * between the top and bottom cells (a 2-unit gap there instead: it would touch the top bars). */
 void ec_kit_cell_box(int i, int *x, int *y, int *w, int *h)
 {
-    *x = i % 2 ? 61 : 0;
-    *w = i % 2 ? W - 61 : 60;
+    *x = i % 2 ? 59 : 0;
+    *w = 61;
     *y = i < 2 ? 76 : 97;
     *h = 23;
 }
@@ -69,11 +72,10 @@ void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
 {
     int i;
     ec_kit_cells_drawn++;
-    R(EC_C_L3, 0, 76, W, 1);
-    R(EC_C_L3, 60, 76, 1, 44);
-    R(EC_C_L3, 0, 98, W, 1);
+    R(EC_C_L3, 0, 76, W, 2);
+    R(EC_C_L3, 59, 76, 2, 44);
     for (i = 0; i < lanes && lanes > 1; i++)
-        R(i == lane ? EC_C_L15 : EC_C_L5, W - 1 - (lanes - i) * 10, 72, 8, 3);
+        R(i == lane ? EC_C_L15 : EC_C_L5, W - 1 - (lanes - i) * 10, 73, 8, 2);
     for (i = 0; i < 4; i++) {
         const unsigned fl = c[i].flags;
         const int lock = (fl & EC_KC_LOCK) != 0, hot = (fl & EC_KC_HOT) != 0;
@@ -89,8 +91,10 @@ void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
             T(EC_C_L3, tag, x + 54, y, 1, EC_AL_RIGHT);
             continue;
         }
-        if (lock)                                    /* a step lock on the held step: the whole cell in LOCK */
+        if (lock) {                                  /* a step lock on the held step: the whole cell in LOCK */
             R(EC_C_LOCK, bx, by, bw, bh);
+            y--;                                     /* no outline: label and value a unit higher, so the LOCK */
+        }                                            /* between the value and the bar is 2 units, not a 1-unit line */
         else if (fl & EC_KC_SOME) {                  /* locked on some step: a 2-unit outline round the whole cell */
             R(EC_C_LOCK, bx, by, bw, 2);
             R(EC_C_LOCK, bx, by + bh - 2, bw, 2);
@@ -207,41 +211,6 @@ void ec_kit_list(const ec_kit_row_t *r, int n, int sel, int y0, int y1, int *ys)
     }
 }
 
-/* ------------------------------------------------------------------------------------------- the pop-up --- */
-int ec_kit_role_colour(char role)
-{
-    switch (role) {
-    case 'P': return EC_C_L15;
-    case 'S': return EC_C_SRC;
-    case 'X': return EC_C_SPECIAL;
-    case 'A': return EC_C_ACTION;
-    default: return EC_C_L3;
-    }
-}
-
-void ec_kit_popup(const char *name, const char *page, const char roles[11], int cur)
-{
-    const int bx = 4, by = 22, bw = 112, bh = 76;
-    int i, sc;
-    ec_gfx_dim();
-    R(EC_C_BG, bx, by, bw, bh);
-    R(EC_C_L12, bx, by, bw, 26);
-    for (sc = 4; sc > 1 && TW(name, sc) > bw - 6; sc--)
-        ;
-    T(EC_C_BG, name, W / 2, by + 13 - 5 * sc / 2, sc, EC_AL_CENTER);
-    T(EC_C_ACC, page ? page : "", W / 2, by + 32, 2, EC_AL_CENTER);
-    for (i = 0; i < 11; i++) {                       /* B1..B11 */
-        const int x = 6 + i * 10, y = by + 50;
-        if (roles[i] == 'O' || !roles[i])
-            ec_gfx_frame(x, y, 8, 14, EC_C_L3);
-        else
-            R(ec_kit_role_colour(roles[i]), x, y, 8, 14);
-        if (i == cur)
-            R(EC_C_L15, x, y + 16, 8, 3);
-    }
-    ec_gfx_frame(bx, by, bw, bh, EC_C_L12);
-}
-
 /* ------------------------------------------------------------------------------------------- pictures --- */
 void ec_kit_wave(const uint8_t *ov, int n, int x0, int x1, int top, int bot, int c_in, int c_out, int rs, int re)
 {
@@ -249,21 +218,21 @@ void ec_kit_wave(const uint8_t *ov, int n, int x0, int x1, int top, int bot, int
     int c;
     if (cols <= 0 || n <= 0)
         return;
-    for (c = 0; c < cols; c++) {
-        int lo = c * n / cols, hi = (c + 1) * n / cols, i, pk = 0, h;
+    for (c = 0; c + 1 < cols; c += 2) {              /* 0.6.1: 2-unit columns, at least 2 high */
+        int lo = c * n / cols, hi = (c + 2) * n / cols, i, pk = 0, h;
         if (hi <= lo)
             hi = lo + 1;
         for (i = lo; i < hi && i < n; i++)
             if (ov[i] > pk)
                 pk = ov[i];
-        h = (pk * half + 127) / 255;
-        R(x0 + c >= rs && x0 + c < re ? c_in : c_out, x0 + c, mid - h, 1, 2 * h + 1);
+        h = (pk * (half - 1) + 127) / 255;
+        R(x0 + c >= rs && x0 + c < re ? c_in : c_out, x0 + c, mid - h, 2, 2 * h + 2);
     }
 }
 
-void ec_kit_playhead(int x, int top, int bot) { R(EC_C_ACC, x, top, 1, bot - top); }
+void ec_kit_playhead(int x, int top, int bot) { R(EC_C_ACC, x, top, 2, bot - top); }
 
-#define BAR_X(i) (3 + 3 * (i))
+#define BAR_X(i) (3 + 4 * (i))
 
 /* page_render.lua's response sketches: unity band, roll-off past the cutoff, resonance as a bump at the cutoff */
 static float resp_lp(float u, float fc, float q)
@@ -319,6 +288,7 @@ void ec_kit_filter_bars(int top, int bot, float cut, float res_raw, int type, fl
         bh = (int)floorf(g * scale + 0.5f);
         if (bh < 1)
             continue;
+        bh = bh < 2 ? 2 : bh;
         bright = fabsf(reach) > 0 ? (u >= lo && u <= hi) : i == nearest;
         R(bright ? EC_C_L15 : EC_C_L5, BAR_X(i), bot - bh, 2, bh);
     }
@@ -387,7 +357,8 @@ void ec_kit_env_bars(int top, int bot, int mode, float a, float d, float s, floa
     float amp[EC_KIT_NBARS];
     int st[EC_KIT_NBARS], n = env_bars(mode, a, d, s, hd, r, EC_KIT_NBARS, amp, st), i;
     for (i = 0; i < n; i++) {
-        const int bh = (int)floorf((amp[i] < 0 ? 0 : amp[i] > 1 ? 1 : amp[i]) * (bot - top - 1) + 0.5f);
+        int bh = (int)floorf((amp[i] < 0 ? 0 : amp[i] > 1 ? 1 : amp[i]) * (bot - top - 1) + 0.5f);
+        bh = bh == 1 ? 2 : bh;
         if (bh >= 1)
             R((unsigned)st[i] & hot ? EC_C_L15 : EC_C_L5, BAR_X(i), bot - bh, 2, bh);
     }
@@ -407,14 +378,16 @@ void ec_kit_grains(const ec_grain_view_t *g, int n, int x0, int x1, int top)
             if (newest != pass)
                 continue;
             w = (int)(g[k].len * cols + 0.5f);
-            w = w < 1 ? 1 : w;
+            w = w < 2 ? 2 : w;
             x = x0 + (int)(g[k].pos * cols - (float)w / 2.0f + 0.5f);
             if (x < x0)
                 w -= x0 - x, x = x0;
             if (x + w > x1)
                 w = x1 - x;
+            if (w < 2)                               /* clipped to a sliver at an edge: 2 units inside it */
+                w = 2, x = x < x0 + 1 ? x0 : x1 - 2;
             col = newest ? EC_C_ACC : lv > 0.75f ? EC_C_L15 : lv > 0.45f ? EC_C_L12 : lv > 0.2f ? EC_C_L8 : EC_C_L5;
-            R(col, x, top + ((k * 5) % 9) * 4, w, 3);
+            R(col, x, top + ((k * 5) % 9) * 4, w, 2);
         }
 }
 
@@ -422,7 +395,7 @@ void ec_kit_grain_frame(int x, int y, int w, int h, int ex)
 {
     ec_gfx_frame(x, y, w, h, EC_C_L8);
     if (ex >= 0)
-        R(EC_C_ACC, ex, y, 1, 3), R(EC_C_ACC, ex, y + h - 3, 1, 3);
+        R(EC_C_ACC, ex, y, 2, 4), R(EC_C_ACC, ex, y + h - 4, 2, 4);
 }
 
 void ec_kit_steps(int top, int bot, uint16_t trigs, uint16_t ghosts, uint16_t locks, uint16_t beyond, int held,
@@ -432,21 +405,22 @@ void ec_kit_steps(int top, int bot, uint16_t trigs, uint16_t ghosts, uint16_t lo
     for (i = 0; i < 16; i++) {
         const int x = 3 + i * 7;
         if (beyond >> i & 1u) {
-            R(EC_C_L3, x + 2, bot - 1, 1, 1);
+            R(EC_C_L3, x + 1, bot - 2, 2, 2);
             continue;
         }
         if (trigs >> i & 1u)
             R(i == held ? EC_C_L15 : EC_C_L12, x, top, 5, bot - top);
-        else if (ghosts >> i & 1u)
-            ec_gfx_frame(x, top, 5, bot - top, i == held ? EC_C_L15 : EC_C_L8);
+        else if (ghosts >> i & 1u)                   /* 0.6.1: a ghost is a dim block (a 2-unit frame would leave a
+                                                      * 1-unit hole in a 5-unit step) */
+            R(i == held ? EC_C_L15 : EC_C_L5, x, top, 5, bot - top);
         else
             R(i == held ? EC_C_L15 : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, bot - 2, 5, 2);
-        if (i == held)
-            ec_gfx_frame(x - 2, top - 2, 9, bot - top + 4, EC_C_L15);
+        if (i == held)                               /* the held step: a bright cap over it (0.6.1: no frame) */
+            R(EC_C_L15, x, top - 4, 5, 2);
         if (locks >> i & 1u)
             R(EC_C_LOCK, x + 1, bot + 2, 3, 2);
         if (i == play)
-            R(EC_C_ACC, x, top - 4, 5, 1);
+            R(EC_C_ACC, x, top - 4, 5, 2);
     }
 }
 
@@ -558,17 +532,18 @@ void ec_scr_cat(int frame, double beats, int playing)
 {
     const int sx = (W - EC_SPR_CAT_W) / 2, sy = EC_KIT_CAT_Y;
     const uint8_t *spr;
-    uint8_t *cv = ec_gfx_canvas();
     int x, y;
     frame %= EC_SPR_CAT_FRAMES;
     frame = frame < 0 ? frame + EC_SPR_CAT_FRAMES : frame;
     spr = ec_spr_cat[frame];
     R(EC_C_BG, 0, 0, W, H);
     cat_beams(spr, sx, sy, beats, playing);
+    ec_gfx_art(1);
     for (y = 0; y < EC_SPR_CAT_H; y++)            /* the cat over them: its ground keyed out, its outline BLACK */
         for (x = 0; x < EC_SPR_CAT_W; x++) {
             const int c = cat_px(spr, x, y);
             if (c != CAT_KEY)
-                cv[(sy + y) * W + sx + x] = (uint8_t)(c == EC_C_BG ? EC_C_BLACK : c);
+                ec_gfx_pixel(sx + x, sy + y, c == EC_C_BG ? EC_C_BLACK : c);
         }
+    ec_gfx_art(0);
 }

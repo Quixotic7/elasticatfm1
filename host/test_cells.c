@@ -41,13 +41,15 @@ static int box_plain(void)
 {
     return px(bx + 1, by + 10) != EC_C_LOCK && px(bx + 20, by + bh - 1) != EC_C_LOCK && px(bx + 2, by + 8) != EC_C_LOCK;
 }
-/* the value's rows of K1 as a mask (text pixels: the value's colour on either ground) */
+/* the value's rows of K1 as a mask (text pixels: the value's colour on either ground); a filled (held-lock) cell
+ * draws its label and value a unit higher (no outline: 2 units of LOCK above the bar) */
 static void value_mask(uint8_t *m, int text)
 {
+    const int dy = text == EC_C_BG ? -1 : 0;
     int x, y;
     for (y = 0; y < 10; y++)
         for (x = 0; x < 54; x++)
-            m[y * 54 + x] = px(bx + 3 + x, by + 8 + y) == text;
+            m[y * 54 + x] = px(bx + 3 + x, by + 8 + dy + y) == text;
 }
 /* SRC pixels in the four cells' bar rows; *w: the widest SRC run */
 static int src_in_bars(int *w)

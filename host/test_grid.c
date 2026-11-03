@@ -1,16 +1,19 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* test_grid: the owner's graphics rules (docs/UX-V2.md §7) on the firmware's own screens. With the demo folder
  * (host/make_demo_folder.py) booted through the core, a broad set of screens is reached by setting the app state
- * directly (category, page, settings, the pop-ups, F3, naming, the scene page, REC, the takeover, SHIFT's map, toasts,
+ * directly (category, page, settings, the pop-ups, F3, naming, the scene page, REC, the takeover, SHIFT's map, a question,
  * held steps with locks, the machines and warps), not by gestures; plus the kit's parts (ec_ui_kit.h) drawn alone:
- * the mode pop-up, the norns filter / envelope bars, the grains, the intro and the CAT frames. For every LCD frame,
+ * the cells, the norns filter / envelope bars, the grains, the settings list, the intro and the CAT frames. For every LCD frame,
  * in each of the six themes: every 2x2 block is one colour, and every colour is one of the theme's 16.
  * 0.6.1 (docs/UX-V2.md §10): SRC is each theme's blue, clear of ACC / LOCK / ALERT; the frames that showed the
  * owner's 1-unit depth bar (every page with its params modulated, a held source key, held / outlined / no step locks,
- * the cells alone with tiny depths); and on every frame with param cells, no 1-unit run in the cells' bar areas
- * (bar_runs: the 2x2 rule passes anything on the 120 grid, a 1-unit bar too).
- *   ec_test_grid <folder> [png dir]     (png dir: the CREAM frames, for a look; results are not committed) */
+ * the cells alone with tiny depths). 0.6.1 wave 2: on every frame (but MIX / CAT for now), the fine check (fine_runs:
+ * no line, bar, marker or rule 1 unit thick, text and sprites exempt by ec_gfx's text mask).
+ *   ec_test_grid <folder> [png dir]     (png dir: the CREAM frames, for a look; results are not committed)
+ *   EC_GRID_DUMP=1 ec_test_grid ..      every bad run of every CREAM frame; with the library built with -DEC_GFX_WHO
+ *                                       also the address of the drawing call (atos / addr2line it) */
 #include <math.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,7 +27,7 @@
 #include "ec_ui_kit.h"
 #include "fm1core.h"
 
-static int fails, checks, shots, fine_frames;
+static int fails, checks, shots, fine_frames, fine_cells;
 #define CHECK(c, ...)                                                                                              \
     do {                                                                                                           \
         checks++;                                                                                                  \
@@ -57,53 +60,54 @@ static void run(int n)
     }
 }
 
-/* 0.6.1: the bar-area check (docs/UX-V2.md §10, the owner's 1-unit depth bar). The 2x2 rule above only says the
- * frame is on the 120 grid: a bar 1 grid unit high is 2x2 blocks and passes it. So, on the grid as shown (every
- * other LCD pixel), in each param cell's bar rows and below them to the box's bottom (the outline): no run of a
- * colour other than the cell's ground (BG, or LOCK on a filled cell) exactly 1 unit long, across or down. A run is
- * measured over the whole row / column and counts only when it lies inside the cell's box / those rows (the rules
- * between the cells, col 60 and row 98, are 1 unit by design). Not under a pop-up (it covers the cells). Returns the bad runs; *where:
- * the first */
-#define G(x, y) lcd[(2 * (y)) * LW + 2 * (x)]
-static int bar_runs(const uint16_t *lcd, char *where, size_t cap)
+/* 0.6.1 (docs/UX-V2.md §7 / §10, the owner's "1 pixel" = one unit of the 120 grid): the fine check. The 2x2 rule
+ * below only says the frame is on the 120 grid: a bar 1 grid unit high is 2x2 blocks and passes it. So, on the canvas
+ * as drawn (the palette indices, every unit of every frame): no run of one colour other than the ground (BG) exactly
+ * 1 unit thick (both neighbours across it another colour, or the screen's edge) and at least 3 units long, across or
+ * down: no line, bar, marker, tick, outline or rule thinner than 2 units. Text is exempt: ec_gfx marks the units the
+ * last text call drew (ec_gfx_text_mask, test builds), and a text unit counts as the run's own colour across it (so a
+ * 1-unit gap between a glyph and a bar in a filled cell is not a run either). Returns the bad runs; *where: the
+ * first. */
+static int g_who_dump;
+/* 0.6.1 wave 2: MIX and the CAT are being redrawn by v61b-gfx (MIX's pan, the CAT's stage); their frames skip the fine
+ * check until that merges (the 2x2 and palette checks still run). Counted in fine_skipped. */
+static int g_skip_fine, fine_skipped;
+#ifdef EC_GFX_WHO
+void *const *ec_gfx_who(void);
+#endif
+static int fine_runs(char *where, size_t cap)
 {
-    const uint16_t rule = ec_gfx_lcd_colour(g_theme, EC_C_L3);
-    int i, bad = 0;
-    for (i = 0; i < 4; i++) {
-        int bx, by, bw, bh, x, y;
-        ec_kit_cell_box(i, &bx, &by, &bw, &bh);
-        {
-            const int y0 = by + 2 + EC_KIT_BAR_DY, y1 = by + bh - 1;
-            const uint16_t ground = G(bx + 2, y0);        /* the column left of the bar */
-            for (y = y0; y <= y1; y++)
-                for (x = bx; x < bx + bw; x++) {
-                    const uint16_t c = G(x, y);
-                    int a = x, b = x;
-                    if (c == ground)
-                        continue;
-                    while (a > 0 && G(a - 1, y) == c)
-                        a--;
-                    while (b < EC_GW - 1 && G(b + 1, y) == c)
-                        b++;
-                    if (a == b && a >= bx && b < bx + bw) {
-                        if (!bad++)
-                            snprintf(where, cap, "K%d: a 1-unit run across at (%d, %d)", i + 1, x, y);
-                    }
-                    a = b = y;
-                    while (a > 0 && G(x, a - 1) == c)
-                        a--;
-                    while (b < EC_GH - 1 && G(x, b + 1) == c)
-                        b++;
-                    if (a == b && a >= y0 && b <= y1 && !(a == 98 && c == rule)) {
-                        if (!bad++)
-                            snprintf(where, cap, "K%d: a 1-unit run down at (%d, %d)", i + 1, x, y);
+    const uint8_t *cv = ec_gfx_canvas(), *tx = ec_gfx_text_mask();
+    int pass, line, at, bad = 0;
+    for (pass = 0; pass < 2; pass++)                       /* 0: runs across (rows), 1: runs down (columns) */
+        for (line = 0; line < EC_GW; line++)
+            for (at = 0; at < EC_GW;) {
+                const int d = pass ? EC_GW : 1, e = pass ? 1 : EC_GW;  /* along, across */
+                const int i0 = pass ? at * EC_GW + line : line * EC_GW + at, c = cv[i0];
+                int n = 0;
+                for (; at + n < EC_GW; n++) {
+                    const int i = i0 + n * d;
+                    if (tx[i] || cv[i] != c || c == EC_C_BG)
+                        break;
+                    if ((line > 0 && (cv[i - e] == c || tx[i - e])) || (line < EC_GW - 1 && (cv[i + e] == c || tx[i + e])))
+                        break;
+                }
+                if (n >= 3) {
+                    const int x = pass ? line : at, y = pass ? at : line;
+                    if (!bad++)
+                        snprintf(where, cap, "a 1-unit run %s at (%d, %d), %d long", pass ? "down" : "across", x, y, n);
+                    if (g_who_dump && g_theme == EC_TH_CREAM) {
+                        printf("  RUN %c %d %d %d c%d", pass ? '|' : '-', x, y, n, c);
+#ifdef EC_GFX_WHO
+                        printf(" @%p", ec_gfx_who()[i0]);
+#endif
+                        printf("\n");
                     }
                 }
-        }
-    }
+                at += n ? n : 1;
+            }
     return bad;
 }
-#undef G
 
 /* the rules on one LCD frame (cells: the frame drew param cells, so the bar-area check too) */
 static void check_lcd_cells(const uint16_t *lcd, const char *name, int cells)
@@ -131,13 +135,17 @@ static void check_lcd_cells(const uint16_t *lcd, const char *name, int cells)
     CHECK(!bad, "%s (%s): %d 2x2 blocks of more than one colour", name, ec_gfx_theme_name(g_theme), bad);
     CHECK(!off, "%s (%s): %d pixels outside the theme's 16 colours", name, ec_gfx_theme_name(g_theme), off);
     CHECK(used >= 2 || !strcmp(name, "kit_intro"), "%s (%s): a blank screen", name, ec_gfx_theme_name(g_theme));
-    if (cells) {
-        char where[64] = "";
-        const int runs = bar_runs(lcd, where, sizeof where);
-        CHECK(!runs, "%s (%s): %d 1-unit runs in the cells' bar areas (%s)", name, ec_gfx_theme_name(g_theme), runs,
-              where);
+    if (!g_skip_fine) {
+        char where[80] = "";
+        int runs;
+        if (g_who_dump && g_theme == EC_TH_CREAM)
+            printf("FRAME %s\n", name);
+        runs = fine_runs(where, sizeof where);
+        CHECK(!runs, "%s (%s): %d 1-unit runs (%s)", name, ec_gfx_theme_name(g_theme), runs, where);
         fine_frames++;
-    }
+        fine_cells += cells;
+    } else
+        fine_skipped++;
     if (g_png && g_theme == EC_TH_CREAM) {
         char path[512];
         snprintf(path, sizeof path, "%s/%03d_%s.png", g_png, shots, name);
@@ -151,20 +159,23 @@ static void shot(const char *name)
 {
     const unsigned n0 = ec_kit_cells_drawn;
     A->redraw = 1;
+    g_skip_fine = 0;
     C->frame();
     check_lcd_cells(P->lcd, name, ec_kit_cells_drawn != n0);
 }
 
+static void k_cat(int f);
 /* the kit alone: draw(), presented to a buffer of our own */
 static void kit_shot(const char *name, void (*draw)(int), int arg)
 {
     const unsigned n0 = ec_kit_cells_drawn;
+    g_skip_fine = 0;
     ec_gfx_begin(g_kitlcd);
     ec_gfx_fill(EC_C_BG);
     draw(arg);
     ec_gfx_present();
     ec_gfx_begin(ec_plat_lcd());
-    check_lcd_cells(g_kitlcd, name, ec_kit_cells_drawn != n0 && strcmp(name, "kit_popup"));
+    check_lcd_cells(g_kitlcd, name, ec_kit_cells_drawn != n0);
 }
 
 static void reset_state(void)
@@ -176,8 +187,6 @@ static void reset_state(void)
     A->ux.f3 = 0;
     A->e5.naming = 0;
     A->e5.confirm = 0;
-    A->e5.toast_ms = 0;
-    A->e5.toast_keep = 0;
     A->rec.open = 0;
     A->ux.to_ms = 0;
     A->fn = 0;
@@ -193,17 +202,6 @@ static void reset_state(void)
 }
 
 /* ------------------------------------------------------------------------------------------- the kit --- */
-static void k_popup(int i)
-{
-    static const char *const NM[3] = {"LOOP ENGINE", "FX", "MODULATION"};
-    static const char *const RL[3] = {"PPPPPSSSSSX", "PAXOSSSSSSX", "PSSSSSSSSSX"};
-    ec_kit_cell_t c[4] = {{"CUTOFF", "2.4K", 0.6f, 0, "LFO1", 0}, {"RESO", "35", 0.3f, EC_KC_LOCK, 0, 0},
-                          {"DEPTH", "+25%", 0.25f, EC_KC_DEPTH | EC_KC_ACTUAL, 0, 0.4f},
-                          {"TYPE", "LP", 0, EC_KC_SOME | EC_KC_ACC, 0, 0}};
-    ec_kit_header("T1", "LOOP/LOOP", "1", "P01", i, 0);
-    ec_kit_cells(c, 3, i % 3);
-    ec_kit_popup(NM[i], "PAGE", RL[i], i - 1);
-}
 /* 0.6.1: the cells alone in every state: values and depths from tiny to full (the owner's 1-unit bar), the step
  * lock fill, the outline, a held source (SRC), the actual mark, dim */
 static void k_cells(int i)
@@ -279,8 +277,6 @@ static void k_misc(int i)
 static void test_kit(void)
 {
     int i;
-    for (i = 0; i < 3; i++)
-        kit_shot("kit_popup", k_popup, i);
     for (i = 0; i < 30; i++)
         kit_shot("kit_cells", k_cells, i);
     for (i = 0; i < 8; i++)
@@ -299,6 +295,61 @@ static void test_kit(void)
         kit_shot("kit_misc", k_misc, i);
     CHECK(ec_scr_intro_frames() == 55 && ec_scr_cat_frames() == 12, "the sprites: %d intro, %d cat frames",
           ec_scr_intro_frames(), ec_scr_cat_frames());
+}
+
+/* the fine check finds what it should: a 1-unit bar, rule, outline and 1-unit runs of a fill (between two bars, under one); not
+ * text, a sprite, 2-unit lines, nor BG gaps */
+static int fine_of(void (*draw)(void))
+{
+    char where[80];
+    ec_gfx_begin(g_kitlcd);
+    ec_gfx_fill(EC_C_BG);
+    draw();
+    ec_gfx_begin(ec_plat_lcd());
+    return fine_runs(where, sizeof where);
+}
+static void f_bar1(void) { ec_gfx_rect(10, 10, 20, 1, EC_C_L8); }
+static void f_rule1(void) { ec_gfx_rect(60, 20, 1, 30, EC_C_L3); }
+static void f_frame1(void)
+{
+    ec_gfx_rect(10, 10, 30, 20, EC_C_L8);
+    ec_gfx_rect(11, 11, 28, 18, EC_C_BG);
+}
+static void f_gap1(void)
+{
+    ec_gfx_rect(10, 10, 30, 6, EC_C_LOCK);
+    ec_gfx_rect(10, 10, 30, 2, EC_C_L8);
+    ec_gfx_rect(10, 13, 30, 2, EC_C_L8);
+}
+static void f_text(void)
+{
+    ec_gfx_text(4, 10, "HELLO WORLD 1234567890 -_=", 1, EC_C_L15);
+    ec_gfx_rect(0, 30, EC_GW, 12, EC_C_LOCK);
+    ec_gfx_text(4, 31, "LOCKED 12", 2, EC_C_BG);
+    ec_gfx_rect(4, 42, 50, 2, EC_C_BG);
+}
+static void f_ok(void)
+{
+    ec_gfx_rect(10, 10, 20, 2, EC_C_L8);
+    ec_gfx_frame(40, 40, 30, 20, EC_C_L12);
+    ec_gfx_line(5, 70, 100, 90, EC_C_ACC);
+    ec_gfx_dots_h(0, 120, 100, 4, EC_C_L3);
+    ec_gfx_rect(10, 110, 3, 6, EC_C_L8), ec_gfx_rect(14, 110, 3, 6, EC_C_L8);   /* a 1-unit BG gap */
+}
+static void f_sprite(void)
+{
+    static const uint8_t spr[16] = {0x50, 0x50, 0x50, 0x50, 0x50, 0x50, 0x50, 0x50,
+                                    0x50, 0x50, 0x50, 0x50, 0x50, 0x50, 0x50, 0x50};   /* a 1-unit column */
+    ec_gfx_blit4(spr, 2, 16, 30, 30, 0);
+}
+static void test_fine_check(void)
+{
+    CHECK(fine_of(f_bar1) == 1 && fine_of(f_rule1) == 1 && fine_of(f_frame1) == 4 && fine_of(f_gap1) == 2,
+          "the fine check finds a 1-unit bar (%d), rule (%d), outline (%d), fill run (%d)", fine_of(f_bar1),
+          fine_of(f_rule1), fine_of(f_frame1), fine_of(f_gap1));
+    CHECK(!fine_of(f_text) && !fine_of(f_ok) && !fine_of(f_sprite),
+          "the fine check passes text (%d), 2-unit lines and BG gaps (%d), a sprite (%d)", fine_of(f_text),
+          fine_of(f_ok), fine_of(f_sprite));
 }
 
 /* ------------------------------------------------------------------------------------------- the palette --- */
@@ -711,11 +762,8 @@ static void test_app(void)
     shot("shift_sticky");
     A->pn.shift_sticky = 0;
     A->fn = 0;
-    snprintf(A->e5.toast, sizeof A->e5.toast, "COPIED 4 STEPS");
-    A->e5.toast_ms = A->ms;
-    shot("toast");
-    A->e5.toast_keep = 1;
-    snprintf(A->e5.toast, sizeof A->e5.toast, "CLEAR?");
+    snprintf(A->msg, sizeof A->msg, "CLEAR?");                /* a question: in the header (0.6.1: no toast box) */
+    A->msg_ms = A->ms;
     A->e5.confirm = 1;
     shot("question");
     reset_state();
@@ -775,6 +823,9 @@ int main(int argc, char **argv)
         return 2;
     }
     g_png = argc > 2 ? argv[2] : 0;
+    g_who_dump = getenv("EC_GRID_DUMP") != 0;          /* every bad run, per CREAM frame (for finding them) */
+    if (g_who_dump)
+        printf("MAIN %p\n", (void *)main);
     ec_fs_native_root(argv[1], "elasticat");
     C = fm1core_get(FM1CORE_ABI);
     if (!C)
@@ -789,6 +840,7 @@ int main(int argc, char **argv)
               !ec_gfx_theme_name(6)[0],
           "the six themes");
     test_palette();
+    test_fine_check();
     for (t = 0; t < ec_gfx_themes(); t++) {
         int before = shots;
         g_theme = t;
@@ -804,7 +856,7 @@ int main(int argc, char **argv)
     CHECK(ec_gfx_theme() == EC_NTHEME - 1, "set_theme clamps");
     ec_gfx_set_theme(EC_TH_CREAM);
     C->shutdown();
-    printf("test_grid: %d frames (%d with param cells: the bar-area check), %d checks, %d failed\n", shots, fine_frames,
-           checks, fails);
+    printf("test_grid: %d frames, %d with the fine check (%d with param cells; %d MIX / CAT frames skipped), %d checks, "
+           "%d failed\n", shots, fine_frames, fine_cells, fine_skipped, checks, fails);
     return fails ? 1 : 0;
 }

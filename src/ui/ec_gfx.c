@@ -9,6 +9,31 @@
 #define H EC_GH
 
 static uint8_t g_cv[W * H];
+#ifdef EC_GFX_TEXT_MASK
+/* test builds: which canvas units the last drawing made text or a sprite (1: the 3x5 glyphs' strokes are 1 unit at
+ * scale 1 by design, the sprites are the owner's norns art as it is) and which anything else (0), for test_grid's
+ * hairline check */
+static uint8_t g_txt[W * H];
+static int g_in_text;
+const uint8_t *ec_gfx_text_mask(void) { return g_txt; }
+#define MARK(i, n) memset(g_txt + (i), g_in_text, (size_t)(n))
+#else
+#define MARK(i, n) ((void)0)
+#endif
+#ifdef EC_GFX_WHO
+/* debugging (-DEC_GFX_WHO): the outermost drawing call's return address per canvas unit (host/test_grid.c dumps it) */
+static void *g_who[W * H];
+static void *g_cur;
+static int g_depth;
+void *const *ec_gfx_who(void) { return g_who; }
+#define ENTER() (g_depth++ ? (void)0 : (void)(g_cur = __builtin_return_address(0)))
+#define LEAVE() ((void)g_depth--)
+#define WHO(i, n) do { int _k; for (_k = 0; _k < (n); _k++) g_who[(i) + _k] = g_cur; } while (0)
+#else
+#define ENTER() ((void)0)
+#define LEAVE() ((void)0)
+#define WHO(i, n) ((void)0)
+#endif
 static uint16_t *g_fb;
 static int g_theme = EC_TH_CREAM;
 
@@ -136,24 +161,43 @@ void ec_gfx_rect(int x, int y, int w, int h, int c)
         h = H - y;
     if (w <= 0 || h <= 0)
         return;
-    for (j = 0; j < h; j++)
+    ENTER();
+    for (j = 0; j < h; j++) {
         memset(g_cv + (y + j) * W + x, c & 15, (size_t)w);
+        MARK((y + j) * W + x, w);
+        WHO((y + j) * W + x, w);
+    }
+    LEAVE();
 }
 
-void ec_gfx_fill(int c) { memset(g_cv, c & 15, sizeof g_cv); }
+void ec_gfx_fill(int c)
+{
+    memset(g_cv, c & 15, sizeof g_cv);
+    MARK(0, W * H);
+}
 
 void ec_gfx_pixel(int x, int y, int c)
 {
-    if (x >= 0 && y >= 0 && x < W && y < H)
+    ENTER();
+    if (x >= 0 && y >= 0 && x < W && y < H) {
         g_cv[y * W + x] = (uint8_t)(c & 15);
+        MARK(y * W + x, 1);
+        WHO(y * W + x, 1);
+    }
+    LEAVE();
 }
+
+/* a 2x2 block at (x, y): the brush of lines and dots (no detail finer than 2 units, docs/UX-V2.md §7 / §10) */
+static void dot2(int x, int y, int c) { ec_gfx_rect(x, y, 2, 2, c); }
 
 void ec_gfx_frame(int x, int y, int w, int h, int c)
 {
-    ec_gfx_rect(x, y, w, 1, c);
-    ec_gfx_rect(x, y + h - 1, w, 1, c);
-    ec_gfx_rect(x, y, 1, h, c);
-    ec_gfx_rect(x + w - 1, y, 1, h, c);
+    ENTER();
+    ec_gfx_rect(x, y, w, 2, c);
+    ec_gfx_rect(x, y + h - 2, w, 2, c);
+    ec_gfx_rect(x, y, 2, h, c);
+    ec_gfx_rect(x + w - 2, y, 2, h, c);
+    LEAVE();
 }
 
 void ec_gfx_line(int x0, int y0, int x1, int y1, int c)
@@ -161,9 +205,10 @@ void ec_gfx_line(int x0, int y0, int x1, int y1, int c)
     const int dx = x1 > x0 ? x1 - x0 : x0 - x1, sx = x0 < x1 ? 1 : -1;
     const int dy = -(y1 > y0 ? y1 - y0 : y0 - y1), sy = y0 < y1 ? 1 : -1;
     int err = dx + dy;
+    ENTER();
     for (;;) {
         int e2;
-        ec_gfx_pixel(x0, y0, c);
+        dot2(x0, y0, c);
         if (x0 == x1 && y0 == y1)
             break;
         e2 = 2 * err;
@@ -176,19 +221,24 @@ void ec_gfx_line(int x0, int y0, int x1, int y1, int c)
             y0 += sy;
         }
     }
+    LEAVE();
 }
 
 void ec_gfx_dots_h(int x0, int x1, int y, int step, int c)
 {
     int x;
-    for (x = x0; x < x1; x += step > 0 ? step : 1)
-        ec_gfx_pixel(x, y, c);
+    ENTER();
+    for (x = x0; x + 1 < x1; x += step > 4 ? step : 4)
+        dot2(x, y, c);
+    LEAVE();
 }
 void ec_gfx_dots_v(int x, int y0, int y1, int step, int c)
 {
     int y;
-    for (y = y0; y < y1; y += step > 0 ? step : 1)
-        ec_gfx_pixel(x, y, c);
+    ENTER();
+    for (y = y0; y + 1 < y1; y += step > 4 ? step : 4)
+        dot2(x, y, c);
+    LEAVE();
 }
 
 void ec_gfx_dim(void)
@@ -198,19 +248,41 @@ void ec_gfx_dim(void)
         g_cv[i] = ec_pal_dim[g_cv[i] & 15];
 }
 
+/* art drawn pixel by pixel (the CAT): counts as a sprite for the tests' text / sprite mask */
+void ec_gfx_art(int on)
+{
+#ifdef EC_GFX_TEXT_MASK
+    g_in_text = on;
+#else
+    (void)on;
+#endif
+}
+
 void ec_gfx_blit4(const uint8_t *packed, int w, int h, int x, int y, int key)
 {
     int i, j;
+    ENTER();
+#ifdef EC_GFX_TEXT_MASK
+    g_in_text = 1;
+#endif
     for (j = 0; j < h; j++)
         for (i = 0; i < w; i++) {
             const int k = j * w + i, b = packed[k >> 1], v = k & 1 ? b & 15 : b >> 4;
             if (v != key)
                 ec_gfx_pixel(x + i, y + j, v);
         }
+#ifdef EC_GFX_TEXT_MASK
+    g_in_text = 0;
+#endif
+    LEAVE();
 }
 
 int ec_gfx_text(int x, int y, const char *s, int scale, int c)
 {
+#ifdef EC_GFX_TEXT_MASK
+    g_in_text = 1;
+#endif
+    ENTER();
     for (; *s; s++, x += 4 * scale) {
         const int g = ec_gfx_glyph(*s);
         int r, k;
@@ -221,6 +293,10 @@ int ec_gfx_text(int x, int y, const char *s, int scale, int c)
                 if (g >> (14 - (r * 3 + k)) & 1)
                     ec_gfx_rect(x + k * scale, y + r * scale, scale, scale, c);
     }
+    LEAVE();
+#ifdef EC_GFX_TEXT_MASK
+    g_in_text = 0;
+#endif
     return x;
 }
 

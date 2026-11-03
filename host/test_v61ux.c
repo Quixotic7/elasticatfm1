@@ -229,7 +229,7 @@ static void test_messages(void)
     run(30);
     wk(1, 0);
     run(30);
-    CHECK(!strcmp(hdr(&bar), "COPY STEP 1") && bar == EC_C_L12 && !A->e5.toast_ms, "copy: COPY STEP 1 in the header (%s)",
+    CHECK(!strcmp(hdr(&bar), "COPY STEP 1") && bar == EC_C_L12, "copy: COPY STEP 1 in the header (%s)",
           hdr(0));
     memcpy(with, draw(), sizeof with);
     CHECK(with[14] == EC_C_L12, "on the plain bar");
@@ -259,7 +259,6 @@ static void test_messages(void)
     btn(FM1P_B_GLO, 0);
     run(30);
     CHECK(strstr(hdr(0), "MEMORIZED") || strstr(hdr(0), "RECALL"), "SHIFT + B4: the header says it (%s)", hdr(0));
-    CHECK(!A->e5.toast_ms, "no toast");
 }
 
 /* ------------------------------------------------------------------------------------------- held keys --- */

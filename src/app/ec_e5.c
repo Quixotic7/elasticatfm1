@@ -2,7 +2,7 @@
 /* E5 on the panel (ec_e5app.h), as 0.6.0 keeps it (docs/UX-V2.md): the scene anchors' knob path (CROSSFADER's
  * B1 / B2 held + a knob, src/app/ec_xfd.c), undo / redo (SHIFT + F1 / F2), memorize / recall (SHIFT + B3 / B4, the
  * project as a record), pattern and project naming, F3's page keys, the slice pads' locks in LOOP ENGINE (hold pad(s)
- * + turn = slice lock; CHOK / SMUT cells = choke group / mute), step preview, toasts. 0.6.0 took out the scene row,
+ * + turn = slice lock; CHOK / SMUT cells = choke group / mute), step preview, header messages. 0.6.0 took out the scene row,
  * the copy / clear / paste scopes (now §2's one-step buffer, src/app/ec_clip.c) and the PAGE overlay. */
 #include <math.h>
 #include <stdio.h>
@@ -92,10 +92,6 @@ void ec_e5_tick(void)
 {
     if (E->preview && A->seq.playing)
         preview_stop();                          /* the transport owns playback now */
-    if (E->toast_ms && !E->toast_keep && A->ms - E->toast_ms > 900) {
-        E->toast_ms = 0;
-        A->redraw = 1;
-    }
 }
 
 /* ------------------------------------------------------------------------------------------- undo --- */
@@ -325,8 +321,6 @@ void ec_e5_answer(int yes)
     if (!E->confirm)
         return;
     E->confirm = 0;
-    E->toast_ms = 0;
-    E->toast_keep = 0;
     msg("CANCELLED");
     A->redraw = 1;
 }

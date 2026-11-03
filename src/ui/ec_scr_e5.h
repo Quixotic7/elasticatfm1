@@ -13,7 +13,7 @@ void ec_scr_e5_overlay(const ec_app_t *a);   /* drawn over every screen */
 /* from ec_screens.c */
 void ec_screens_header(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_screens_cells(const ec_app_t *a, const ec_page_t *pg);
-/* 0.3.0 (ec_scr_ux.c): a pop-up's two arrows (back, OK), 18 x 7 units from (x, y) in grid units (ec_kit_arrows at x + 1, y + 1) */
+/* 0.3.0 (ec_scr_ux.c): a pop-up's two arrows (back, OK), 18 x 6 units from (x, y) in grid units (ec_kit_arrows at x + 1, y + 1) */
 void ec_scr_arrows(int x, int y, int c);
 
 #endif

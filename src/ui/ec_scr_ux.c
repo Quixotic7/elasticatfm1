@@ -46,12 +46,14 @@ static void shift_map(const ec_app_t *a)
         if (i == sel) {
             R(EC_C_L15, x, 46, 12, 11);
             T(EC_C_BG, N[i], x + 6, 49, EC_AL_CENTER);
-        } else {
+        } else {                                     /* 0.6.1: a dim block, not a 1-unit frame */
             const int audible = i >= EC_NTRACK || ec_app_track_audible(a, i);
-            F(i < 6 && audible ? EC_C_L8 : EC_C_L5, x, 46, 12, 11);
+            if (i < 6 && audible)
+                R(EC_C_L3, x, 46, 12, 11);
             T(i < 6 && audible ? EC_C_L12 : EC_C_L8, N[i], x + 6, 49, EC_AL_CENTER);
         }
-        R(i == sel ? EC_C_L15 : EC_C_L5, x + 1, 62, (int)(10.0f * lv + 0.5f), 3);
+        if (lv > 0)
+            R(i == sel ? EC_C_L15 : EC_C_L5, x + 1, 62, (int)(10.0f * lv + 0.5f) < 2 ? 2 : (int)(10.0f * lv + 0.5f), 3);
     }
     memset(c, 0, sizeof c);
     c[0].label = "BPM", c[0].value = bpm, c[0].frac = (a->proj.bpm - 20.0f) / 280.0f;
@@ -115,7 +117,7 @@ static void takeover(const ec_app_t *a)
         big_text(v, 42, 22);
     for (i = 0; i < 24; i++) {                     /* the stripes */
         const int on = (float)i < u->to_frac * 24.0f + 0.01f || (i == 0 && u->to_frac > 0);
-        R(on ? EC_C_L15 : EC_C_L3, 4 + i * 4 + 4, 74, 3, 12);
+        R(on ? EC_C_L15 : EC_C_L3, 4 + i * 4 + 4, 74, 2, 12);   /* 0.6.1: 2-unit gaps */
     }
     if (u->to_kind == EC_TO_SAMPLE) {              /* the folder position, the load */
         const ec_slotrt_t *rt = &a->slot[ec_app_track_slot(a, a->track)];
@@ -151,13 +153,13 @@ static void f3_screen(const ec_app_t *a)
     ec_gfx_text_al(64, 20, b, 3, EC_C_L15, EC_AL_LEFT);
     if (a->seq.playing)                            /* the beat */
         R((a->seq.global_pos / 4) % 2 ? EC_C_L5 : EC_C_ACC, 54, 22, 4, 4);
-    R(EC_C_L3, 0, 37, W, 1);
+    R(EC_C_L3, 0, 36, W, 2);
     /* the pages: tap a key = edit it (bright), hold = in / out of the loop (filled), the playing one underlined */
     for (i = 0; i < 16; i++) {
         const int c = i % 8, row = i / 8, x = 2 + c * 14 + (c >= 4 ? 4 : 0), y = 41 + row * 16, w = 12, h = 13;
         snprintf(b, sizeof b, "%d", i + 1);
         if (i >= pages) {
-            R(EC_C_L3, x + w / 2 - 1, y + h / 2, 2, 1);
+            R(EC_C_L3, x + w / 2 - 1, y + h / 2, 2, 2);
             continue;
         }
         if (ec_e5_page_in_loop(&a->proj, a->track, i, pages)) {
@@ -167,8 +169,6 @@ static void f3_screen(const ec_app_t *a)
             F(i == a->step_page ? EC_C_L15 : EC_C_L5, x, y, w, h);
             T(i == a->step_page ? EC_C_L15 : EC_C_L5, b, x + w / 2, y + 4, EC_AL_CENTER);
         }
-        if (i == a->step_page)
-            R(EC_C_L15, x, y + h + 1, w, 1);
         if (i == ppage)
             R(EC_C_ACC, x, y + h - 2, w, 2);
     }

@@ -86,8 +86,8 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
                                     : !isd && !strcmp(a->pn.fdir, EC_PF_DIR) && !strcmp(name, ec_pf_name());
             const float sec = path ? known_len(a, path) : 0;
             fit(buf, sizeof buf, name, sec > 0 ? 20 : 26);
-            if (cur)
-                R(EC_C_L15, 0, y - 1, W, 7);
+            if (cur)                               /* 0.6.1: 2 units round the name */
+                R(EC_C_L15, 0, y - 2, W, 9);
             T(cur ? EC_C_BG : isd ? EC_C_L12 : EC_C_L8, buf, 6, y, EC_AL_LEFT);
             if (sec > 0) {
                 snprintf(r, sizeof r, "%.1fS", (double)sec);
@@ -96,7 +96,7 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
             if (pooled)
                 R(cur ? EC_C_BG : EC_C_ACC, 2, y + 1, 2, 3);
             if (cur && a->pn.pv_play && path && !strcmp(path, a->pn.pv_path))
-                R(EC_C_ACC, 0, y - 1, 2, 7);       /* previewing */
+                R(EC_C_ACC, 0, y - 2, 2, 9);       /* previewing */
         }
     } else
         T2(EC_C_L5, a->scanning || (!strcmp(a->pn.fdir, EC_PF_DIR) && ec_pf_list_busy()) ? "SCANNING"
@@ -184,8 +184,8 @@ void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg)
         const int set = fabsf(pos - sl->trim_start) < vw / 30.0f || fabsf(pos - sl->trim_end) < vw / 30.0f;
         R(set ? EC_C_ACC : EC_C_L5, 3 + i * 7, 64, 5, set ? 4 : 2);
     }
-    R(EC_C_L3, 2, 71, W - 4, 2);                   /* where the view sits in the file */
-    R(EC_C_L12, 2 + (int)(v0 * (float)(W - 4)), 71, clampi((int)(vw * (float)(W - 4) + 0.5f), 1, W - 4), 2);
+    R(EC_C_L3, 2, 69, W - 4, 2);                   /* where the view sits in the file */
+    R(EC_C_L12, 2 + (int)(v0 * (float)(W - 4)), 69, clampi((int)(vw * (float)(W - 4) + 0.5f), 2, W - 4), 2);
     ec_scr_cells(a, pg);
 }
 
@@ -244,9 +244,9 @@ void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg)
         if (tracks[s]) {
             for (k = 0; k < EC_NTRACK; k++)        /* T1..T6 */
                 R(tracks[s] >> k & 1u ? (on ? EC_C_BG : k == a->track && !a->bus ? EC_C_ACC : EC_C_L15)
-                                      : on ? EC_C_L12 : EC_C_L3, 97 + k * 4, y, 2, 5);   /* (the selected: ACC) */
+                                      : on ? EC_C_L12 : EC_C_L3, 98 + k * 4, y, 2, 5);   /* (the selected: ACC) */
         } else if (locks[s])
-            R(EC_C_LOCK, 97, y, 22, 5);            /* only a step lock plays it */
+            R(EC_C_LOCK, 98, y, 22, 5);            /* only a step lock plays it */
     }
 }
 
@@ -273,7 +273,7 @@ void ec_scr_sampler(const ec_app_t *a)
         const int y = 22 + ch * 13;
         T2(EC_C_L8, ch ? "R" : "L", 2, y, EC_AL_LEFT);
         for (i = 0; i < 24; i++)
-            R(i < lit ? (i >= 18 ? EC_C_ACC : EC_C_L15) : EC_C_L3, 12 + i * 4 + (i / 6), y, 3, 10);
+            R(i < lit ? (i >= 18 ? EC_C_ACC : EC_C_L15) : EC_C_L3, 12 + i * 4 + (i / 6), y, 2, 10);   /* 2-unit gaps */
     }
     {
         const uint32_t bar = (uint32_t)floor(4.0 * 60.0 * EC_FS / (a->seq.bpm > 1 ? a->seq.bpm : a->proj.bpm) + 0.5);
@@ -281,7 +281,7 @@ void ec_scr_sampler(const ec_app_t *a)
         const int cur = bar ? (int)(rc->n / bar) : 0;
         if (armed || run) {                        /* armed: a blinking dot; taking: the dot lit */
             const int c = run || ((a->ms / 250) & 1u) ? EC_C_ACC : EC_C_L5;
-            R(c, 4, 52, 6, 6), R(c, 3, 53, 8, 4), R(c, 5, 51, 4, 8);
+            R(c, 3, 53, 8, 4), R(c, 5, 51, 4, 8);  /* 0.6.1: corners cut in 2-unit steps */
             T2(c, armed ? "ARMED" : "REC", 14, 50, EC_AL_LEFT);
             /* taking: the take's bar; armed while playing: the song's bar it starts on (the next) */
             snprintf(buf, sizeof buf, "BAR %d", run ? cur + 1 : (int)floor(ec_seq_song_beats(&a->seq) / 4.0) + 2);

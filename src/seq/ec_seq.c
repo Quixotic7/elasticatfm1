@@ -1154,11 +1154,28 @@ void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
     if (pressed) {
         ec_event_t e = ev0(EC_EV_NOTE_ON, t);
         st->live_pitch = v[EC_P_PITCH] + semis;
+        st->live_semis = semis;
         st->live_pitch_on = 1;
+        st->kb_down++;
         e.length = 0;
         emit(s, &e);
-    } else
+        if (!s->playing) {                         /* 0.6.1: stopped: the loop itself, from its start, while held */
+            e = ev0(EC_EV_LOOP_KEY, t);
+            e.slice = 0;
+            e.value = 1.0f;
+            e.flags = EC_TF_AUDITION;
+            emit(s, &e);
+        }
+    } else {
         st->live_pitch_on = 0;
+        st->kb_down = st->kb_down > 0 ? st->kb_down - 1 : 0;
+        if (!st->kb_down) {                        /* the last key up: the audition ends (a no-op when none) */
+            ec_event_t e = ev0(EC_EV_LOOP_KEY, t);
+            e.slice = 0;
+            e.value = 0.0f;
+            emit(s, &e);
+        }
+    }
     st->dirty = 1;
 }
 
@@ -1173,8 +1190,8 @@ int ec_seq_track_slot(const ec_seq_t *s, int t)
 float ec_seq_value(const ec_seq_t *s, int t, int id)
 {
     const ec_seq_track_t *st = &s->tr[t];
-    if (id == EC_P_PITCH && st->live_pitch_on)
-        return st->live_pitch;
+    if (id == EC_P_PITCH && st->live_pitch_on)   /* 0.6.1: the track's PITCH now + the key (PITCH turned while held) */
+        return ptr(s, t)->v[EC_P_PITCH] + st->live_semis;
     if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END)
         return st->hold_val[id];
     {

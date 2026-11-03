@@ -150,6 +150,12 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
             c[i].flags |= EC_KC_SOME;
         if ((it->flags & EC_IF_STOPPED) && a->seq.playing)
             c[i].flags |= EC_KC_DIM;
+        /* 0.6.0 (the mocks): a live value in the accent: PATTERN LAUNCH's NEXT while one is queued, KEYBOARD's target
+         * step, the crossfader while it glides */
+        if ((it->kind == EC_IT_UX && it->id == EC_UX_NEXT && a->seq.pending >= 0) ||
+            (it->kind == EC_IT_UX && it->id == EC_UX_TARGET && a->pn.target) ||
+            (it->kind == EC_IT_E5 && it->id == EC_X_XFD && a->e5.gliding))
+            c[i].flags |= EC_KC_ACC;
         if (it->kind == EC_IT_PARAM && !a->settings && (marks = ec_mk_marks(it->id)) != 0) {
             mark_text(marks, mk[i], sizeof mk[i]);
             c[i].mark = mk[i];
@@ -172,34 +178,46 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
     ec_kit_cells(c, nl, lane);
 }
 
-/* the stages (EC_KIT_ST_*) the active lane's knobs edit, for the envelope bars */
+/* a param's envelope stage (EC_KIT_ST_*), 0 none */
+static unsigned stage_of(int id)
+{
+    switch (id) {
+    case EC_P_FENV_ATTACK:
+    case EC_P_ENV_ATTACK:
+    case EC_P_MENV_ATTACK: return EC_KIT_ST_A;
+    case EC_P_FENV_DECAY:
+    case EC_P_ENV_DECAY:
+    case EC_P_MENV_DECAY: return EC_KIT_ST_D;
+    case EC_P_FENV_SUSTAIN:
+    case EC_P_ENV_SUSTAIN:
+    case EC_P_MENV_SUSTAIN: return EC_KIT_ST_S;
+    case EC_P_FENV_HOLD:
+    case EC_P_ENV_HOLD: return EC_KIT_ST_H;
+    case EC_P_FENV_RELEASE:
+    case EC_P_ENV_RELEASE:
+    case EC_P_MENV_RELEASE: return EC_KIT_ST_R;
+    default: return 0;
+    }
+}
+
+/* the envelope's selected stage (norns' draw_envelope_bars: the stages the knobs edit, bright): the stage of the value
+ * knob turned last among this lane's stage cells; none turned yet: every stage the lane edits */
 static unsigned hot_stages(const ec_app_t *a, const ec_page_t *pg)
 {
     const int lane = ec_app_lane(a, pg);
-    unsigned hot = 0;
+    unsigned hot = 0, last = 0;
+    uint32_t last_ms = 0;
     int i;
     for (i = lane * 4; i < lane * 4 + 4 && i < pg->n; i++) {
-        if (pg->it[i].kind != EC_IT_PARAM)
+        const uint32_t t = a->ux.knob_ms[EC_E_K1 + i - lane * 4];
+        unsigned st;
+        if (pg->it[i].kind != EC_IT_PARAM || !(st = stage_of(pg->it[i].id)))
             continue;
-        switch (pg->it[i].id) {
-        case EC_P_FENV_ATTACK:
-        case EC_P_ENV_ATTACK:
-        case EC_P_MENV_ATTACK: hot |= EC_KIT_ST_A; break;
-        case EC_P_FENV_DECAY:
-        case EC_P_ENV_DECAY:
-        case EC_P_MENV_DECAY: hot |= EC_KIT_ST_D; break;
-        case EC_P_FENV_SUSTAIN:
-        case EC_P_ENV_SUSTAIN:
-        case EC_P_MENV_SUSTAIN: hot |= EC_KIT_ST_S; break;
-        case EC_P_FENV_HOLD:
-        case EC_P_ENV_HOLD: hot |= EC_KIT_ST_H; break;
-        case EC_P_FENV_RELEASE:
-        case EC_P_ENV_RELEASE:
-        case EC_P_MENV_RELEASE: hot |= EC_KIT_ST_R; break;
-        default: break;
-        }
+        hot |= st;
+        if (t && t >= last_ms)
+            last_ms = t, last = st;
     }
-    return hot;
+    return last ? last : hot;
 }
 
 /* ------------------------------------------------------------------------------------------- waveform --- */
@@ -407,7 +425,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     switch (pg->pic) {
     case EC_PIC_WAVE: fit(left, sizeof left, file_name(a), 20); break;
     case EC_PIC_WAVE_MACHINE: snprintf(left, sizeof left, "%s", ec_machine_name(mach)); break;
-    case EC_PIC_WAVE_WARP: snprintf(left, sizeof left, "%s", ec_warp_name(iv(v, EC_P_MODE))); break;
+    case EC_PIC_WAVE_WARP: fit(left, sizeof left, file_name(a), 20); break;   /* the warp: on the right */
     default: snprintf(left, sizeof left, "RANGE"); break;
     }
     if (mach == EC_MACH_NEIGHBOR)   /* E3 */
@@ -415,14 +433,21 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     if (mach == EC_MACH_INPUT)      /* E6 */
         snprintf(left, sizeof left, "INPUT");
     T(EC_C_L15, left, 2, 13, EC_AL_LEFT);
-    if (pg->pic == EC_PIC_WAVE_WARP) {   /* E3: only the spectral budget falls back (to tape) */
+    if (pg->pic == EC_PIC_WAVE_WARP && mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {
+        /* WARP: the warp's short name on the right (the mock's "GRAIN"); E3: only the spectral budget falls back (to
+         * tape): then TAPE in the accent */
         ec_track_status_t st;
         ec_dsp_track_status(a->dsp, a->track, &st);
         if (!st.mode_implemented)
-            T(EC_C_ACC, "TAPE", 2 + TW(left) + 4, 13, EC_AL_LEFT);
+            T(EC_C_ACC, "TAPE", W - 2, 13, EC_AL_RIGHT);
+        else {
+            ec_param_format(EC_P_MODE, v[EC_P_MODE], 3, r, sizeof r);
+            T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
+        }
+    } else {
+        snprintf(r, sizeof r, "%d", (int)floorf(sl->bpm + 0.5f));
+        T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     }
-    snprintf(r, sizeof r, "%d", (int)floorf(sl->bpm + 0.5f));
-    T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     sample_area(a, 22, 58);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
         key_ruler(a, 66);                          /* 0.6.0: LOOP ENGINE's white keys play the loop */
@@ -495,9 +520,10 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     switch (a->cat) {
     case EC_CAT_TRIG: {
         const int hs = ec_app_held_step(a);
-        if (hs >= 0)
-            snprintf(left, sizeof left, "STEP %d  %d LOCKS", hs + 1,
-                     a->proj.pat[a->proj.current].tr[a->track].steps[hs].nlock);
+        if (hs >= 0) {
+            const int nl = a->proj.pat[a->proj.current].tr[a->track].steps[hs].nlock;
+            snprintf(left, sizeof left, "STEP %d  %d LOCK%s", hs + 1, nl, nl == 1 ? "" : "S");
+        }
         else
             snprintf(left, sizeof left, "%s  LEN %d  %s", ec_machine_name(iv(v, EC_P_MACHINE)),
                      ec_seq_pattern_steps(&a->seq, a->track), ec_rate_label(iv(v, EC_P_RATE)));

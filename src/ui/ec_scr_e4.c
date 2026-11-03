@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* E4 screens: the visual above the cells on the FX pages (per machine: delay taps, reverb decay, dynamics with the
- * live gain reduction, crushed waves, sweeps, EQ bands), SENDS (levels + the tap point), and MOD (LFO shapes with the
- * live value, the mod envelope, velocity, the macros and their matrix). On the 120x120 grid in palette slots (ec_gfx.h). */
+/* E4 screens: the picture above the cells on the FX pages (0.6.0: the track's FX chain, the approved mock's slot list),
+ * SENDS (levels + the tap point), and MOD (LFO shapes with the live value, the mod envelope, velocity, the macros and
+ * their matrix). On the 120x120 grid in palette slots (ec_gfx.h). */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -43,317 +43,48 @@ static void trace(const float *y, int n, float x0, float x1, int c)
     }
 }
 
-static const float BEATS[16] = {0.125f, 1.f / 6, 0.25f, 1.f / 3, 0.375f, 0.5f, 2.f / 3, 0.75f,
-                                1.f,    4.f / 3, 1.5f, 2.f,     3.f,    4.f,  8.f,     16.f};
-
-/* ------------------------------------------------------------------------------------------- FX visuals --- */
+/* ------------------------------------------------------------------------------------------- the visuals' area --- */
 #define VX0 3
 #define VX1 108
 #define VT 34
 #define VB 70
 
-static void vis_delay(const ec_app_t *a, int m)
-{
-    const int tid = m == EC_FX_DELAY ? EC_P_DELAY_TIME : EC_P_ECHO_TIME;
-    const float tb = BEATS[(opt(a, tid) < 1 ? 1 : opt(a, tid) > 15 ? 15 : opt(a, tid)) - 1];
-    const float fb = clampf(amt(a, EC_P_DELAY_FEEDBACK), 0, 0.95f);
-    const float tone = m == EC_FX_DELAY ? amt(a, EC_P_DELAY_TONE) : amt(a, EC_P_ECHO_TONE);
-    const float span = 8.0f, px = (VX1 - VX0) / span, mid = (VT + VB) / 2.0f, hh = (VB - VT) / 2.0f;
-    const int echo = m == EC_FX_ECHO;
-    const float off = echo ? powf(2.0f, bip(a, EC_P_ECHO_OFFSET)) : 1.0f;   /* linexp -1..1 -> 0.5..2 */
-    const int ping = echo && opt(a, EC_P_ECHO_MODE) == 2;
-    int b, k;
-    for (b = 0; b <= 8; b++)
-        R(b % 4 == 0 ? EC_C_L5 : EC_C_L3, VX0 + (int)(b * px), VB + 1, 1, 2);
-    R(EC_C_L15, VX0, (int)(mid - hh), 2, (int)(2 * hh));
-    for (k = 1; k < 64; k++) {
-        const float g = powf(fb, (float)(k - 1)), h = hh * g;
-        const int c = tone > 0.5f ? EC_C_L12 : EC_C_L8;
-        const float xl = VX0 + k * tb * px, xr = VX0 + k * tb * off * px;
-        if (h < 0.5f || (xl > VX1 && xr > VX1))
-            break;
-        if (!echo) {
-            if (xl <= VX1)
-                R(k == 1 ? EC_C_ACC : c, (int)xl, (int)(mid - h), 2, (int)(2 * h) < 1 ? 1 : (int)(2 * h));
-        } else {                                /* L taps up, R taps down; ping-pong alternates the sides */
-            const int up = !ping || (k & 1);
-            if (xl <= VX1)
-                R(k == 1 ? EC_C_ACC : c, (int)xl, up ? (int)(mid - h) : (int)mid, 2, (int)h < 1 ? 1 : (int)h);
-            if (xr <= VX1)
-                R(c, (int)xr, up ? (int)mid : (int)(mid - h), 2, (int)h < 1 ? 1 : (int)h);
-        }
-    }
-    if (m == EC_FX_TAPE_ECHO) {                 /* the wobble: a wavy rule */
-        float y[40];
-        int i;
-        const float w = amt(a, EC_P_TAPE_WOW), f = amt(a, EC_P_TAPE_FLUTTER);
-        for (i = 0; i < 40; i++)
-            y[i] = VT - 2 + 2.0f * w * sinf(i * 0.35f) + f * sinf(i * 2.1f);
-        trace(y, 40, VX0, VX1, EC_C_L5);
-    }
-}
-
-static void vis_reverb(const ec_app_t *a, int m)
-{
-    const float size = amt(a, EC_P_REVERB_SIZE), damp = amt(a, EC_P_REVERB_DAMP);
-    float tau, pre = 0;
-    int c, freeze = 0;
-    if (m == EC_FX_BLACKHOLE) {
-        const float g = amt(a, EC_P_BH_GRAVITY);
-        freeze = g > 0.995f;
-        tau = 0.15f + 0.85f * (0.5f + size) * g * g;
-        pre = amt(a, EC_P_BH_PREDELAY) * 0.15f;
-    } else
-        tau = 0.08f + 0.5f * size;
-    for (c = 0; c <= VX1 - VX0; c++) {
-        const float x = (float)c / (VX1 - VX0), t = x - pre;
-        float e, eh;
-        int h, hh2;
-        if (t < 0)
-            continue;
-        e = freeze ? 0.8f : expf(-t / tau) * (t < 0.02f ? t / 0.02f : 1.0f);
-        eh = e * expf(-t * damp * 6.0f);       /* the damped highs */
-        h = (int)(e * (VB - VT));
-        hh2 = (int)(eh * (VB - VT));
-        if (h > 0)
-            R((c & 1) ? EC_C_L5 : EC_C_L3, VX0 + c, VB - h, 1, h);
-        if (hh2 > 0)
-            R(EC_C_L12, VX0 + c, VB - hh2, 1, 1);
-    }
-    R(EC_C_ACC, VX0 + (int)(pre * (VX1 - VX0)), VT, 1, VB - VT);
-}
-
-/* COMP / LIMIT / DUCK: the static curve (comp / limit) + the live input and gain reduction */
-static void vis_dyn(const ec_app_t *a, int m, const ec_fx_meter_t *mt)
-{
-    const float x0 = VX0, s = (float)(VB - VT);
-    float thr_db = -99, slope = 1, gain_db = 0;
-    int c;
-    if (m == EC_FX_COMP) {
-        thr_db = 20.0f * log10f(0.02f + amt(a, EC_P_COMP_THRESH) * 0.98f);
-        {
-            const float r = amt(a, EC_P_COMP_RATIO);
-            slope = r <= 0.001f ? 1.0f : powf(0.05f, (r - 0.001f) / 0.999f);
-        }
-    } else if (m == EC_FX_LIMIT) {
-        thr_db = -12.0f + 12.0f * amt(a, EC_P_LIMIT_CEIL);
-        slope = 0;
-        gain_db = 18.0f * amt(a, EC_P_LIMIT_GAIN);
-    }
-    if (m != EC_FX_DUCK) {                      /* transfer: in -48..0 dB across, out -48..0 dB up */
-        R(EC_C_L3, (int)x0, VT, 1, (int)s);
-        R(EC_C_L3, (int)x0, VB, (int)s, 1);
-        for (c = 0; c < (int)s; c++) {
-            const float in = -48.0f + 48.0f * c / s + gain_db;
-            float out = in > thr_db ? thr_db + (in - thr_db) * slope : in;
-            int y;
-            out = clampf(out, -48, 0);
-            y = VB - (int)((out + 48.0f) / 48.0f * s);
-            R(EC_C_L12, (int)x0 + c, y, 1, 1);
-        }
-        if (thr_db > -48)
-            R(EC_C_ACC, (int)x0 + (int)((thr_db - gain_db + 48.0f) / 48.0f * s), VT, 1, (int)s);
-        if (mt->valid) {                       /* the live input on the curve */
-            const float in = clampf(mt->key_db, -48, 0);
-            R(EC_C_L15, (int)x0 + (int)((in + 48.0f) / 48.0f * s) - 1, VB - 3, 2, 3);
-        }
-    }
-    {   /* meters: IN (key) and GR (down from the top, accent) */
-        const int mx = m == EC_FX_DUCK ? 20 : 54;
-        const float in = mt->valid ? clampf((mt->key_db + 48.0f) / 48.0f, 0, 1) : 0;
-        const float gr = mt->valid ? clampf(-mt->gr_db / 24.0f, 0, 1) : 0;
-        int k;
-        T(EC_C_L8, "IN", mx, VT, EC_AL_LEFT);
-        R(EC_C_L3, mx + 12, VT + 1, 40, 4);
-        R(EC_C_L12, mx + 12, VT + 1, (int)(in * 40), 4);
-        T(EC_C_L8, "GR", mx, VT + 12, EC_AL_LEFT);
-        R(EC_C_L3, mx + 12, VT + 13, 40, 4);
-        R(EC_C_ACC, mx + 52 - (int)(gr * 40), VT + 13, (int)(gr * 40), 4);
-        for (k = 0; k <= 4; k++)
-            R(EC_C_L5, mx + 12 + k * 10, VT + 18, 1, 1);
-        if (mt->valid) {
-            char b[16];
-            snprintf(b, sizeof b, "%.1fDB", (double)mt->gr_db);
-            T2(gr > 0.02f ? EC_C_ACC : EC_C_L8, b, mx + 52, VT + 24, EC_AL_RIGHT);
-        }
-    }
-}
-
-/* LOFI / DESTROY: a sine through the hold + the quantizer (+ fold / saturation) */
-static void vis_crush(const ec_app_t *a, int m)
-{
-    float y[106];
-    const int n = 106;
-    float holds, levels, drive = 0, fold = 0, sat = 0;
-    int i;
-    if (m == EC_FX_LOFI) {
-        const float hz = 1000.0f * powf(48.0f, val(a, EC_P_LOFI_RATE) / 127.0f);
-        const float bits = 1.0f + val(a, EC_P_LOFI_BITS) / 127.0f * 23.0f;
-        holds = clampf(hz / 400.0f, 3, 106);
-        levels = powf(2.0f, clampf(bits - 1.0f, 0, 6));
-    } else {
-        const float crush = amt(a, EC_P_DESTROY_CRUSH), srr = amt(a, EC_P_DESTROY_SRR);
-        holds = clampf(106.0f * powf(1.0f / 30.0f, srr), 3, 106);
-        levels = powf(2.0f, clampf(5.0f * (1.0f - crush) + 1.0f, 1, 6));
-        drive = amt(a, EC_P_FX_DRIVE), fold = amt(a, EC_P_DESTROY_FOLD), sat = amt(a, EC_P_DESTROY_SAT);
-    }
-    for (i = 0; i < n; i++) {
-        const float t = floorf((float)i * holds / n) / holds;
-        float x = 0.9f * sinf(6.2831853f * 2.0f * t);
-        if (drive > 0)
-            x = tanhf(x * (1 + drive * 24));
-        if (fold > 0) {
-            x *= 1 + fold * 6;
-            while (x > 1 || x < -1)
-                x = x > 1 ? 2 - x : -2 - x;
-        }
-        if (sat > 0)
-            x = tanhf(x * (1 + sat * 14));
-        x = floorf(x * levels * 0.5f + 0.5f) / (levels * 0.5f);
-        y[i] = (VT + VB) / 2.0f - clampf(x, -1, 1) * (VB - VT) / 2.0f;
-    }
-    ec_gfx_dots_h(VX0, VX1, (VT + VB) / 2, 2, EC_C_L3);
-    for (i = 0; i + 1 < n; i++) {
-        R(EC_C_L12, VX0 + i, (int)y[i], 1, 1);
-        if (fabsf(y[i + 1] - y[i]) >= 1)
-            LINE(EC_C_L8, VX0 + i + 1, y[i], VX0 + i + 1, y[i + 1]);
-    }
-}
-
-/* CHORUS / FLANGER / PHASER / RINGS / CASSETTE / MOTION: a sweep */
-static void vis_sweep(const ec_app_t *a, int m)
-{
-    float y[106], y2[106];
-    const int n = 106;
-    const float mid = (VT + VB) / 2.0f, hh = (VB - VT) / 2.0f;
-    int i, two = 0;
-    for (i = 0; i < n; i++) {
-        const float x = (float)i / (n - 1);
-        float v = 0, v2 = 0;
-        switch (m) {
-        case EC_FX_CHORUS:
-        case EC_FX_FLANGER:
-        case EC_FX_PHASER: {
-            const float cyc = 1 + 5 * amt(a, EC_P_MODFX_RATE), d = 0.15f + 0.85f * amt(a, EC_P_MODFX_DEPTH);
-            v = d * sinf(6.2831853f * cyc * x);
-            if (m == EC_FX_CHORUS) {
-                v2 = d * sinf(6.2831853f * cyc * x + amt(a, EC_P_CHORUS_WIDTH) * 3.14159f);
-                two = 1;
-            }
-        } break;
-        case EC_FX_RINGS: {
-            const float f = fabsf(bip(a, EC_P_RINGS_FREQ));
-            v = sinf(6.2831853f * 2 * x) * sinf(6.2831853f * (3 + 30 * f) * x) * 0.9f;
-        } break;
-        case EC_FX_CASSETTE: {
-            const float w = amt(a, EC_P_TAPE_WOW), f = amt(a, EC_P_TAPE_FLUTTER);
-            v = 0.7f * sinf(6.2831853f * 3 * x + w * 1.5f * sinf(6.2831853f * x) + f * 0.6f * sinf(80 * x));
-        } break;
-        default: {                               /* MOTION: L / R gains over two cycles */
-            const int sh = opt(a, EC_P_MOTION_SHAPE);
-            const float ph = 2 * x - floorf(2 * x);
-            const float lfo = sh == 3 ? (ph < 0.5f ? 1.f : 0.f)
-                              : sh == 2 ? 1 - fabsf(2 * ph - 1) : 0.5f + 0.5f * sinf(6.2831853f * ph);
-            const float tr = 1 - amt(a, EC_P_MOTION_TREM) * lfo, pn = amt(a, EC_P_MOTION_PAN);
-            v = tr * (1 - pn * lfo) * 2 - 1;
-            v2 = tr * (1 - pn * (1 - lfo)) * 2 - 1;
-            two = 1;
-        } break;
-        }
-        y[i] = mid - v * hh;
-        y2[i] = mid - v2 * hh;
-    }
-    ec_gfx_dots_h(VX0, VX1, (int)mid, 2, EC_C_L3);
-    if (two)
-        trace(y2, n, VX0, VX1, EC_C_L8);
-    trace(y, n, VX0, VX1, EC_C_L12);
-    if (m == EC_FX_PHASER) {                    /* the notches: one per two stages */
-        const int st = opt(a, EC_P_PHASER_STAGES), cn = amt(a, EC_P_PHASER_CENTER) * (VX1 - VX0);
-        int k;
-        for (k = 0; k < (st + 1) / 2; k++)
-            R(EC_C_ACC, VX0 + (int)(cn * (k + 1) / ((st + 1) / 2 + 1) * 1.6f) % (VX1 - VX0), VB + 1, 2, 2);
-    }
-    if (m == EC_FX_CASSETTE && amt(a, EC_P_CASS_NOISE) > 0) {
-        uint32_t r = 0x2468ACEu;
-        int k, cnt = (int)(amt(a, EC_P_CASS_NOISE) * 60);
-        for (k = 0; k < cnt; k++) {
-            r = r * 1664525u + 1013904223u;
-            R(EC_C_L5, VX0 + (int)(r >> 8) % (VX1 - VX0), VT + (int)(r >> 20) % (VB - VT), 1, 1);
-        }
-    }
-}
-
-static void vis_eq(const ec_app_t *a)
-{
-    const float xl = 0.15f + 0.25f * amt(a, EC_P_EQ_XLOW), xh = 0.55f + 0.3f * amt(a, EC_P_EQ_XHI);
-    const float g[3] = {1 + bip(a, EC_P_EQ_LOW), 1 + bip(a, EC_P_EQ_MID), 1 + bip(a, EC_P_EQ_HIGH)};
-    const float e[4] = {0, xl, xh, 1};
-    const float unity = VB - (VB - VT) / 2.0f;
-    int b;
-    for (b = 0; b < 3; b++) {
-        const int x0 = VX0 + (int)(e[b] * (VX1 - VX0)) + 1, x1 = VX0 + (int)(e[b + 1] * (VX1 - VX0)) - 1;
-        const int h = (int)(g[b] / 2.0f * (VB - VT));
-        R(g[b] < 0.02f ? EC_C_ACC : EC_C_L5, x0, VB - (h > 0 ? h : 1), x1 - x0, h > 0 ? h : 1);
-        R(EC_C_L12, x0, VB - h, x1 - x0, 1);
-    }
-    ec_gfx_dots_h(VX0, VX1, (int)unity, 2, EC_C_L8);
-}
-
-static void fx_visual(const ec_app_t *a, int m, const ec_fx_meter_t *mt)
-{
-    switch (m) {
-    case EC_FX_DELAY:
-    case EC_FX_ECHO:
-    case EC_FX_TAPE_ECHO: vis_delay(a, m); break;
-    case EC_FX_REVERB:
-    case EC_FX_BLACKHOLE: vis_reverb(a, m); break;
-    case EC_FX_COMP:
-    case EC_FX_LIMIT:
-    case EC_FX_DUCK: vis_dyn(a, m, mt); break;
-    case EC_FX_LOFI:
-    case EC_FX_DESTROY: vis_crush(a, m); break;
-    case EC_FX_DJ_EQ: vis_eq(a); break;
-    case EC_FX_NONE:
-        ec_gfx_dots_h(VX0, VX1, (VT + VB) / 2, 3, EC_C_L5);
-        break;
-    default: vis_sweep(a, m); break;
-    }
-}
-
-static void level_bar(float pk, int x, int top, int bot)
-{
-    const int h = (int)(clampf(pk, 0, 1) * (bot - top));
-    R(EC_C_L3, x, top, 2, bot - top);
-    R(pk > 0.89f ? EC_C_ACC : EC_C_L12, x, bot - h, 2, h);
-}
-
+/* FX (0.6.0, the approved mock): the four FX slots of the selected track's chain, one a row: the slot (INSERT, SEND 1,
+ * SEND 2, MASTER; there is one insert per track), its engine big, its mix as a bar (the insert's FX MIX, the track's
+ * send levels, the master bus's FX MIX); the slot the page edits highlighted. An engine swap still fading: an accent
+ * notch under its name. */
 static void fx_page(const ec_app_t *a, const ec_page_t *pg)
 {
     static const char *const SLOT[4] = {"INSERT", "SEND 1", "SEND 2", "MASTER"};
-    const int m = opt(a, EC_P_FX_MACHINE);
-    ec_fx_meter_t mt;
-    float pk;
-    int running;
-    memset(&mt, 0, sizeof mt);
-    if (pg->busv) {
-        ec_bus_status_t bs;
-        ec_dsp_bus_status(a->dsp, pg->busv - 1, &bs);
-        mt = bs.fx_meter;
-        pk = bs.peak_l > bs.peak_r ? bs.peak_l : bs.peak_r;
-        running = bs.fx_running;
-    } else {
-        ec_track_status_t st;
-        ec_dsp_track_status(a->dsp, a->track, &st);
-        mt = st.fx_meter;
-        pk = st.peak_l > st.peak_r ? st.peak_l : st.peak_r;
-        running = st.fx_running;
+    const float *tv = a->proj.pat[a->proj.current].tr[a->track].v;
+    int i;
+    for (i = 0; i < 4; i++) {
+        const int y = 12 + i * 15, on = i == pg->busv;
+        const int m = (int)floorf((i ? a->proj.bus[i - 1][EC_P_FX_MACHINE] : tv[EC_P_FX_MACHINE]) + 0.5f);
+        const float mix = i == 0 ? tv[EC_P_FX_MIX] : i < 3 ? tv[i == 1 ? EC_P_SEND1 : EC_P_SEND2]
+                                                           : a->proj.bus[2][EC_P_FX_MIX];
+        int running = m;
+        if (on)
+            R(EC_C_L3, 0, y, W, 13);
+        T(on ? EC_C_L15 : EC_C_L8, SLOT[i], 3, y + 4, EC_AL_LEFT);
+        T2(m == EC_FX_NONE ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, m == EC_FX_NONE ? "--" : ec_fx_short_name(m), 34,
+           y + 2, EC_AL_LEFT);
+        if (on) {
+            if (pg->busv) {
+                ec_bus_status_t bs;
+                ec_dsp_bus_status(a->dsp, pg->busv - 1, &bs);
+                running = bs.fx_running;
+            } else {
+                ec_track_status_t st;
+                ec_dsp_track_status(a->dsp, a->track, &st);
+                running = st.fx_running;
+            }
+        }
+        if (running != m)                          /* the swap fade in progress */
+            R(EC_C_ACC, 34, y + 12, 6, 1);
+        R(EC_C_L5, 100, y + 6, 17, 1);
+        R(on ? EC_C_ACC : EC_C_L12, 100, y + 5, (int)(17.0f * clampf(mix / 127.0f, 0, 1) + 0.5f), 3);
     }
-    T(EC_C_L8, SLOT[pg->busv], 2, 13, EC_AL_LEFT);
-    T2(m == EC_FX_NONE ? EC_C_L5 : EC_C_L15, ec_fx_name(m), 2, 20, EC_AL_LEFT);
-    if (running != m)                           /* the swap fade in progress */
-        R(EC_C_ACC, 2, 31, 6, 1);
-    fx_visual(a, m, &mt);
-    level_bar(pk, W - 6, VT, VB);
 }
 
 static void sends_page(const ec_app_t *a)

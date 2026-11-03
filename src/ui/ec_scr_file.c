@@ -218,17 +218,16 @@ void ec_scr_sampler(const ec_app_t *a)
             const int c = run || ((a->ms / 250) & 1u) ? EC_C_ACC : EC_C_L5;
             R(c, 4, 52, 6, 6), R(c, 3, 53, 8, 4), R(c, 5, 51, 4, 8);
             T2(c, armed ? "ARMED" : "REC", 14, 50, EC_AL_LEFT);
-            snprintf(buf, sizeof buf, "BAR %d", cur + 1);
-            if (run)
+            /* taking: the take's bar; armed while playing: the song's bar it starts on (the next) */
+            snprintf(buf, sizeof buf, "BAR %d", run ? cur + 1 : (int)floor(ec_seq_song_beats(&a->seq) / 4.0) + 2);
+            if (run || a->seq.playing)
                 T2(EC_C_L15, buf, W - 2, 50, EC_AL_RIGHT);
         } else
             T2(EC_C_L5, rc->takes ? "READY" : "B11 ARMS", 14, 50, EC_AL_LEFT);
-        for (i = 0; i < 8; i++) {                  /* the take's bars (FREE: the bars taken so far) */
+        for (i = 0; i < 8; i++) {                  /* the take's bars: the length lit (FREE: all 8), taking: done / now */
             const int want = bars ? i < bars : 1;
             const int done = run && i < cur, now = run && i == cur;
-            if (!want && !done)
-                continue;
-            R(done ? EC_C_L12 : now ? EC_C_ACC : EC_C_L3, 3 + i * 15, 66, 13, 4);
+            R(done ? EC_C_L12 : now ? EC_C_ACC : want ? (run ? EC_C_L5 : EC_C_L12) : EC_C_L3, 3 + i * 15, 66, 13, 4);
         }
     }
     ec_app_page(a, &pg);

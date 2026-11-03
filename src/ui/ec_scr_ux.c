@@ -34,10 +34,7 @@ static void shift_map(const ec_app_t *a)
     int i;
     R(EC_C_BG, 0, 0, W, H);
     ec_screens_header(a, "SHIFT", 0, "");
-    if (fabsf(a->proj.bpm - floorf(a->proj.bpm + 0.5f)) < 0.05f)
-        snprintf(bpm, sizeof bpm, "%d", (int)floorf(a->proj.bpm + 0.5f));
-    else
-        snprintf(bpm, sizeof bpm, "%.1f", (double)a->proj.bpm);
+    snprintf(bpm, sizeof bpm, "%.1f", (double)a->proj.bpm);   /* the mock's 120.0: the tenths SELECT sets */
     snprintf(sw, sizeof sw, "%d", (int)floorf(a->proj.swing + 0.5f));
     T(EC_C_L8, "BPM", 3, 14, EC_AL_LEFT);
     ec_gfx_text_al(3, 21, bpm, 3, EC_C_L15, EC_AL_LEFT);

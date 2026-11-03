@@ -310,5 +310,7 @@ void ec_scr_modes_overlay(const ec_app_t *a)
         return;
     roles = ec_pn_roles(mode, &cur);
     ec_gfx_dim();
-    ec_kit_popup(ec_mode_name(mode), ec_pn_page_name(mode), roles, cur);
+    /* a name too long for scale 2 (PATTERN LAUNCH): the mode's short tag big (the mock's PATTERNS) */
+    ec_kit_popup(mode < EC_NCAT && ec_gfx_text_w(ec_mode_name(mode), 2) > 106 ? ec_cat_tag(mode) : ec_mode_name(mode),
+                 ec_pn_page_name(mode), roles, cur);
 }

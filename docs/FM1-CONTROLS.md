@@ -22,7 +22,7 @@ Words used here:
 
 | Button | Mode(s), in tap order | Tapped again | Hold 0.4 s | SHIFT + |
 |---|---|---|---|---|
-| FX | FX | the next FX page (on a bus: back to the track's pages) | FX settings | FX settings |
+| FX | FX | the next FX page (INSERT, SENDS, S1, S2, MST, MIX, then INSERT again) | FX settings | FX settings |
 | SEL | FILTER | the next page | filter settings | filter settings |
 | ENV | AMP | the next page | amp settings | amp settings |
 | LFO | MODULATION | the next page | (none: NO SETTINGS) | (none) |
@@ -46,7 +46,7 @@ The other controls:
 | White keys | the selected track's steps (most modes; see each mode) |
 | Black keys | per mode |
 | MASTER | master volume |
-| SEL | the page's lanes, on into the next page (lists, the browser, the MATRIX row: see the modes) |
+| SEL | the mode's page list, both ways, stopping at its ends (lists, the browser, the MATRIX row: see the modes) |
 | ALGO | the step page (1-16, 17-32 ...); KEYBOARD: the target step |
 | PRESETS | the track's pool slot |
 | K1-K4 | the page's four values |
@@ -71,8 +71,23 @@ These hold in every mode unless the mode says otherwise.
 
 ### Knobs
 
-- **K1-K4** change the page's four values. A page with more than four has **lanes**: SEL steps the lanes and runs on
-  into the next page, so SEL alone reaches everything in a mode.
+- **K1-K4** change the page's four values. A page with more than four has **lanes** (the header's box: P1, P2 ..).
+- **One page list per mode** (0.6.2): every mode's pages, lanes and knob pages included, are one ordered list.
+  **SEL walks it both ways** and stops at its first and last page (no wrap), so turning back always returns the way
+  it came and SEL alone reaches everything in a mode. **A page key jumps to its group's first page; tapped again
+  there it steps through the group's pages** (the same ones SEL passes), back to the first after the last. Nothing
+  is reachable only by a key. The lists, as built (track selected):
+  - TRIG: TRIG P1, TRIG P2 (B1), COND (B2), PLAYHEAD (B3)
+  - LOOP ENGINE: LOOP P1, LOOP P2 (B1), MACHINE (B2), WARP (B3), RANGE (B4); the warp page's lanes follow the warp
+  - FILTER: FILTER (B1; lanes by filter machine), FILTER ENV (B2), MIX (B3)
+  - AMP: AMP P1, AMP P2 (B1), AMP ENV (B2), MOD ENV P1, MOD ENV P2 (B3)
+  - FX: INS 1 P1, INS 1 P2 .., INS 2 P1 .. (B1), SENDS (B2), S1 .. (B3), S2 .. (B4), MST .. (B5), MIX (B11); the
+    insert and bus pages as many as their effect's params need
+  - MODULATION: MATRIX (B1, AT), LFO 1 (B6), LFO 2 (B7), VELOCITY (B9), MACROS (B11), MACRO 1-4 (B2-B5)
+  - MIX: TRACK MIX P1, P2, MASTER (no page keys: the black keys are the rates; MST selected shows MASTER)
+  - FILE: BROWSE (B3), EDITOR P1, P2 (B4), RAZOR P1, P2 (B5), POOL (B6)
+  - PATTERN LAUNCH: the banks A-D (B1-B4); CROSSFADER, KEYBOARD, PAGES, SAMPLER: one page
+  - With a bus selected, the modes that show the bus's page list only its lanes.
 - **Lists** (0.6.1: APP SETTINGS, the record settings, every mode's settings, the recorder's setup): **SEL moves the
   one selected row, K1 changes its value**; K2-K4 do nothing there. The SETUP rows in the tables below are the list's
   rows in order (their KNOB columns are the 0.6.0 layout). A row whose label and value don't fit on one line shows the
@@ -226,19 +241,22 @@ patterns (PATTERN LAUNCH's white keys).
 |---|---|---|---|---|---|---|---|---|---|---|
 | page 1 (hold: quick setting) | page 2 | page 3 | page 4 | page 5 | LFO 1 | LFO 2 | MOD ENV | VEL | AT | the mode's special key |
 
-- **B1-B5 open the mode's pages** (the "Key" column of the tables below). A key with no page is dark.
+- **B1-B5 open the mode's pages** (the "Key" column of the tables below); tapped again on their page, they step
+  through its lanes / knob pages (0.6.2). A key with no page is dark.
 - **Hold B1 = the quick setting**, changed with K1 or SEL while held: FILTER the filter type, AMP the envelope mode.
 - **Hold menus** (0.6.1) in FX and LOOP ENGINE: holding the key (400 ms, or at once with SEL / K1) shows a list of
   one setting's values over the screen, the header saying what the key does; SEL or K1 moves the cursor, letting go
-  picks (nothing changes if the cursor never moved). A tap still opens the key's page.
+  picks (nothing changes if the cursor never moved). A tap still opens the key's page (or steps its group).
   - LOOP ENGINE: B1 LOOP = loop mode (the slice play mode on slice machines, else the chop loop mode), B2 MACHINE =
     machine, B3 WARP = warp mode (STOP FIRST while playing), B4 RANGE = voice mode (MONO / POLY), B5 = ADVANCE
     (hold only).
   - FX: B1 = the selected insert's effect type, B3 / B4 / B5 = S1's / S2's / the master's.
 - **FX INSERT** (0.6.1): two inserts per track, INS 1 then INS 2 in series (an empty slot costs nothing). The page
   lists both (the engine, its MIX bar), the buses' engines and the **load meter** (the cart's counted load: 100 % =
-  the hosts' 2x real-time budget). **SEL picks INS 1 / INS 2**; K1-K3 are its params, **K4 always its MIX**; an
-  effect with more than three params has more knob pages: **tap B1 again** (header P1, P2, P3). INS 2's params
+  the hosts' 2x real-time budget). K1-K3 are the insert's params, **K4 always its MIX**; an effect with more than
+  three params has more knob pages. 0.6.2: **INS 1 P1, INS 1 P2 .., INS 2 P1 .. are pages of FX's list**: SEL walks
+  them (and on to SENDS), B1 jumps to INS 1 P1 and tapped again steps INS 1 P2 .. INS 2 P1 .. and back to INS 1 P1;
+  the header shows the insert and its place (FX/INS 2, P2). INS 2's params
   follow its machine (a new type starts from that type's defaults; one UNDO takes the pick back).
 - **B6-B10 are the sources.** Hold one + turn any value knob = route that source to that param:
   - the first detent puts the route in a matrix slot (that source's slot on that param, else the first free one);

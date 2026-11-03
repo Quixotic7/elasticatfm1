@@ -991,13 +991,6 @@ void ec_app_load_file(int s, const char *path)
     mark_dirty();
 }
 
-static int page_lanes(void)
-{
-    ec_page_t pg;
-    ec_app_page(A, &pg);
-    return ec_ux_lanes(pg.n);
-}
-
 void ec_app_set_page(int c, int page)
 {
     A->page[c] = page;
@@ -1010,26 +1003,8 @@ void ec_app_goto(int c, int page)
     ec_pn_goto(c, page);
 }
 
-/* SELECT: the next lane, on past the last into the next page (and back: the previous page's last lane) */
-void ec_app_lane_step(int d)
-{
-    const int c = A->cat;
-    const int np = ec_cat_pages(c, ec_app_params(A));
-    for (; d > 0; d--) {
-        if (UX->lane[c] + 1 < page_lanes())
-            UX->lane[c]++;
-        else
-            ec_app_set_page(c, (A->page[c] + 1) % np);
-    }
-    for (; d < 0; d++) {
-        if (UX->lane[c] > 0)
-            UX->lane[c]--;
-        else {
-            ec_app_set_page(c, (A->page[c] + np - 1) % np);
-            UX->lane[c] = page_lanes() - 1;
-        }
-    }
-}
+/* SELECT: 0.6.2, the mode's page list (ec_nav.c): lanes and pages, both ways, no wrap */
+void ec_app_lane_step(int d) { ec_nav_sel(d); }
 
 /* ------------------------------------------------------------------------------------------- mute / solo --- */
 int ec_app_track_audible(const ec_app_t *a, int t)

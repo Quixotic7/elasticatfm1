@@ -59,7 +59,7 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
     double lo, hi;
     int k;
     snprintf(r, sizeof r, "ZOOM %dX", ec_rzui.zoom);
-    ec_scr_header(a, "FILE/RAZOR", 2, r);
+    ec_scr_header_page(a, "FILE/RAZOR", 2, r);
     snprintf(t, sizeof t, "SLICE %02d/%02d", sel, count);
     T(razor ? EC_C_L15 : EC_C_L8, t, 2, 13, EC_AL_LEFT);
     snprintf(r, sizeof r, "SNAP %s", ec_rzui_snap_name(rz->snap));

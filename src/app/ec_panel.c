@@ -219,13 +219,8 @@ static void mode_tap(int b)
             for (i = 0; i < n && modes[i] != cur; i++)
                 ;
             ec_pn_enter(modes[(i + 1) % n]);
-        } else if (cur < EC_NCAT) {
-            if (cur == EC_CAT_FX && A->bus) {      /* FX on a bus: back to the track's pages */
-                A->bus = 0;
-                ec_app_set_page(cur, 0);
-            } else
-                ec_app_set_page(cur, (A->page[cur] + 1) % ec_cat_pages(cur, ec_app_params(A)));
-        }
+        } else if (cur < EC_NCAT)
+            ec_nav_next_group(cur);                /* 0.6.2: the next group of the page list (wraps) */
         A->redraw = 1;
         return;
     }
@@ -881,28 +876,22 @@ static void select_knob(int d)
     case EC_MODE_PAGES:
     case EC_MODE_SAMPLER:
     case EC_CAT_XFD: return;
-    case EC_CAT_PAT:                               /* the bank */
-        P->bank = clampi(P->bank + (d > 0 ? 1 : -1), 0, EC_NBANK - 1);
-        A->redraw = 1;
-        return;
+    case EC_CAT_PAT: ec_nav_sel(d > 0 ? 1 : -1); return;   /* the bank (B1..B4 its keys) */
     default: break;
     }
-    if (ec_src_insert_page()) {
-        ec_src_select(d);                          /* 0.6.1: FX's INSERT page: SEL picks INS 1 / INS 2 */
-    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
+    /* 0.6.2: SEL walks the mode's page list (ec_nav.c), both ways, no wrap; the lists keep SEL for their rows */
+    if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
         ec_file_select(d);                         /* the browser: the cursor (folders, files) */
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_POOL) {
         ec_file_pool_select(d);                    /* 0.6.1: POOL: the slot */
     } else if (mode == EC_CAT_FILE) {
-        ec_app_lane_step(d > 0 ? 1 : -1);          /* 0.6.1: EDITOR, RAZOR: the page (a lane), one a turn */
+        ec_nav_sel(d > 0 ? 1 : -1);                /* 0.6.1: EDITOR, RAZOR: one page a turn */
     } else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX) {
-        if (!ec_mk_select(d))                      /* 0.5.0: the MATRIX page's row, then on to the next page */
-            ec_app_lane_step(d > 0 ? 1 : -1);
-    } else {
-        ec_app_lane_step(d);
-        if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX)
-            A->mk.row = d < 0 ? 7 : 0;             /* (onto MATRIX backwards: its last row) */
-    }
+        const int row = A->mk.row;
+        if (!ec_mk_select(d) && !ec_nav_sel(d > 0 ? 1 : -1))   /* 0.5.0: the rows, then on to the next page */
+            A->mk.row = row;                       /* (the list's end: the row stays) */
+    } else
+        ec_nav_sel(d);
 }
 
 static void knob(int r, int d)
@@ -1042,8 +1031,9 @@ void ec_pn_tick(const void *vin)
                 white_down(k, lo, in->key_vel[k], in->key_lean[k]);
             else if (up >= 0)
                 black_down(k, up + 1, in->key_vel[k]);
-            if (P->src_key || P->slot_key)         /* (a key during a hold: the hold was used) */
-                P->bk_used |= P->bk_held;
+            if (P->src_key || P->slot_key)         /* (a key during a hold: the hold was used; 0.6.2: not the key
+                                                      itself, so a quick-setting key's tap still steps its group) */
+                P->bk_used |= (uint16_t)(P->bk_held & ~(up >= 0 && lo < 0 ? 1u << up : 0u));
             A->redraw = 1;
         }
         if (in->key_up >> k & 1u) {

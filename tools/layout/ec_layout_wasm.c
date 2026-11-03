@@ -205,6 +205,32 @@ static int jstr(char *o, int n, int cap, const char *s)
 
 #define OPT(v, id) ((int)((v)[id] + 0.5f))
 
+/* 0.6.0: the loaded layout's modes as the firmware reads them (ec_pages.h): JSON [{mode, name, tag, button, order,
+ * keys: [the page each black key B1..B11 opens, -1 none], bus: [the bus each key targets, 0 none]}] */
+API const char *lw_modes(void)
+{
+    int n = 0, m, k;
+    const int cap = (int)sizeof g_out;
+    n += snprintf(g_out + n, (size_t)(cap - n), "[");
+    for (m = 0; m < EC_NMODE && n < cap - 200; m++) {
+        n += snprintf(g_out + n, (size_t)(cap - n), "%s{\"mode\":%d,\"name\":", m ? "," : "", m);
+        n = jstr(g_out, n, cap, ec_mode_name(m));
+        n += snprintf(g_out + n, (size_t)(cap - n), ",\"tag\":");
+        n = jstr(g_out, n, cap, m < EC_NCAT ? ec_cat_tag(m) : "");
+        n += snprintf(g_out + n, (size_t)(cap - n), ",\"button\":%d,\"order\":%d,\"keys\":[", ec_mode_button(m),
+                      ec_mode_order(m));
+        for (k = 1; k <= EC_NBKEY; k++)
+            n += snprintf(g_out + n, (size_t)(cap - n), "%s%d", k > 1 ? "," : "", ec_cat_key_page(m, k));
+        n += snprintf(g_out + n, (size_t)(cap - n), "],\"bus\":[");
+        for (k = 1; k <= EC_NBKEY; k++)
+            n += snprintf(g_out + n, (size_t)(cap - n), "%s%d", k > 1 ? "," : "", ec_cat_key_bus(m, k));
+        n += snprintf(g_out + n, (size_t)(cap - n), "]}");
+    }
+    if (n < cap)
+        snprintf(g_out + n, (size_t)(cap - n), "]");
+    return g_out;
+}
+
 /* the panel's state and the page shown: JSON */
 API const char *lw_state(void)
 {
@@ -223,7 +249,10 @@ API const char *lw_state(void)
                   OPT(v, EC_P_ENV_MODE), OPT(v, EC_P_FX_MACHINE), OPT(ec_app.proj.bus[0], EC_P_FX_MACHINE),
                   OPT(ec_app.proj.bus[1], EC_P_FX_MACHINE), OPT(ec_app.proj.bus[2], EC_P_FX_MACHINE));
     n = jstr(g_out, n, cap, pg.title);
-    n += snprintf(g_out + n, (size_t)(cap - n), ",\"items\":[");
+    n += snprintf(g_out + n, (size_t)(cap - n), ",\"mode\":");          /* 0.6.0: the mode, the page's black key */
+    n = jstr(g_out, n, cap, ec_cat_name(ec_app.cat));
+    n += snprintf(g_out + n, (size_t)(cap - n), ",\"key\":%d,\"items\":[",
+                  ec_app.settings ? 0 : ec_cat_page_key(ec_app.cat, ec_app.page[ec_app.cat]));
     for (i = 0; i < pg.n && n < cap - 64; i++) {
         char val[24];
         const ec_item_t *it = &pg.it[i];

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* E5's screens (ec_scr_e5.h; 0.3.0: the PAGE overlay became F3, src/ui/ec_scr_ux.c), in the mockup's 120x120 grid at scale EC_U, palette as ec_screens.c. */
+/* E5's screens (ec_scr_e5.h; 0.3.0: the PAGE overlay became F3, src/ui/ec_scr_ux.c), on the 120x120 grid in palette slots (ec_gfx.h). */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,10 +10,10 @@
 
 #define W EC_GW
 #define H EC_GH
-#define R(c, x, y, w, h) ec_gfx_rect(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define F(c, x, y, w, h) ec_gfx_frame(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define T(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), EC_U, (c), (al))
-#define T2(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), 2 * EC_U, (c), (al))
+#define R(c, x, y, w, h) ec_gfx_rect((x), (y), (w), (h), (c))
+#define F(c, x, y, w, h) ec_gfx_frame((x), (y), (w), (h), (c))
+#define T(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 1, (c), (al))
+#define T2(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 2, (c), (al))
 #define TW(s) (ec_gfx_text_w((s), 1))
 
 static int iv(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
@@ -109,7 +109,7 @@ static void morph_list(const ec_app_t *a, int y0, int rows)
         T(EC_C_L8, b, W - 2, y0 + rows * 8, EC_AL_RIGHT);
     }
     if (!total)
-        ec_gfx_dots_h(EC_U * 2, EC_U * (W - 2), EC_U * (y0 + 12), 2 * EC_U, EC_U, EC_C_L3);
+        ec_gfx_dots_h(2, W - 2, y0 + 12, 2, EC_C_L3);
 }
 
 static void scene_screen(const ec_app_t *a)
@@ -145,7 +145,7 @@ static void name_screen(const ec_app_t *a)
         b[1] = 0;
         if (cur)
             R(EC_C_L3, x - 1, 21, 7, 14);
-        ec_gfx_text_al(EC_U * (x + 3), EC_U * 23, b, 2 * EC_U, cur ? EC_C_ACC : EC_C_L15, EC_AL_CENTER);
+        ec_gfx_text_al(x + 3, 23, b, 2, cur ? EC_C_ACC : EC_C_L15, EC_AL_CENTER);
         R(cur ? EC_C_ACC : EC_C_L3, x, 35, 5, cur ? 2 : 1);
     }
     p = strchr(set, e->name[e->name_cur]);
@@ -196,7 +196,7 @@ static void toast(const ec_app_t *a)
     const int big = (int)strlen(s) <= 13;
     const int w = (big ? 2 * TW(s) : TW(s)) + 8, h = big ? 16 : 11;
     const int x = (W - w) / 2, y = 54;
-    const uint16_t bg = a->e5.toast_keep ? EC_C_ACC : EC_C_L15;
+    const int bg = a->e5.toast_keep ? EC_C_ACC : EC_C_L15;
     R(EC_C_BG, x - 1, y - 1, w + 2, h + 2);
     R(bg, x, y, w, h);
     if (big)

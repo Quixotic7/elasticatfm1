@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* 0.3.0's screens (src/ui/ec_scr_ux.c): F3 (tempo, swing, the pattern's length and rate, the pages), the held-step
- * frame, the knob takeover (a value big for a second; PRESETS' sample name), SHIFT's map, the pop-up arrows. */
+/* 0.3.0's screens (src/ui/ec_scr_ux.c): F3 (tempo, swing, the pattern's length and rate, the pages), the knob
+ * takeover (a value big for a second; PRESETS' sample name), SHIFT's map, the pop-up arrows. */
 #ifndef EC_SCR_UX_H
 #define EC_SCR_UX_H
 

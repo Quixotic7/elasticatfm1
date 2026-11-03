@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* 0.3.0's screens (ec_scr_ux.h), in the mockup's 120x120 grid at scale EC_U, palette as ec_screens.c: cream for
+/* 0.3.0's screens (ec_scr_ux.h), on the 120x120 grid in palette slots (ec_gfx.h): cream for
  * what is active, grey for the rest, orange for locks and the playhead. Pictures, not hints: no text but values. */
 #include <math.h>
 #include <stdio.h>
@@ -9,141 +9,59 @@
 #include "ec_loader.h"
 #include "ec_scr_e5.h"
 #include "ec_scr_ux.h"
+#include "ec_ui_kit.h"
 
 #define W EC_GW
 #define H EC_GH
-#define R(c, x, y, w, h) ec_gfx_rect(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define F(c, x, y, w, h) ec_gfx_frame(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define T(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), EC_U, (c), (al))
-#define T2(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), 2 * EC_U, (c), (al))
+#define R(c, x, y, w, h) ec_gfx_rect((x), (y), (w), (h), (c))
+#define F(c, x, y, w, h) ec_gfx_frame((x), (y), (w), (h), (c))
+#define T(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 1, (c), (al))
+#define T2(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 2, (c), (al))
 #define TW(s) (ec_gfx_text_w((s), 1))
-#define LN(c, x0, y0, x1, y1) ec_gfx_line(EC_U * (x0), EC_U * (y0), EC_U * (x1), EC_U * (y1), (c))
 
 /* ------------------------------------------------------------------------------------------- icons --- */
-/* a left-pointing triangle (back) and a right-pointing one (OK), 7 units high */
-static void tri(int x, int y, int left, uint16_t c)
-{
-    int k;
-    for (k = 0; k < 4; k++)
-        R(c, left ? x + k : x + 3 - k, y + 3 - k, 1, 1 + 2 * k);
-}
-
-void ec_scr_arrows(int x, int y, uint16_t c)
-{
-    tri(x + 1, y + 1, 1, c);
-    R(c, x + 4, y + 3, 3, 1);                      /* back: an arrow left */
-    tri(x + 12, y + 1, 0, c);
-    R(c, x + 9, y + 3, 3, 1);                      /* OK: an arrow right */
-}
-
-static void ic_box_arrow(int x, int y, int down, uint16_t c)   /* memorize (into the box) / recall (out of it) */
-{
-    F(c, x, y + 3, 7, 4);
-    R(c, x + 3, y, 1, 4);
-    if (down)
-        R(c, x + 2, y + 2, 3, 1);
-    else
-        R(c, x + 2, y + 1, 3, 1);
-}
-static void ic_copy(int x, int y, uint16_t c)
-{
-    F(c, x, y, 5, 5);
-    F(c, x + 2, y + 2, 5, 5);
-}
-static void ic_paste(int x, int y, uint16_t c)
-{
-    F(c, x, y + 1, 7, 6);
-    R(c, x + 2, y, 3, 2);
-    R(c, x + 2, y + 3, 3, 1);
-}
-static void ic_tap(int x, int y, uint16_t c)
-{
-    F(c, x, y, 7, 7);
-    R(c, x + 2, y + 2, 3, 3);
-}
-static void ic_lock(int x, int y, uint16_t c)
-{
-    R(c, x, y + 3, 7, 4);
-    F(c, x + 1, y, 5, 4);
-}
-static void ic_pencil(int x, int y, uint16_t c)
-{
-    LN(c, x, y + 6, x + 6, y);
-    LN(c, x + 1, y + 6, x + 6, y + 1);
-    R(c, x, y + 5, 2, 2);
-}
-static void ic_undo(int x, int y, int redo, uint16_t c)
-{
-    tri(redo ? x + 4 : x, y, !redo, c);
-    R(c, redo ? x : x + 3, y + 3, 4, 1);
-    R(c, redo ? x : x + 6, y + 3, 1, 4);
-}
-static void ic_stop(int x, int y, uint16_t c)
-{
-    R(c, x, y, 1, 7);
-    R(c, x + 2, y + 1, 5, 5);
-}
-static void ic_save(int x, int y, uint16_t c)
-{
-    R(c, x, y, 7, 7);
-    R(EC_C_BG, x + 2, y + 1, 3, 2);
-    R(EC_C_BG, x + 1, y + 4, 5, 2);
-}
-static void ic_grid(int x, int y, uint16_t c)
-{
-    R(c, x, y, 3, 3), R(c, x + 4, y, 3, 3), R(c, x, y + 4, 3, 3), R(c, x + 4, y + 4, 3, 3);
-}
-static void ic_snap(int x, int y, uint16_t c)
-{
-    int k;
-    R(c, x, y + 6, 7, 1);
-    for (k = 0; k < 4; k++)
-        R(c, x + k * 2, y + (k & 1 ? 3 : 0), 1, k & 1 ? 3 : 6);
-}
-static void ic_setup(int x, int y, uint16_t c)     /* a list */
-{
-    R(c, x, y, 7, 1), R(c, x, y + 3, 7, 1), R(c, x, y + 6, 7, 1);
-    R(c, x, y, 1, 7);
-}
+void ec_scr_arrows(int x, int y, int c) { ec_kit_arrows(x + 1, y + 1, c); }
 
 /* ------------------------------------------------------------------------------------------- SHIFT's map --- */
-/* the panel drawn small: the eleven upper keys, then the buttons and knobs SHIFT gives a job, each with its icon;
- * the keys without a job are dark (FIZZ: only SHIFT's keys light) */
+/* SHIFT held alone (the mock's SHIFT): BPM (SELECT) and swing (ALGORITHM) big, the track keys W1..W9 with their
+ * levels, and the cells: BPM, SWING, the track (PRESETS), the snap of the value knobs */
 static void shift_map(const ec_app_t *a)
 {
+    static const char *const N[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
+    const int sel = a->bus ? EC_NTRACK - 1 + a->bus : a->track;
+    static char bpm[12], sw[8];
+    ec_kit_cell_t c[4];
     int i;
-    R(EC_C_BG, 0, 10, W, H - 10);
-    for (i = 0; i < EC_NUPPER; i++) {
-        const int x = 1 + i * 108 / 10, y = 14;
-        const uint16_t c = EC_C_L15;
-        switch (i) {
-        case 0: F(c, x, y, 9, 14), ic_box_arrow(x + 1, y + 5, 1, c); break;
-        case 1: F(c, x, y, 9, 14), ic_box_arrow(x + 1, y + 5, 0, a->e5.memo_ok ? c : EC_C_L5); break;
-        case 6: F(c, x, y, 9, 14), ic_copy(x + 1, y + 5, c); break;
-        case 7: F(c, x, y, 9, 14), ic_paste(x + 1, y + 5, a->e5.clip_pat.ok ? c : EC_C_L5); break;
-        case 8: F(c, x, y, 9, 14), ic_tap(x + 1, y + 5, c); break;
-        case 9: F(c, x, y, 9, 14), ic_lock(x + 1, y + 5, a->fill_latched ? EC_C_ACC : c); break;
-        case 10: F(c, x, y, 9, 14), ic_pencil(x + 1, y + 5, c); break;
-        default: R(EC_C_L3, x + 2, y + 6, 5, 2); break;
+    R(EC_C_BG, 0, 0, W, H);
+    ec_screens_header(a, "SHIFT", 0, "");
+    if (fabsf(a->proj.bpm - floorf(a->proj.bpm + 0.5f)) < 0.05f)
+        snprintf(bpm, sizeof bpm, "%d", (int)floorf(a->proj.bpm + 0.5f));
+    else
+        snprintf(bpm, sizeof bpm, "%.1f", (double)a->proj.bpm);
+    snprintf(sw, sizeof sw, "%d", (int)floorf(a->proj.swing + 0.5f));
+    T(EC_C_L8, "BPM", 3, 14, EC_AL_LEFT);
+    ec_gfx_text_al(3, 21, bpm, 3, EC_C_L15, EC_AL_LEFT);
+    T(EC_C_L8, "SWING", W - 3, 14, EC_AL_RIGHT);
+    ec_gfx_text_al(W - 3, 21, sw, 3, EC_C_L15, EC_AL_RIGHT);
+    for (i = 0; i < 9; i++) {                        /* the track keys W1..W9 */
+        const int x = 3 + i * 13;
+        const float lv = a->meter[i] > 1 ? 1 : a->meter[i];
+        if (i == sel) {
+            R(EC_C_L15, x, 46, 12, 11);
+            T(EC_C_BG, N[i], x + 6, 49, EC_AL_CENTER);
+        } else {
+            const int audible = i >= EC_NTRACK || ec_app_track_audible(a, i);
+            F(i < 6 && audible ? EC_C_L8 : EC_C_L5, x, 46, 12, 11);
+            T(i < 6 && audible ? EC_C_L12 : EC_C_L8, N[i], x + 6, 49, EC_AL_CENTER);
         }
+        R(i == sel ? EC_C_L15 : EC_C_L5, x + 1, 62, (int)(10.0f * lv + 0.5f), 3);
     }
-    /* the buttons: OCT- undo, OCT+ redo, PLAY stop, REC save; the categories' setup */
-    {
-        const int y = 36;
-        F(EC_C_L15, 2, y, 18, 14), ic_undo(7, y + 4, 0, a->e5.undo.n ? EC_C_L15 : EC_C_L5);
-        F(EC_C_L15, 22, y, 18, 14), ic_undo(27, y + 4, 1, a->e5.undo.nr ? EC_C_L15 : EC_C_L5);
-        F(EC_C_L15, 58, y, 18, 14), ic_stop(64, y + 4, EC_C_L15);
-        F(EC_C_L15, 78, y, 18, 14), ic_save(84, y + 4, a->dirty ? EC_C_ACC : EC_C_L15);
-        F(EC_C_L8, 100, y, 18, 14), ic_setup(106, y + 4, EC_C_L8);
-    }
-    /* the knobs: PRESETS the pattern, the value knobs snap */
-    {
-        const int y = 56;
-        F(EC_C_L15, 2, y, 18, 14), ic_grid(7, y + 4, EC_C_L15);
-        for (i = 0; i < 4; i++)
-            F(EC_C_L15, 40 + i * 20, y, 18, 14), ic_snap(46 + i * 20, y + 4, EC_C_L15);
-    }
-    R(EC_C_L3, 0, 74, W, 1);
+    memset(c, 0, sizeof c);
+    c[0].label = "BPM", c[0].value = bpm, c[0].frac = (a->proj.bpm - 20.0f) / 280.0f;
+    c[1].label = "SWING", c[1].value = sw, c[1].frac = a->proj.swing / 100.0f;
+    c[2].label = "TRACK", c[2].value = N[sel], c[2].frac = (float)sel / 8.0f, c[2].flags = EC_KC_ACC;
+    c[3].label = "SNAP", c[3].value = "K1-K4";
+    ec_kit_cells(c, 1, 0);
 }
 
 /* ------------------------------------------------------------------------------------------- the takeover --- */
@@ -155,7 +73,7 @@ static void big_text(const char *s, int y, int h)
         if (TW(s) * sc <= W - 6 && 5 * sc <= h)
             break;
     if (sc >= 2) {
-        ec_gfx_text_al(EC_U * (W / 2), EC_U * (y - 5 * sc / 2), s, EC_U * sc, EC_C_L15, EC_AL_CENTER);
+        ec_gfx_text_al(W / 2, y - 5 * sc / 2, s, sc, EC_C_L15, EC_AL_CENTER);
         return;
     }
     {
@@ -176,8 +94,8 @@ static void big_text(const char *s, int y, int h)
         snprintf(b, sizeof b, "%s", s + cut + (s[cut] == '_' || s[cut] == ' ' ? 1 : 0));
         sc = TW(a) > TW(b) ? TW(a) : TW(b);
         sc = sc * 2 <= W - 6 ? 2 : 1;
-        ec_gfx_text_al(EC_U * (W / 2), EC_U * (y - 6 * sc), a, EC_U * sc, EC_C_L15, EC_AL_CENTER);
-        ec_gfx_text_al(EC_U * (W / 2), EC_U * (y + sc), b, EC_U * sc, EC_C_L15, EC_AL_CENTER);
+        ec_gfx_text_al(W / 2, y - 6 * sc, a, sc, EC_C_L15, EC_AL_CENTER);
+        ec_gfx_text_al(W / 2, y + sc, b, sc, EC_C_L15, EC_AL_CENTER);
     }
 }
 
@@ -230,10 +148,10 @@ static void f3_screen(const ec_app_t *a)
     else
         snprintf(b, sizeof b, "%.1f", (double)a->proj.bpm);
     T(EC_C_L8, "BPM", 3, 13, EC_AL_LEFT);
-    ec_gfx_text_al(EC_U * 3, EC_U * 20, b, 3 * EC_U, EC_C_L15, EC_AL_LEFT);
+    ec_gfx_text_al(3, 20, b, 3, EC_C_L15, EC_AL_LEFT);
     T(EC_C_L8, "SWNG", 64, 13, EC_AL_LEFT);
     snprintf(b, sizeof b, "%d%%", (int)floorf(a->proj.swing + 0.5f));
-    ec_gfx_text_al(EC_U * 64, EC_U * 20, b, 3 * EC_U, EC_C_L15, EC_AL_LEFT);
+    ec_gfx_text_al(64, 20, b, 3, EC_C_L15, EC_AL_LEFT);
     if (a->seq.playing)                            /* the beat */
         R((a->seq.global_pos / 4) % 2 ? EC_C_L5 : EC_C_ACC, 54, 22, 4, 4);
     R(EC_C_L3, 0, 37, W, 1);
@@ -276,9 +194,4 @@ void ec_scr_ux_overlay(const ec_app_t *a)
         shift_map(a);
     else if (a->ux.to_ms)
         takeover(a);
-    if (a->step_held && !a->bus && !a->e5.naming && !a->ux.f3 && !a->patn_open) {   /* the knobs lock: the frame */
-        ec_gfx_frame(0, 0, 240, 240, EC_C_ACC);
-        ec_gfx_frame(1, 1, 238, 238, EC_C_ACC);
-        ec_gfx_frame(2, 2, 236, 236, EC_C_ACC);
-    }
 }

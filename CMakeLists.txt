@@ -158,3 +158,9 @@ add_test(NAME e0_nofolder
 # E4: FX on every slot, the sends, the master insert and MOD through panel input (results/e4); the model side
 add_test(NAME seq_e4 COMMAND ec_test_seq_e4)
 add_test(NAME e4_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e4.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e4)
+# 0.6.0: the graphics rules (docs/UX-V2.md §7) on every screen reached by state, in all six themes: every 2x2 block of
+# the LCD one colour, every colour one of the theme's 16 (the CREAM frames -> build/grid for a look)
+add_executable(ec_test_grid host/test_grid.c host/ec_png.c)
+target_link_libraries(ec_test_grid PRIVATE elasticat)
+target_compile_options(ec_test_grid PRIVATE -Wall -Wextra)
+add_test(NAME grid COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/grid_folder >/dev/null && mkdir -p ${CMAKE_BINARY_DIR}/grid && $<TARGET_FILE:ec_test_grid> ${CMAKE_BINARY_DIR}/grid_folder ${CMAKE_BINARY_DIR}/grid")

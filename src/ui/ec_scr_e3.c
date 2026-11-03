@@ -8,11 +8,12 @@
 #include "ec_gfx.h"
 #include "ec_razor_ui.h"
 #include "ec_screens.h"
+#include "ec_ui_kit.h"
 
 #define W EC_GW
-#define R(c, x, y, w, h) ec_gfx_rect(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define T(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), EC_U, (c), (al))
-#define T2(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), 2 * EC_U, (c), (al))
+#define R(c, x, y, w, h) ec_gfx_rect((x), (y), (w), (h), (c))
+#define T(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 1, (c), (al))
+#define T2(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 2, (c), (al))
 #define TW(s) (ec_gfx_text_w((s), 1))
 
 static int iv(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
@@ -64,15 +65,15 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
     snprintf(r, sizeof r, "SNAP %s", ec_rzui_snap_name(rz->snap));
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     if (!razor)   /* the table is edited for any track; only the razor machines play it */
-        T(EC_C_ACC, "NOT RAZOR", W / 2, 19, EC_AL_CENTER);
+        T(EC_C_ALERT, "NOT RAZOR", W / 2, 19, EC_AL_CENTER);
     view(a, &v0, &v1);
     ec_rzui_window(a, a->track, &lo, &hi);
     if (!smp) {
-        ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
+        ec_gfx_dots_h(x0, x1, (top + bot) / 2, 2, EC_C_L3);
         T2(EC_C_L5, "NO SAMPLE", W / 2, top + 10, EC_AL_CENTER);
     } else {
-        /* the waveform at full panel resolution, read from the sample: peak |L,R| per pixel column */
-        const int px0 = EC_U * x0, pcols = EC_U * (x1 - x0), mid = EC_U * (top + bot) / 2, half = EC_U * (bot - top) / 2;
+        /* the waveform, read from the sample: peak |L,R| per grid column */
+        const int px0 = x0, pcols = x1 - x0, mid = (top + bot) / 2, half = (bot - top) / 2;
         const double f0 = (lo + (hi - lo) * v0 / 128.0) * smp->frames, f1 = (lo + (hi - lo) * v1 / 128.0) * smp->frames;
         int sx = x0 + (int)((rz->start[sel - 1] - v0) / (v1 - v0) * (float)(x1 - x0));
         int ex = x0 + (int)((rz->end[sel - 1] - v0) / (v1 - v0) * (float)(x1 - x0));
@@ -82,14 +83,14 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
         if (ex > sx)
             R(EC_C_L15, sx, top - 2, ex - sx, bot - top + 4);   /* the selected slice: a cream block (mockup) */
         else
-            ec_gfx_dots_h(EC_U * x0, EC_U * x1, mid, 2 * EC_U, EC_U, EC_C_L3);
+            ec_gfx_dots_h(x0, x1, mid, 2, EC_C_L3);
         for (c = 0; c < pcols; c++) {
             const double a0 = f0 + (f1 - f0) * c / pcols, a1 = f0 + (f1 - f0) * (c + 1) / pcols;
             uint32_t i0 = a0 < 0 ? 0 : (uint32_t)a0, i1 = a1 < 0 ? 0 : (uint32_t)a1, i, step;
             const float x = v0 + (v1 - v0) * ((float)c + 0.5f) / (float)pcols;
             const int sl = slice_at(rz, count, x);
             int pk = 0, h;
-            uint16_t col;
+            int col;
             if (i1 >= smp->frames)
                 i1 = smp->frames - 1;
             if (i1 < i0)
@@ -117,8 +118,7 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
                 if (j == 1 && k + 1 < count && fabsf(rz->start[k + 1] - e[1]) < 0.02f)
                     continue;
                 if (px >= x0 && px <= x1)
-                    ec_gfx_dots_v(EC_U * px, EC_U * (top - 2), EC_U * (bot + 3), 2 * EC_U, EC_U,
-                                  k == sel - 1 ? EC_C_L15 : EC_C_L8);
+                    ec_gfx_dots_v(px, top - 2, bot + 3, 2, k == sel - 1 ? EC_C_L15 : EC_C_L8);
             }
         }
         /* the transients at the chop sensitivity: ticks over the waveform (Auto-Chop's cut points) */
@@ -137,9 +137,9 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             ec_dsp_track_status(a->dsp, a->track, &st);
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++) {
                 const double x = (st.voice_pos[k] - lo) / (hi - lo) * 128.0;
-                const int px = EC_U * x0 + (int)((x - v0) / (v1 - v0) * (float)(EC_U * (x1 - x0)));
-                if (px >= EC_U * x0 && px < EC_U * x1)
-                    ec_gfx_rect(px, EC_U * (top - 1), EC_U, EC_U * (bot - top + 2), EC_C_ACC);
+                const int px = x0 + (int)((x - v0) / (v1 - v0) * (float)(x1 - x0));
+                if (px >= x0 && px < x1)
+                    ec_kit_playhead(px, top - 1, bot + 1);
             }
         }
         /* the slice numbers, where they fit (the selected one always) */
@@ -189,12 +189,12 @@ void ec_scr_neighbor(const ec_app_t *a, int top, int bot)
     char l[8], r[8];
     int y0 = top + 4, h = bot - top - 14;
     if (left < 0) {
-        T2(EC_C_ACC, "NO LEFT TRACK", W / 2, top + 10, EC_AL_CENTER);
+        T2(EC_C_ALERT, "NO LEFT TRACK", W / 2, top + 10, EC_AL_CENTER);
         return;
     }
     snprintf(l, sizeof l, "T%d", left + 1);
     snprintf(r, sizeof r, "T%d", a->track + 1);
-    ec_gfx_frame(EC_U * 6, EC_U * y0, EC_U * 40, EC_U * h, EC_C_L8);
+    ec_gfx_frame(6, y0, 40, h, EC_C_L8);
     R(EC_C_L15, 74, y0, 40, h);
     T2(EC_C_L15, l, 26, y0 + h / 2 - 5, EC_AL_CENTER);
     T2(EC_C_BG, r, 94, y0 + h / 2 - 5, EC_AL_CENTER);

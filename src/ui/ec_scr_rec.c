@@ -1,19 +1,20 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* E6's screens: the REC pop-up (design/mockup/Display.dc.html mode "rec": the source and the target slot, the take's
  * waveform with the record head in the accent, the bar ruler, the IN meters with the threshold's tick, LEN / THR /
- * SYNC) and the INPUT machine's view on SRC (the input's meters, NO INPUT). The mockup's 120x120 grid at EC_U. */
+ * SYNC) and the INPUT machine's view on SRC (the input's meters, NO INPUT). The 120x120 grid in palette slots (ec_gfx.h). */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "ec_gfx.h"
 #include "ec_screens.h"
+#include "ec_ui_kit.h"
 
 #define W EC_GW
 #define H EC_GH
-#define R(c, x, y, w, h) ec_gfx_rect(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define T(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), EC_U, (c), (al))
-#define T2(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), 2 * EC_U, (c), (al))
+#define R(c, x, y, w, h) ec_gfx_rect((x), (y), (w), (h), (c))
+#define T(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 1, (c), (al))
+#define T2(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 2, (c), (al))
 #define TW(s) (ec_gfx_text_w((s), 1))
 
 static float db_frac(float p)
@@ -46,8 +47,8 @@ void ec_scr_input(const ec_app_t *a, int top, int bot)
     const ec_rec_t *r = &a->rec;
     char b[24];
     if (ec_plat_ain_state() != EC_AIN_LIVE) {
-        ec_gfx_dots_h(EC_U * 2, EC_U * (W - 2), EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
-        T2(EC_C_ACC, "NO INPUT", W / 2, (top + bot) / 2 - 5, EC_AL_CENTER);
+        ec_gfx_dots_h(2, (W - 2), ((top + bot) / 2), 2, EC_C_L3);
+        T2(EC_C_ALERT, "NO INPUT", W / 2, (top + bot) / 2 - 5, EC_AL_CENTER);
         return;
     }
     T(EC_C_L8, "L", 2, top + 6, EC_AL_LEFT);
@@ -64,20 +65,12 @@ void ec_scr_input(const ec_app_t *a, int top, int bot)
 }
 
 /* ------------------------------------------------------------------------------------------- the REC pop-up --- */
-static void cell(int i, const char *label, const char *val, float frac, int dim)
+static void cell(ec_kit_cell_t *c, const char *label, const char *val, float frac, int dim)
 {
-    const int x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101;
-    char tag[4];
-    const uint16_t vc = dim ? EC_C_L5 : EC_C_L15;
-    snprintf(tag, sizeof tag, "K%d", i + 1);
-    T(EC_C_L8, label, x, y, EC_AL_LEFT);
-    T(EC_C_L5, tag, x + 54, y, EC_AL_RIGHT);
-    if (TW(val) * 2 <= 54)
-        T2(vc, val, x, y + 7, EC_AL_LEFT);
-    else
-        T(vc, val, x, y + 9, EC_AL_LEFT);
-    R(EC_C_L3, x, y + 18, 54, 1);
-    R(dim ? EC_C_L5 : EC_C_L8, x, y + 18, (int)(frac * 54.0f + 0.5f), 1);
+    c->label = label;
+    c->value = val;
+    c->frac = frac;
+    c->flags = dim ? EC_KC_DIM : 0;
 }
 
 /* the take's waveform from the store (each column's peak, a few hundred frames read) up to the head */
@@ -151,14 +144,14 @@ void ec_scr_rec(const ec_app_t *a)
         const int big = r->len ? i % 4 == 0 : 1;
         R(big ? EC_C_L8 : EC_C_L3, x0 + cols * i / (nt ? nt : 1), top - 3, 1, big ? 3 : 2);
     }
-    ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * (top + 3), 3 * EC_U, EC_U, EC_C_L3);
-    ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * (bot - 3), 3 * EC_U, EC_U, EC_C_L3);
+    ec_gfx_dots_h(x0, x1, (top + 3), 3, EC_C_L3);
+    ec_gfx_dots_h(x0, x1, (bot - 3), 3, EC_C_L3);
     if (taking) {
         const ec_ss_sample_t *x = ec_ss_get(r->handle);
         const int xr = x0 + (int)((uint64_t)cols * (r->n < total ? r->n : total) / total);
         if (x)
             take_wave(x->data, r->n < total ? r->n : total, total, x0, cols, top, bot);
-        ec_gfx_dots_h(EC_U * xr, EC_U * x1, EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
+        ec_gfx_dots_h(xr, x1, ((top + bot) / 2), 2, EC_C_L3);
         R(EC_C_ACC, xr, top - 2, 1, bot - top + 4);
     } else {
         const ec_ss_sample_t *s = a->slot[slot].handle >= 0 ? ec_ss_ready(a->slot[slot].handle) : 0;
@@ -172,15 +165,15 @@ void ec_scr_rec(const ec_app_t *a)
             snprintf(b, sizeof b, "%.24s", s->name);
             T(EC_C_L8, b, W / 2, bot + 1, EC_AL_CENTER);
         } else
-            ec_gfx_dots_h(EC_U * x0, EC_U * x1, EC_U * ((top + bot) / 2), 2 * EC_U, EC_U, EC_C_L3);
+            ec_gfx_dots_h(x0, x1, ((top + bot) / 2), 2, EC_C_L3);
         if (r->state == EC_RS_ARMED)
             R(EC_C_ACC, x0, top - 2, 1, bot - top + 4);
     }
     if (r->src == EC_RSRC_IN && !live)              /* no input from the host: a take is silence */
-        T2(EC_C_ACC, "NO INPUT", W / 2, (top + bot) / 2 - 5, EC_AL_CENTER);
+        T2(EC_C_ALERT, "NO INPUT", W / 2, (top + bot) / 2 - 5, EC_AL_CENTER);
 
     /* the meters: the input (or the master out) with the threshold's tick, the latency */
-    ec_gfx_dots_h(0, EC_U * W, EC_U * 63, 2 * EC_U, EC_U, EC_C_L3);
+    ec_gfx_dots_h(0, W, 63, 2, EC_C_L3);
     if (r->src == EC_RSRC_IN) {
         T(EC_C_L8, "IN", 2, 66, EC_AL_LEFT);
         meter(12, 66, 60, 2, r->in_meter[0]);
@@ -200,15 +193,18 @@ void ec_scr_rec(const ec_app_t *a)
     }
 
     /* the cells */
-    R(EC_C_L3, 0, 76, W, 1);
-    R(EC_C_L3, 60, 76, 1, 44);
-    R(EC_C_L3, 0, 98, W, 1);
-    cell(0, "SRC", SRC[r->src], (float)r->src, 0);
-    cell(1, "LEN", LEN[r->len], (float)r->len / (EC_REC_NLEN - 1), 0);
-    if (r->thr)
-        snprintf(b, sizeof b, "%dDB", ec_rec_thr_db(r->thr));
-    else
-        snprintf(b, sizeof b, "OFF");
-    cell(2, "THR", b, (float)r->thr / (EC_REC_NTHR - 1), r->sync != EC_RSYNC_FREE);
-    cell(3, "SYNC", SYNC[r->sync], (float)r->sync / (EC_NRSYNC - 1), 0);
+    {
+        ec_kit_cell_t c[4];
+        char thr[16];
+        memset(c, 0, sizeof c);
+        if (r->thr)
+            snprintf(thr, sizeof thr, "%dDB", ec_rec_thr_db(r->thr));
+        else
+            snprintf(thr, sizeof thr, "OFF");
+        cell(&c[0], "SRC", SRC[r->src], (float)r->src, 0);
+        cell(&c[1], "LEN", LEN[r->len], (float)r->len / (EC_REC_NLEN - 1), 0);
+        cell(&c[2], "THR", thr, (float)r->thr / (EC_REC_NTHR - 1), r->sync != EC_RSYNC_FREE);
+        cell(&c[3], "SYNC", SYNC[r->sync], (float)r->sync / (EC_NRSYNC - 1), 0);
+        ec_kit_cells(c, 1, 0);
+    }
 }

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* E4 screens: the visual above the cells on the FX pages (per machine: delay taps, reverb decay, dynamics with the
  * live gain reduction, crushed waves, sweeps, EQ bands), SENDS (levels + the tap point), and MOD (LFO shapes with the
- * live value, the mod envelope, velocity, the macros and their matrix). Mockup grid 120 x 120 at EC_U. */
+ * live value, the mod envelope, velocity, the macros and their matrix). On the 120x120 grid in palette slots (ec_gfx.h). */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,11 +11,11 @@
 #include "ec_scr_e4.h"
 
 #define W EC_GW
-#define R(c, x, y, w, h) ec_gfx_rect(EC_U * (x), EC_U * (y), EC_U * (w), EC_U * (h), (c))
-#define T(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), EC_U, (c), (al))
-#define T2(c, s, x, y, al) ec_gfx_text_al(EC_U * (x), EC_U * (y), (s), 2 * EC_U, (c), (al))
-#define LINE(c, x0, y0, x1, y1) ec_gfx_line((int)((x0) * EC_U), (int)((y0) * EC_U), (int)((x1) * EC_U), \
-                                            (int)((y1) * EC_U), (c))
+#define R(c, x, y, w, h) ec_gfx_rect((x), (y), (w), (h), (c))
+#define T(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 1, (c), (al))
+#define T2(c, s, x, y, al) ec_gfx_text_al((x), (y), (s), 2, (c), (al))
+#define LINE(c, x0, y0, x1, y1) ec_gfx_line((int)floorf((x0) + 0.5f), (int)floorf((y0) + 0.5f), \
+                                            (int)floorf((x1) + 0.5f), (int)floorf((y1) + 0.5f), (c))
 
 static float clampf(float x, float lo, float hi) { return x < lo ? lo : x > hi ? hi : x; }
 
@@ -34,14 +34,12 @@ static float bip(const ec_app_t *a, int id) { return clampf((val(a, id) - 64.0f)
 static int opt(const ec_app_t *a, int id) { return (int)floorf(val(a, id) + 0.5f); }
 
 /* a polyline of n points y[i] (grid units) across x0..x1 */
-static void trace(const float *y, int n, float x0, float x1, uint16_t c, int thick)
+static void trace(const float *y, int n, float x0, float x1, int c)
 {
     int i;
     for (i = 0; i + 1 < n; i++) {
         const float xa = x0 + (x1 - x0) * i / (n - 1), xb = x0 + (x1 - x0) * (i + 1) / (n - 1);
         LINE(c, xa, y[i], xb, y[i + 1]);
-        if (thick)
-            ec_gfx_line((int)(xa * EC_U), (int)(y[i] * EC_U) + 1, (int)(xb * EC_U), (int)(y[i + 1] * EC_U) + 1, c);
     }
 }
 
@@ -70,7 +68,7 @@ static void vis_delay(const ec_app_t *a, int m)
     R(EC_C_L15, VX0, (int)(mid - hh), 2, (int)(2 * hh));
     for (k = 1; k < 64; k++) {
         const float g = powf(fb, (float)(k - 1)), h = hh * g;
-        const uint16_t c = tone > 0.5f ? EC_C_L12 : EC_C_L8;
+        const int c = tone > 0.5f ? EC_C_L12 : EC_C_L8;
         const float xl = VX0 + k * tb * px, xr = VX0 + k * tb * off * px;
         if (h < 0.5f || (xl > VX1 && xr > VX1))
             break;
@@ -91,7 +89,7 @@ static void vis_delay(const ec_app_t *a, int m)
         const float w = amt(a, EC_P_TAPE_WOW), f = amt(a, EC_P_TAPE_FLUTTER);
         for (i = 0; i < 40; i++)
             y[i] = VT - 2 + 2.0f * w * sinf(i * 0.35f) + f * sinf(i * 2.1f);
-        trace(y, 40, VX0, VX1, EC_C_L5, 0);
+        trace(y, 40, VX0, VX1, EC_C_L5);
     }
 }
 
@@ -214,7 +212,7 @@ static void vis_crush(const ec_app_t *a, int m)
         x = floorf(x * levels * 0.5f + 0.5f) / (levels * 0.5f);
         y[i] = (VT + VB) / 2.0f - clampf(x, -1, 1) * (VB - VT) / 2.0f;
     }
-    ec_gfx_dots_h(EC_U * VX0, EC_U * VX1, EC_U * (VT + VB) / 2, 2 * EC_U, EC_U, EC_C_L3);
+    ec_gfx_dots_h(VX0, VX1, (VT + VB) / 2, 2, EC_C_L3);
     for (i = 0; i + 1 < n; i++) {
         R(EC_C_L12, VX0 + i, (int)y[i], 1, 1);
         if (fabsf(y[i + 1] - y[i]) >= 1)
@@ -265,10 +263,10 @@ static void vis_sweep(const ec_app_t *a, int m)
         y[i] = mid - v * hh;
         y2[i] = mid - v2 * hh;
     }
-    ec_gfx_dots_h(EC_U * VX0, EC_U * VX1, EC_U * (int)mid, 2 * EC_U, EC_U, EC_C_L3);
+    ec_gfx_dots_h(VX0, VX1, (int)mid, 2, EC_C_L3);
     if (two)
-        trace(y2, n, VX0, VX1, EC_C_L8, 0);
-    trace(y, n, VX0, VX1, EC_C_L12, 1);
+        trace(y2, n, VX0, VX1, EC_C_L8);
+    trace(y, n, VX0, VX1, EC_C_L12);
     if (m == EC_FX_PHASER) {                    /* the notches: one per two stages */
         const int st = opt(a, EC_P_PHASER_STAGES), cn = amt(a, EC_P_PHASER_CENTER) * (VX1 - VX0);
         int k;
@@ -298,7 +296,7 @@ static void vis_eq(const ec_app_t *a)
         R(g[b] < 0.02f ? EC_C_ACC : EC_C_L5, x0, VB - (h > 0 ? h : 1), x1 - x0, h > 0 ? h : 1);
         R(EC_C_L12, x0, VB - h, x1 - x0, 1);
     }
-    ec_gfx_dots_h(EC_U * VX0, EC_U * VX1, EC_U * (int)unity, 2 * EC_U, EC_U, EC_C_L8);
+    ec_gfx_dots_h(VX0, VX1, (int)unity, 2, EC_C_L8);
 }
 
 static void fx_visual(const ec_app_t *a, int m, const ec_fx_meter_t *mt)
@@ -316,7 +314,7 @@ static void fx_visual(const ec_app_t *a, int m, const ec_fx_meter_t *mt)
     case EC_FX_DESTROY: vis_crush(a, m); break;
     case EC_FX_DJ_EQ: vis_eq(a); break;
     case EC_FX_NONE:
-        ec_gfx_dots_h(EC_U * VX0, EC_U * VX1, EC_U * (VT + VB) / 2, 3 * EC_U, EC_U, EC_C_L5);
+        ec_gfx_dots_h(VX0, VX1, (VT + VB) / 2, 3, EC_C_L5);
         break;
     default: vis_sweep(a, m); break;
     }
@@ -402,7 +400,7 @@ static float wave_at(int w, float ph)
 
 /* 0.5.0: the source's routes in the matrix ("> CUT +30%", more: "+2"), dim "> OFF" when it has none, and its live
  * value as a bipolar meter at the right */
-static void routes(const ec_app_t *a, int src)
+static void routes(const ec_app_t *a, int src, int small)
 {
     const float *v = a->proj.pat[a->proj.current].tr[a->track].v;
     char b[32], nm[16], dp[12];
@@ -422,6 +420,10 @@ static void routes(const ec_app_t *a, int src)
             snprintf(b, sizeof b, "> %s %s +%d", nm, dp, n - 1);
         else
             snprintf(b, sizeof b, "> %s %s", nm, dp);
+    }
+    if (small) {                                /* over the envelope bars: no meter */
+        T(first < 0 ? EC_C_L5 : EC_C_L15, b, 2, 13, EC_AL_LEFT);
+        return;
     }
     T2(first < 0 ? EC_C_L5 : EC_C_L15, b, 2, 15, EC_AL_LEFT);
     {
@@ -452,47 +454,26 @@ static void lfo_page(const ec_app_t *a, int k)
     float y[104];
     const float mid = (VT - 6 + VB) / 2.0f, hh = (VB - VT + 6) / 2.0f;
     int i;
-    routes(a, k ? EC_MS_LFO2 : EC_MS_LFO1);
+    routes(a, k ? EC_MS_LFO2 : EC_MS_LFO1, 0);
     for (i = 0; i < 104; i++) {
         const float x = (float)i / 103 * cyc, ph = x - floorf(x);
         const float w = mode == 3 && x >= 1 ? wave_at(wave, 1.0f) : wave_at(wave, mode == 3 ? x : ph);
         y[i] = mid - w * d * hh;
     }
-    ec_gfx_dots_h(EC_U * VX0, EC_U * VX1, EC_U * (int)mid, 2 * EC_U, EC_U, EC_C_L3);
+    ec_gfx_dots_h(VX0, VX1, (int)mid, 2, EC_C_L3);
     if (mode == 2 || mode == 3)                 /* TRIG / ONE: the reset at the note */
         R(EC_C_L8, VX0, VT - 6, 1, VB - VT + 6);
-    trace(y, 104, VX0, VX1, d == 0 ? EC_C_L5 : EC_C_L12, 1);
+    trace(y, 104, VX0, VX1, d == 0 ? EC_C_L5 : EC_C_L12);
 }
 
-static void menv_page(const ec_app_t *a)
-{
-    const int er = opt(a, EC_P_ENV_RANGE);
-    const float at = ec_xf_env_seconds(val(a, EC_P_MENV_ATTACK), er), dc = ec_xf_env_seconds(val(a, EC_P_MENV_DECAY), er);
-    const float rl = ec_xf_env_seconds(val(a, EC_P_MENV_RELEASE), er), su = amt(a, EC_P_MENV_SUSTAIN);
-    const float d = bip(a, EC_P_MENV_DEPTH);
-    const float base = d >= 0 ? VB : VT, peak = d >= 0 ? VB - (VB - VT) * fabsf(d) : VT + (VB - VT) * fabsf(d);
-    float xs[5], ys[5], x = VX0;
-    int i;
-#define EW(s) (3.0f + 7.0f * log2f(1.0f + (s) * 20.0f) > 30 ? 30 : 3.0f + 7.0f * log2f(1.0f + (s) * 20.0f))
-    xs[0] = x, ys[0] = base;
-    x += EW(at), xs[1] = x, ys[1] = peak;
-    x += EW(dc), xs[2] = x, ys[2] = base + (peak - base) * su;
-    x += 18, xs[3] = x, ys[3] = ys[2];
-    x += EW(rl), xs[4] = x, ys[4] = base;
-#undef EW
-    ec_gfx_dots_h(EC_U * VX0, EC_U * VX1, EC_U * (int)base, 2 * EC_U, EC_U, EC_C_L3);
-    for (i = 0; i < 4; i++) {
-        LINE(d == 0 ? EC_C_L5 : EC_C_L12, xs[i], ys[i], xs[i + 1], ys[i + 1]);
-        R(EC_C_L15, (int)xs[i + 1] - 1, (int)ys[i + 1] - 1, 2, 2);
-    }
-    routes(a, EC_MS_ENV);
-}
+/* MOD ENV: the norns envelope bars are drawn by ec_screens.c (y 20..75); here the source's routes, small, above them */
+static void menv_page(const ec_app_t *a) { routes(a, EC_MS_ENV, 1); }
 
 static void vel_page(const ec_app_t *a)
 {
     const float d = bip(a, EC_P_MVEL_DEPTH), mid = (VT + VB) / 2.0f, hh = (VB - VT) / 2.0f;
     int k;
-    routes(a, EC_MS_VEL);
+    routes(a, EC_MS_VEL, 0);
     for (k = 0; k < 8; k++) {                   /* velocity 1/8 .. 1 -> the push */
         const float v = (k + 1) / 8.0f * d;
         const int x = VX0 + 4 + k * 12, h = (int)(fabsf(v) * hh);
@@ -557,26 +538,27 @@ static void matrix_page(const ec_app_t *a)
     ec_track_status_t st;
     int k;
     ec_dsp_track_status(a->dsp, a->track, &st);
-    for (k = 0; k < EC_MTX_SLOTS; k++) {
-        const int y = 14 + k * 7, sel = k == a->mk.row, src = ec_mtx_src(v, k), live = ec_mtx_live(v, k);
+    for (k = 0; k < EC_MTX_SLOTS; k++) {     /* the mock's MATRIX rows: 8 units apart from y 12 */
+        const int y = 12 + k * 8, sel = k == a->mk.row, src = ec_mtx_src(v, k), live = ec_mtx_live(v, k);
+        const int used = src && ec_mtx_dst(v, k) >= 0;
         const float d = v[ec_mtx_depth_id(k)];
-        const uint16_t c = sel ? EC_C_L15 : live ? EC_C_L8 : EC_C_L5;
+        const int c = sel ? EC_C_L15 : used ? EC_C_L12 : EC_C_L5;
         char n[4], nm[16], dp[12];
         int w;
         if (sel)
-            R(EC_C_L3, 0, y - 1, W, 7);
+            R(EC_C_L3, 0, y, W, 8);
         snprintf(n, sizeof n, "%d", k + 1);
-        T(sel ? EC_C_L15 : EC_C_L5, n, 2, y + 1, EC_AL_LEFT);
-        T(c, src ? ec_mtx_src_name(src) : "--", 8, y + 1, EC_AL_LEFT);
+        T(sel ? EC_C_L15 : EC_C_L5, n, 2, y + 2, EC_AL_LEFT);
+        T(c, src ? ec_mtx_src_name(src) : "--", 9, y + 2, EC_AL_LEFT);
         ec_mk_dst_name(v[ec_mtx_dst_id(k)], nm, sizeof nm);
-        T(c, ec_mtx_dst(v, k) >= 0 ? nm : "--", 28, y + 1, EC_AL_LEFT);
+        T(c, ec_mtx_dst(v, k) >= 0 ? nm : "--", 29, y + 2, EC_AL_LEFT);
         ec_param_format(ec_mtx_depth_id(k), d, 3, dp, sizeof dp);
-        T(c, dp, 80, y + 1, EC_AL_RIGHT);
-        R(EC_C_L5, 84, y + 3, 34, 1);
-        w = (int)(fabsf(d) / 100.0f * 17.0f + 0.5f);
+        T(c, dp, 78, y + 2, EC_AL_RIGHT);
+        R(EC_C_L5, 84, y + 4, 34, 1);
+        w = (int)(fabsf(d) / 100.0f * 16.0f + 0.5f);
         if (w)
-            R(sel ? EC_C_L15 : EC_C_L8, d >= 0 ? 101 : 101 - w, y + 2, w, 3);
-        R(sel ? EC_C_L15 : EC_C_L8, 101, y + 1, 1, 5);
+            R(sel ? EC_C_L15 : used ? EC_C_L12 : EC_C_L5, d >= 0 ? 101 : 101 - w, y + 3, w, 3);
+        R(EC_C_L12, 101, y + 2, 1, 5);
         if (live) {                                 /* the amount now: source x depth */
             float x = 0;
             if (src >= EC_MS_LFO1 && src <= EC_MS_EXPR)
@@ -584,7 +566,7 @@ static void matrix_page(const ec_app_t *a)
             else if (src >= EC_MS_M1)
                 x = st.macro[src - EC_MS_M1];
             x = clampf(x * d / 100.0f, -1, 1);
-            R(EC_C_ACC, 101 + (int)(x * 17.0f), y + 1, 1, 5);
+            R(EC_C_ACC, 101 + (int)(x * 16.0f), y + 2, 1, 5);
         }
     }
 }

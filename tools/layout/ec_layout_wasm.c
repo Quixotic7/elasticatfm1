@@ -20,6 +20,7 @@
 #include "ec_fs_native.h"
 #include "ec_layout.h"
 #include "ec_layout_pack.h"
+#include "ec_mode.h"
 #include "ec_params.h"
 #include "ec_rec.h"
 #include "fm1core.h"
@@ -144,23 +145,26 @@ API void lw_target(int i)
         ec_app.bus = i - EC_NTRACK + 1;
     ec_app.redraw = 1;
 }
-/* a category's page and lane (settings: its setup), every pop-up closed */
+/* a category's page and lane (settings: its setup), every pop-up closed: its mode entered as the panel enters it
+ * (ec_app_goto), without the mode's pop-up (the designer jumps, the player doesn't); FILE while playing too (the
+ * unit refuses it, STOP FIRST: the designer shows the page anyway) */
 API void lw_goto(int cat, int page, int lane, int settings)
 {
     if (cat < 0 || cat >= EC_NCAT)
         return;
-    ec_rec_close();
     ec_app.ux.f3 = 0;
-    ec_app.patn_open = ec_app.patn_latched = 0;
-    ec_app.e5.naming = 0;
-    ec_app.cat = cat;
+    ec_app_goto(cat, page < 0 ? 0 : page);
+    if (ec_app.cat != cat || ec_app.scr) {
+        ec_app.scr = 0;
+        ec_app.cat = cat;
+        ec_app_set_page(cat, page < 0 ? 0 : page);
+    }
+    ec_app.pn.pop = 0;
     ec_app.settings = settings != 0;
     if (settings)
         ec_app.ux.set_lane = lane < 0 ? 0 : lane;
-    else {
-        ec_app.page[cat] = page < 0 ? 0 : page;
+    else
         ec_app.ux.lane[cat] = lane < 0 ? 0 : lane;
-    }
     ec_app.redraw = 1;
 }
 
@@ -249,8 +253,8 @@ API const char *lw_state(void)
                   OPT(v, EC_P_ENV_MODE), OPT(v, EC_P_FX_MACHINE), OPT(ec_app.proj.bus[0], EC_P_FX_MACHINE),
                   OPT(ec_app.proj.bus[1], EC_P_FX_MACHINE), OPT(ec_app.proj.bus[2], EC_P_FX_MACHINE));
     n = jstr(g_out, n, cap, pg.title);
-    n += snprintf(g_out + n, (size_t)(cap - n), ",\"mode\":");          /* 0.6.0: the mode, the page's black key */
-    n = jstr(g_out, n, cap, ec_cat_name(ec_app.cat));
+    n += snprintf(g_out + n, (size_t)(cap - n), ",\"scr\":%d,\"mode\":", ec_app.scr);   /* 0.6.0: the mode shown */
+    n = jstr(g_out, n, cap, ec_mode_name(ec_app_mode()));
     n += snprintf(g_out + n, (size_t)(cap - n), ",\"key\":%d,\"items\":[",
                   ec_app.settings ? 0 : ec_cat_page_key(ec_app.cat, ec_app.page[ec_app.cat]));
     for (i = 0; i < pg.n && n < cap - 64; i++) {

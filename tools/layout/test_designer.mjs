@@ -18,8 +18,9 @@
 //   6. every kind of <select> (context, a page's picture, MOVE TO, VARIANT, + VARIANT FOR, OPEN) opened with the
 //      mouse stays: 2 s of the demo playing, the same element, focused, its value kept
 //   7. descriptions: a slot's and a page header's tooltip, the inspector, the tray's search over descriptions
-//   8. the drawn FM-1 by the mouse: SEQ -> TRIG, the key LEDs light for trigs, Shift-click latches SHIFT (the live
-//      labels change), a lower key latched + the wheel on KN1 = a p-lock (the lock frame, K1's filled chip)
+//   8. the drawn FM-1 by the mouse (0.6.0's gestures): SEQ -> PATTERN LAUNCH, HOME twice -> LOOP ENGINE -> TRIG, the
+//      key LEDs light for trigs, Shift-click latches SHIFT (the live labels change), a white key latched + the wheel
+//      on KN1 = a p-lock (the header's step box in LOCK, K1's filled cell)
 //   9. the columns: the tree ~30% wide at 1280 and 2000 px with the screen and the FM-1 whole, lanes capped; the tree
 //      splitter dragged, kept across a reload, a double-click = the default (09_columns_2000.png at 2000x1050)
 // Screenshots + SUMMARY.txt into results/layout/.
@@ -331,9 +332,18 @@ try {
   await sleep(300);
   const s8 = await js("designer.state()");
   const lbl8 = await js("designer.panel.labels()");
-  // (0.5.0's app: SEQ opens TRIG; 0.6.0's: the layout's SEQ mode, PATTERN LAUNCH)
+  // (SEQ opens the layout's SEQ mode: PATTERN LAUNCH)
   const seqMode = (await js("designer.modes()")).find((m) => m.button === 9);
-  ok((s8.cat === 0 && s8.title === "TRIG") || (seqMode && s8.cat === seqMode.mode), `8. the panel's SEQ button (drawn "${lbl8.buttons[9]}") pressed: the preview is on ${s8.mode}/${s8.title}`);
+  ok(seqMode && s8.cat === seqMode.mode && s8.mode === "PATTERN LAUNCH", `8. the panel's SEQ button (drawn "${lbl8.buttons[9]}") pressed: the preview is on ${s8.mode}/${s8.title}`);
+  // HOME, then HOME again: LOOP ENGINE, then TRIG (0.6.0: the white keys are the steps there; their LEDs the trigs)
+  const homeB = await at("btn", 6);
+  const modesSeen = [];
+  for (let i = 0; i < 2; i++) {
+    await mouse("mousePressed", homeB.x, homeB.y); await sleep(120); await mouse("mouseReleased", homeB.x, homeB.y);
+    await sleep(300);
+    modesSeen.push((await js("designer.state()")).mode);
+  }
+  ok(modesSeen.join(" > ") === "LOOP ENGINE > TRIG", `   the panel's HOME, tapped twice: ${modesSeen.join(" > ")}`);
   let maxLit = 0, litKeys = new Set();
   for (let i = 0; i < 20; i++) { const lv = await js("designer.panel.keyLevels()"); lv.forEach((v, k) => { if (k <= 26 && v >= 176) litKeys.add(k); maxLit = Math.max(maxLit, v); }); await sleep(60); }
   ok(litKeys.size > 0, `   the key LEDs light for the trigs (keys lit over 1.2 s: ${[...litKeys].join(" ")})`);
@@ -359,8 +369,9 @@ try {
   await click(k0.x, k0.y, { modifiers: 8 });
   await sleep(250);
   const pxB = await js("designer.pixels()");
-  const frameA = orange(pxA, 0, 0, 240, 3), frameB = orange(pxB, 0, 0, 240, 3);
-  ok((await js("designer.panel.held()")).key[0] && frameB > 600 && frameA < 100, `   Shift-click on the lower key 1: held, the screen's lock frame (orange top edge ${frameA} -> ${frameB} px)`);
+  // (0.6.0: a held step lights the header's page box in the LOCK colour, its number dark on it)
+  const frameA = orange(pxA, 210, 0, 240, 20), frameB = orange(pxB, 210, 0, 240, 20);
+  ok((await js("designer.panel.held()")).key[0] && frameB > 200 && frameA < 50, `   Shift-click on the white key 1: held, the header's step box in the LOCK colour (orange px ${frameA} -> ${frameB})`);
   const chipA = orange(pxB, 4, 168, 120, 196);
   const kn1 = await at("knob", 3);
   for (let i = 0; i < 6; i++) { await mouse("mouseWheel", kn1.x, kn1.y, { deltaX: 0, deltaY: -60 }); await sleep(40); }

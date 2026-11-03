@@ -253,8 +253,10 @@ that can never show.
   `lw_modes`, a key set opens that page on the unit and a taken key swaps, a page moved between modes keeps its key
   only where free, the 0.4.0 layout opened gets CROSSFADER with MST's SCENE page); every kind of `<select>` opened with the mouse stays open (2 s of the demo playing: the same element,
   focused, its value kept); a slot's and a page header's tooltip, the inspector's descriptions, the tray's search
-  over descriptions; the panel by the mouse: SEQ -> TRIG, key LEDs for trigs, Shift-click latches SHIFT and the
-  live labels change, a lower key latched + the wheel on KN1 = a p-lock (the lock frame, K1's filled chip).
+  over descriptions; the panel by the mouse (0.6.0's gestures): SEQ -> PATTERN LAUNCH, HOME twice -> LOOP ENGINE -> TRIG,
+  key LEDs for trigs, Shift-click latches SHIFT and the live labels change, a white key latched + the wheel on KN1 =
+  a p-lock (the header's step box in LOCK, K1's filled cell). The preview's `lw_goto` enters the mode as the panel
+  does (`ec_app_goto`) but without its pop-up, and shows FILE while playing (the unit says STOP FIRST).
   `results/layout/` (screenshots, SUMMARY.txt).
 
 Why the dropdowns used to close: a click anywhere on a page's header row (its picture or MOVE TO select, its title)

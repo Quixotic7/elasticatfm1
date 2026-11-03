@@ -1,9 +1,9 @@
-tools/layout/test_designer.mjs (2026-11-03T11:16:31.322Z): 66 checks, 0 failed
+tools/layout/test_designer.mjs (2026-11-03T12:55:03.563Z): 67 checks, 0 failed
 
 ok   1. the page and its preview start
 ok      the demo project plays (LOOP, 3199 device ms)
   shot results/layout/01_designer.png
-ok   2. the designer's pack of the shipped design = gen_layout.py --pack (11770 bytes)
+ok   2. the designer's pack of the shipped design = gen_layout.py --pack (11750 bytes)
 ok      the firmware's pack of the layout it loaded = the same
 ok      the shipped design: 0 errors, 0 warnings besides long labels
 ok   3. on FILT/FILTER (classic): KNOB 1 CUTOFF, KNOB 2 RESO
@@ -26,7 +26,7 @@ ok      undo: the shipped file again
 ok   5. FILT/MIX moved to MOD (page 10), FILT has 2 pages
 ok      the preview: MOD/MIX, 2 lanes, lane 2 KNOB 1 DRIV (labels DRIV   )
   shot results/layout/03_page_moved.png
-ok      gen_layout.py --check of the export: gen_layout: warning: descriptions: description(s) for page(s) this design does not have: FILT/MIX
+ok      gen_layout.py --check of the export: gen_layout: warning: descriptions: description(s) for page(s) this design does not have: FILT/MIX, FILE/SAMPLE
 ok      a lower-case title: 1 error (TRIG/trig: the title 'trig' has lower case (the font has capitals only)), the preview keeps the last good layout
 ok      three undos: the shipped file again
 ok   5b. the tree: the modes by button (FX: FX | SEL: FILTER | ENV: AMP | LFO: MODULATION | EDIT: MIX > PAGES | HOME: LOOP ENGINE > TRIG > KEYBOARD | FILE: FILE > SAMPLER | ARP: CROSSFADER | SEQ: PATTERN LAUNCH)
@@ -41,32 +41,33 @@ ok      undo: the shipped file again
 ok   6. the context's MACHINE: found
 ok      the context's MACHINE: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "1")
 ok   6. a page's picture: found
-ok      a page's picture: opened, 2 s of the demo playing (2091 device ms): the same element, focused, value kept (true, true, "fenv")
+ok      a page's picture: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "fenv")
 ok   6. a page's MOVE TO: found
 ok      a page's MOVE TO: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "")
 ok   6. a page's VARIANT: found
 ok      a page's VARIANT: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "0")
 ok   6. + VARIANT FOR: found
-ok      + VARIANT FOR: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "")
+ok      + VARIANT FOR: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "")
 ok   6. a page's black key: found
-ok      a page's black key: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "2")
+ok      a page's black key: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "2")
 ok   6. OPEN: found
-ok      OPEN: opened, 2 s of the demo playing (2040 device ms): the same element, focused, value kept (true, true, "")
-ok   7. descriptions loaded: 228 items, 46 pages
+ok      OPEN: opened, 2 s of the demo playing (2057 device ms): the same element, focused, value kept (true, true, "")
+ok   7. descriptions loaded: 229 items, 46 pages
 ok      hover FILT/FILTER KNOB 1: the tooltip is filter_cutoff's ("Cutoff, 20 Hz to 20 kHz. On COMB (TUNE) the comb's pitch; on...")
   shot results/layout/04_tooltip_slot.png
 ok      hover the FILT/FILTER header: the page's description and its variant's (CLASSC)
   shot results/layout/05_tooltip_page.png
 ok      the inspector: the slot's description and the page's (3 blocks: Cutoff, 20 Hz to 20 kHz. On COMB (TUNE)  / The filter machine's controls (cutoff, r / VARIANT CLASSC: CLASSC: Classic multimod)
 ok      the tray's search finds descriptions: "semitones" -> 8 (pitch filter_balance filter_env_depth harm_interval harm_interval2 harm_interval3)
-ok   8. the panel's SEQ button (drawn "TRIG") pressed: the preview is on TRIG/TRIG
-ok      the key LEDs light for the trigs (keys lit over 1.2 s: 1 19 21 23 24 26 0 2 4 6 7 9)
+ok   8. the panel's SEQ button (drawn "PATTERN") pressed: the preview is on PATTERN LAUNCH/PATTERN
+ok      the panel's HOME, tapped twice: LOOP ENGINE > TRIG
+ok      the key LEDs light for the trigs (keys lit over 1.2 s: 1 4 6 7 9 11 12 14 16 18 19)
   shot results/layout/06_panel_trig.png
-ok      Shift-click latches SHIFT: live labels on the buttons change (FX->SETUP SRC->SETUP AMP->SETUP MOD->LFO FILT->SETUP FILE->SAVE PAT->SETUP TRIG->SETUP PAUSE->STOP SAMPLING->SAVE LOOP KEYS->UNDO KEYS->REDO)
+ok      Shift-click latches SHIFT: live labels on the buttons change (TRIG->SETTINGS FILE->SAVE PATTERN->F3 REC->REC SETUP COPY->UNDO CUT->REDO)
   shot results/layout/07_panel_shift_labels.png
 ok      a click on it lets SHIFT go
-ok      Shift-click on the lower key 1: held, the screen's lock frame (orange top edge 0 -> 720 px)
-ok      the wheel on the panel's KN1: KNOB 1 locked on that step (K1's orange chip 0 -> 888 px)
+ok      Shift-click on the white key 1: held, the header's step box in the LOCK colour (orange px 0 -> 408)
+ok      the wheel on the panel's KN1: KNOB 1 locked on that step (K1's orange chip 0 -> 2504 px)
   shot results/layout/08_panel_plock.png
 ok      a click on the key lets it go
 ok   9. at 1280 px: the tree 384 px (30.0%), side 300, preview 584 (screen + FM-1 whole)

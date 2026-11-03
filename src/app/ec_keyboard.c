@@ -36,7 +36,7 @@ void ec_kb_target(int det)
 {
     const int len = ec_seq_pattern_steps(&A->seq, A->track);
     char b[12];
-    P->target = clampi(P->target + (det > 0 ? 1 : -1), 0, len);
+    P->target = clampi(P->target + det, 0, len);
     if (P->target)
         A->step_page = (P->target - 1) / 16;
     if (P->target)

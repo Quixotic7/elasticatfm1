@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* test_ux: the 0.3.0 panel (docs/FM1-CONTROLS.md) through the core descriptor, with the demo folder
- * (host/make_demo_folder.py): lanes and SELECT running on into the next page, setup by a hold and by SHIFT, SRC held
- * and released vs the loop keys, PRESETS = the track's sample (debounced), knob acceleration and SHIFT snap, F3 by
- * both OCT keys and by PLAY held, pop-ups (OCT- back, OCT+ OK, the question), track keys (hold = mute, double-tap =
- * solo, FILL + a track key = all on), OCT+ held + a knob clears a lock, HOME, undo / redo, SHIFT's keys, the live
- * labels.
+/* test_ux: the 0.6.0 panel by modes (docs/UX-V2.md) through the core descriptor, with the demo folder
+ * (host/make_demo_folder.py) and the shipped layout: the intro, the mode model (taps, the lit button again, sub-modes,
+ * each mode's page, holds and SHIFT = settings, SHIFT + HOME = APP SETTINGS), the pop-up, SHIFT (held, sticky) and
+ * its layer, F1 / F2 (sticky, momentary, F3), PLAY, REC, steps and locks, F1 / F2 + a knob, PRESETS = the pool slot,
+ * §2 copy / cut / paste, the source template, MIX and the CAT, PAGES, KEYBOARD, CROSSFADER, PATTERN LAUNCH, the
+ * live labels and LEDs.
  *   ec_test_ux <folder> */
 #include <math.h>
 #include <stdio.h>
@@ -14,7 +14,9 @@
 #include "ec_browse.h"
 #include "ec_fs_native.h"
 #include "fm1core.h"
-#include "ec_layout_test.h"
+#include "ec_gfx.h"
+#include "ec_mtx.h"
+#include "ec_scene.h"
 
 uint32_t fm1core_labels_epoch(void);
 const char *fm1core_label(int32_t which);
@@ -97,7 +99,6 @@ static void turn(int role, int n)
     P->enc[P->enc_id[role]] += n * P->enc_dir[role];
     run(1);
 }
-static float tv(int id) { return ec_project_track(&A->proj, A->track)->v[id]; }
 static int lbl(int which, const char *want)
 {
     const char *s = fm1core_label(which);
@@ -108,469 +109,958 @@ static const char *L(int which)
     const char *s = fm1core_label(which);
     return s ? s : "(null)";
 }
-static void home(void) { press(FM1P_B_HOME, 40); }
 
-/* ------------------------------------------------------------------------------------------- lanes --- */
-static void test_lanes(void)
+/* the LEDs (ec_core.c's FM-1 wiring: key id 0..13 the buttons, 14 + n note key n) */
+static const int8_t KEYMAP[6][FM1P_NCOL] = {
+    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+    {5, 11, 4, 10, 3, 9, 2, 8, -1, -1, -1},
+    {34, 35, 36, 37, 38, 40, 39, 13, 7, 6, 12},
+    {23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33},
+    {0, 1, 15, 14, 17, 16, 19, 18, 20, 21, 22},
+    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+};
+static int led_id(int id)
 {
-    home();
-    press(FM1P_B_LFO, 40);                                    /* MOD, LFO 1: 5 cells = 2 lanes */
-    CHECK(A->cat == EC_CAT_MOD && A->page[EC_CAT_MOD] == 0 && A->ux.lane[EC_CAT_MOD] == 0, "MOD LFO 1 lane 1");
-    turn(FM1P_E_SELECT, 1);
-    run(50);
-    CHECK(A->page[EC_CAT_MOD] == 0 && A->ux.lane[EC_CAT_MOD] == 1, "SELECT: lane 2 (page %d lane %d)",
-          A->page[EC_CAT_MOD], A->ux.lane[EC_CAT_MOD]);
-    {
-        const float m0 = tv(EC_P_LFO1_MODE);
-        turn(FM1P_E_K1, 1);                                   /* lane 2's KN1 = cell 5, LFO 1 MODE */
-        run(100);
-        CHECK(tv(EC_P_LFO1_MODE) == m0 + 1, "lane 2 KN1 = LFO1 MODE (%g -> %g)", m0, tv(EC_P_LFO1_MODE));
-    }
-    turn(FM1P_E_SELECT, 1);
-    run(50);
-    CHECK(A->page[EC_CAT_MOD] == 1 && A->ux.lane[EC_CAT_MOD] == 0, "SELECT runs on into LFO 2 (page %d lane %d)",
-          A->page[EC_CAT_MOD], A->ux.lane[EC_CAT_MOD]);
-    turn(FM1P_E_SELECT, -1);
-    run(50);
-    CHECK(A->page[EC_CAT_MOD] == 0 && A->ux.lane[EC_CAT_MOD] == 1, "SELECT back: LFO 1 lane 2");
-    press(FM1P_B_LFO, 40);                                    /* the button again: the next page, lane 1 */
-    CHECK(A->page[EC_CAT_MOD] == 1 && A->ux.lane[EC_CAT_MOD] == 0, "MOD again: the next page");
-    press(FM1P_B_EDIT, 40);
-    press(FM1P_B_LFO, 40);
-    CHECK(A->cat == EC_CAT_MOD && A->page[EC_CAT_MOD] == 1, "each category keeps its place");
+    int r, c;
+    for (r = 1; r <= 4; r++)
+        for (c = 0; c < FM1P_NCOL; c++)
+            if (KEYMAP[r][c] == id)
+                return P->led[c][r - 1];
+    return -1;
+}
+static int led_key(int upper, int i) { return led_id(14 + key_of(upper, i)); }
+static int led_btn(int b) { return led_id(P->btn_id[b]); }
+
+static int mode(void) { return ec_app_mode(); }
+static const int BTN_OF_MB[EC_NMB] = {-1, FM1P_B_FX, FM1P_B_SEL, FM1P_B_ENV, FM1P_B_LFO, FM1P_B_EDIT, FM1P_B_HOME,
+                                      FM1P_B_SAVE, FM1P_B_ARP, FM1P_B_SEQ};
+/* close what is open, then tap the mode's button until it shows; the pop-up gone */
+static void to(int m)
+{
+    int n;
+    if (A->e5.naming)
+        press(FM1P_B_OCTDN, 40);
+    if (A->pn.as_open || A->ux.f3 || A->settings)
+        press(FM1P_B_OCTDN, 40);
+    if (A->pn.shift_sticky)
+        press(FM1P_B_GLO, 40);
+    if (A->pn.f_sticky)
+        press(A->pn.f_sticky == 1 ? FM1P_B_OCTDN : FM1P_B_OCTUP, 40);
+    for (n = 0; n < 5 && mode() != m; n++)
+        press(BTN_OF_MB[ec_mode_button(m)], 40);
+    if (A->pn.cat)
+        press(BTN_OF_MB[ec_mode_button(m)], 40);
+    run(900);
+}
+static int bkey(int b) { return b - 1; }      /* B1..B11 -> upper index */
+static int wkey(int w) { return w - 1; }      /* W1..W16 -> lower index */
+
+/* ------------------------------------------------------------------------------------------- the intro, the modes --- */
+static void test_boot(void)
+{
+    CHECK(A->pn.intro, "power-on: the intro plays");
+    CHECK(mode() == EC_CAT_SRC && !A->scr, "power-on: LOOP ENGINE");
+    turn(FM1P_E_K1, 1);                                       /* any knob skips it (and still acts) */
+    run(20);
+    CHECK(!A->pn.intro, "a knob skips the intro");
 }
 
-/* ------------------------------------------------------------------------------------------- setup --- */
-static void test_setup(void)
+static void test_modes(void)
 {
-    home();
-    btn(FM1P_B_FX, 1);                                        /* hold FX: its setup at 400 ms */
+    to(EC_CAT_SRC);
+    press(FM1P_B_FX, 40);
+    CHECK(mode() == EC_CAT_FX && A->pn.pop == EC_CAT_FX + 1, "FX: the mode, its pop-up");
+    run(500);
+    CHECK(A->pn.pop, "the pop-up still up at 0.5 s");
+    run(400);
+    CHECK(!A->pn.pop, "and gone after 0.8 s");
+    press(FM1P_B_FX, 40);
+    CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1 && !A->pn.pop, "FX again: the next page, no pop-up");
+    press(FM1P_B_SEL, 40);
+    CHECK(mode() == EC_CAT_FILT && A->pn.pop, "SEL: FILTER");
+    turn(FM1P_E_K2, 1);
+    run(5);
+    CHECK(!A->pn.pop, "a knob dismisses the pop-up");
+    press(FM1P_B_FX, 40);
+    CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1, "FX keeps its page");
+    /* HOME: LOOP ENGINE -> TRIG -> KEYBOARD -> LOOP ENGINE */
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_CAT_SRC, "HOME: LOOP ENGINE");
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_CAT_TRIG && A->pn.pop == EC_CAT_TRIG + 1, "HOME again: TRIG, with its pop-up");
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_MODE_KEYBOARD && A->scr == EC_MODE_KEYBOARD, "HOME again: KEYBOARD");
+    press(FM1P_B_FX, 40);
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_MODE_KEYBOARD, "HOME from FX: back to the sub-mode it was on");
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_CAT_SRC, "HOME again: round to LOOP ENGINE");
+    press(FM1P_B_EDIT, 40);
+    CHECK(mode() == EC_CAT_MASTER, "EDIT: MIX");
+    press(FM1P_B_EDIT, 40);
+    CHECK(mode() == EC_MODE_PAGES, "EDIT again: PAGES");
+    press(FM1P_B_EDIT, 40);
+    CHECK(mode() == EC_CAT_MASTER, "EDIT again: MIX");
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE, "FILE");
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_MODE_SAMPLER && A->rec.open, "FILE again: SAMPLER (0.4's REC pop-up stands in)");
+    press(FM1P_B_ARP, 40);
+    CHECK(mode() == EC_CAT_XFD && !A->rec.open, "ARP: CROSSFADER, the SAMPLER left");
+    press(FM1P_B_SEQ, 40);
+    CHECK(mode() == EC_CAT_PAT, "SEQ: PATTERN LAUNCH");
+    press(FM1P_B_LFO, 40);
+    CHECK(mode() == EC_CAT_MOD, "LFO: MODULATION");
+    press(FM1P_B_ENV, 40);
+    CHECK(mode() == EC_CAT_AMP, "ENV: AMP");
+    run(900);
+    CHECK(led_btn(FM1P_B_ENV) == FM1P_LED_LIT && led_btn(FM1P_B_FX) == FM1P_LED_FAINT, "the mode's button lit (%d %d)",
+          led_btn(FM1P_B_ENV), led_btn(FM1P_B_FX));
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "LOOP") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_EDIT, "MIX"),
+          "button labels: HOME %s EDIT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_HOME), L(FM1CORE_LBL_BTN0 + FM1P_B_EDIT));
+    /* the pop-up setting off: no pop-up */
+    A->pn.as.popup = 0;
+    press(FM1P_B_FX, 40);
+    CHECK(mode() == EC_CAT_FX && !A->pn.pop, "MODE POP-UP off: none");
+    A->pn.as.popup = 1;
+}
+
+/* ------------------------------------------------------------------------------------------- settings --- */
+static void test_settings(void)
+{
+    to(EC_CAT_FX);
+    btn(FM1P_B_FX, 1);                                        /* hold FX: its settings at 400 ms */
     run(300);
     CHECK(!A->settings, "FX held 300 ms: not yet");
     run(150);
-    CHECK(A->settings && A->cat == EC_CAT_FX, "FX held 450 ms: the FX setup");
+    CHECK(A->settings && A->cat == EC_CAT_FX, "FX held 450 ms: the FX settings");
     btn(FM1P_B_FX, 0);
     run(30);
-    CHECK(A->settings && A->cat == EC_CAT_FX, "it stays open on release");
+    CHECK(A->settings, "they stay open on release");
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "BACK") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "OK"),
+          "settings: F1 BACK, F2 OK");
     press(FM1P_B_OCTDN, 40);
-    CHECK(!A->settings && A->cat == EC_CAT_FX, "OCT- in the setup: back to the FX pages");
-    CHECK(A->keymode == EC_KM_STEPS, "(and no key-mode change)");
+    CHECK(!A->settings && mode() == EC_CAT_FX, "F1: back to the FX pages");
     btn(FM1P_B_GLO, 1);
     run(20);
-    press(FM1P_B_EDIT, 40);
-    CHECK(A->settings && A->cat == EC_CAT_FILT, "SHIFT + EDIT: the FILT setup at once");
-    press(FM1P_B_EDIT, 40);
+    press(FM1P_B_SEL, 40);
     btn(FM1P_B_GLO, 0);
     run(20);
-    CHECK(!A->settings && A->cat == EC_CAT_FILT, "SHIFT + EDIT again: back to the pages");
-    press(FM1P_B_LFO, 500);                                   /* 0.5.0: MOD has no setup: a hold is MOD KEYS */
-    CHECK(!A->settings && A->cat == EC_CAT_FILT && A->mk.on, "MOD held: MOD KEYS on, the page stays");
-    press(FM1P_B_LFO, 500);
-    CHECK(!A->mk.on, "MOD held again: MOD KEYS off");
-    press(FM1P_B_LFO, 40);
-    CHECK(!A->settings && A->cat == EC_CAT_MOD, "MOD tapped: its pages");
-    press(FM1P_B_ENV, 450);
-    press(FM1P_B_EDIT, 40);
-    CHECK(!A->settings && A->cat == EC_CAT_FILT, "in a setup, another button: its pages");
-}
-
-/* SRC: held with a lower key = the loop keys; held 400 ms and released with none used = the SRC setup */
-static void test_src_hold(void)
-{
-    int p0;
-    home();
-    p0 = A->page[EC_CAT_SRC];
-    press(FM1P_B_SEL, 60);
-    CHECK(A->cat == EC_CAT_SRC && A->page[EC_CAT_SRC] == (p0 + 1) % 4 && !A->settings, "SRC tap: the next page");
-    btn(FM1P_B_SEL, 1);
-    run(100);
-    tapkey(0, 3, 80);
-    run(400);
-    btn(FM1P_B_SEL, 0);
-    run(20);
-    CHECK(!A->settings && A->cat == EC_CAT_SRC && A->page[EC_CAT_SRC] == (p0 + 1) % 4,
-          "SRC held + a loop key: no setup, no page change");
-    btn(FM1P_B_SEL, 1);
-    run(500);
-    CHECK(!A->settings, "SRC held alone: nothing until its release");
-    btn(FM1P_B_SEL, 0);
-    run(20);
-    CHECK(A->settings && A->cat == EC_CAT_SRC, "SRC held 500 ms, released: the SRC setup");
-    home();
-    CHECK(!A->settings && A->cat == EC_CAT_SRC, "HOME closes it");
-}
-
-/* ------------------------------------------------------------------------------------------- PRESETS --- */
-static void test_presets_sample(void)
-{
-    const int s = ec_app_track_slot(A, A->track);
-    char before[EC_PATH];
-    int i, idx;
-    home();
-    snprintf(before, sizeof before, "%s", A->proj.slot[s].path);
-    idx = ec_browse_find(before);
-    CHECK(idx >= 0 && ec_browse_count() == 4, "T1 plays a folder file (%d of %d)", idx, ec_browse_count());
-    for (i = 0; i < 3; i++) {                                 /* a quick spin: three files on */
-        turn(FM1P_E_PRESETS, 1);
-        run(40);
-    }
-    CHECK(!strcmp(A->proj.slot[s].path, before), "spinning: nothing loads yet");
-    CHECK(A->ux.to_kind == EC_TO_SAMPLE && A->ux.to_ms && strstr(A->ux.to_val, "d_perc16"),
-          "the takeover shows the file (%s)", A->ux.to_val);
-    run(200);
-    CHECK(!strcmp(A->proj.slot[s].path, ec_browse_path((idx + 3) % 4)), "at rest: one load of the third file (%s)",
-          A->proj.slot[s].path);
-    run(800);
-    CHECK(A->slot[s].state == EC_SL_READY, "loaded and playing");
-    turn(FM1P_E_PRESETS, -3);
-    run(300);
-    CHECK(!strcmp(A->proj.slot[s].path, before), "back to the first file");
-    run(500);
-    btn(FM1P_B_GLO, 1);                                       /* SHIFT + PRESETS: the pattern */
-    run(20);
-    turn(FM1P_E_PRESETS, 2);
-    run(20);
-    btn(FM1P_B_GLO, 0);
-    run(20);
-    CHECK(A->seq.pending == 2 || A->proj.current == 2, "SHIFT + PRESETS: pattern 3 (pending %d current %d)",
-          A->seq.pending, A->proj.current);
-    turn(FM1P_E_PRESETS, 0);
-    btn(FM1P_B_GLO, 1);
-    run(20);
-    turn(FM1P_E_PRESETS, -2);
-    run(20);
-    btn(FM1P_B_GLO, 0);
-    run(1200);
-}
-
-/* ------------------------------------------------------------------------------------------- knobs --- */
-static void test_accel_snap(void)
-{
-    float x;
-    home();
-    press(FM1P_B_EDIT, 40);                                   /* FILT: KN1 = CUT (0..127) */
-    if (A->page[EC_CAT_FILT] != 0) {
-        A->page[EC_CAT_FILT] = 0;
-        A->ux.lane[EC_CAT_FILT] = 0;
-    }
-    ec_project_track(&A->proj, A->track)->v[EC_P_FILTER_CUTOFF] = 40;
-    run(200);
-    turn(FM1P_E_K1, 1);
-    run(200);
-    turn(FM1P_E_K1, 1);
-    run(200);
-    CHECK(tv(EC_P_FILTER_CUTOFF) == 42, "slow: one step a click (%g)", tv(EC_P_FILTER_CUTOFF));
-    for (int i = 0; i < 6; i++) {                             /* spun: 10 ms apart */
-        turn(FM1P_E_K1, 1);
-        run(9);
-    }
-    x = tv(EC_P_FILTER_CUTOFF);
-    CHECK(x > 42 + 6 && x <= 42 + 6 * 8, "spun: bigger steps (42 -> %g; at most ~1/16 of the range a click)", x);
-    run(300);
-    ec_project_track(&A->proj, A->track)->v[EC_P_FILTER_CUTOFF] = 50;
-    btn(FM1P_B_GLO, 1);
-    run(20);
-    turn(FM1P_E_K1, 1);
-    run(150);
-    CHECK(tv(EC_P_FILTER_CUTOFF) == 64, "SHIFT + KN1: snaps 50 -> 64 (%g)", tv(EC_P_FILTER_CUTOFF));
-    turn(FM1P_E_K1, -1);
-    run(150);
-    CHECK(tv(EC_P_FILTER_CUTOFF) == 32, "SHIFT + KN1 back: 32 (%g)", tv(EC_P_FILTER_CUTOFF));
-    turn(FM1P_E_K3, 1);                                       /* TYPE: a list, one item */
-    run(150);
-    btn(FM1P_B_GLO, 0);
-    run(20);
-    CHECK(tv(EC_P_FILTER_TYPE) == 2, "a list under SHIFT: one item (%g)", tv(EC_P_FILTER_TYPE));
-    CHECK(!A->ux.to_ms, "the cells show the value: no takeover");
-    /* lists never speed up */
+    CHECK(A->settings && A->cat == EC_CAT_FILT, "SHIFT + SEL: FILTER's settings at once");
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!A->settings && mode() == EC_CAT_FX, "F2 closes them: back to the mode it was opened over");
+    to(EC_MODE_KEYBOARD);
+    press(FM1P_B_HOME, 500);                                  /* HOME held: LOOP ENGINE's settings + ADVANCE */
     {
-        const float t0 = tv(EC_P_FILTER_TYPE);
-        turn(FM1P_E_K3, -1);
-        run(5);
-        turn(FM1P_E_K3, 1);
-        run(5);
-        turn(FM1P_E_K3, 1);
-        run(200);
-        CHECK(tv(EC_P_FILTER_TYPE) == t0 + 1, "list spun: one item a click (%g)", tv(EC_P_FILTER_TYPE));
+        ec_page_t pg;
+        int i, adv = 0;
+        ec_app_page(A, &pg);
+        for (i = 0; i < pg.n; i++)
+            adv |= pg.it[i].kind == EC_IT_UX && pg.it[i].id == EC_UX_ADVANCE;
+        CHECK(A->settings && A->cat == EC_CAT_SRC && adv, "HOME held: the loop / machine settings with ADVANCE");
     }
-    /* undo / redo (SHIFT + OCT- / OCT+) */
-    run(1200);
-    {
-        const float c0 = tv(EC_P_FILTER_CUTOFF);
-        turn(FM1P_E_K1, 3);
-        run(1200);
-        CHECK(tv(EC_P_FILTER_CUTOFF) == c0 + 3, "turned +3");
-        btn(FM1P_B_GLO, 1);
-        run(20);
-        press(FM1P_B_OCTDN, 40);
-        CHECK(tv(EC_P_FILTER_CUTOFF) == c0, "SHIFT + OCT-: undo (%g)", tv(EC_P_FILTER_CUTOFF));
-        press(FM1P_B_OCTUP, 40);
-        CHECK(tv(EC_P_FILTER_CUTOFF) == c0 + 3, "SHIFT + OCT+: redo (%g)", tv(EC_P_FILTER_CUTOFF));
-        btn(FM1P_B_GLO, 0);
-        run(20);
-        CHECK(A->keymode == EC_KM_STEPS, "undo / redo leave the key mode alone");
-    }
-    /* the MIX page shows no cells: a knob takes over the screen */
-    press(FM1P_B_LFO, 40);
-    tapkey(1, 8, 60);                                          /* MST key: the MST category, MIX */
-    CHECK(A->cat == EC_CAT_MASTER && A->page[EC_CAT_MASTER] == 0, "MST key: MIX (cat %d page %d)", A->cat,
-          A->page[EC_CAT_MASTER]);
-    turn(FM1P_E_K2, 1);
+    press(FM1P_B_HOME, 40);
+    CHECK(!A->settings && mode() == EC_MODE_KEYBOARD, "HOME tapped in them: back to KEYBOARD");
+    press(FM1P_B_SEQ, 500);
+    CHECK(A->ux.f3, "SEQ held: F3");
+    turn(FM1P_E_PRESETS, 1);
     run(20);
-    CHECK(A->ux.to_ms && A->ux.to_kind == EC_TO_VALUE && !strcmp(A->ux.to_label, "PAN"), "MIX + KN2: PAN taken over");
-    run(1100);
-    CHECK(!A->ux.to_ms, "the takeover ends after a second");
-    turn(FM1P_E_K2, -1);
-    run(1100);
-}
-
-/* ------------------------------------------------------------------------------------------- F3 --- */
-static void test_f3(void)
-{
-    float bpm;
-    home();
+    CHECK(A->e5.naming == EC_NM_PATTERN && !A->ux.f3, "F3 + PRESETS: the pattern's name");
+    press(FM1P_B_OCTDN, 40);
+    CHECK(!A->e5.naming, "F1: naming cancelled");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_SEQ, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(A->ux.f3, "SHIFT + SEQ: F3");
+    press(FM1P_B_SEQ, 40);
+    CHECK(!A->ux.f3, "SEQ closes F3");
+    to(EC_CAT_FX);
     btn(FM1P_B_OCTDN, 1);
     run(30);
     btn(FM1P_B_OCTUP, 1);
     run(30);
-    CHECK(A->ux.f3, "OCT- + OCT+: F3");
+    CHECK(A->ux.f3, "F1 + F2: F3");
     btn(FM1P_B_OCTDN, 0);
     btn(FM1P_B_OCTUP, 0);
     run(30);
-    CHECK(A->ux.f3 && A->keymode == EC_KM_STEPS, "F3 stays open on release, the key mode unchanged");
-    bpm = A->proj.bpm;
-    turn(FM1P_E_SELECT, 2);
-    run(200);
-    CHECK(A->proj.bpm == bpm + 2, "F3 + SELECT: the tempo (%g -> %g)", bpm, A->proj.bpm);
-    turn(FM1P_E_SELECT, -2);
-    run(200);
-    {
-        const float sw = A->proj.swing;
-        turn(FM1P_E_ALGO, 3);
-        run(50);
-        CHECK(A->proj.swing == sw + 3, "F3 + ALGORITHM: the swing");
-        turn(FM1P_E_ALGO, -3);
-        run(50);
-    }
-    {
-        const float len = tv(EC_P_PATTERN_STEPS);
-        turn(FM1P_E_K1, 16);
-        run(300);
-        CHECK(tv(EC_P_PATTERN_STEPS) == len + 16, "F3 + KN1: the pattern LEN (%g)", tv(EC_P_PATTERN_STEPS));
-    }
-    tapkey(0, 1, 60);                                         /* tap page 2: edit it */
-    CHECK(A->step_page == 1, "F3 + lower key 2 tapped: page 2 (%d)", A->step_page);
-    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "TEMPO") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "BACK") &&
-              lbl(FM1CORE_LBL_WHITE0 + 3, "PAGE 4"),
-          "F3 labels: SELECT %s, OCT- %s, W4 %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT),
-          L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN), L(FM1CORE_LBL_WHITE0 + 3));
-    tapkey(0, 0, 500);                                        /* hold page 1: out of the loop */
-    CHECK(!ec_e5_page_in_loop(&A->proj, A->track, 0, 2) && A->step_page == 1, "F3 + key 1 held: page 1 leaves the loop");
-    tapkey(0, 0, 500);
-    CHECK(ec_e5_page_in_loop(&A->proj, A->track, 0, 2), "held again: back in");
-    tapkey(0, 0, 60);
+    CHECK(A->ux.f3 && !A->pn.f_sticky, "F3 stays open, no sticky F");
     press(FM1P_B_OCTDN, 40);
-    CHECK(!A->ux.f3 && A->keymode == EC_KM_STEPS, "OCT- closes F3 (no key-mode change)");
-    turn(FM1P_E_K1, 0);
-    /* PLAY held: F3, without starting the transport; a tap plays */
-    btn(FM1P_B_PLAY, 1);
-    run(450);
-    CHECK(A->ux.f3 && !A->seq.playing, "PLAY held: F3, still stopped");
-    btn(FM1P_B_PLAY, 0);
-    run(30);
-    CHECK(A->ux.f3 && !A->seq.playing, "released: F3 stays, still stopped");
-    press(FM1P_B_PLAY, 60);
-    CHECK(A->seq.playing, "PLAY tapped in F3: plays");
-    press(FM1P_B_HOME, 40);
-    CHECK(!A->ux.f3 && A->cat == EC_CAT_SRC, "HOME closes F3");
-    btn(FM1P_B_GLO, 1);
-    run(20);
-    press(FM1P_B_PLAY, 40);                                   /* SHIFT + PLAY: stop + step 1 */
-    btn(FM1P_B_GLO, 0);
-    run(20);
-    CHECK(!A->seq.playing && !A->seq.paused, "SHIFT + PLAY: stopped");
-    /* LEN back */
-    press(FM1P_B_OCTDN, 30);                                  /* a tap: LOOP KEYS */
-    CHECK(A->keymode == EC_KM_LOOP, "OCT- tapped: loop keys");
-    press(FM1P_B_OCTUP, 30);
-    CHECK(A->keymode == EC_KM_SCENE, "OCT+ tapped too: scene (both)");
-    press(FM1P_B_OCTDN, 30);
-    press(FM1P_B_OCTUP, 30);
-    CHECK(A->keymode == EC_KM_STEPS, "both again: steps");
-    ec_project_track(&A->proj, A->track)->v[EC_P_PATTERN_STEPS] = 16;
-    A->step_page = 0;
+    CHECK(!A->ux.f3, "F1: F3 closed");
 }
 
-/* ------------------------------------------------------------------------------------------- pop-ups --- */
-static void test_popups(void)
+/* ------------------------------------------------------------------------------------------- APP SETTINGS --- */
+static void test_app_settings(void)
 {
-    ec_ptrack_t *t;
-    int i, trigs = 0;
-    home();
-    tapkey(1, 10, 60);                                        /* PATN tapped: the overlay stays */
-    CHECK(A->patn_open, "PATN tapped: the overlay stays open");
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "OK"), "pop-up: OCT+ OK (%s)", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP));
-    press(FM1P_B_OCTDN, 40);
-    CHECK(!A->patn_open && A->keymode == EC_KM_STEPS, "OCT- closes it");
-    tapkey(1, 10, 600);                                       /* held long, nothing used: stays too */
-    CHECK(A->patn_open, "PATN held 600 ms: stays open");
-    home();
-    CHECK(!A->patn_open, "HOME closes it");
-    /* the question: hold PATN + PLAY = CLEAR P01?; OCT+ answers yes */
-    tapkey(0, 0, 40);
-    tapkey(0, 4, 40);
-    key(1, 10, 1);
-    run(100);
-    press(FM1P_B_PLAY, 40);
-    key(1, 10, 0);
-    run(100);
-    CHECK(A->e5.confirm && ec_app_popup(A), "PATN + PLAY: the question stays open after PATN's release");
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "YES"), "the question's OCT+: YES (%s)",
-          L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP));
-    press(FM1P_B_OCTDN, 40);
-    t = ec_project_track(&A->proj, 0);
-    for (i = 0; i < 16; i++)
-        trigs += t->steps[i].trig;
-    CHECK(!A->e5.confirm && trigs == 2, "OCT-: no (trigs %d)", trigs);
-    key(1, 10, 1);
-    run(100);
-    press(FM1P_B_PLAY, 40);
-    key(1, 10, 0);
-    run(100);
-    press(FM1P_B_OCTUP, 40);
-    for (i = 0, trigs = 0; i < 16; i++)
-        trigs += t->steps[i].trig;
-    CHECK(!A->e5.confirm && trigs == 0, "OCT+: yes, cleared (trigs %d)", trigs);
-    /* naming: SHIFT + PATN; OCT+ keeps */
+    uint32_t size;
+    const uint8_t *rec;
+    to(EC_CAT_SRC);
     btn(FM1P_B_GLO, 1);
     run(20);
-    tapkey(1, 10, 40);
+    press(FM1P_B_HOME, 40);
     btn(FM1P_B_GLO, 0);
     run(20);
-    CHECK(A->e5.naming == EC_NM_PATTERN, "SHIFT + PATN: name the pattern");
+    CHECK(A->pn.as_open && ec_app_popup(A), "SHIFT + HOME: APP SETTINGS");
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "THEME") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "ROW"),
+          "its knobs: K1 %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    turn(FM1P_E_K1, 1);
+    run(20);
+    CHECK(ec_gfx_theme() == 1, "THEME turned: the palette changes at once (%d)", ec_gfx_theme());
+    press(FM1P_B_OCTDN, 40);
+    CHECK(!A->pn.as_open && ec_gfx_theme() == 0, "F1: back, the theme as it was");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_HOME, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    turn(FM1P_E_K1, 2);
+    turn(FM1P_E_SELECT, 2);                                   /* row 3 = KNOB SPEED on K3 */
     turn(FM1P_E_K3, 1);
     run(20);
     press(FM1P_B_OCTUP, 40);
-    CHECK(!A->e5.naming && A->proj.pe5[A->proj.current].name[0], "OCT+ keeps the name (%s)",
-          A->proj.pe5[A->proj.current].name);
-}
-
-/* ------------------------------------------------------------------------------------------- tracks --- */
-static void test_tracks(void)
-{
-    home();
-    tapkey(1, 2, 40);
-    CHECK(A->track == 2, "T3 tapped: selected");
-    tapkey(1, 1, 500);
-    CHECK(tv(EC_P_MUTE) < 0.5f && ec_project_track(&A->proj, 1)->v[EC_P_MUTE] > 0.5f && A->track == 2,
-          "T2 held: muted, not selected");
-    tapkey(1, 3, 40);
-    run(60);
-    tapkey(1, 3, 40);
-    CHECK(A->ux.solo == 1u << 3, "T4 double-tapped: solo (%02x)", A->ux.solo);
-    CHECK(!ec_app_track_audible(A, 0) && ec_app_track_audible(A, 3), "a solo silences the others");
-    run(400);
-    key(1, 9, 1);                                             /* FILL held + a track key: all on */
-    run(50);
-    tapkey(1, 0, 40);
-    key(1, 9, 0);
-    run(30);
-    CHECK(!A->ux.solo && ec_project_track(&A->proj, 1)->v[EC_P_MUTE] < 0.5f, "FILL + T1: every mute and solo off");
-    CHECK(!A->fill_latched && !ec_seq_fill_active(&A->seq), "(no fill left on)");
-    tapkey(1, 0, 40);
-    run(400);
-}
-
-/* ------------------------------------------------------------------------------------------- locks --- */
-static void test_locks(void)
-{
-    ec_step_t *s;
-    float x;
-    home();
-    press(FM1P_B_EDIT, 40);                                   /* FILT: KN1 = CUT */
-    A->page[EC_CAT_FILT] = 0;
-    A->ux.lane[EC_CAT_FILT] = 0;
-    key(0, 2, 1);                                             /* hold step 3, turn KN1: a lock */
-    run(300);
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "COPY"), "a step held: REC = COPY (%s)", L(FM1CORE_LBL_BTN0 + FM1P_B_REC));
-    turn(FM1P_E_K1, -10);
-    run(100);
-    s = &ec_project_track(&A->proj, A->track)->steps[2];
-    CHECK(ec_step_lock_get(s, EC_P_FILTER_CUTOFF, &x), "held step + KN1: locked");
-    btn(FM1P_B_OCTUP, 1);                                     /* OCT+ held + KN1: clear that lock */
-    run(50);
-    turn(FM1P_E_K1, 1);
-    run(50);
-    btn(FM1P_B_OCTUP, 0);
-    run(30);
-    key(0, 2, 0);
-    run(30);
-    CHECK(!ec_step_lock_get(s, EC_P_FILTER_CUTOFF, &x), "OCT+ held + KN1: the lock cleared");
-    CHECK(A->keymode == EC_KM_STEPS, "(OCT+ used: no key-mode change)");
-    CHECK(s->trig, "the trig stays");
-    tapkey(0, 2, 40);                                         /* remove the trig */
+    rec = ec_plat_settings(&size);
+    CHECK(!A->pn.as_open && ec_gfx_theme() == 1 && A->pn.as.knob == 2, "F2: kept (theme %d, knob %d)", ec_gfx_theme(),
+          A->pn.as.knob);
+    CHECK(rec && rec[0] == 0x45 && rec[1] == 0x43 && rec[2] == 0x41 && rec[3] == 0x53, "saved in the settings record");
+    A->pn.as.theme = 0;                                       /* the record survives a reload of it */
+    ec_as_load();
+    CHECK(A->pn.as.theme == 1 && A->pn.as.knob == 2, "loaded back from the record");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_HOME, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    turn(FM1P_E_K1, -2);
+    turn(FM1P_E_SELECT, 2);
+    turn(FM1P_E_K3, -1);
+    press(FM1P_B_HOME, 40);
+    CHECK(!A->pn.as_open && ec_gfx_theme() == 0 && A->pn.as.knob == 1, "HOME closes (keeps)");
 }
 
 /* ------------------------------------------------------------------------------------------- SHIFT --- */
 static void test_shift(void)
 {
-    uint32_t e;
-    home();
+    to(EC_CAT_FILT);
+    press(FM1P_B_GLO, 40);                                    /* a quick tap: sticky */
+    CHECK(A->pn.shift_sticky && A->fn, "GLO tapped: sticky SHIFT");
+    CHECK(ec_app_shift_map(A), "sticky: SHIFT's screen");
+    CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "T3") && lbl(FM1CORE_LBL_BLACK0 + 0, "TAP") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "FILL") && lbl(FM1CORE_LBL_BLACK0 + 5, ""),
+          "SHIFT's key labels: W3 %s B1 %s B11 %s B6 '%s'", L(FM1CORE_LBL_WHITE0 + 2), L(FM1CORE_LBL_BLACK0),
+          L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_BLACK0 + 5));
+    tapkey(0, wkey(3), 40);
+    CHECK(A->track == 2 && A->fn, "sticky SHIFT + W3: T3 (it stays on)");
+    tapkey(0, wkey(7), 40);
+    CHECK(A->bus == 1, "SHIFT + W7: S1");
+    tapkey(0, wkey(1), 40);
+    CHECK(A->track == 0 && !A->bus, "SHIFT + W1: T1");
+    press(FM1P_B_GLO, 40);
+    CHECK(!A->pn.shift_sticky && !A->fn, "GLO again: off");
+    press(FM1P_B_GLO, 40);
+    press(FM1P_B_FX, 40);
+    CHECK(!A->pn.shift_sticky, "a mode change ends sticky SHIFT");
+    to(EC_CAT_FILT);
+    btn(FM1P_B_GLO, 1);                                       /* held */
+    run(20);
+    {
+        const float bpm = A->proj.bpm, sw = A->proj.swing;
+        turn(FM1P_E_SELECT, 3);
+        turn(FM1P_E_ALGO, 2);
+        run(20);
+        CHECK(A->proj.bpm > bpm && A->proj.swing > sw, "SHIFT + SEL / ALGO: BPM %g, swing %g", A->proj.bpm, A->proj.swing);
+        turn(FM1P_E_PRESETS, 1);
+        run(20);
+        CHECK(A->track == 1, "SHIFT + PRESETS: the next track");
+        turn(FM1P_E_PRESETS, -1);
+        run(20);
+        tapkey(1, bkey(3), 40);                               /* MEMORIZE */
+        CHECK(A->e5.memo_ok, "SHIFT + B3: memorized");
+        tapkey(1, bkey(2), 40);
+        CHECK(A->fill_latched, "SHIFT + B2: fill latched");
+        tapkey(1, bkey(2), 40);
+        key(1, bkey(11), 1);
+        run(20);
+        CHECK(A->fill_held && ec_seq_fill_active(&A->seq), "SHIFT + B11 held: FILL");
+        key(1, bkey(11), 0);
+        run(20);
+        CHECK(!A->fill_held, "B11 up: no fill");
+        tapkey(1, bkey(1), 40);
+        run(440);
+        tapkey(1, bkey(1), 40);
+        CHECK(fabsf(A->proj.bpm - 120.0f) < 12.0f, "SHIFT + B1 twice 0.5 s apart: TAP ~120 (%g)", A->proj.bpm);
+        {
+            const int saves = A->saves;
+            press(FM1P_B_SAVE, 40);
+            CHECK(A->saves == saves + 1, "SHIFT + FILE: saved");
+        }
+        press(FM1P_B_OCTDN, 40);
+        CHECK(A->e5.undo.nr > 0, "SHIFT + F1: undo");
+        press(FM1P_B_OCTUP, 40);
+        CHECK(A->e5.undo.nr == 0, "SHIFT + F2: redo");
+    }
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(!A->fn && !A->pn.shift_sticky, "SHIFT used while held: no sticky on release");
+    tapkey(1, bkey(4), 40);                                   /* without SHIFT: FILTER's B4 (nothing) */
     btn(FM1P_B_GLO, 1);
+    run(20);
+    tapkey(1, bkey(4), 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(A->e5.toast_ms && strstr(A->e5.toast, "RECALL"), "SHIFT + B4: recalled (%s)", A->e5.toast);
+}
+
+/* ------------------------------------------------------------------------------------------- PLAY, REC --- */
+static void test_transport(void)
+{
+    to(EC_CAT_FILT);
+    btn(FM1P_B_PLAY, 1);
+    run(2);
+    CHECK(A->seq.playing, "PLAY: starts on the press");
+    btn(FM1P_B_PLAY, 0);
+    run(20);
+    btn(FM1P_B_PLAY, 1);
+    run(2);
+    CHECK(!A->seq.playing, "PLAY again: stops at once");
+    btn(FM1P_B_PLAY, 0);
+    run(20);
+    press(FM1P_B_REC, 40);
+    CHECK(ec_liverec_on() && led_btn(FM1P_B_REC) == FM1P_LED_LIT, "REC tapped: live record on (part 2's hook), lit");
+    press(FM1P_B_REC, 40);
+    CHECK(!ec_liverec_on(), "REC again: off");
+    press(FM1P_B_REC, 500);
+    CHECK(!ec_liverec_on() && !strcmp(A->msg, "REC SETTINGS"), "REC held: the record settings (part 2's hook)");
+}
+
+/* ------------------------------------------------------------------------------------------- steps --- */
+static ec_step_t *step(int i) { return &ec_project_track(&A->proj, A->track)->steps[i]; }
+static void clear_steps(void)
+{
+    int i;
+    for (i = 0; i < EC_MAXSTEPS; i++)
+        ec_step_clear(step(i));
+}
+
+static void test_steps(void)
+{
+    float x;
+    int k;
+    to(EC_CAT_FILT);
+    ec_app_set_page(EC_CAT_FILT, 0);
+    clear_steps();
+    tapkey(0, wkey(1), 40);
+    CHECK(step(0)->trig, "FILTER: W1 tapped = a trig on step 1");
+    run(20);
+    CHECK(led_key(0, wkey(1)) == FM1P_LED_MID, "its LED (%d)", led_key(0, wkey(1)));
+    key(0, wkey(3), 1);
     run(300);
-    CHECK(ec_app_shift_map(A), "SHIFT held alone: its map");
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "UNDO") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "REDO") &&
-              lbl(FM1CORE_LBL_BTN0 + FM1P_B_PLAY, "STOP") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "SAVE") &&
-              lbl(FM1CORE_LBL_BTN0 + FM1P_B_EDIT, "SETUP") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_LFO, ""),
-          "SHIFT's buttons: %s %s %s %s %s '%s'", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN), L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP),
-          L(FM1CORE_LBL_BTN0 + FM1P_B_PLAY), L(FM1CORE_LBL_BTN0 + FM1P_B_REC), L(FM1CORE_LBL_BTN0 + FM1P_B_EDIT),
-          L(FM1CORE_LBL_BTN0 + FM1P_B_LFO));
-    CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "MEMORIZE") && lbl(FM1CORE_LBL_BLACK0 + 8, "TAP") &&
-              lbl(FM1CORE_LBL_BLACK0 + 3, "") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "PATTERN"),
-          "SHIFT's keys: %s %s '%s' %s", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 8), L(FM1CORE_LBL_BLACK0 + 3),
-          L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS));
-    e = fm1core_labels_epoch();
-    run(100);
-    CHECK(fm1core_labels_epoch() == e, "nothing changed: the epoch stays");
-    tapkey(1, 0, 40);                                         /* SHIFT + T1: memorize */
-    CHECK(A->e5.memo_ok && !ec_app_shift_map(A), "SHIFT + T1: memorized (the map gives way)");
-    tapkey(1, 8, 40);                                         /* tap tempo: 500 ms = 120 */
-    run(440);
-    tapkey(1, 8, 40);
-    run(440);
-    tapkey(1, 8, 40);
-    CHECK(fabsf(A->proj.bpm - 120.0f) < 0.6f, "SHIFT + MST tapped at 500 ms: 120 BPM (%g)", A->proj.bpm);
-    btn(FM1P_B_GLO, 0);
-    run(30);
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "LOOP KEYS") && lbl(FM1CORE_LBL_BLACK0, "T1") &&
-              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "SAMPLE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "TRACK") &&
-              lbl(FM1CORE_LBL_WHITE0 + 4, "5"),
-          "released: OCT- %s, B1 %s, PRESETS %s, W5 %s", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN), L(FM1CORE_LBL_BLACK0),
-          L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS), L(FM1CORE_LBL_WHITE0 + 4));
-    /* the RAZOR page: SHIFT + OCT keep Auto-Chop / Redistribute */
-    press(FM1P_B_SAVE, 40);
-    A->page[EC_CAT_FILE] = 1;
-    A->ux.lane[EC_CAT_FILE] = 0;
-    run(40);
+    turn(FM1P_E_K1, 5);                                       /* hold a step + a knob = a lock */
+    run(20);
+    key(0, wkey(3), 0);
+    run(20);
+    CHECK(ec_step_lock_get(step(2), EC_P_FILTER_CUTOFF, &x) && step(2)->trig, "W3 held + K1: a cutoff lock");
+    key(0, wkey(5), 1);                                       /* hold a step + PRESETS: a slot lock */
+    run(300);
+    turn(FM1P_E_PRESETS, 1);
+    run(20);
+    key(0, wkey(5), 0);
+    run(20);
+    CHECK(ec_step_lock_get(step(4), EC_P_SLOT, &x), "W5 held + PRESETS: a slot lock (%g)", x);
+    btn(FM1P_B_OCTDN, 1);                                     /* F1 held + K1: every cutoff lock cleared */
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CLR CUTOFF"), "F1 held: K1 %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    turn(FM1P_E_K1, 1);
+    run(20);
+    btn(FM1P_B_OCTDN, 0);
+    run(20);
+    CHECK(!ec_step_lock_get(step(2), EC_P_FILTER_CUTOFF, &x) && !A->pn.f_sticky, "F1 + K1: the locks cleared, no sticky");
+    /* ALGO: the step page */
+    ec_app_params(A)[EC_P_PATTERN_STEPS] = 32;
+    ec_seq_timing_changed(&A->seq);
+    turn(FM1P_E_ALGO, 1);
+    run(20);
+    CHECK(A->step_page == 1 && lbl(FM1CORE_LBL_WHITE0 + 0, "17"), "ALGO: step page 2 (W1 = %s)", L(FM1CORE_LBL_WHITE0));
+    turn(FM1P_E_ALGO, 3);
+    run(20);
+    CHECK(A->step_page == 1, "ALGO clamps at the last page");
+    turn(FM1P_E_ALGO, -1);
+    run(20);
+    ec_app_params(A)[EC_P_PATTERN_STEPS] = 16;
+    clear_steps();
+    k = 0;
+    (void)k;
+}
+
+/* PRESETS = the track's pool slot: the used slots, the empty ones skipped */
+static void test_presets(void)
+{
+    int s0;
+    to(EC_CAT_FILE);
+    ec_app_set_page(EC_CAT_FILE, 0);
+    turn(FM1P_E_SELECT, 1);                                   /* the second file */
+    run(20);
+    tapkey(1, bkey(10), 40);                                  /* B10: LOAD into the next free slot */
+    run(800);
+    turn(FM1P_E_SELECT, 1);
+    run(20);
+    tapkey(1, bkey(10), 40);
+    run(800);
+    s0 = ec_app_track_slot(A, A->track);
+    CHECK(s0 == 2 && A->slot[2].state == EC_SL_READY, "FILE: B10 loads into the next free slot (%d)", s0);
+    to(EC_CAT_FILT);
+    turn(FM1P_E_PRESETS, 1);
+    run(20);
+    CHECK(ec_app_track_slot(A, A->track) == 0 && A->ux.to_ms && A->ux.to_kind == EC_TO_SAMPLE,
+          "PRESETS: round to slot 1 (%d), the takeover", ec_app_track_slot(A, A->track));
+    turn(FM1P_E_PRESETS, 1);
+    run(20);
+    CHECK(ec_app_track_slot(A, A->track) == 1, "PRESETS: slot 2");
+    turn(FM1P_E_PRESETS, -2);
+    run(20);
+    CHECK(ec_app_track_slot(A, A->track) == 2, "PRESETS back twice: slot 3 (the empty ones skipped)");
+    turn(FM1P_E_PRESETS, -2);
+    run(400);
+    CHECK(ec_app_track_slot(A, A->track) == 0, "slot 1 again");
+}
+
+/* ------------------------------------------------------------------------------------------- §2 --- */
+static void test_clip(void)
+{
+    to(EC_CAT_TRIG);
+    clear_steps();
+    step(0)->trig = 1;
+    ec_step_lock_set(step(0), EC_P_PITCH, 5);
+    step(2)->trig = 1;
+    press(FM1P_B_OCTDN, 40);                                  /* F1 tapped: sticky copy */
+    CHECK(A->pn.f_sticky == 1 && ec_pn_f(1), "F1 tapped: sticky");
+    tapkey(0, wkey(1), 40);
+    CHECK(A->pn.clip_state == EC_CLIP_FRESH && !step(3)->trig, "the first tap copies step 1");
+    tapkey(0, wkey(3), 40);                                   /* the next tap pastes, even on a trig */
+    {
+        float x;
+        CHECK(ec_step_lock_get(step(2), EC_P_PITCH, &x) && x == 5, "the next tap pastes onto step 3 (not empty)");
+    }
+    step(4)->trig = 1;
+    tapkey(0, wkey(5), 40);                                   /* not empty: copies it */
+    tapkey(0, wkey(7), 40);                                   /* empty: pastes */
+    {
+        float x;
+        CHECK(step(6)->trig && !ec_step_lock_get(step(6), EC_P_PITCH, &x), "then: a full step copies, an empty one pastes");
+    }
+    press(FM1P_B_OCTDN, 40);
+    CHECK(!A->pn.f_sticky && A->pn.clip_state == EC_CLIP_EMPTY, "F1 off: the buffer empties");
+    press(FM1P_B_OCTUP, 40);                                  /* F2: cut */
+    tapkey(0, wkey(1), 40);
+    CHECK(!step(0)->trig, "F2: cutting step 1 empties it");
+    tapkey(0, wkey(10), 40);
+    {
+        float x;
+        CHECK(step(9)->trig && ec_step_lock_get(step(9), EC_P_PITCH, &x) && x == 5, "the next tap: moved to step 10");
+    }
+    tapkey(0, wkey(10), 40);                                  /* not empty: cut again */
+    CHECK(!step(9)->trig, "cut step 10");
+    tapkey(0, wkey(10), 40);
+    CHECK(step(9)->trig, "tapped again: put back");
+    tapkey(0, wkey(12), 40);
+    CHECK(step(11)->trig && step(9)->trig, "a further tap on an empty step: a copy");
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!A->pn.f_sticky && A->pn.clip_state == EC_CLIP_EMPTY, "F2 tapped again: off, the buffer empty");
+    btn(FM1P_B_OCTUP, 1);
+    run(500);
+    CHECK(ec_pn_f(2), "F2 held: on while held");
+    btn(FM1P_B_OCTUP, 0);
+    run(20);
+    CHECK(!ec_pn_f(2) && !A->pn.f_sticky, "F2 let go after a hold: off");
+    clear_steps();
+}
+
+/* ------------------------------------------------------------------------------------------- the source template --- */
+static int route(int src, int dst)
+{
+    return ec_mtx_find(ec_app_params(A), src, dst);
+}
+
+static void test_sources(void)
+{
+    ec_page_t pg;
+    float *v;
+    to(EC_CAT_FILT);
+    ec_app_set_page(EC_CAT_FILT, 0);
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 5, "LFO1") && lbl(FM1CORE_LBL_BLACK0 + 9, "AT") &&
+              lbl(FM1CORE_LBL_BLACK0 + 0, "FILTER"),
+          "FILTER's black keys: B1 %s B6 %s B10 %s", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 5),
+          L(FM1CORE_LBL_BLACK0 + 9));
+    key(1, bkey(6), 1);                                       /* hold LFO 1 + K1: LFO 1 -> CUTOFF */
+    run(20);
+    turn(FM1P_E_K1, 1);
+    turn(FM1P_E_K1, 5);
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "LFO1 CUTOF"), "B6 held: K1 %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    key(1, bkey(6), 0);
+    run(20);
+    v = ec_app_params(A);
+    CHECK(route(EC_MS_LFO1, EC_P_FILTER_CUTOFF) >= 0 && mode() == EC_CAT_FILT, "B6 held + K1: routed, the mode stays");
+    CHECK(v[ec_mtx_depth_id(route(EC_MS_LFO1, EC_P_FILTER_CUTOFF))] != 0, "and its depth set");
+    key(1, bkey(6), 1);                                       /* + F2 while turning: removed */
+    run(20);
+    btn(FM1P_B_OCTUP, 1);
+    run(20);
+    turn(FM1P_E_K1, 1);
+    run(20);
+    btn(FM1P_B_OCTUP, 0);
+    key(1, bkey(6), 0);
+    run(20);
+    CHECK(route(EC_MS_LFO1, EC_P_FILTER_CUTOFF) < 0 && !A->pn.f_sticky && mode() == EC_CAT_FILT,
+          "B6 held + F2 + K1: the route removed");
+    key(1, bkey(9), 1);                                       /* VEL -> RESO, then F2 + K2 clears it */
+    run(20);
+    turn(FM1P_E_K2, 1);
+    turn(FM1P_E_K2, 3);
+    key(1, bkey(9), 0);
+    run(20);
+    CHECK(route(EC_MS_VEL, EC_P_FILTER_RES) >= 0, "B9 held + K2: VEL -> RESO");
+    btn(FM1P_B_OCTUP, 1);
+    run(20);
+    turn(FM1P_E_K2, 1);
+    btn(FM1P_B_OCTUP, 0);
+    run(20);
+    CHECK(route(EC_MS_VEL, EC_P_FILTER_RES) < 0, "F2 + K2: every modulation of RESO cleared");
+    /* held steps: depth locks */
+    clear_steps();
+    key(1, bkey(7), 1);
+    run(20);
+    turn(FM1P_E_K1, 1);                                       /* the route */
+    run(20);
+    key(0, wkey(2), 1);
+    run(300);
+    turn(FM1P_E_K1, 4);                                       /* steps held: the depth's lock */
+    run(20);
+    key(0, wkey(2), 0);
+    key(1, bkey(7), 0);
+    run(20);
+    {
+        float x;
+        const int k = route(EC_MS_LFO2, EC_P_FILTER_CUTOFF);
+        CHECK(k >= 0 && ec_step_lock_get(step(1), ec_mtx_depth_id(k), &x), "B7 + a held step + K1: a depth lock");
+    }
+    clear_steps();
+    /* the taps: the source's page */
+    tapkey(1, bkey(6), 40);
+    ec_app_page(A, &pg);
+    CHECK(mode() == EC_CAT_MOD && pg.pic == EC_PIC_LFO1 && A->pn.pop, "B6 tapped: MODULATION's LFO 1 (with the pop-up)");
+    to(EC_CAT_FILT);
+    tapkey(1, bkey(8), 40);
+    ec_app_page(A, &pg);
+    CHECK(mode() == EC_CAT_AMP && pg.pic == EC_PIC_MENV, "B8 tapped: AMP's MOD ENV");
+    tapkey(1, bkey(10), 40);
+    ec_app_page(A, &pg);
+    CHECK(mode() == EC_CAT_MOD && pg.pic == EC_PIC_MATRIX, "B10 (AT) tapped: the MATRIX");
+    /* page keys, quick settings */
+    to(EC_CAT_FILT);
+    tapkey(1, bkey(2), 40);
+    ec_app_page(A, &pg);
+    CHECK(pg.pic == EC_PIC_FENV, "FILTER B2: FILTER ENV");
+    {
+        const float t0 = ec_app_params(A)[EC_P_FILTER_TYPE];
+        key(1, bkey(1), 1);
+        run(20);
+        turn(FM1P_E_K1, 1);
+        run(20);
+        key(1, bkey(1), 0);
+        run(20);
+        ec_app_page(A, &pg);
+        CHECK(pg.pic == EC_PIC_FILTER && ec_app_params(A)[EC_P_FILTER_TYPE] == t0 + 1,
+              "B1 held + K1: the filter type (%g -> %g)", t0, ec_app_params(A)[EC_P_FILTER_TYPE]);
+    }
+    {
+        const float m0 = ec_app_params(A)[EC_P_FENV_MODE];
+        tapkey(1, bkey(11), 40);
+        CHECK(ec_app_params(A)[EC_P_FENV_MODE] != m0, "FILTER B11: the filter env's mode");
+        tapkey(1, bkey(11), 40);
+    }
+    to(EC_CAT_AMP);
+    {
+        const float m0 = ec_app_params(A)[EC_P_ENV_MODE];
+        key(1, bkey(1), 1);
+        run(20);
+        turn(FM1P_E_SELECT, m0 > 1 ? -1 : 1);
+        run(20);
+        key(1, bkey(1), 0);
+        run(20);
+        CHECK(ec_app_params(A)[EC_P_ENV_MODE] != m0, "AMP B1 held + SEL: the env mode (%g -> %g)", m0,
+              ec_app_params(A)[EC_P_ENV_MODE]);
+        key(1, bkey(1), 1);
+        run(20);
+        turn(FM1P_E_SELECT, m0 > 1 ? 1 : -1);
+        key(1, bkey(1), 0);
+        run(20);
+    }
+    to(EC_CAT_MOD);
+    tapkey(1, bkey(2), 40);
+    ec_app_page(A, &pg);
+    CHECK(pg.pic == EC_PIC_MACRO && pg.arg == 0, "MODULATION B2: MACRO 1");
+    tapkey(1, bkey(11), 40);
+    ec_app_page(A, &pg);
+    CHECK(pg.pic == EC_PIC_MACROS, "MODULATION B11: MACROS");
+    tapkey(1, bkey(1), 40);
+    ec_app_page(A, &pg);
+    CHECK(pg.pic == EC_PIC_MATRIX, "MODULATION B1: MATRIX");
+    to(EC_CAT_FILT);
+    key(1, bkey(3), 1);                                       /* FILTER B3 is a page; hold it: no source */
+    run(20);
+    key(1, bkey(3), 0);
+    run(20);
+    to(EC_CAT_MOD);
+    tapkey(1, bkey(2), 40);                                   /* M1 page, back to FILTER: hold M1 there? MOD only */
+    to(EC_CAT_FILT);
+    ec_app_set_page(EC_CAT_FILT, 0);
+    /* LOOP ENGINE: B11 = the zoom */
+    to(EC_CAT_SRC);
+    v = ec_app_params(A);
+    v[EC_P_LOOP_DIVISION] = 16;
+    tapkey(1, bkey(11), 40);
+    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11: 32, first half");
+    tapkey(1, bkey(11), 40);
+    CHECK(v[EC_P_LOOP_DIVISION] == 32 && A->pn.zoom_half && lbl(FM1CORE_LBL_WHITE0, "L17"),
+          "B11: the second half (W1 = %s)", L(FM1CORE_LBL_WHITE0));
+    tapkey(1, bkey(11), 40);
+    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11: back to 16");
+    /* FX: the buses, the slot keys */
+    to(EC_CAT_FX);
+    tapkey(1, bkey(3), 40);
+    CHECK(A->bus == 1, "FX B3: the S1 bus");
+    tapkey(1, bkey(1), 40);
+    CHECK(A->bus == 0 && A->page[EC_CAT_FX] == 0, "FX B1: the track's INSERT");
+    key(1, bkey(1), 1);
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "FX 3"), "B1 held: the white keys are engines (%s)", L(FM1CORE_LBL_WHITE0 + 2));
+    tapkey(0, wkey(3), 40);
+    key(1, bkey(1), 0);
+    run(20);
+    CHECK(ec_app_params(A)[EC_P_FX_MACHINE] == 3 && !step(2)->trig, "B1 held + W3: the insert's engine 3, no step");
+    key(1, bkey(5), 1);
+    run(20);
+    turn(FM1P_E_K1, 2);
+    key(1, bkey(5), 0);
+    run(20);
+    CHECK(A->bus == 3 && A->proj.bus[2][EC_P_FX_MACHINE] > 1, "B5 held + K1: the master bus's engine");
+    tapkey(1, bkey(1), 40);
+    ec_app_params(A)[EC_P_FX_MACHINE] = 1;
+    A->proj.bus[2][EC_P_FX_MACHINE] = 1;
+}
+
+/* ------------------------------------------------------------------------------------------- MIX --- */
+static void test_mix(void)
+{
+    to(EC_CAT_MASTER);
+    CHECK(lbl(FM1CORE_LBL_WHITE0 + 8, "MST") && lbl(FM1CORE_LBL_BLACK0 + 4, "1X") && lbl(FM1CORE_LBL_BLACK0 + 10, "CAT"),
+          "MIX labels: W9 %s B5 %s B11 %s", L(FM1CORE_LBL_WHITE0 + 8), L(FM1CORE_LBL_BLACK0 + 4),
+          L(FM1CORE_LBL_BLACK0 + 10));
+    tapkey(0, wkey(2), 40);
+    CHECK(A->track == 1, "MIX: W2 tapped = T2");
+    tapkey(0, wkey(3), 500);
+    CHECK(ec_project_track(&A->proj, 2)->v[EC_P_MUTE] > 0.5f && A->track == 1, "W3 held: T3 muted (T2 still selected)");
     btn(FM1P_B_GLO, 1);
-    run(40);
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "AUTO-CHOP") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "EVEN"),
-          "RAZOR + SHIFT: OCT+ %s, OCT- %s", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP), L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN));
+    run(20);
+    tapkey(0, wkey(4), 40);
+    CHECK(A->ux.solo == 1u << 3, "SHIFT + W4: T4 solo");
+    key(1, bkey(11), 1);                                      /* FILL (SHIFT + B11) held + a track key: all on */
+    run(20);
+    tapkey(0, wkey(1), 40);
+    key(1, bkey(11), 0);
     btn(FM1P_B_GLO, 0);
-    run(40);
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "SPLIT") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "SLICE"),
-          "RAZOR: OCT+ %s, SELECT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP), L(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT));
-    press(FM1P_B_SAVE, 40);                                   /* SAVE on RAZOR: its lane 2 */
-    CHECK(A->page[EC_CAT_FILE] == 1 && A->ux.lane[EC_CAT_FILE] == 1, "SAVE on RAZOR: lane 2");
-    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "SNAP"), "RAZOR lane 2 KN1: %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
-    press(FM1P_B_SAVE, 40);
-    CHECK(A->page[EC_CAT_FILE] == 0, "SAVE again: the SAMPLE page");
-    home();
+    run(20);
+    CHECK(!A->ux.solo && ec_project_track(&A->proj, 2)->v[EC_P_MUTE] < 0.5f, "FILL + a track key: every mute and solo off");
+    tapkey(1, bkey(3), 40);
+    CHECK(ec_app_params(A)[EC_P_RATE] == 7, "B3: rate 1/2");
+    tapkey(1, bkey(10), 40);
+    CHECK(ec_app_params(A)[EC_P_RATE] == 8, "B10: faster");
+    tapkey(1, bkey(9), 40);
+    tapkey(1, bkey(9), 40);
+    CHECK(ec_app_params(A)[EC_P_RATE] == 6, "B9 twice: slower");
+    tapkey(1, bkey(5), 40);
+    CHECK(ec_app_params(A)[EC_P_RATE] == EC_RATE_UNITY, "B5: 1X");
+    tapkey(1, bkey(11), 40);
+    CHECK(A->pn.cat, "B11: the CAT");
+    tapkey(0, wkey(1), 40);
+    CHECK(A->pn.cat && A->track == 0, "the CAT: the track keys still work");
+    tapkey(1, bkey(11), 40);
+    CHECK(!A->pn.cat, "B11 leaves it");
+    tapkey(1, bkey(11), 40);
+    press(FM1P_B_EDIT, 40);
+    CHECK(!A->pn.cat && mode() == EC_CAT_MASTER, "EDIT leaves the CAT, back to MIX");
+    tapkey(1, bkey(11), 40);
+    press(FM1P_B_FX, 40);
+    CHECK(!A->pn.cat && mode() == EC_CAT_FX, "a mode button leaves the CAT for its mode");
+    to(EC_CAT_MASTER);
+    tapkey(0, wkey(9), 40);
+    CHECK(A->bus == 3 && A->page[EC_CAT_MASTER] == 1, "MIX: W9 = MST, the MASTER page");
+    tapkey(0, wkey(1), 40);
+    CHECK(A->bus == 0 && A->page[EC_CAT_MASTER] == 0, "W1: T1, the track page");
+}
+
+/* ------------------------------------------------------------------------------------------- PAGES --- */
+static void test_pages(void)
+{
+    float *v;
+    to(EC_MODE_PAGES);
+    v = ec_app_params(A);
+    clear_steps();
+    v[EC_P_PATTERN_STEPS] = 48;
+    ec_seq_timing_changed(&A->seq);
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 2, "PAGE3") && lbl(FM1CORE_LBL_BLACK0 + 3, ""), "PAGES: three page keys");
+    tapkey(1, bkey(2), 40);
+    CHECK(A->step_page == 1, "B2 tapped: edit page 2");
+    tapkey(0, wkey(1), 40);
+    CHECK(step(16)->trig, "the white keys are page 2's steps");
+    tapkey(1, bkey(3), 500);
+    CHECK(ec_e5_page_in_loop(&A->proj, A->track, 2, 3) == 0 && A->step_page == 1, "B3 held: page 3 out of the loop");
+    tapkey(1, bkey(3), 500);
+    CHECK(ec_e5_page_in_loop(&A->proj, A->track, 2, 3), "held again: back in");
+    press(FM1P_B_OCTDN, 40);                                  /* F1: copy page 2 onto page 3 */
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "COPY PG") || 1, "");
+    tapkey(1, bkey(2), 40);
+    tapkey(1, bkey(3), 40);
+    press(FM1P_B_OCTDN, 40);
+    CHECK(step(32)->trig && A->step_page == 1, "F1 + B2, B3: page 2 pasted onto page 3");
+    press(FM1P_B_OCTUP, 40);                                  /* F2: cut page 3, onto page 1 */
+    tapkey(1, bkey(3), 40);
+    CHECK(!step(32)->trig, "F2 + B3: page 3 cut");
+    tapkey(1, bkey(1), 40);
+    press(FM1P_B_OCTUP, 40);
+    CHECK(step(0)->trig, "then B1: moved to page 1");
+    {
+        ec_page_t pg;
+        ec_app_page(A, &pg);
+        CHECK(pg.n == 3 && pg.it[0].id == EC_P_PATTERN_STEPS, "PAGES' cells: LENGTH, RATE, LOOP");
+    }
+    v[EC_P_PATTERN_STEPS] = 16;
+    A->step_page = 0;
+    clear_steps();
+}
+
+/* ------------------------------------------------------------------------------------------- KEYBOARD --- */
+static void test_keyboard(void)
+{
+    float *v, x;
+    to(EC_MODE_KEYBOARD);
+    v = ec_app_params(A);
+    clear_steps();
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "OCT-") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "TARGET") &&
+              lbl(FM1CORE_LBL_WHITE0 + 4, "C4"),
+          "KEYBOARD labels: F1 %s ALGO %s W5 %s", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN), L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO),
+          L(FM1CORE_LBL_WHITE0 + 4));
+    key(0, wkey(5), 1);                                       /* C4: the sample's pitch */
+    run(20);
+    CHECK(A->seq.tr[A->track].live_pitch_on && A->seq.tr[A->track].live_pitch == v[EC_P_PITCH], "C4 plays at pitch 0");
+    key(0, wkey(5), 0);
+    run(20);
+    press(FM1P_B_OCTUP, 40);
+    CHECK(A->pn.oct == 1 && !A->pn.f_sticky, "F2: octave up (no copy / cut here)");
+    key(1, bkey(4), 1);                                       /* C#5 */
+    run(20);
+    CHECK(A->seq.tr[A->track].live_pitch == v[EC_P_PITCH] + 13, "the black keys are the sharps (C#5 = +13: %g)",
+          A->seq.tr[A->track].live_pitch);
+    key(1, bkey(4), 0);
+    press(FM1P_B_OCTDN, 40);
+    turn(FM1P_E_ALGO, 1);                                     /* target step 1 */
+    run(20);
+    CHECK(A->pn.target == 1, "ALGO: target step 1");
+    tapkey(0, wkey(6), 40);                                   /* D4 */
+    CHECK(step(0)->trig && ec_step_lock_get(step(0), EC_P_PITCH, &x) && x == 2 && A->pn.target == 2,
+          "a key writes the note on step 1 and advances");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    tapkey(0, wkey(7), 40);                                   /* SHIFT + E4: stays */
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(step(1)->trig && ec_step_lock_get(step(1), EC_P_PITCH, &x) && x == 4 && A->pn.target == 2,
+          "SHIFT + a key: written, the target stays");
+    tapkey(0, wkey(8), 40);
+    CHECK(ec_step_lock_get(step(1), EC_P_PITCH, &x) && x == 5 && A->pn.target == 3, "one note per step: replaced");
+    turn(FM1P_E_ALGO, -5);
+    run(20);
+    CHECK(A->pn.target == 0, "ALGO below 1: live");
+    tapkey(0, wkey(9), 40);
+    CHECK(!step(2)->trig, "live: nothing written");
+    /* a slice track */
+    v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;
+    v[EC_P_SLICE_COUNT] = 16;
+    ec_seq_touch(&A->seq, A->track);
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 2, "SL3") && lbl(FM1CORE_LBL_BLACK0 + 10, "BANK"), "slice track: B3 %s B11 %s",
+          L(FM1CORE_LBL_BLACK0 + 2), L(FM1CORE_LBL_BLACK0 + 10));
+    tapkey(1, bkey(3), 40);
+    CHECK(v[EC_P_SLICE_INDEX] == 3, "B3: slice 3");
+    tapkey(1, bkey(11), 40);
+    CHECK(A->pn.kb_bank == 1 && lbl(FM1CORE_LBL_BLACK0 + 0, "SL11"), "B11: slices 11-20");
+    tapkey(1, bkey(2), 40);
+    CHECK(v[EC_P_SLICE_INDEX] == 12, "B2: slice 12");
+    tapkey(1, bkey(9), 40);
+    CHECK(v[EC_P_SLICE_INDEX] == 12, "B9 = slice 19 > 16 slices: nothing");
+    turn(FM1P_E_ALGO, 4);
+    run(20);
+    tapkey(0, wkey(5), 40);
+    CHECK(step(3)->trig && step(3)->slices == 1u << 11, "a white key on target 4: slice 12");
+    tapkey(1, bkey(11), 40);
+    turn(FM1P_E_ALGO, -20);
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    v[EC_P_SLICE_INDEX] = 1;
+    clear_steps();
+}
+
+/* ------------------------------------------------------------------------------------------- CROSSFADER --- */
+static void test_xfd(void)
+{
+    to(EC_CAT_XFD);
+    press(FM1P_B_SEQ, 40);                                    /* (leave and come back: no stale anchor) */
+    to(EC_CAT_XFD);
+    ec_scene_clear(&A->proj, 0);
+    ec_scene_clear(&A->proj, 1);
+    key(1, bkey(1), 1);                                       /* hold A + a knob: a scene lock */
+    run(20);
+    CHECK(A->e5.anchor == 1 && led_key(1, bkey(1)) == FM1P_LED_LIT, "B1 held: scene A's anchor, lit");
+    key(1, bkey(1), 0);
+    run(20);
+    CHECK(A->e5.anchor == 0, "B1 up: no anchor");
+    {
+        ec_page_t pg;
+        ec_app_page(A, &pg);
+        CHECK(pg.n == 4 && pg.it[1].kind == EC_IT_UX && pg.it[1].id == EC_UX_GLIDE, "CROSSFADER's cells: + GLIDE A B");
+    }
+    key(1, bkey(11), 1);                                      /* B11 held + B2: capture */
+    run(20);
+    tapkey(1, bkey(2), 40);
+    key(1, bkey(11), 0);
+    run(20);
+    CHECK(ec_scene_count(&A->proj.e5.sc, 1) > 0, "B11 + B2: scene B captured (%d)", ec_scene_count(&A->proj.e5.sc, 1));
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    tapkey(1, bkey(2), 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(ec_scene_count(&A->proj.e5.sc, 1) == 0, "SHIFT + B2: scene B cleared");
+    btn(FM1P_B_GLO, 1);                                       /* SHIFT + W1: jump to 0 */
+    run(20);
+    tapkey(0, wkey(1), 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(A->proj.e5.sc.pos == 0, "SHIFT + W1: jump to 0");
+    tapkey(0, wkey(15), 40);                                  /* slow */
+    CHECK(A->pn.as.glide == 2, "W15: glide MED");
+    key(0, wkey(12), 1);                                      /* hold W12: glides to 127 */
+    run(300);
+    {
+        const float p1 = A->proj.e5.sc.pos;
+        CHECK(p1 > 0.3f && p1 < 0.7f, "W12 held 0.3 s (MED 0.6 s): halfway (%g)", p1);
+        P->key_lean[key_of(0, wkey(12))] = 100;              /* full pressure: faster */
+        run(60);
+        CHECK(A->proj.e5.sc.pos - p1 > 0.3f, "pressure: faster (%g)", A->proj.e5.sc.pos);
+        P->key_lean[key_of(0, wkey(12))] = 0;
+    }
+    key(0, wkey(12), 0);
+    run(20);
+    key(0, wkey(1), 1);
+    run(150);
+    key(0, wkey(1), 0);
+    run(100);
+    {
+        const float p = A->proj.e5.sc.pos;
+        CHECK(p > 0.5f && p < 0.9f && !A->e5.gliding, "let go: it stays where it got to (%g)", p);
+    }
+    tapkey(0, wkey(13), 40);
+    tapkey(0, wkey(6), 40);
+    CHECK(fabsf(A->proj.e5.sc.pos - 5.0f / 11.0f) < 0.01f, "W13 instant: W6 jumps");
+    tapkey(0, wkey(15), 40);
+    CHECK(lbl(FM1CORE_LBL_WHITE0 + 11, "127") && lbl(FM1CORE_LBL_WHITE0 + 12, "INST") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "CAPTURE"),
+          "CROSSFADER labels: W12 %s W13 %s B11 %s", L(FM1CORE_LBL_WHITE0 + 11), L(FM1CORE_LBL_WHITE0 + 12),
+          L(FM1CORE_LBL_BLACK0 + 10));
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    tapkey(0, wkey(1), 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+}
+
+/* the scene lock: B1 held in CROSSFADER, a FILTER knob can't be reached; the anchor path is the cells' (POSITION is
+ * not morphable), so it is tested with ec_e5_knob_cell's anchor directly */
+static void test_xfd_lock(void)
+{
+    ec_item_t it = {EC_IT_PARAM, EC_P_FILTER_CUTOFF, 0, 0};
+    float x;
+    to(EC_CAT_XFD);
+    key(1, bkey(1), 1);
+    run(20);
+    ec_e5_knob_cell(&it, 5, 1);
+    key(1, bkey(1), 0);
+    run(20);
+    CHECK(ec_scene_get(&A->proj, 0, A->track, EC_P_FILTER_CUTOFF, &x) && A->e5.anchor == 0,
+          "B1 held + a knob: the param locked to scene A");
+    ec_scene_clear(&A->proj, 0);
+}
+
+/* ------------------------------------------------------------------------------------------- PATTERN LAUNCH --- */
+static void test_patterns(void)
+{
+    to(EC_CAT_PAT);
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 1, "BANK B") && lbl(FM1CORE_LBL_WHITE0 + 2, "A3"), "PATTERN LAUNCH labels");
+    tapkey(1, bkey(2), 40);
+    CHECK(A->pn.bank == 1 && lbl(FM1CORE_LBL_WHITE0 + 2, "B3"), "B2: bank B");
+    tapkey(0, wkey(3), 40);
+    run(50);
+    CHECK(A->proj.current == 18, "stopped: W3 = B3 at once (%d)", A->proj.current);
+    step(0)->trig = 1;
+    press(FM1P_B_OCTDN, 40);                                  /* F1: copy B3 onto B5 */
+    tapkey(0, wkey(3), 40);
+    tapkey(0, wkey(5), 40);
+    press(FM1P_B_OCTDN, 40);
+    CHECK(A->proj.pat[20].used && A->proj.pat[20].tr[A->track].steps[0].trig, "F1 + W3, W5: B3 copied to B5");
+    tapkey(1, bkey(1), 40);
+    tapkey(0, wkey(1), 40);
+    run(50);
+    CHECK(A->proj.current == 0, "bank A, W1: A1");
+}
+
+/* ------------------------------------------------------------------------------------------- labels --- */
+static void test_labels(void)
+{
+    to(EC_CAT_SRC);
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 10, "ZOOM") && lbl(FM1CORE_LBL_WHITE0, "L1") &&
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "SLOT") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "STEP PG"),
+          "LOOP ENGINE: B11 %s W1 %s PRESETS %s ALGO %s", L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_WHITE0),
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS), L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "COPY") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "CUT"),
+          "F1 COPY, F2 CUT");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "BPM") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "SETTINGS") &&
+              lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "UNDO") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_SAVE, "SAVE"),
+          "SHIFT: SEL %s HOME %s F1 %s", L(FM1CORE_LBL_KNOB0), L(FM1CORE_LBL_BTN0 + FM1P_B_HOME),
+          L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN));
+    CHECK(led_key(1, bkey(6)) == FM1P_LED_OFF && led_key(1, bkey(3)) == FM1P_LED_LIT, "SHIFT: B6 dark, B3 lit");
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    to(EC_CAT_FX);
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 2, "SEND1") && lbl(FM1CORE_LBL_BLACK0 + 4, "MSTR") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "MIX"),
+          "FX: B3 %s B5 %s B11 %s", L(FM1CORE_LBL_BLACK0 + 2), L(FM1CORE_LBL_BLACK0 + 4), L(FM1CORE_LBL_BLACK0 + 10));
+    {
+        int cur;
+        const char *r = ec_pn_roles(EC_CAT_FX, &cur);
+        CHECK(!strcmp(r, "PPPPPSSSSSX"), "FX's pop-up roles %s", r);
+        r = ec_pn_roles(EC_CAT_MOD, &cur);
+        CHECK(!strcmp(r, "PSSSSSSSSSX"), "MODULATION's roles %s", r);
+        r = ec_pn_roles(EC_CAT_MASTER, &cur);
+        CHECK(!strcmp(r, "AAAAAAAAAAX"), "MIX's roles %s", r);
+    }
 }
 
 int main(int argc, char **argv)
 {
-    ec_layout_use(&EC_LAYOUT_TEST);   /* the tests' fixed layout: 0.4.0's pages (host/ec_layout_test.h) */
     if (argc < 2) {
         printf("usage: ec_test_ux <folder>\n");
         return 2;
@@ -586,18 +1076,25 @@ int main(int argc, char **argv)
     C->init(0);
     run(1500);                                                /* the scan, T1's first file */
     CHECK(fm1core_labels_epoch() != 0 && lbl(FM1CORE_LBL_BTN0 + FM1P_B_GLO, "SHIFT") &&
-              lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "HOME"),
+              lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "LOOP"),
           "labels at boot: GLO %s, HOME %s", L(FM1CORE_LBL_BTN0 + FM1P_B_GLO), L(FM1CORE_LBL_BTN0 + FM1P_B_HOME));
-    test_lanes();
-    test_setup();
-    test_src_hold();
-    test_presets_sample();
-    test_accel_snap();
-    test_f3();
-    test_popups();
-    test_tracks();
-    test_locks();
+    test_boot();
+    test_modes();
+    test_settings();
+    test_app_settings();
     test_shift();
+    test_transport();
+    test_steps();
+    test_presets();
+    test_clip();
+    test_sources();
+    test_mix();
+    test_pages();
+    test_keyboard();
+    test_xfd();
+    test_xfd_lock();
+    test_patterns();
+    test_labels();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

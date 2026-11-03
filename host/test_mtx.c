@@ -2,9 +2,9 @@
 /* test_mtx: 0.5.0's mod matrix (docs/MOD-MATRIX.md) on the shipped layout, through the core descriptor with the demo
  * folder: the resolve (generic destinations and the fast buses, M1..M4 as sources, AT / CC 1 / CC 11), a 0.4 record's
  * migration (LFO -> CUT the same strength; the routes past 8 dropped and counted), the MATRIX page (SELECT the row
- * and on, K1 SRC, K2 DST with SHIFT's category jump, K3 DEPTH's fine steps), every MOD KEYS gesture (hold MOD,
- * SHIFT + MOD, HOME, the first detent, DEPTH, release frees an unused slot, NO MOD, FULL, OCT+ clears, held steps
- * lock, taps open pages, SCN A writes the scene), the marks, the labels and LEDs.
+ * and on, K1 SRC, K2 DST with SHIFT's category jump, K3 DEPTH's fine steps), every source-key gesture (0.6.0's
+ * source template: the first detent, DEPTH, release frees an unused slot, NO MOD, FULL, F2 removes, held steps lock,
+ * taps open pages, MODULATION's macro keys), the marks, the labels and LEDs.
  *   ec_test_mtx <folder> [png dir] */
 #include <math.h>
 #include <stdio.h>
@@ -446,33 +446,26 @@ static void test_matrix_page(void)
     CHECK(ec_mk_marks(EC_P_FILTER_CUTOFF) == 1u << EC_MS_LFO1, "CUTOFF is marked LFO1");
 }
 
-/* ------------------------------------------------------------------------------------------- MOD KEYS --- */
+/* ------------------------------------------------------------------------------------------- the source keys --- */
+/* 0.6.0: MOD KEYS became the source template (docs/UX-V2.md §1): B6 LFO 1, B7 LFO 2, B8 MOD ENV, B9 VEL, B10 AT in
+ * FILTER / AMP / MODULATION / LOOP ENGINE / TRIG / FX; MODULATION's B2..B5 = M1..M4. The 0.5.0 gestures, re-keyed */
+enum { B_LFO1 = 5, B_LFO2 = 6, B_ENV = 7, B_VEL = 8, B_AT = 9 };   /* upper indices */
+
 static void test_modkeys(void)
 {
     int k;
-    printf("MOD KEYS: on / off, the gestures\n");
-    home();
-    clear_matrix();
-    press(FM1P_B_LFO, 450);
-    CHECK(A->mk.on, "MOD held: MOD KEYS on");
-    CHECK(!strcmp(L(FM1CORE_LBL_BLACK0 + 0), "LFO 1") && !strcmp(L(FM1CORE_LBL_BLACK0 + 4), "AT") &&
-              !strcmp(L(FM1CORE_LBL_BLACK0 + 10), "SCN B"),
-          "black keys: %s .. %s .. %s", L(FM1CORE_LBL_BLACK0 + 0), L(FM1CORE_LBL_BLACK0 + 4),
-          L(FM1CORE_LBL_BLACK0 + 10));
-    home();
-    CHECK(!A->mk.on, "HOME: off");
-    btn(FM1P_B_GLO, 1);
-    run(20);
-    press(FM1P_B_LFO, 40);
-    btn(FM1P_B_GLO, 0);
-    run(20);
-    CHECK(A->mk.on, "SHIFT + MOD: on");
-
-    /* hold LFO 2 + KNOB 1 on FILT / FILTER (CUTOFF) */
+    printf("the source keys: the gestures\n");
     ec_app_goto(EC_CAT_FILT, 0);
-    run(20);
+    run(900);
+    clear_matrix();
+    CHECK(!strcmp(L(FM1CORE_LBL_BLACK0 + B_LFO1), "LFO1") && !strcmp(L(FM1CORE_LBL_BLACK0 + B_AT), "AT") &&
+              !strcmp(L(FM1CORE_LBL_BLACK0 + B_ENV), "MENV"),
+          "black keys: %s .. %s .. %s", L(FM1CORE_LBL_BLACK0 + B_LFO1), L(FM1CORE_LBL_BLACK0 + B_ENV),
+          L(FM1CORE_LBL_BLACK0 + B_AT));
+
+    /* hold LFO 2 + KNOB 1 on FILTER (CUTOFF) */
     tv()[EC_P_LFO2_DEPTH] = 64;
-    key(1, EC_MK_LFO2, 1);
+    key(1, B_LFO2, 1);
     turn(FM1P_E_K1, 1);
     run(30);
     k = ec_mtx_find(tv(), EC_MS_LFO2, EC_P_FILTER_CUTOFF);
@@ -484,7 +477,7 @@ static void test_modkeys(void)
     CHECK(!strncmp(L(FM1CORE_LBL_KNOB0 + FM1P_E_K1), "LFO2 ", 5), "K1 label while held: %s",
           L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
     png("source_held.png");
-    key(1, EC_MK_LFO2, 0);
+    key(1, B_LFO2, 0);
     run(30);
     CHECK(ec_mtx_find(tv(), EC_MS_LFO2, EC_P_FILTER_CUTOFF) == 0 && A->cat == EC_CAT_FILT,
           "released: the slot stays, no page change");
@@ -492,46 +485,47 @@ static void test_modkeys(void)
     png("cell_mark.png");
 
     /* a hold that leaves the new slot at 0: freed */
-    key(1, EC_MK_ENV, 1);
+    key(1, B_ENV, 1);
     turn(FM1P_E_K2, 1);                                       /* RESO */
     run(30);
-    CHECK(ec_mtx_find(tv(), EC_MS_ENV, EC_P_FILTER_RES) == 1, "ENV > RESO in slot 2");
-    key(1, EC_MK_ENV, 0);
+    CHECK(ec_mtx_find(tv(), EC_MS_ENV, EC_P_FILTER_RES) == 1, "MOD ENV > RESO in slot 2");
+    key(1, B_ENV, 0);
     run(30);
     CHECK(ec_mtx_find(tv(), EC_MS_ENV, EC_P_FILTER_RES) < 0 && ec_mtx_src(tv(), 1) == EC_MS_OFF,
           "released at 0: freed");
 
     /* NO MOD: an option */
-    key(1, EC_MK_LFO1, 1);
+    key(1, B_LFO1, 1);
     turn(FM1P_E_K3, 1);                                       /* filter TYPE */
     run(30);
     CHECK(!strcmp(A->ux.to_val, "NO MOD") && A->ux.to_ms, "TYPE: NO MOD (%s)", A->ux.to_val);
-    key(1, EC_MK_LFO1, 0);
+    key(1, B_LFO1, 0);
     run(30);
     CHECK(ec_mtx_src(tv(), 1) == EC_MS_OFF && A->cat == EC_CAT_FILT, "nothing made, no page (a turn is no tap)");
 
-    /* OCT+ held: clears that source's slot */
+    /* F2 while turning: that source's slot removed */
+    key(1, B_LFO2, 1);
+    run(10);
     btn(FM1P_B_OCTUP, 1);
     run(10);
-    key(1, EC_MK_LFO2, 1);
     turn(FM1P_E_K1, 1);
     run(30);
-    key(1, EC_MK_LFO2, 0);
     btn(FM1P_B_OCTUP, 0);
+    key(1, B_LFO2, 0);
     run(30);
-    CHECK(ec_mtx_find(tv(), EC_MS_LFO2, EC_P_FILTER_CUTOFF) < 0, "OCT+ + LFO 2 + K1: cleared");
-    CHECK(A->keymode == EC_KM_STEPS, "OCT+ used: no key mode change");
+    CHECK(ec_mtx_find(tv(), EC_MS_LFO2, EC_P_FILTER_CUTOFF) < 0, "LFO 2 + F2 + K1: removed");
+    CHECK(!A->pn.f_sticky && !A->pn.f_held, "F2 used: no sticky F2");
 
     /* held steps: the DEPTH is a lock */
-    key(1, EC_MK_M1, 1);
-    turn(FM1P_E_K2, 1);                                       /* make M1 > RESO */
+    key(1, B_AT, 1);
+    turn(FM1P_E_K2, 1);                                       /* make AT > RESO */
     run(20);
     key(0, 2, 1);                                             /* step 3 held */
     turns(FM1P_E_K2, 2);
     key(0, 2, 0);
-    key(1, EC_MK_M1, 0);
+    key(1, B_AT, 0);
     run(30);
-    k = ec_mtx_find(tv(), EC_MS_M1, EC_P_FILTER_RES);
+    k = ec_mtx_find(tv(), EC_MS_AT, EC_P_FILTER_RES);
     {
         float x = 0;
         CHECK(k >= 0 && tv()[ec_mtx_depth_id(k)] == 0 &&
@@ -545,60 +539,65 @@ static void test_modkeys(void)
             tv()[ec_mtx_src_id(k)] = EC_MS_M4 + 1;
             tv()[ec_mtx_dst_id(k)] = EC_P_FILTER_DRIVE + 1;
         }
-    key(1, EC_MK_VEL, 1);
+    key(1, B_VEL, 1);
     turn(FM1P_E_K1, 1);
     run(30);
-    key(1, EC_MK_VEL, 0);
+    key(1, B_VEL, 0);
     run(30);
     CHECK(!strcmp(A->ux.to_val, "FULL") && ec_mtx_find(tv(), EC_MS_VEL, EC_P_FILTER_CUTOFF) < 0, "8 slots: FULL (%s)",
           A->ux.to_val);
     clear_matrix();
 
     /* taps: the source's page */
-    tapkey(1, EC_MK_LFO1);
+    tapkey(1, B_LFO1);
     CHECK(A->cat == EC_CAT_MOD && ec_page_pic(EC_CAT_MOD, A->page[EC_CAT_MOD], 0) == EC_PIC_LFO1, "tap LFO 1: its page");
-    tapkey(1, EC_MK_AT);
+    tapkey(1, B_AT);
     CHECK(A->cat == EC_CAT_MOD && ec_page_pic(EC_CAT_MOD, A->page[EC_CAT_MOD], 0) == EC_PIC_MATRIX, "tap AT: MATRIX");
-    tapkey(1, EC_MK_M3);
+    tapkey(1, 3);                                             /* MODULATION's B4 = M3 */
     {
         ec_page_t pg;
         ec_page_items(EC_CAT_MOD, A->page[EC_CAT_MOD], tv(), 0, &pg);
-        CHECK(A->cat == EC_CAT_MOD && pg.pic == EC_PIC_MACRO && pg.arg == 2, "tap M3: MACRO 3");
+        CHECK(A->cat == EC_CAT_MOD && pg.pic == EC_PIC_MACRO && pg.arg == 2, "MODULATION: tap M3 (B4): MACRO 3");
     }
-    tapkey(1, EC_MK_SCNA);
-    CHECK(A->cat == EC_CAT_MASTER && ec_page_pic(EC_CAT_MASTER, A->page[EC_CAT_MASTER], 0) == EC_PIC_SCENE,
-          "tap SCN A: MST / SCENE");
-
-    /* SCN B held + a knob: that scene's value */
-    ec_app_goto(EC_CAT_FILT, 0);
-    run(20);
+    tapkey(1, B_ENV);
+    CHECK(A->cat == EC_CAT_AMP && ec_page_pic(EC_CAT_AMP, A->page[EC_CAT_AMP], 0) == EC_PIC_MENV,
+          "tap MOD ENV: AMP's MOD ENV page");
+    /* MODULATION: hold M2 (B3) + a value knob = route the macro */
+    ec_app_goto(EC_CAT_MOD, 1);                               /* LFO 1 */
+    run(900);
     {
-        const float c0 = tv()[EC_P_FILTER_CUTOFF];
-        float x = 0;
-        key(1, EC_MK_SCNB, 1);
-        turns(FM1P_E_K1, -3);
-        key(1, EC_MK_SCNB, 0);
-        run(30);
-        CHECK(ec_scene_get(&A->proj, 1, A->track, EC_P_FILTER_CUTOFF, &x) && x < c0 && tv()[EC_P_FILTER_CUTOFF] == c0,
-              "SCN B + K1: scene B's CUTOFF %g (the track's stays %g)", x, c0);
-        CHECK(A->cat == EC_CAT_FILT && !A->e5.anchor, "a turn is no tap; the anchor let go");
+        ec_page_t pg;
+        int c, id = -1;
+        ec_app_page(A, &pg);
+        for (c = 0; c < pg.n && c < 4 && id < 0; c++)
+            if (pg.it[c].kind == EC_IT_PARAM && ec_param_mod_dest(pg.it[c].id))
+                id = c;
+        if (id >= 0) {
+            key(1, 2, 1);
+            turn(FM1P_E_K1 + id, 1);
+            turns(FM1P_E_K1 + id, 3);
+            key(1, 2, 0);
+            run(30);
+            CHECK(ec_mtx_find(tv(), EC_MS_M2, pg.it[id].id) >= 0, "MODULATION: M2 held + K%d: M2 > %s", id + 1,
+                  EC_PARAMS[pg.it[id].id].label);
+        }
     }
+    clear_matrix();
 
     /* LEDs and SHIFT's layer */
-    key(1, EC_MK_ENV, 1);
+    ec_app_goto(EC_CAT_FILT, 0);
+    run(900);
+    key(1, B_ENV, 1);
     C->frame();
     CHECK(P->led[0][0] || 1, "(LEDs drawn)");
-    key(1, EC_MK_ENV, 0);
+    key(1, B_ENV, 0);
     run(30);
     btn(FM1P_B_GLO, 1);
     run(300);
-    CHECK(!strcmp(L(FM1CORE_LBL_BLACK0 + 8), "TAP"), "SHIFT held in MOD KEYS: its layer (%s)", L(FM1CORE_LBL_BLACK0 + 8));
+    CHECK(!strcmp(L(FM1CORE_LBL_BLACK0 + 0), "TAP") && !strcmp(L(FM1CORE_LBL_BLACK0 + B_LFO1), ""),
+          "SHIFT held: its layer (%s, B6 '%s')", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + B_LFO1));
     btn(FM1P_B_GLO, 0);
     run(20);
-    home();
-    CHECK(!A->mk.on, "HOME: off");
-    tapkey(1, 0);
-    CHECK(A->track == 0 && !A->mk.on, "the black keys are the tracks again");
 }
 
 int main(int argc, char **argv)

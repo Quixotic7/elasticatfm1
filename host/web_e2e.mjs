@@ -15,7 +15,8 @@
 //   5. the worklet's load reports while it plays (render share, busiest 21 ms, late ms)
 //   6. the live panel labels (the player's "labels" message): F1 / F2 COPY / CUT, SHIFT held: UNDO / REDO, the black
 //      keys TAP LATCH MEMO RECALL .. FILL, FILE = SAVE (src/app/ec_panel_leds.c)
-//   7. stop (PLAY), SHIFT + FILE saves, a reload: the project comes back (T1's file, T2's file) and plays
+//   7. stop (PLAY), SHIFT + FILE saves (0.6.1: SAVING, then SAVED: the file /data/projects/PROJ-001.ecp, the flash
+//      keeps its name), a reload: the project comes back from the file (T1's file, T2's file) and plays
 //   8. (E6, a site with ain1) live input from a fake microphone (Chromium's --use-file-for-fake-audio-capture: the
 //      demo's chord loop): T3 on INPUT (hold B1 = the machine, K1) says NO INPUT while off and is silent (stopped);
 //      input on (the page's hint): the INPUT track sounds; the SAMPLER (FILE, FILE) B2 = 1 BAR, B11 arms (stopped:

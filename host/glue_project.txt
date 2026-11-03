@@ -1,7 +1,9 @@
 # The FM1VST glue test's project (core-glue/elasticat/test_project.flash), built through panel input only (the 0.6.0
 # modes, docs/UX-V2.md) from the glue's test folder (one loop, testloop_bpm120.wav): four tracks on that one sample
 # (pool slot 1, every track's default), each a different engine path.
-#   ec_run --folder <test_folder> --flash out.bin --script host/glue_project.txt   (then host/trim_flash.py)
+#   ec_run --folder <test_folder> --flash out.bin --script host/glue_project.txt   (then host/trim_flash.py out.bin
+#   test_project.flash <test_folder>: 0.6.1 saves the project as <test_folder>/data/elasticat/projects/PROJ-001.ecp and
+#   the flash only names it; trim_flash.py puts the file back into the flash's record, which still loads at power-on)
 # lower I = white key W(I+1), upper I = black key B(I+1); SHIFT (GLO) held + W1..W4 selects T1..T4.
 # T1 loop (TRIG = HOME tapped in LOOP ENGINE): trigs 1 5 9 13, step 13 locks the pitch (+5), step 5 the cutoff
 # (FILTER). (0.5's region lock of step 13 by a loop key has no panel gesture in 0.6.0: LOOP ENGINE's keys play.)

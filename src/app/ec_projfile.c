@@ -265,7 +265,7 @@ static void save_tick(void)
             if (flash_fallback() == 0)              /* no folder: the flash keeps it, as 0.6.0 did */
                 save_done(1, 0, 0);
             else
-                save_done(0, "NOT SAVED", FS_ENOSPC);
+                save_done(0, "NOT SAVED", FS_ENOFOLDER);   /* (bigger than the flash record) */
             return;
         }
         if (g.req.result < 0) {

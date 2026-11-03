@@ -155,8 +155,8 @@ int ec_track_has_trigs(const ec_ptrack_t *tr);
 void ec_pattern_prepare(ec_project_t *p, int idx);
 void ec_pattern_clear_steps(ec_pattern_t *pt);
 
-/* the record: returns the bytes written (<= cap), or -1 when it does not fit (the app shows FULL; buf's bytes past
- * the old record may be overwritten, so a caller that must keep the old record saves into a scratch buffer first).
+/* the record: returns the bytes written (<= cap), or -1 when it does not fit (nothing written: it is measured first).
+ * 0.6.1: the project file's contents (src/app/ec_projfile.c, /data/projects/NAME.ecp); the flash holds it no more.
  * Version 2 (0.6.0) is sparse: a track's params are the ids that differ from the defaults, steps only when they have
  * content, values that are small integers in one byte. */
 int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap);

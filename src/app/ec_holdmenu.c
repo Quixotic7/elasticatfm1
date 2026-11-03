@@ -6,6 +6,7 @@
 
 #include "ec_app.h"
 #include "ec_holdmenu.h"
+#include "ec_palette.h"
 #include "ec_scene.h"
 
 #define A (&ec_app)

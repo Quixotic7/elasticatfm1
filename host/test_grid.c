@@ -152,7 +152,7 @@ static void shot(const char *name)
     const unsigned n0 = ec_kit_cells_drawn;
     A->redraw = 1;
     C->frame();
-    check_lcd_cells(P->lcd, name, ec_kit_cells_drawn != n0 && !A->pn.pop);
+    check_lcd_cells(P->lcd, name, ec_kit_cells_drawn != n0);
 }
 
 /* the kit alone: draw(), presented to a buffer of our own */

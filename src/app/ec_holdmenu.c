@@ -80,8 +80,6 @@ const char *ec_hm_label(int i)
         return i ? "ON" : "OFF";
     if (g.id == EC_P_FX_MACHINE || g.id == EC_P_INS2_MACHINE)
         return i == 0 ? "NONE" : ec_fx_name(i + 1);   /* the long names: "TAPE ECHO" */
-    if (g.id == EC_P_MODE)
-        return ec_warp_name(i + 1);
     return EC_PARAMS[g.id].opts[i];
 }
 

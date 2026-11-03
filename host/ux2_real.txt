@@ -117,11 +117,11 @@ press LFO@35000
 png 35150:Mod_popup.png
 png 36000:Mod_screen.png
 
-# ---- FX: B1 held + W4 = the insert's engine; the screen once the takeover has gone
+# ---- FX: B1 held + K1 3 = the insert's engine (0.6.1: the type menu, picked on release: LOFI)
 press FX@36800
 png 36950:Fx_popup.png
 upper 0@37400+700
-lower 3@37600
+turn K1@37600:3
 png 39600:Fx_screen.png
 
 # ---- HOME's pop-ups on their remembered pages: TRIG (its last) on COND, KEYBOARD, LOOP ENGINE on WARP; AMP on AMP ENV
@@ -327,3 +327,21 @@ png 120200:FileEditor_screen.png
 press SAVE@120600
 press SAVE@121200
 png 121350:FileEditor_popup.png
+
+# ======== 0.6.1 (v61-fx): FX's two inserts and the hold menus, stopped
+# ---- FX (its INSERT page, INS 1 = LOFI from above): SEL = INS 2; B1 held = INS 2's type menu, K1 7 = BLACKHOLE
+# (shown while held); let go = picked: both inserts; B1 tapped = P2 (BLACKHOLE's last three params)
+press FX@122400
+turn SELECT@123000:1
+upper 0@123400+1000
+turn K1@123900:7
+png 124200:Fx_menu.png
+png 125400:Fx_two_inserts.png
+upper 0@125800
+png 126800:Fx_p2.png
+# ---- LOOP ENGINE (HOME twice from FILE: KEYBOARD, its last, then LOOP ENGINE): B3 held = the warp mode menu, K1 2
+press HOME@127200
+press HOME@127600
+upper 2@128200+1000
+turn K1@128700:2
+png 129000:Loop_menu.png

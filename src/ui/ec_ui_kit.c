@@ -451,10 +451,84 @@ void ec_scr_intro(int frame)
     ec_kit_sprite(ec_spr_intro[frame], EC_SPR_INTRO_W, EC_SPR_INTRO_H, (W - EC_SPR_INTRO_W) / 2, 28);
 }
 
-void ec_scr_cat(int frame)
+/* 0.6.1 (docs/UX-V2.md §10 "CAT stage"): the stage light beams, on the grid in 2x2 cells (every edge 2 units). Four
+ * wedges, two from each top corner, measured from straight down towards the middle; a cell is lit when its centre is
+ * in a wedge and none of its four pixels is the cat (so a beam never touches the cat: at most a 1-unit gap, BG next to
+ * the cat's outline). Playing: each wedge sweeps 15..70 degrees and back once per bar (the second pair half a bar
+ * behind), its colour ACC / SPECIAL / ACTION / SRC turning one step on every beat. Stopped: they rest, in ACC_DIM */
+#define CAT_KEY EC_C_SHADE                         /* the sprite's ground (sprite_to_c.py): not drawn */
+#define DEG(d) ((float)(d) * 3.14159265f / 180.0f)
+static int cat_px(const uint8_t *spr, int x, int y)
 {
+    const uint8_t b = spr[(y * EC_SPR_CAT_W + x) >> 1];
+    return x & 1 ? b & 15 : b >> 4;
+}
+
+static int cat_covers(const uint8_t *spr, int sx, int sy, int px, int py)   /* any pixel of the 2x2 cell at px, py */
+{
+    int i, j;
+    for (j = 0; j < 2; j++)
+        for (i = 0; i < 2; i++) {
+            const int x = px + i - sx, y = py + j - sy;
+            if (x >= 0 && x < EC_SPR_CAT_W && y >= 0 && y < EC_SPR_CAT_H && cat_px(spr, x, y) != CAT_KEY)
+                return 1;
+        }
+    return 0;
+}
+
+int ec_scr_cat_beam_colour(double beats, int playing, int k)
+{
+    static const uint8_t COL[4] = {EC_C_ACC, EC_C_SPECIAL, EC_C_ACTION, EC_C_SRC};
+    return playing ? COL[(unsigned)((int)floor(beats) + k) & 3u] : EC_C_ACC_DIM;
+}
+
+static void cat_beams(const uint8_t *spr, int sx, int sy, double beats, int playing)
+{
+    const float lo = DEG(15), hi = DEG(70), tw = tanf(DEG(6));
+    float dx[4], dy[4];
+    int col[4], k, cx, cy;
+    for (k = 0; k < 4; k++) {
+        float a;
+        if (playing) {
+            double ph = beats / 4.0 + (k >= 2 ? 0.5 : 0.0);
+            ph -= floor(ph);
+            a = lo + (hi - lo) * (float)(1.0 - fabs(2.0 * ph - 1.0));
+        } else
+            a = k >= 2 ? DEG(55) : DEG(28);
+        col[k] = ec_scr_cat_beam_colour(beats, playing, k);
+        dx[k] = sinf(a);
+        dy[k] = cosf(a);
+    }
+    for (cy = 0; cy < H / 2; cy++)
+        for (cx = 0; cx < W / 2; cx++) {
+            const int px = 2 * cx, py = 2 * cy;
+            int lit = -1;
+            for (k = 0; k < 4; k++) {
+                const float ox = (float)(k & 1 ? W - (px + 1) : px + 1), oy = (float)(py + 1);   /* from the corner */
+                const float along = ox * dx[k] + oy * dy[k], across = ox * dy[k] - oy * dx[k];
+                if (along > 0 && fabsf(across) <= along * tw)
+                    lit = k;
+            }
+            if (lit >= 0 && !cat_covers(spr, sx, sy, px, py))
+                R(col[lit], px, py, 2, 2);
+        }
+}
+
+void ec_scr_cat(int frame, double beats, int playing)
+{
+    const int sx = (W - EC_SPR_CAT_W) / 2, sy = EC_KIT_CAT_Y;
+    const uint8_t *spr;
+    uint8_t *cv = ec_gfx_canvas();
+    int x, y;
     frame %= EC_SPR_CAT_FRAMES;
     frame = frame < 0 ? frame + EC_SPR_CAT_FRAMES : frame;
-    R(EC_C_SHADE, 0, 10, W, H - 10);
-    ec_kit_sprite(ec_spr_cat[frame], EC_SPR_CAT_W, EC_SPR_CAT_H, (W - EC_SPR_CAT_W) / 2, 22);
+    spr = ec_spr_cat[frame];
+    R(EC_C_BG, 0, 0, W, H);
+    cat_beams(spr, sx, sy, beats, playing);
+    for (y = 0; y < EC_SPR_CAT_H; y++)            /* the cat over them: its ground keyed out, its outline BLACK */
+        for (x = 0; x < EC_SPR_CAT_W; x++) {
+            const int c = cat_px(spr, x, y);
+            if (c != CAT_KEY)
+                cv[(sy + y) * W + sx + x] = (uint8_t)(c == EC_C_BG ? EC_C_BLACK : c);
+        }
 }

@@ -14,7 +14,10 @@ flash frames) maps to ACC.
                                                                an animated GIF of the 120x120 screen, 4x
 
 It also takes Elasticat/images/dancingcat.png (the CAT: 12 frames of 128x64, 10 fps at 120 BPM): its ground (level 22)
-maps to SHADE and its black outlines to BG, so the art reads as on norns.
+maps to SHADE and its black outlines to BG. 0.6.1: SHADE is the ground's key (the firmware's ec_scr_cat() keys it out:
+the stage and its beams show there) and BG the outline (drawn BLACK); the cat's art spans 64x61 of the 120x64 frame, so
+it is drawn at 1x (2x would not fit the 120 grid). The ramp's greys below are only the source levels' matching points:
+the themes' BG and SHADE are pure black now (src/ui/ec_palette.c).
 """
 import argparse
 import json

@@ -636,12 +636,36 @@ static void settings_screen(const ec_app_t *a, const ec_page_t *pg)
 }
 
 /* ------------------------------------------------------------------------------------------- MIX --- */
-/* the mixer (the mock's MIX): mute / solo letters, the meters y 19..61 with the volume marks, the track names, and
- * the cells under them */
+/* the mixer (the mock's MIX): mute / solo letters, the meters y 19..52 with the volume marks, each strip's pan under
+ * its meter (0.6.1, docs/UX-V2.md §10 "MIX shows each track's pan"), the track names, and the cells under them.
+ * 0.6.1: nothing 1 grid unit (the meter moves in 2-unit steps, the volume rail is 2 wide, 2-unit gaps) */
+
+/* a track's pan now, -1..1: the resolved value (a playing step's lock, the crossfader) plus the modulation's pan */
+float ec_scr_mix_pan_now(const ec_app_t *a, int t)
+{
+    ec_track_status_t st;
+    float p = ec_xf_bipolar(ec_seq_value(&a->seq, t, EC_P_PAN));
+    ec_dsp_track_status(a->dsp, t, &st);
+    p += st.mod[EC_MOD_PAN] < -1 ? -1 : st.mod[EC_MOD_PAN] > 1 ? 1 : st.mod[EC_MOD_PAN];
+    return p < -1 ? -1 : p > 1 ? 1 : p;
+}
+
+/* the pan track under strip x (x+1..x+10, y 55..60): the track (L3, 2 high) with its centre in L8 (2 units, in the
+ * track: nothing sticks out 1 unit), the marker (2 wide, 6 high) 4 steps of 1 unit either side of the centre */
+int ec_scr_mix_pan_x(int x, float pan) { return x + 5 + (int)floorf(pan * 4.0f + 0.5f); }
+
+static void mix_pan(int x, float pan, int col)
+{
+    R(EC_C_L3, x + 1, 57, 10, 2);
+    R(EC_C_L8, x + 5, 57, 2, 2);
+    if (col >= 0)
+        R(col, ec_scr_mix_pan_x(x, pan), 55, 2, 6);
+}
+
 static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
 {
     static const char *const N[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "M"};
-    const int top = 19, mh = 42;
+    const int top = 19, mh = 34;
     const int sel = a->bus ? EC_NTRACK - 1 + a->bus : a->track;
     char t[32], r[16];
     int i;
@@ -652,7 +676,7 @@ static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
         snprintf(r, sizeof r, "%s", ec_rate_label(iv(tv(a), EC_P_RATE)));
     header(a, t, 0, r);
     for (i = 0; i < 9; i++) {
-        const int x = 2 + i * 13, cx = x + 6, x0 = cx - 5;
+        const int x = 2 + i * 13, cx = x + 6, x0 = x + 1;
         const int muted = i < EC_NTRACK && a->proj.pat[a->proj.current].tr[i].v[EC_P_MUTE] > 0.5f;
         const int solo = i < EC_NTRACK && (a->ux.solo >> i & 1u);
         float lev = a->meter[i], vol;
@@ -664,16 +688,23 @@ static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
         else
             vol = 0;
         lev = lev > 1 ? 1 : lev;
+        vol = vol < 0 ? 0 : vol > 1 ? 1 : vol;
         if (muted || solo)
             T(muted ? EC_C_ACC : EC_C_L15, muted ? "M" : "S", cx, 12, EC_AL_CENTER);
         R(EC_C_L3, x0, top, 4, mh);
-        h = (int)(mh * lev + 0.5f);
+        h = 2 * (int)(mh * lev * 0.5f + 0.5f);               /* 2-unit steps */
         R(muted ? EC_C_L5 : EC_C_L12, x0, top + mh - h, 4, h);
         if (lev > 0.78f)
             R(EC_C_ACC, x0, top + mh - h, 4, 2);
-        R(EC_C_L5, cx + 1, top, 1, mh);
-        if (i != 6 && i != 7)
-            R(EC_C_L15, cx, top + (int)(mh * (1 - vol) + 0.5f) - 1, 4, 3);
+        if (i != 6 && i != 7) {
+            R(EC_C_L5, x + 8, top, 2, mh);
+            R(EC_C_L15, x + 7, top + (int)((mh - 2) * (1 - vol) + 0.5f), 4, 2);
+        }
+        /* the pan: the tracks' live pan; S1 / S2 (stereo returns, no pan param) rest at the centre; MST has none */
+        if (i < EC_NTRACK)
+            mix_pan(x, ec_scr_mix_pan_now(a, i), i == sel ? EC_C_ACC : muted ? EC_C_L5 : EC_C_L12);
+        else if (i < 8)
+            mix_pan(x, 0, i == sel ? EC_C_ACC : EC_C_L5);
         if (i == sel) {
             R(EC_C_L15, x + 1, 63, 11, 9);
             T(EC_C_BG, N[i], cx, 65, EC_AL_CENTER);

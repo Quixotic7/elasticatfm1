@@ -29,6 +29,7 @@
 
 /* items the panel makes itself (beside the layout's EC_IT_*): ec_app.c formats / edits them through ec_pn_item_* */
 #define EC_IT_UX 40
+#define EC_CAT_T_BEAT 1.5   /* 0.6.3: the CAT fractal's evolution a beat played (stopped: 1 a second) */
 enum { EC_UX_TARGET,   /* KEYBOARD: the target step (0 = live) */
        EC_UX_OCT,      /* KEYBOARD: the octave */
        EC_UX_PLOOP,    /* PAGES: the pages in the loop ("1-2") */
@@ -45,6 +46,9 @@ enum { EC_UX_TARGET,   /* KEYBOARD: the target step (0 = live) */
        EC_UX_SLEN,     /* SAMPLER: the take's length (FREE, 1, 2, 4, 8 bars) */
        EC_UX_SGAIN,    /*   .. the input gain (dB) */
        EC_UX_SMON,     /*   .. the input monitor on / off */
+       EC_UX_FXT0,     /* 0.6.3: FX SETUP: the effect type of slot 0 INSERT 1 .. 4 MASTER (EC_UX_FXT0 + slot) */
+       EC_UX_FXT4 = EC_UX_FXT0 + 4,
+       EC_UX_SMODE,    /* 0.6.3: FX SETUP with a bus targeted: the track's SEND MODE (send_tap) */
        EC_NUX };
 
 /* APP SETTINGS (docs/UX-V2.md §3): the global record (ec_plat_settings), magic + version */
@@ -108,7 +112,13 @@ typedef struct {
     uint32_t trk_ms[9];
     int cat;                   /* MIX's CAT shows */
     uint32_t cat_ms;
-    uint32_t cat_n;            /* 0.6.2: the CAT's redraws (the stopped fractal's drift) */
+    uint32_t cat_n;            /* 0.6.2: the CAT's redraws */
+    /* 0.6.3 (docs/UX-V2.md §10 "CAT fractals"): the fractal's algorithm (+1: 0 none yet) and seed, picked on each entry
+     * by the app's generator (cat_rng, seeded from the tick count); its evolution clock (cat_t: stopped, 1/40 a redraw;
+     * playing, CAT_T_BEAT a beat of the transport, cat_beats the last beats seen) */
+    int cat_algo1;
+    uint32_t cat_seed, cat_rng;
+    double cat_t, cat_beats;
     /* LOOP ENGINE: the zoom's half (32: 0 first, 1 second) */
     int zoom_half;
     /* KEYBOARD */
@@ -196,6 +206,19 @@ int ec_src_hold_tick(void);
 int ec_src_mk_index(int key);                 /* the ec_mk source (EC_MK_*) a black key is in this mode, -1 */
 /* 0.6.1: FX's INSERT page (the track's, not a bus's) is shown: its cells are the selected slot's knob page */
 int ec_src_insert_page(void);
+/* 0.6.3 (docs/UX-V2.md §10 "FX layout"): the slots 0 INSERT 1, 1 INSERT 2, 2 SEND 1, 3 SEND 2, 4 MASTER */
+int ec_fx_effects_page(void);
+int ec_fx_sends_page(void);
+int ec_fx_slot(void);                          /* the slot shown (A->bus 1..3: 2..4, else pn.ins_slot) */
+int ec_fx_on_sends(void);
+int ec_fx_slot_machine(int slot);
+const char *ec_fx_slot_name(int slot);         /* "INSERT 1" .. "MASTER" */
+void ec_fx_sends_items(void *out);
+void ec_fx_setup_items(void *out);             /* (ec_page_t *) FX SETUP: the five slots' types, SEND MODE */
+void ec_fx_type_step(int slot, int det);       /* a slot's effect type one on (INSERT 2: its params reset) */             /* (ec_page_t *) SENDS's cells */
+void ec_fx_send_mode(int det);                 /* SENDS: ALGO, the send mode PRE / POST */
+void ec_fx_swap(int key);                      /* SENDS: B1 / B2 swap the inserts, B3 / B4 the sends */
+int ec_fx_cur_key(void);                       /* the key of the place shown (1..5, 11) */
 int ec_src_ins_pages(void);                   /* the selected slot's knob pages (P1..): its params in threes, >= 1 */
 int ec_src_ins_param(int slot, int i);        /* the id knob K(i%3+1) of page i/3 edits (INS 2: EC_P_INS2_Pn), -1 */
 int ec_src_ins_mix(int slot);                 /* the slot's K4 MIX param (INS 1: fx_mix / fx_wet, INS 2: its MIX) */

@@ -130,8 +130,18 @@ int ec_scr_intro_frames(void);   /* 55 */
 int ec_scr_cat_frames(void);     /* 12 */
 void ec_scr_intro(int frame);    /* frame clamped */
 #define EC_KIT_CAT_Y 26
-/* frame modulo the frames; beats: the transport's clock; drift: stopped, the fractal's slow clock (a frame count) */
-void ec_scr_cat(int frame, double beats, int playing, uint32_t drift);
+/* 0.6.3 (§10 "CAT fractals", src/ui/ec_cat_fractal.c): frame modulo the frames; beats: the transport's clock (the
+ * pulse); t: the fractal's evolution clock (the app's: stopped, redraws / 40; playing, faster, from beats); algo: one
+ * of ec_scr_cat_algos(), seed: the entry's (the phases and the zoom targets). Never the host clock */
+void ec_scr_cat(int frame, double beats, int playing, double t, int algo, uint32_t seed);
+int ec_scr_cat_algos(void);                          /* 7 */
+const char *ec_scr_cat_algo_name(int algo);
+int ec_scr_cat_next(uint32_t *rng, int prev);        /* a random algorithm, never prev (-1: any); rng: xorshift32 */
+typedef struct {
+    int algo, cap, cells, top;                       /* the last frame: its iteration cap, the stage's cells, the */
+    double pull;                                     /* biggest grey class; the collapse pull back (log2) */
+} ec_cat_stats_t;
+const ec_cat_stats_t *ec_scr_cat_stats(void);
 void ec_kit_sprite(const uint8_t *packed, int w, int h, int x, int y);   /* = ec_gfx_blit4, opaque */
 
 #endif

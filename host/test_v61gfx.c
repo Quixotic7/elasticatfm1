@@ -130,7 +130,7 @@ static void test_cat(void)
     redraw();
     CHECK(A->pn.cat, "B11: the CAT");
     CHECK(top_is_stage() && all_grey(), "the CAT has no header, greys only");
-    CHECK(greys() > 1500, "stopped: the fractal shows (%d grey px)", greys());
+    CHECK(greys() > 800, "stopped: the fractal shows (%d grey px, %s)", greys(), ec_scr_cat_algo_name(A->pn.cat_algo1 - 1));
     memcpy(was, ec_gfx_canvas(), sizeof was);
     run(2000);
     redraw();
@@ -139,7 +139,7 @@ static void test_cat(void)
     press(FM1P_B_PLAY, 20);
     run(100);
     redraw();
-    CHECK(A->seq.playing && top_is_stage() && all_grey() && greys() > 1500, "playing: greys only, the fractal (%d px)",
+    CHECK(A->seq.playing && top_is_stage() && all_grey() && greys() > 800, "playing: greys only, the fractal (%d px)",
           greys());
     beat = (int)floor(ec_seq_beats(&A->seq));
     while ((int)floor(ec_seq_beats(&A->seq)) == beat)          /* the next beat: the pulse */
@@ -165,6 +165,115 @@ static void test_cat(void)
     CHECK(!A->pn.cat && mode() == EC_CAT_FILT, "a mode button (SEL) leaves the CAT");
 }
 
+/* 0.6.3 (§10 "CAT fractals"): every algorithm draws the greys only, with detail, and keeps evolving without repeating;
+ * entries pick a new algorithm each time, never the last one; playing evolves faster than stopped */
+static uint32_t frame_hash(void)
+{
+    uint32_t h = 2166136261u;
+    int i;
+    for (i = 0; i < EC_GW * EC_GH; i++)
+        h = (h ^ ec_gfx_canvas()[i]) * 16777619u;
+    return h;
+}
+static int distinct_greys(void)
+{
+    return (count(EC_C_L3) > 0) + (count(EC_C_L5) > 0) + (count(EC_C_L8) > 0) + (count(EC_C_L12) > 0) +
+           (count(EC_C_L15) > 0) + (count(EC_C_BG) > 0);
+}
+static void cat_draw(double t, int algo, uint32_t seed)
+{
+    ec_gfx_begin(ec_plat_lcd());
+    ec_scr_cat((int)(t * 10.0), 0.0, 0, t, algo, seed);
+}
+
+static void test_cat_algos(void)
+{
+    static uint8_t was[EC_GW * EC_GH];
+    static uint32_t seen[4000];
+    const int na = ec_scr_cat_algos();
+    int a, i, j;
+    CHECK(na >= 6, "%d fractal algorithms", na);
+    for (a = 0; a < na; a++) {
+        const uint32_t seed = 0x5EED0000u + (uint32_t)a * 77u;
+        int detail = 0, shots = 0, grey_ok = 1, dupes = 0, minchg = 1 << 30, worst_top = 0;
+        double t;
+        /* 30 minutes of stopped evolution, a frame every 0.5 (t units: ~0.6 s), every frame's hash */
+        for (i = 0, t = 0.0; i < 3600; i++, t += 0.5) {
+            cat_draw(t, a, seed);
+            seen[i] = frame_hash();
+            if (i % 120 == 0) {                        /* every minute: greys only, detail */
+                const ec_cat_stats_t *st = ec_scr_cat_stats();
+                shots++;
+                grey_ok &= all_grey();
+                detail += distinct_greys() >= 4 && st->top < 0.9 * st->cells;
+                worst_top = st->top * 100 / st->cells > worst_top ? st->top * 100 / st->cells : worst_top;
+            }
+        }
+        for (i = 0; i < 3600; i++)                     /* no frame twice (a hash set would do; 3600^2 / 2 is fine) */
+            for (j = i + 1; j < 3600; j++)
+                if (seen[i] == seen[j]) {
+                    dupes++;
+                    if (dupes < 4)
+                        printf("  %s: frames %d and %d (t %.1f, %.1f) match\n", ec_scr_cat_algo_name(a), i, j, i * 0.5,
+                               j * 0.5);
+                }
+        for (i = 0; i < 6; i++) {                      /* frames two minutes apart differ */
+            int n;
+            cat_draw(200.0 * i, a, seed);
+            memcpy(was, ec_gfx_canvas(), sizeof was);
+            cat_draw(200.0 * i + 120.0, a, seed);
+            n = changed(was);
+            minchg = n < minchg ? n : minchg;
+        }
+        printf("cat %-7s: detail %d/%d minutes (worst top %d %%), 2-minute change >= %d px, %d repeats\n",
+               ec_scr_cat_algo_name(a), detail, shots, worst_top, minchg, dupes);
+        CHECK(grey_ok, "%s: the theme's greys only", ec_scr_cat_algo_name(a));
+        CHECK(detail >= shots - 2, "%s: detail (4+ greys, no class over 90 %%) in %d of %d minutes (worst top %d %%)",
+              ec_scr_cat_algo_name(a), detail, shots, worst_top);
+        CHECK(dupes == 0, "%s: 3600 frames over 30 minutes, no frame twice (%d repeats)", ec_scr_cat_algo_name(a), dupes);
+        CHECK(minchg > 300, "%s: frames two minutes apart differ (at least %d px)", ec_scr_cat_algo_name(a), minchg);
+    }
+}
+
+static void test_cat_entries(void)
+{
+    int k, prev = -1, same = 0, hit[16] = {0}, kinds = 0;
+    double t0;
+    to(EC_CAT_MASTER);
+    W(1, 40);
+    for (k = 0; k < 24; k++) {
+        B(11, 40);                                     /* on */
+        CHECK(A->pn.cat && A->pn.cat_algo1 >= 1 && A->pn.cat_algo1 <= ec_scr_cat_algos(), "B11: the CAT, an algorithm");
+        same += A->pn.cat_algo1 - 1 == prev;
+        prev = A->pn.cat_algo1 - 1;
+        hit[prev & 15]++;
+        run(37 + 13 * k);
+        B(11, 40);                                     /* off */
+        run(25);
+    }
+    for (k = 0; k < 16; k++)
+        kinds += hit[k] > 0;
+    CHECK(same == 0, "24 entries: never the same algorithm twice running (%d)", same);
+    CHECK(kinds >= 5, "24 entries: %d different algorithms", kinds);
+    B(11, 40);                                         /* stopped vs playing: the evolution clock */
+    t0 = A->pn.cat_t;
+    run(2000);
+    t0 = A->pn.cat_t - t0;
+    CHECK(t0 > 1.0 && t0 < 2.2, "stopped: the fractal evolves ~1 a second (%.2f in 2 s)", t0);
+    press(FM1P_B_PLAY, 20);
+    run(100);
+    {
+        const double t1 = A->pn.cat_t;
+        run(2000);
+        printf("cat entries: %d kinds; evolution in 2 s: stopped %.2f, playing %.2f\n", kinds, t0, A->pn.cat_t - t1);
+        CHECK(A->pn.cat_t - t1 > 2.0 * t0, "playing (120 BPM): faster (%.2f in 2 s)", A->pn.cat_t - t1);
+    }
+    press(FM1P_B_PLAY, 20);
+    run(300);
+    B(11, 40);
+    CHECK(!A->pn.cat, "B11: MIX");
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -176,6 +285,8 @@ int main(int argc, char **argv)
     test_mix_pan();
     test_mix_pan_lock();
     test_cat();
+    test_cat_algos();
+    test_cat_entries();
     C->shutdown();
     printf("test_v61gfx: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

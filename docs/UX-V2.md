@@ -691,3 +691,75 @@ them:
   opens the type menu.
 - **FX settings (hold FX / SHIFT + FX) list every slot**: INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER (each row picks
   that slot's effect type), then SEND MODE.
+
+**Built in 0.6.3** (2026-11-03)
+- CAT stage, 0.6.3 (`src/ui/ec_cat_fractal.c`, replacing 0.6.2's single Julia loop): each B11 entry picks one of seven
+  algorithms with the app's xorshift32 (`pn.cat_rng`, stirred with the tick count and the redraw count at entry; never
+  the host clock), never the previous one (`ec_scr_cat_next`): **JULIA** (z^2 + c; c glides between well-loved
+  constants -- dendrites, rabbits, spirals, Siegel disks, dust -- a new random one every ~22 units, a small wander on
+  top; point symmetric: half the cells), **MANDEL**, **SHIP** (Burning Ship), **TRICORN** (Mandelbar) (the zooms),
+  **JULIA4** (z^4 + c, c anywhere on the quartic Multibrot's edge, a little out; half the cells), **PHOENIX** (z^2 + p
+  + q z', p and q wandering), **NEWTON** (z^3 - 1 with a wandering complex relaxation; the grey from the root and the
+  steps). The evolution clock `pn.cat_t` (counted from the entry): stopped, 1/40 a CAT redraw (~0.83 a second);
+  playing, 1.5 a beat of the transport (3 a second at 120 BPM). Everything wandering (the constants, zoom, rotation,
+  centre) is a sum of three sines at unrelated rates (x1, x sqrt 2, x golden ratio) with the entry seed's phases, the
+  rotation with a steady turn on top (never turning back): nothing comes round again.
+- The zooms: t is cut into epochs of 420 units, each into six cycles of random lengths; a cycle dives from the
+  overview to a target and pulls back out quickly (the overview is the same view for every target, so cycles join
+  seamlessly), the target moving out beside the cat (0.62 of the half width, its angle wandering). The target is
+  found once a cycle (in doubles, cached): from one of the set's detailed regions (MANDEL: the valleys, bulbs and the
+  overview; SHIP: its antenna's little ships; TRICORN: its three tips), level by level into the third of a 12 x 12
+  probe grid with the most detail (distinct bands, jumps between neighbours that are not a gradient, some inside
+  but not mostly), to a random depth (MANDEL up to 2^12.5, SHIP 2^11, TRICORN 2^8; Q28 in 64 bits keeps over 2000
+  steps of precision across a cell there). The iteration cap rises with the depth (16 + 4 a zoom octave, at most 64)
+  and the bands widen (1 + (cap - 16) / 20 counts a band; SHIP one more: its antenna glitters).
+- Detail check: a frame whose biggest grey class covers over 86 % of the stage, or whose BG (the inside) over 60 %,
+  pulls the view back (0.06 octave a frame, 0.5 when flat), easing in again by 0.01 a frame once it has detail; the
+  zooms never pull past the overview, the Julia kinds at most 1.5 octaves.
+- Cost control: JULIA and JULIA4 (point symmetric, centred on 0) compute half the cells through the mirror; the others
+  compute half the cells a frame (a checkerboard, alternating; the other half is the last frame's count, kept as its
+  band), all of them after a new algorithm, seed or a jump in t.
+- The beat: the zoom pulses in 10 % on a beat, 20 % on a bar's first, easing out over the beat; the bands step one
+  grey on for its first part (two on the bar).
+- Cost, native (M-series, -O2, mean / worst a redraw over ten minutes of evolution): JULIA 0.04 / 0.08 ms, MANDEL
+  0.07 / 0.17, SHIP 0.08 / 0.16, TRICORN 0.07 / 0.14, JULIA4 0.06 / 0.09, PHOENIX 0.04 / 0.06, NEWTON 0.09 / 0.14.
+  wasm3 (rfm1_run on the heavy project, the CAT forced up with a fixed algorithm and drawn 11 times a redraw against
+  once; 785 redraws in 20 s, user time, two runs): JULIA 0.32 ms, MANDEL 0.51, SHIP 0.60, TRICORN 0.50, JULIA4 0.32,
+  PHOENIX 0.32, NEWTON 0.44 a redraw (before the half-a-frame update the zooms cost 0.77-0.95 ms). At the CAT's ~39
+  redraws a second that is 1.2-2.3 % of a core. The heavy project's speed on the same (loaded) machine: 2.1x with the
+  CAT off (10.6-10.7 s user for 20 s), 2.0-2.1x with it up (10.8-11.2 s: JULIA4 / PHOENIX / JULIA / NEWTON 2.1x,
+  the three zooms 2.0x).
+- FX layout (§10 "FX layout"): the slots 0 INSERT 1, 1 INSERT 2, 2 SEND 1, 3 SEND 2, 4 MASTER (`ec_fx_slot`); a bus
+  slot is edited through the bus target (A->bus 1..3), so targeting S1 / S2 / MST with the track keys shows that row /
+  MASTER in FX. Every slot's knobs come from the layout's FX/EFFECTS variant for its machine (`ins_list`): K1-K3 in
+  threes, K4 its MIX (`ec_src_ins_mix`: fx_mix, or fx_wet without a blend; INSERT 2: its own MIX). The page list
+  (`ec_nav.c fx_list`): INSERT 1 P1.. (B1), INSERT 2 P1.. (B2), SEND 1 P1.. (B3), SEND 2 P1.. (B4), SENDS, MASTER
+  P1.. (B5), then the layout's others (FX MIX, B11). B5 steps SENDS -> MASTER P1 -> MASTER P2 -> SENDS (one group, so
+  the generic key rule holds; COMP has two knob pages). The FX button tapped again goes to the next row / group.
+  Layout: FX/INSERT is now FX/EFFECTS (B1), SENDS moved to B5, the MST bus has no key (S1 B3, S2 B4 as before).
+  Other modes with a bus target keep the bus's layout page, its cells put in the same K1-K3 + K4 MIX lanes
+  (`ec_page_bus_k4`, applied by the app so the layout's pages and the 0.4.0 hash stay).
+- SENDS (`ec_fx_sends_items`): K1 INSERT 1's MIX, K2 INSERT 2's MIX, K3 SEND 1, K4 SEND 2; ALGO = `send_tap`, the
+  existing per-track send mode (saved since E4; 0.6.3 makes it p-lockable), PRE (1, the default: old projects keep
+  it) / POST (2). In the DSP (`track_chunk`, unchanged): the track's level and pan act at the filter's output
+  (`ec_filter_process`), so PRE taps after the filter, level and pan, before INSERT 1; POST taps after INSERT 2; the
+  mute is after both. That is the spec's POST (after the inserts and level / pan); the picture draws AMP after the
+  inserts, as the spec does, though the DSP applies it before them. No DSP change: no cost. Test: tests/dsp test_v61
+  "the send mode" (an insert killing every band: POST sends ~nothing, PRE the loop).
+- Swaps (`ec_project_swap_inserts` / `_sends`, `EC_U_FXSWAP`: the undo applies the swap again): the inserts by an id
+  map per pattern (each pattern's own machines): INSERT 1's params in the layout order <-> INSERT 2's P1.., the
+  MIXes, the machines; values, step and slice locks, matrix destinations and the scenes' values follow. The sends: the
+  two bus records, SEND 1 <-> SEND 2 on every track (values, locks, routes, scenes) and the scenes' S1 / S2 rows. A
+  held B1-B4 on SENDS arms `EC_HM_SWAP` (the header names it, "SWAP INSERTS" / "SWAP SENDS"; at 400 ms it swaps,
+  once; released before: a tap, which goes to that row).
+- FX settings (`ec_fx_setup_items`): INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER, SEND MODE; the row of the place the
+  knobs edit is its own param (INSERT 1's fx_insert1_machine, or the targeted bus's), the others panel items
+  (EC_UX_FXT0 + slot; INSERT 2's resets its params and is one undo; a bus's is global, no undo, like its knobs).
+- Screens (`ec_scr_e4.c`): EFFECTS rows 14 units, the knob pages as 4x2 boxes under each row's bar; MASTER: its row and
+  the load meter; SENDS: the routing in two rows of blocks (effect names abbreviated: the option labels), the tap in
+  ACC, then I1 / I2 / S1 / S2 with their effects' names and bars.
+- Tests: v61gfx (each algorithm: greys only, detail every minute of 30, no frame twice in 3600, frames two minutes
+  apart differ; 24 entries never repeat an algorithm and reach at least five; playing evolves faster), grid (the
+  kit's CAT frames over every algorithm), fx2 (bus K4 MIX on every page, SENDS cells, ALGO send mode and its undo, both
+  swaps with undo and a lock and a route following, the FX settings rows), nav (FX's list and keys), ux / v61ux /
+  v61list (keys, headers, the settings list), real screens Fx_send1, Fx_sends, Fx_sends_post, Fx_master, Fx_setup.

@@ -49,110 +49,131 @@ static void trace(const float *y, int n, float x0, float x1, int c)
 #define VT 34
 #define VB 70
 
-/* FX (0.6.0, the approved mock): the four FX slots of the selected track's chain, one a row: the slot (INSERT, SEND 1,
- * SEND 2, MASTER; there is one insert per track), its engine big, its mix as a bar (the insert's FX MIX, the track's
- * send levels, the master bus's FX MIX); the slot the page edits highlighted. An engine swap still fading: an accent
- * notch under its name. */
-static void fx_page(const ec_app_t *a, const ec_page_t *pg)
+/* 0.6.3 (docs/UX-V2.md §10 "FX layout"): a slot's level (K4 MIX; the sends' rows: the track's send levels) */
+static float slot_level(const ec_app_t *a, int slot)
 {
-    static const char *const SLOT[4] = {"INSERT", "SEND 1", "SEND 2", "MASTER"};
     const float *tv = a->proj.pat[a->proj.current].tr[a->track].v;
-    int i;
-    for (i = 0; i < 4; i++) {
-        const int y = 12 + i * 15, on = i == pg->busv;
-        const int m = (int)floorf((i ? a->proj.bus[i - 1][EC_P_FX_MACHINE] : tv[EC_P_FX_MACHINE]) + 0.5f);
-        const float mix = i == 0 ? tv[EC_P_FX_MIX] : i < 3 ? tv[i == 1 ? EC_P_SEND1 : EC_P_SEND2]
-                                                           : a->proj.bus[2][EC_P_FX_MIX];
-        int running = m;
-        if (on)                                    /* 0.6.1: 2 units round the name */
-            R(EC_C_L3, 0, y, W, 14);
-        T(on ? EC_C_L15 : EC_C_L8, SLOT[i], 3, y + 4, EC_AL_LEFT);
-        T2(m == EC_FX_NONE ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, m == EC_FX_NONE ? "--" : ec_fx_short_name(m), 34,
-           y + 2, EC_AL_LEFT);
-        if (on) {
-            if (pg->busv) {
-                ec_bus_status_t bs;
-                ec_dsp_bus_status(a->dsp, pg->busv - 1, &bs);
-                running = bs.fx_running;
-            } else {
-                ec_track_status_t st;
-                ec_dsp_track_status(a->dsp, a->track, &st);
-                running = st.fx_running;
-            }
-        }
-        if (running != m)                          /* the swap fade in progress */
-            R(EC_C_ACC, 34, y + 11, 6, 2);
-        R(on ? EC_C_L5 : EC_C_L3, 100, y + 5, 17, 3);   /* 0.6.1: the track as tall as the bar */
-        R(on ? EC_C_ACC : EC_C_L12, 100, y + 5, (int)(17.0f * clampf(mix / 127.0f, 0, 1) + 0.5f), 3);
+    switch (slot) {
+    case 0: return tv[ec_fx_mix_id((int)floorf(tv[EC_P_FX_MACHINE] + 0.5f))];
+    case 1: return tv[EC_P_INS2_MIX];
+    case 2: return tv[EC_P_SEND1];
+    case 3: return tv[EC_P_SEND2];
+    default: {
+        const float *bv = a->proj.bus[2];
+        return bv[ec_fx_mix_id((int)floorf(bv[EC_P_FX_MACHINE] + 0.5f))];
+    }
+    }
+}
+static int slot_mach(const ec_app_t *a, int slot)
+{
+    const float *tv = a->proj.pat[a->proj.current].tr[a->track].v;
+    const float x = slot >= 2 ? a->proj.bus[slot - 2][EC_P_FX_MACHINE] : tv[slot ? EC_P_INS2_MACHINE : EC_P_FX_MACHINE];
+    return (int)floorf(x + 0.5f);
+}
+static int slot_running(const ec_app_t *a, int slot)   /* the engine running (a swap still fading: not the machine) */
+{
+    if (slot >= 2) {
+        ec_bus_status_t bs;
+        ec_dsp_bus_status(a->dsp, slot - 2, &bs);
+        return bs.fx_running;
+    } else {
+        ec_track_status_t st;
+        ec_dsp_track_status(a->dsp, a->track, &st);
+        return slot ? st.fx2_running : st.fx_running;
     }
 }
 
-/* 0.6.1 (docs/UX-V2.md §9): the track's INSERT page: its two inserts in series, one a row (the slot, its engine big,
- * its MIX as a bar; the slot SEL picked highlighted, an engine swap still fading: an accent block under its name),
- * the buses' engines small, and the load meter: the counted engine load (ec_dsp_load: 1.0 = the hosts' 2x real
- * time budget) as a chunky bar. No warning colour: the bar is the bar. */
-static void insert_page(const ec_app_t *a)
+/* one slot's row: its name small, its engine big, its level as a bar, its knob pages as boxes under the bar (the
+ * one shown lit on the selected row); selected: an L3 band. An engine swap still fading: an accent block */
+static void slot_row(const ec_app_t *a, int slot, int y, int on)
 {
-    const float *tv = a->proj.pat[a->proj.current].tr[a->track].v;
-    ec_track_status_t st;
-    char b[40];
-    int i;
-    ec_dsp_track_status(a->dsp, a->track, &st);
-    for (i = 0; i < 2; i++) {
-        const int y = 12 + i * 15, on = i == a->pn.ins_slot;
-        const int m = (int)floorf(tv[i ? EC_P_INS2_MACHINE : EC_P_FX_MACHINE] + 0.5f);
-        const int running = i ? st.fx2_running : st.fx_running;
-        const float mix = tv[i ? EC_P_INS2_MIX : ec_fx_mix_id(m)];
-        if (on)
-            R(EC_C_L3, 0, y, W, 14);
-        T(on ? EC_C_L15 : EC_C_L8, i ? "INS 2" : "INS 1", 3, y + 5, EC_AL_LEFT);
-        T2(m == EC_FX_NONE ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, m == EC_FX_NONE ? "--" : ec_fx_name(m), 28, y + 2,
-           EC_AL_LEFT);
-        if (running != m)                          /* the swap fade in progress */
-            R(EC_C_ACC, 28, y + 12, 8, 2);
-        if (m != EC_FX_NONE) {
-            R(on ? EC_C_L5 : EC_C_L3, 98, y + 5, 19, 4);
-            R(on ? EC_C_ACC : EC_C_L12, 98, y + 5, (int)(19.0f * clampf(mix / 127.0f, 0, 1) + 0.5f), 4);
-        }
-    }
-    snprintf(b, sizeof b, "S1 %s  S2 %s  M %s", ec_fx_short_name((int)(a->proj.bus[0][EC_P_FX_MACHINE] + 0.5f)),
-             ec_fx_short_name((int)(a->proj.bus[1][EC_P_FX_MACHINE] + 0.5f)),
-             ec_fx_short_name((int)(a->proj.bus[2][EC_P_FX_MACHINE] + 0.5f)));
-    T(EC_C_L5, b, 3, 45, EC_AL_LEFT);
-    {   /* the load meter */
-        const float ld = clampf(ec_src_load(), 0, 1);
-        const int w = (int)(ld * 76.0f + 0.5f);
-        snprintf(b, sizeof b, "%d%%", (int)floorf(ec_src_load() * 100.0f + 0.5f));
-        T(EC_C_L8, "LOAD", 3, 59, EC_AL_LEFT);
-        R(EC_C_L3, 22, 56, 76, 10);
-        R(EC_C_L12, 22, 56, w, 10);
-        T(EC_C_L15, b, 117, 59, EC_AL_RIGHT);
-    }
+    const int m = slot_mach(a, slot);
+    const int np = a == &ec_app ? ec_src_ins_pages_of(slot) : 1, kp = on ? a->pn.ins_page : -1;
+    const float lv = slot_level(a, slot);
+    int k;
+    if (on)
+        R(EC_C_L3, 0, y, W, 14);
+    T(on ? EC_C_L15 : EC_C_L8, ec_fx_slot_name(slot), 3, y + 5, EC_AL_LEFT);
+    T2(m == EC_FX_NONE ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, m == EC_FX_NONE ? "--" : ec_fx_short_name(m), 40, y + 2,
+       EC_AL_LEFT);
+    if (slot_running(a, slot) != m)
+        R(EC_C_ACC, 40, y + 12, 6, 2);
+    R(on ? EC_C_L5 : EC_C_L3, 98, y + 4, 20, 4);
+    R(on ? EC_C_ACC : EC_C_L12, 98, y + 4, (int)(10.0f * clampf(lv / 127.0f, 0, 1) + 0.5f) * 2, 4);
+    for (k = 0; k < np && k < 3; k++)              /* the knob pages: P1 P2 .. */
+        R(k == kp ? EC_C_L15 : on ? EC_C_L8 : EC_C_L5, 98 + k * 6, y + 10, 4, 2);
 }
 
+/* EFFECTS: INSERT 1, INSERT 2, SEND 1, SEND 2 a row each, the slot shown highlighted */
+static void effects_page(const ec_app_t *a, int sel)
+{
+    int i;
+    for (i = 0; i < 4; i++)
+        slot_row(a, i, 12 + i * 14, i == sel);
+}
+
+/* MASTER: the master bus's effect (its row, its knob pages) and the load meter: the counted engine load (ec_dsp_load:
+ * 1.0 = the hosts' 2x real time budget) as a chunky bar. No warning colour: the bar is the bar */
+static void master_page(const ec_app_t *a)
+{
+    char b[16];
+    const float ld = clampf(ec_src_load(), 0, 1);
+    slot_row(a, 4, 12, 1);
+    T(EC_C_L8, "LOAD", 3, 41, EC_AL_LEFT);
+    R(EC_C_L3, 22, 38, 76, 10);
+    R(EC_C_L12, 22, 38, (int)(ld * 38.0f + 0.5f) * 2, 10);
+    snprintf(b, sizeof b, "%d%%", (int)floorf(ec_src_load() * 100.0f + 0.5f));
+    T(EC_C_L15, b, 117, 41, EC_AL_RIGHT);
+}
+
+/* SENDS (§10): the track's routing, FILT -> INSERT 1 -> INSERT 2 -> AMP -> MIX, the send tap (ACC) where the send
+ * mode puts it (PRE: after the filter; POST: after AMP), down to S1 / S2's effects and on to MST; then K1-K4's
+ * levels: I1 / I2 (the inserts' MIX), S1 / S2 (the sends), each with its effect's name */
+static void block(int x, int w, int y, int c, const char *s)
+{
+    R(c, x, y, w, 10);
+    T(EC_C_BG, s, x + w / 2, y + 3, EC_AL_CENTER);
+}
+static const char *mach_name(const ec_app_t *a, int slot)
+{
+    const int m = slot_mach(a, slot);
+    return m == EC_FX_NONE ? "--" : ec_fx_short_name(m);
+}
 static void sends_page(const ec_app_t *a)
 {
-    const float s1 = amt(a, EC_P_SEND1), s2 = amt(a, EC_P_SEND2);
-    const int post = opt(a, EC_P_SEND_TAP) == 2;
-    const int y = 24;
+    static const char *const N[4] = {"I1", "I2", "S1", "S2"};
+    const int post = opt(a, EC_P_SEND_TAP) == 2, y = 12, yb = 32;
+    const int tx = post ? 98 : 18, x0 = post ? 38 : tx, x1 = post ? tx + 2 : 80;
+    char b[16];
     int i;
-    /* the chain: FILT -> FX -> MIX, the tap before or after the insert */
-    R(EC_C_L5, 4, y, 22, 9), T(EC_C_BG, "FILT", 15, y + 2, EC_AL_CENTER);
-    R(EC_C_L12, 46, y, 22, 9), T(EC_C_BG, "FX", 57, y + 2, EC_AL_CENTER);
-    R(EC_C_L5, 88, y, 22, 9), T(EC_C_BG, "MIX", 99, y + 2, EC_AL_CENTER);
-    R(EC_C_L8, 26, y + 3, 20, 2), R(EC_C_L8, 68, y + 3, 20, 2);   /* 0.6.1: 2 units */
-    {
-        const int tx = post ? 78 : 36;
-        R(EC_C_ACC, tx, y + 3, 2, 15);
-        R(EC_C_ACC, tx - 2, y + 3, 6, 2);
-    }
-    for (i = 0; i < 2; i++) {
-        const float lv = i ? s2 : s1;
-        const int by = 44 + i * 13;
-        T(EC_C_L8, i ? "S2" : "S1", 4, by, EC_AL_LEFT);
-        R(EC_C_L3, 16, by, 92, 5);
-        R(lv > 0 ? EC_C_L12 : EC_C_L3, 16, by, (int)(lv * 92), 5);
-        T(EC_C_L5, ec_fx_short_name((int)(a->proj.bus[i][EC_P_FX_MACHINE] + 0.5f)), 108, by + 7, EC_AL_RIGHT);
+    /* the chain, left to right; MIX down to MST */
+    block(2, 16, y, EC_C_L5, "FILT");
+    block(22, 26, y, EC_C_L12, mach_name(a, 0));
+    block(52, 26, y, EC_C_L12, mach_name(a, 1));
+    block(82, 16, y, EC_C_L5, "AMP");
+    block(102, 16, y, EC_C_L5, "MIX");
+    for (i = 0; i < 4; i++)
+        R(EC_C_L8, 18 + i * 30 + (i == 3 ? -10 : 0), y + 4, 4, 2);
+    R(EC_C_L8, 108, y + 10, 2, yb - (y + 10));
+    /* the sends: S1 and S2's effects, on to MST */
+    block(22, 34, yb, EC_C_L8, mach_name(a, 2));
+    block(62, 34, yb, EC_C_L8, mach_name(a, 3));
+    block(102, 16, yb, EC_C_L5, "MST");
+    R(EC_C_L8, 56, yb + 4, 6, 2), R(EC_C_L8, 96, yb + 4, 6, 2);
+    /* the tap (the send mode): down from the chain, along, down into S1 and S2 */
+    R(EC_C_ACC, tx, y + 4, 4, 2);
+    R(EC_C_ACC, tx + 1 - (tx & 1), y + 6, 2, 8);
+    R(EC_C_ACC, x0 < x1 ? x0 : x1, y + 12, (x0 < x1 ? x1 - x0 : x0 - x1) + 2, 2);
+    R(EC_C_ACC, 38, y + 12, 2, yb - (y + 12)), R(EC_C_ACC, 78, y + 12, 2, yb - (y + 12));
+    T(EC_C_L12, post ? "POST" : "PRE", 2, yb + 3, EC_AL_LEFT);
+    /* K1-K4's levels, each with its effect's name */
+    for (i = 0; i < 4; i++) {
+        const int x = 2 + (i % 2) * 60, yy = 46 + (i / 2) * 14;
+        const float lv = clampf(slot_level(a, i) / 127.0f, 0, 1);
+        snprintf(b, sizeof b, "%s %s", N[i], mach_name(a, i));
+        T(EC_C_L8, b, x, yy, EC_AL_LEFT);
+        R(EC_C_L3, x, yy + 6, 54, 4);
+        R(lv > 0 ? EC_C_L12 : EC_C_L3, x, yy + 6, (int)(lv * 27.0f + 0.5f) * 2, 4);
     }
 }
 
@@ -363,11 +384,11 @@ static void matrix_page(const ec_app_t *a)
 void ec_scr_e4(const ec_app_t *a, const ec_page_t *pg)
 {
     switch (pg->pic) {
-    case EC_PIC_FX:
-        if (!pg->busv && a == &ec_app && ec_src_insert_page())
-            insert_page(a);                         /* 0.6.1: both inserts + the load meter */
+    case EC_PIC_FX:                                 /* 0.6.3: EFFECTS (the slot shown), MASTER */
+        if (pg->busv == 3)
+            master_page(a);
         else
-            fx_page(a, pg);
+            effects_page(a, pg->busv ? pg->busv + 1 : a == &ec_app && ec_src_insert_page() ? ec_fx_slot() : 0);
         break;
     case EC_PIC_SENDS: sends_page(a); break;
     case EC_PIC_LFO1: lfo_page(a, 0); break;

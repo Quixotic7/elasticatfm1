@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.6.2: one page list per mode (docs/UX-V2.md §11, "One page list per mode"; "0.6.2 navigation"). Every mode's
  * pages, every knob page included, in one ordered list (ec_nav_list): a layout page's lanes (its cells in fours), FX's
- * INSERT as INS 1 P1, INS 1 P2 .., INS 2 P1 .., the bus pages S1 / S2 / MST (before the first page whose key is above
- * theirs: FX's MIX on B11), PATTERN LAUNCH's banks. SEL walks it both ways and stops at its ends (ec_nav_sel); a page
+ * slots (0.6.3, fx_list: INSERT 1 P1.., INSERT 2 P1.., SEND 1 P1.., SEND 2 P1.., SENDS, MASTER P1.., FX MIX),
+ * PATTERN LAUNCH's banks. SEL walks it both ways and stops at its ends (ec_nav_sel); a page
  * key jumps to its group's first entry, and tapped again inside its group steps through the group, wrapping
  * (ec_nav_key). The mode button tapped again goes to the next group (wrapping, as before). Nothing else moves the
  * page, so SEL and the keys cannot disagree. The state the entries are made of stays where it was: A->page, the lane
@@ -49,9 +49,35 @@ static int add_bus(ec_nav_t *o, int n, int max, int m, int bus)
     ec_page_t pg;
     int k, nl;
     ec_page_items_bus(m, 0, ec_app_params(A), bus, A->proj.bus[bus - 1], &pg);
+    if (pg.busv && pg.pic == EC_PIC_FX)        /* 0.6.3: the lanes as the app shows them (K4 MIX) */
+        ec_page_bus_k4(&pg, (int)(A->proj.bus[bus - 1][EC_P_FX_MACHINE] + 0.5f));
     nl = lanes_of(&pg);
     for (k = 0; k < nl; k++)
         n = add(o, n, max, 0, k, 0, bus, m == EC_CAT_FX ? ec_bus_key(bus) : 0, 0);
+    return n;
+}
+
+/* 0.6.3 (docs/UX-V2.md §10 "FX layout"): INSERT 1 P1.. (B1), INSERT 2 P1.. (B2), SEND 1 P1.. (B3), SEND 2 P1.. (B4),
+ * SENDS (B5), MASTER P1.. (B5), then the layout's other pages (FX MIX on B11) */
+static int fx_list(ec_nav_t *o, int max)
+{
+    const int pe = ec_fx_effects_page(), ps = ec_fx_sends_page();
+    const float *v = ec_app_params(A);
+    int n = 0, s, k, p;
+    for (s = 0; s < 5; s++) {
+        if (s == 4 && ps >= 0)
+            n = add(o, n, max, ps, 0, 0, 0, 5, 0);
+        for (k = 0; k < ec_src_ins_pages_of(s); k++)
+            n = add(o, n, max, pe, k, s, s >= 2 ? s - 1 : 0, s < 4 ? s + 1 : 5, 0);
+    }
+    for (p = 0; p < ec_cat_pages(EC_CAT_FX, v); p++) {
+        ec_page_t pg;
+        if (p == pe || p == ps)
+            continue;
+        ec_page_items(EC_CAT_FX, p, v, 0, &pg);
+        for (k = 0; k < lanes_of(&pg); k++)
+            n = add(o, n, max, p, k, 0, 0, page_key(EC_CAT_FX, p), 0);
+    }
     return n;
 }
 
@@ -69,6 +95,8 @@ int ec_nav_list(int m, ec_nav_t *o, int max)
     }
     if (A->bus && bus_mode(m) && m != EC_CAT_FX)   /* a bus is the target: its page (its lanes) whatever the page */
         return add_bus(o, n, max, m, A->bus);
+    if (m == EC_CAT_FX)
+        return fx_list(o, max);
     np = ec_cat_pages(m, v);
     for (p = 0; p < np; p++) {
         const int key = page_key(m, p);
@@ -123,6 +151,13 @@ static int find(int m, const ec_nav_t *o, int n)
         ec_app_page(A, &pg);
         lane = ec_app_lane(A, &pg);
     }
+    if (m == EC_CAT_FX && (A->bus || A->page[m] == ec_fx_effects_page())) {   /* 0.6.3: a slot's knob page */
+        const int s = ec_fx_slot();
+        for (i = 0; i < n; i++)
+            if (o[i].page == ec_fx_effects_page() && o[i].slot == s && o[i].sub == P->ins_page)
+                return i;
+        return -1;
+    }
     if (A->bus && bus_mode(m)) {
         for (i = 0; i < n; i++)
             if (o[i].bus == A->bus && o[i].sub == lane)
@@ -132,11 +167,6 @@ static int find(int m, const ec_nav_t *o, int n)
     for (i = 0; i < n; i++) {
         if (o[i].bus || o[i].page != A->page[m])
             continue;
-        if (m == EC_CAT_FX && ec_page_pic(m, o[i].page, 0) == EC_PIC_FX) {
-            if (o[i].slot == P->ins_slot && o[i].sub == P->ins_page)
-                return i;
-            continue;
-        }
         if (o[i].rows || o[i].sub == lane)
             return i;
     }
@@ -167,7 +197,7 @@ void ec_nav_go(int m, const ec_nav_t *e, int dir)
         A->bus = e->bus;
     ec_app_set_page(m, e->page);
     A->ux.lane[m] = e->sub;
-    if (m == EC_CAT_FX && !e->bus && ec_page_pic(m, e->page, 0) == EC_PIC_FX) {
+    if (m == EC_CAT_FX && e->page == ec_fx_effects_page()) {   /* 0.6.3: a slot (its bus set above) */
         A->ux.lane[m] = 0;
         P->ins_slot = e->slot;
         P->ins_page = e->sub;
@@ -254,7 +284,7 @@ int ec_nav_next_group(int m)
         return 0;
     if (i < 0)
         i = 0;
-    for (j = i + 1; j < n && o[j].page == o[i].page && o[j].bus == o[i].bus; j++)
+    for (j = i + 1; j < n && o[j].page == o[i].page && o[j].bus == o[i].bus && o[j].slot == o[i].slot; j++)
         ;
     ec_nav_go(m, &o[j < n ? j : 0], 0);
     return 1;

@@ -59,9 +59,12 @@ static const char *button_text(int b)
 static const char *quick_text(int mode, int key)
 {
     static const char *const BUS[3] = {"S1 FX TYPE", "S2 FX TYPE", "MST FX TYPE"};
-    if (mode == EC_CAT_FX) {
-        const int bus = ec_cat_key_bus(EC_CAT_FX, key);
-        return bus >= 1 && bus <= 3 ? BUS[bus - 1] : key == 1 ? "FX TYPE" : 0;
+    if (mode == EC_CAT_FX) {                       /* 0.6.3: B1-B4 the slots' types (SENDS: the swaps), B5 MASTER */
+        static const char *const SLOT[2] = {"INSERT 1 TYPE", "INSERT 2 TYPE"};
+        if (key >= 1 && key <= 4 && ec_fx_on_sends())
+            return key <= 2 ? "SWAP INSERTS" : "SWAP SENDS";
+        return key >= 1 && key <= 2 ? SLOT[key - 1] : key >= 3 && key <= 4 ? BUS[key - 3] : key == 5 && A->bus == 3
+                                                                                                 ? BUS[2] : 0;
     }
     if (key != 1)
         return 0;

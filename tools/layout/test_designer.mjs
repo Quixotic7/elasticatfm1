@@ -227,7 +227,7 @@ try {
     if (tk.join() !== fk.join() || fw[ci].name !== c.mode || BTNS[fw[ci].button - 1] !== c.button || fw[ci].order !== c.order) { same = false; log(`  ${c.cat}: tree ${tk} firmware ${fk} ${fw[ci].name}`); }
   }
   const amp = fw[3], fx = fw[4], modm = fw[5];
-  ok(same && amp.keys.slice(0, 3).join() === "0,1,2" && fx.keys[10] === 2 && fx.bus.slice(2, 5).join() === "1,2,3" && modm.keys[0] === 0 && modm.keys[10] === 4 && fw[10].name === "KEYBOARD",
+  ok(same && amp.keys.slice(0, 3).join() === "0,1,2" && fx.keys[10] === 2 && fx.bus.slice(2, 5).join() === "1,2,0" && modm.keys[0] === 0 && modm.keys[10] === 4 && fw[10].name === "KEYBOARD",
     `   every mode's pages and black keys in the tree = the firmware's (AMP B1-B3 ${amp.keys.slice(0, 3)}, FX B11 page ${fx.keys[10]} and buses ${fx.bus.slice(2, 5)}, MOD B1 / B11 ${modm.keys[0]} / ${modm.keys[10]})`);
   await shot("03b_modes");
   // a key set on FILT's MIX page (B3 -> B5), then onto B1 (taken by FILTER: the two swap)

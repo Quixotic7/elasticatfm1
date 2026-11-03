@@ -163,6 +163,10 @@ void ec_e5_undo(int redo)
     case EC_U_XFADE: ec_seq_touch_all(&A->seq); break;
     case EC_U_TRIM: ec_seq_touch_all(&A->seq); break;      /* 0.6.1: a slot's trim */
     case EC_U_SLOTS: ec_file_slots_swapped(gid, (int)gv); break;   /* 0.6.1: POOL's MOVE */
+    case EC_U_FXSWAP:                              /* 0.6.3: the inserts / sends swapped back */
+        ec_seq_touch_all(&A->seq);
+        xf_apply(A->proj.e5.sc.pos);
+        break;
     default:
         ec_seq_timing_changed(&A->seq);        /* (a pattern rate may have come back) */
         if (t >= 0)

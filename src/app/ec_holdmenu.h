@@ -13,7 +13,8 @@
 
 enum { EC_HM_PARAM,      /* a track param (an option list): id; FX's INS 1 type on a bus targets the bus's record */
        EC_HM_INS2,       /* INS 2's type (EC_P_INS2_MACHINE: picking resets its MIX and P1..P8, one undo) */
-       EC_HM_ADVANCE };  /* KEYBOARD's ADVANCE (APP SETTINGS) */
+       EC_HM_ADVANCE,    /* KEYBOARD's ADVANCE (APP SETTINGS) */
+       EC_HM_SWAP };     /* 0.6.3: FX SENDS: no list; held EC_HOLD_MS it swaps (id 0 the inserts, 1 the sends) */
 
 /* arm the menu on black key `key` (1..11): kind, the param (EC_HM_PARAM), the header while it shows */
 void ec_hm_arm(int key, int kind, int id, const char *head);

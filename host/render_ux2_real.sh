@@ -23,7 +23,7 @@ cp "$F/audio/a_drums_bpm120.wav" "$F/audio/breaks/funky_drummer.wav"
 cp "$F/audio/c_chords_bpm120.wav" "$F/audio/breaks/apache.wav"
 cp "$F/audio/b_bass_bpm120.wav" "$F/audio/breaks/jungle/reese.wav"
 rm -f "$F/data/elasticat/rec/"rec-*.wav
-"$B/ec_run" --folder "$F" --out "$OUT" --script "$H/ux2_real.txt" --ms 165500 \
+"$B/ec_run" --folder "$F" --out "$OUT" --script "$H/ux2_real.txt" --ms 177500 \
     --audio-in "$F/audio/c_chords_bpm120.wav" --expect-ui pool:36 --expect-ui takes:1 --expect-ui fdir:/audio/breaks
 # every mockup has its real screen (host/mock_ux2.c MODES[]; 0.6.1: no mode pop-ups, so no *_popup shots)
 for n in Main Shift Fx Filter Amp Mod Mix Pages Loop Trig Keyboard FileBrowser FileEditor Sampler Crossfader Patterns; do
@@ -50,6 +50,10 @@ for n in FileEditor_end Pool; do
 done
 # 0.6.1 (v61b-gfx): MIX's pan tracks, the CAT stage at two beats; 0.6.2: and stopped
 for n in Mix_pan Cat_beat1 Cat_beat2 Cat_stopped; do
+    test -s "$OUT/$n.png" || { echo "missing $n"; exit 1; }
+done
+# 0.6.3: FX's SEND 1 row, SENDS (PRE / POST), MASTER with the load meter, FX SETUP
+for n in Fx_send1 Fx_sends Fx_sends_post Fx_master Fx_setup; do
     test -s "$OUT/$n.png" || { echo "missing $n"; exit 1; }
 done
 # 0.6.1 (lead): FX with a held source key, KEYBOARD with a key held (stopped: the loop sounds)

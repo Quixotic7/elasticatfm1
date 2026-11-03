@@ -206,49 +206,69 @@ static void fx_setup(void)
     v[EC_P_INS2_MACHINE] = EC_FX_BLACKHOLE;
     ec_ins2_reset(v);
     A->proj.bus[0][EC_P_FX_MACHINE] = EC_FX_BLACKHOLE;
+    A->proj.bus[1][EC_P_FX_MACHINE] = EC_FX_NONE;
+    A->proj.bus[2][EC_P_FX_MACHINE] = EC_FX_COMP;     /* (five params: P1, P2) */
 }
 
+/* 0.6.3 (docs/UX-V2.md §10 "FX layout"): INSERT 1 P1.., INSERT 2 P1.., SEND 1 P1.., SEND 2 P1.., SENDS, MASTER P1..,
+ * FX MIX; B1-B4 the EFFECTS rows (tapped again: their knob pages), B5 SENDS / MASTER, the header's place */
 static void test_fx_header(void)
 {
+    static const struct {
+        int slot, bus, sub, key;
+        const char *title;
+    } W[] = {{0, 0, 0, 1, "INSERT 1"}, {0, 0, 1, 1, "INSERT 1"}, {1, 0, 0, 2, "INSERT 2"}, {1, 0, 1, 2, "INSERT 2"},
+             {2, 1, 0, 3, "SEND 1"},   {2, 1, 1, 3, "SEND 1"},   {3, 2, 0, 4, "SEND 2"},   {0, 0, 0, 5, "SENDS"},
+             {4, 3, 0, 5, "MASTER"},   {4, 3, 1, 5, "MASTER"},   {0, 0, 0, 11, "MIX"}};
     ec_page_t pg;
-    int i, k, c;
+    int i, k, c, ok = 1;
     to(EC_CAT_FX);
     list();
-    for (i = 0; i < nL && !(L_[i].slot == 1 && L_[i].sub == 1 && !L_[i].bus); i++)
-        ;
-    CHECK(i < nL, "FX: INS 2 P2 is in the list");
+    CHECK(nL == (int)(sizeof W / sizeof W[0]), "FX: %d entries", nL);
+    for (i = 0; i < nL && i < (int)(sizeof W / sizeof W[0]); i++) {
+        go(i);
+        ec_app_page(A, &pg);
+        ok &= L_[i].slot == W[i].slot && L_[i].bus == W[i].bus && L_[i].sub == W[i].sub && L_[i].key == W[i].key &&
+              !strcmp(pg.title, W[i].title) && at() == i;
+        if (!ok) {
+            printf("  entry %d: slot %d bus %d sub %d key %d %s\n", i, L_[i].slot, L_[i].bus, L_[i].sub, L_[i].key,
+                   pg.title);
+            break;
+        }
+    }
+    CHECK(ok, "FX: the list INSERT 1 P1 P2, INSERT 2 P1 P2, SEND 1 P1 P2, SEND 2, SENDS, MASTER P1 P2, MIX");
     go(0);
     B(1, 40);
-    CHECK(at() == 1 && A->pn.ins_slot == 0 && A->pn.ins_page == 1, "FX B1 on INS 1 P1: INS 1 P2 (%d)", at());
+    CHECK(at() == 1 && A->pn.ins_page == 1, "FX B1 on INSERT 1 P1: P2 (%d)", at());
     go(nL - 1);
-    B(1, 40);
-    B(1, 40);
-    B(1, 40);
-    B(1, 40);
+    B(2, 40);
+    B(2, 40);
     ec_app_page(A, &pg);
-    CHECK(A->pn.ins_slot == 1 && A->pn.ins_page == 1 && !strcmp(pg.title, "INS 2") && ec_nav_place(&k, &c) && k == 1 &&
+    CHECK(ec_fx_slot() == 1 && A->pn.ins_page == 1 && !strcmp(pg.title, "INSERT 2") && ec_nav_place(&k, &c) && k == 1 &&
               c == 2,
-          "B1 from FX MIX, then three taps: INS 2 P2 (%s P%d/%d)", pg.title, k + 1, c);
+          "B2 from FX MIX, then a tap: INSERT 2 P2 (%s P%d/%d)", pg.title, k + 1, c);
     sel(-1);
-    CHECK(A->pn.ins_slot == 1 && A->pn.ins_page == 0, "SEL back: INS 2 P1");
+    CHECK(ec_fx_slot() == 1 && A->pn.ins_page == 0, "SEL back: INSERT 2 P1");
     sel(-1);
-    CHECK(A->pn.ins_slot == 0 && A->pn.ins_page == 1, "SEL back: INS 1 P2");
-    sel(1);
-    sel(1);
-    sel(1);
+    CHECK(ec_fx_slot() == 0 && A->pn.ins_page == 1, "SEL back: INSERT 1 P2");
+    B(3, 40);
+    CHECK(A->bus == 1 && ec_fx_slot() == 2 && A->pn.ins_page == 0, "B3: SEND 1 (bus %d)", A->bus);
+    B(4, 40);
+    CHECK(A->bus == 2 && ec_fx_slot() == 3, "B4: SEND 2 (bus %d)", A->bus);
+    B(5, 40);
     ec_app_page(A, &pg);
-    CHECK(!A->bus && !strcmp(pg.title, "SENDS"), "SEL on: SENDS (%s)", pg.title);
-    sel(1);
-    CHECK(A->bus == 1, "SEL on: S1 (bus %d)", A->bus);
+    CHECK(!A->bus && !strcmp(pg.title, "SENDS"), "B5: SENDS (%s)", pg.title);
+    B(5, 40);
+    ec_app_page(A, &pg);
+    CHECK(A->bus == 3 && !strcmp(pg.title, "MASTER"), "B5 again: MASTER (%s)", pg.title);
     sel(-1);
-    CHECK(!A->bus && A->page[EC_CAT_FX] == L_[at()].page, "and back: SENDS, the track again");
-    /* the FX button tapped again: the next group */
+    CHECK(!A->bus && A->page[EC_CAT_FX] == ec_fx_sends_page(), "SEL back: SENDS, the track again");
+    /* the FX button tapped again: the next group (INSERT 1 -> INSERT 2 -> SEND 1) */
     go(0);
     press(FM1P_B_FX, 40);
-    ec_app_page(A, &pg);
-    CHECK(!strcmp(pg.title, "SENDS"), "FX tapped again on INSERT: SENDS (%s)", pg.title);
+    CHECK(ec_fx_slot() == 1 && !A->bus, "FX tapped again on INSERT 1: INSERT 2 (slot %d)", ec_fx_slot());
     press(FM1P_B_FX, 40);
-    CHECK(A->bus == 1, "FX again: S1");
+    CHECK(A->bus == 1, "FX again: SEND 1");
 }
 
 static void test_bus_target(void)

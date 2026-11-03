@@ -22,7 +22,7 @@ Words used here:
 
 | Button | Mode(s), in tap order | Tapped again | Hold 0.4 s | SHIFT + |
 |---|---|---|---|---|
-| FX | FX | the next FX page (INSERT, SENDS, S1, S2, MST, MIX, then INSERT again) | FX settings | FX settings |
+| FX | FX | the next FX group (INSERT 1, INSERT 2, SEND 1, SEND 2, SENDS / MASTER, MIX, then INSERT 1 again) | FX settings | FX settings |
 | SEL | FILTER | the next page | filter settings | filter settings |
 | ENV | AMP | the next page | amp settings | amp settings |
 | LFO | MODULATION | the next page | (none: NO SETTINGS) | (none) |
@@ -81,8 +81,8 @@ These hold in every mode unless the mode says otherwise.
   - LOOP ENGINE: LOOP P1, LOOP P2 (B1), MACHINE (B2), WARP (B3), RANGE (B4); the warp page's lanes follow the warp
   - FILTER: FILTER (B1; lanes by filter machine), FILTER ENV (B2), MIX (B3)
   - AMP: AMP P1, AMP P2 (B1), AMP ENV (B2), MOD ENV P1, MOD ENV P2 (B3)
-  - FX: INS 1 P1, INS 1 P2 .., INS 2 P1 .. (B1), SENDS (B2), S1 .. (B3), S2 .. (B4), MST .. (B5), MIX (B11); the
-    insert and bus pages as many as their effect's params need
+  - FX (0.6.3): INSERT 1 P1.. (B1), INSERT 2 P1.. (B2), SEND 1 P1.. (B3), SEND 2 P1.. (B4), SENDS, MASTER P1.. (B5),
+    FX MIX (B11); each effect has as many knob pages as its params need (three a page, K4 its MIX)
   - MODULATION: MATRIX (B1, AT), LFO 1 (B6), LFO 2 (B7), VELOCITY (B9), MACROS (B11), MACRO 1-4 (B2-B5)
   - MIX: TRACK MIX P1, P2, MASTER (no page keys: the black keys are the rates; MST selected shows MASTER)
   - FILE: BROWSE (B3), EDITOR P1, P2 (B4), RAZOR P1, P2 (B5), POOL (B6)
@@ -250,14 +250,27 @@ patterns (PATTERN LAUNCH's white keys).
   - LOOP ENGINE: B1 LOOP = loop mode (the slice play mode on slice machines, else the chop loop mode), B2 MACHINE =
     machine, B3 WARP = warp mode (STOP FIRST while playing), B4 RANGE = voice mode (MONO / POLY), B5 = ADVANCE
     (hold only).
-  - FX: B1 = the selected insert's effect type, B3 / B4 / B5 = S1's / S2's / the master's.
-- **FX INSERT** (0.6.1): two inserts per track, INS 1 then INS 2 in series (an empty slot costs nothing). The page
-  lists both (the engine, its MIX bar), the buses' engines and the **load meter** (the cart's counted load: 100 % =
-  the hosts' 2x real-time budget). K1-K3 are the insert's params, **K4 always its MIX**; an effect with more than
-  three params has more knob pages. 0.6.2: **INS 1 P1, INS 1 P2 .., INS 2 P1 .. are pages of FX's list**: SEL walks
-  them (and on to SENDS), B1 jumps to INS 1 P1 and tapped again steps INS 1 P2 .. INS 2 P1 .. and back to INS 1 P1;
-  the header shows the insert and its place (FX/INS 2, P2). INS 2's params
-  follow its machine (a new type starts from that type's defaults; one UNDO takes the pick back).
+  - FX (0.6.3): B1 / B2 / B3 / B4 = INSERT 1's / INSERT 2's / SEND 1's / SEND 2's effect type; B5 on MASTER = the
+    master's. On SENDS a held B1-B4 swaps instead (below).
+- **FX** (0.6.3, docs/UX-V2.md §10 "FX layout"): two inserts per track, INSERT 1 then INSERT 2 in series (an empty
+  slot costs nothing), and the S1 / S2 send buses. **EFFECTS** lists four rows, INSERT 1, INSERT 2, SEND 1, SEND 2
+  (the effect, its level as a bar, its knob pages as little boxes, the one shown lit; the selected row highlighted).
+  **B1-B4 select a row; tapped again they step its knob pages** (P1, P2 .., wrapping). K1-K3 are the effect's params
+  in threes, **K4 always its MIX** (fx_wet where the effect has no dry / wet; on a send bus too). INSERT 2's params
+  follow its machine (a new type starts from that type's defaults; one UNDO takes the pick back). **B5 steps SENDS ->
+  MASTER P1 .. -> SENDS**: **SENDS** draws the track's routing (FILT -> INSERT 1 -> INSERT 2 -> AMP -> MIX, the send
+  tap in accent where the send mode puts it, down to S1 and S2's effects and on to MST) and the four levels; its knobs
+  are **K1 INSERT 1's MIX, K2 INSERT 2's MIX, K3 SEND 1, K4 SEND 2**, and **ALGO is the send mode PRE / POST**
+  (p-lockable, undoable). PRE taps after the filter and the track's level and pan (the AMP block: applied at the
+  filter's output), before the inserts; POST taps after both inserts. **Holding B1 or B2 on SENDS swaps INSERT 1 and
+  INSERT 2** (machines, params, MIX, the step and slice locks and matrix routes on them, every pattern); **B3 or B4
+  swaps SEND 1 and SEND 2** (both buses' effects and settings, every track's send levels and their locks, the scenes:
+  the sound stays the same). The header names the swap while held; it happens at 400 ms; one UNDO puts it back.
+  **MASTER** is the master bus's effect (its knob pages) and the **load meter** (the cart's counted load: 100 % =
+  the hosts' 2x real-time budget). The header shows the place (FX/INSERT 2, P2). Targeting S1 / S2 / MST with the
+  track keys shows that row / MASTER in FX.
+- **FX settings** (hold FX): INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER (each row that slot's effect type, the same
+  choices as the type menus), then SEND MODE.
 - **B6-B10 are the sources.** Hold one + turn any value knob = route that source to that param:
   - the first detent puts the route in a matrix slot (that source's slot on that param, else the first free one);
     the next detents set its DEPTH. The cell shows SOURCE > PARAM and the depth.
@@ -296,41 +309,40 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| INSERT · DELAY | B1 | 1 | TIME | FBK | TONE | MIX |
-| INSERT · REVERB |  | 1 | SIZE | DAMP | MIX |  |
-| INSERT · LOFI |  | 1 | BITS | RATE | MIX |  |
-| INSERT · COMP |  | 1 | THRS | RATO | ATK | REL |
+| EFFECTS · DELAY | B1 | 1 | TIME | FBK | TONE | MIX |
+| EFFECTS · REVERB |  | 1 | SIZE | DAMP | MIX |  |
+| EFFECTS · LOFI |  | 1 | BITS | RATE | MIX |  |
+| EFFECTS · COMP |  | 1 | THRS | RATO | ATK | REL |
 |  |  | 2 | MKUP | MIX |  |  |
-| INSERT · DESTRY |  | 1 | CRSH | SRR | WARB | DRIV |
+| EFFECTS · DESTRY |  | 1 | CRSH | SRR | WARB | DRIV |
 |  |  | 2 | FOLD | SAT | TONE | LEVL |
-| INSERT · ECHO |  | 1 | TIME | OFST | FBK | MODE |
+| EFFECTS · ECHO |  | 1 | TIME | OFST | FBK | MODE |
 |  |  | 2 | TONE | WOBL | MIX |  |
-| INSERT · B.HOLE |  | 1 | SIZE | GRAV | MOD | LOW |
+| EFFECTS · B.HOLE |  | 1 | SIZE | GRAV | MOD | LOW |
 |  |  | 2 | HI | PRE | MIX |  |
-| INSERT · CHORUS |  | 1 | RATE | DPTH | WDTH | TONE |
+| EFFECTS · CHORUS |  | 1 | RATE | DPTH | WDTH | TONE |
 |  |  | 2 | MIX |  |  |  |
-| INSERT · FLANGR |  | 1 | RATE | DPTH | FBK | TONE |
+| EFFECTS · FLANGR |  | 1 | RATE | DPTH | FBK | TONE |
 |  |  | 2 | MIX |  |  |  |
-| INSERT · PHASER |  | 1 | RATE | DPTH | CNTR | STGS |
+| EFFECTS · PHASER |  | 1 | RATE | DPTH | CNTR | STGS |
 |  |  | 2 | FBK | MIX |  |  |
-| INSERT · DJ EQ |  | 1 | LOW | MID | HIGH | XLOW |
+| EFFECTS · DJ EQ |  | 1 | LOW | MID | HIGH | XLOW |
 |  |  | 2 | XHI |  |  |  |
-| INSERT · DUCK |  | 1 | AMNT | SENS | ATK | REL |
-| INSERT · T.ECHO |  | 1 | TIME | FBK | WOW | FLUT |
+| EFFECTS · DUCK |  | 1 | AMNT | SENS | ATK | REL |
+| EFFECTS · T.ECHO |  | 1 | TIME | FBK | WOW | FLUT |
 |  |  | 2 | SAT | TONE | MIX |  |
-| INSERT · CASSET |  | 1 | WOW | FLUT | NOIS | CRKL |
+| EFFECTS · CASSET |  | 1 | WOW | FLUT | NOIS | CRKL |
 |  |  | 2 | DROP | TONE | MIX |  |
-| INSERT · MOTION |  | 1 | WDTH | RATE | TREM | PAN |
+| EFFECTS · MOTION |  | 1 | WDTH | RATE | TREM | PAN |
 |  |  | 2 | SHPE |  |  |  |
-| INSERT · RINGS |  | 1 | MODE | FREQ | FINE | FBK |
+| EFFECTS · RINGS |  | 1 | MODE | FREQ | FINE | FBK |
 |  |  | 2 | TONE | MIX |  |  |
-| INSERT · LIMIT |  | 1 | GAIN | CEIL | REL |  |
-| INSERT · otherwise |  | - | | | | |
-| SENDS | B2 | 1 | - | - | SEND 1 | SEND 2 |
+| EFFECTS · LIMIT |  | 1 | GAIN | CEIL | REL |  |
+| EFFECTS · otherwise |  | - | | | | |
+| SENDS | B5 | 1 | INS 1 | - | SEND 1 | SEND 2 |
 | MIX | B11 | 1 | FX MIX | DRIVE | SEND 1 | SEND 2 |
 | S1 bus | B3 | | the bus's page (below) | | | |
 | S2 bus | B4 | | the bus's page (below) | | | |
-| MST bus | B5 | | the bus's page (below) | | | |
 | SETUP | hold | 1 | INSERT 1 | - | SEND MODE |  |
 
 ### FILTER (SEL · FILT)
@@ -467,9 +479,9 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | S1 SETUP | hold | 1 | SEND 1 FX |  |  |  |
 | S2 SETUP | hold | 1 | SEND 2 FX |  |  |  |
 | MST SETUP | hold | 1 | MASTER FX |  |  |  |
-| S1: SEND 1 | B3 | | the lanes of FX/INSERT, for the bus's own FX machine | | | |
-| S2: SEND 2 | B4 | | the lanes of FX/INSERT, for the bus's own FX machine | | | |
-| MST: MASTER | B5 | | the lanes of FX/INSERT, for the bus's own FX machine | | | |
+| S1: SEND 1 | B3 | | the lanes of FX/EFFECTS, for the bus's own FX machine | | | |
+| S2: SEND 2 | B4 | | the lanes of FX/EFFECTS, for the bus's own FX machine | | | |
+| MST: MASTER |  | | the lanes of FX/EFFECTS, for the bus's own FX machine | | | |
 | MST: LOOP ENGINE = MIX |  | 1 | VOL | PAN | MUTE | BPM |
 
 ### F3
@@ -856,7 +868,6 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 | AMP/AMP ENV | The amp envelope (ADSR or AHR) over the envelope's shape. |
 | AMP/MOD ENV | The mod envelope (ADSR) and its depth, its level into the mod matrix (MOD/MATRIX sets where it goes). It retriggers on steps whose ERST is on, for the note's length. |
 | AMP/SETUP | Amp envelope mode, the time range of every envelope, portamento (legato), and how long slice notes last. |
-| FX/INSERT | The track's insert effect: the chosen FX machine's knobs over a picture of it (delay taps, reverb tail, compressor curve with meters ...). Empty for NONE. |
 | FX/SENDS | How much of the track goes to the S1 and S2 send buses, and where it is tapped (before or after the insert). |
 | FX/MIX | The insert's dry / wet mix and drive, and the S1 / S2 send levels: B11 in FX. |
 | FX/SETUP | Choose the insert FX machine (any time, with a short fade) and the send tap point. |
@@ -895,15 +906,15 @@ The page tables above give each mode's pages and knobs. This part gives the keys
 
 | Key | Does |
 |---|---|
-| B1 | the track's **INSERT** page. Hold: the insert's FX machine (K1, SEL, or a white key: one machine per key, in the list's order) |
-| B2 | **SENDS** (S1 / S2 levels) |
-| B3 / B4 / B5 | the **S1 / S2 / MST bus** (the target becomes that bus; its FX page). Hold: that bus's FX machine |
+| B1 / B2 | **INSERT 1 / INSERT 2** (EFFECTS, that row); tapped again: its knob pages. Hold: its type menu (SENDS: swap the inserts) |
+| B3 / B4 | **SEND 1 / SEND 2** (EFFECTS, that row: the target becomes the bus); tapped again: its knob pages. Hold: its type menu (SENDS: swap the sends) |
+| B5 | **SENDS**, then **MASTER** P1 .. (the master effect, the load meter), then SENDS again. Hold on MASTER: its type menu |
+| ALGO | on SENDS: the send mode PRE / POST |
 | B6-B10 | the sources |
 | B11 | the **MIX** page (FX MIX, DRIVE, SEND 1, SEND 2) |
-| White keys | steps; while B1 or a bus key is held: the FX machines (one per key, the current one lit) |
+| White keys | steps |
 
-FX tapped again on a bus goes back to the track's pages. An FX machine changes at any time (a short fade, no
-click).
+An FX machine changes at any time (a short fade, no click).
 
 ### FILTER (SEL)
 
@@ -946,7 +957,9 @@ click).
 
 - The knobs show TRACK MIX (LEVEL PAN SEND 1 SEND 2 / MUTE) for a track, MASTER (BPM, SWING, GLO LENGTH) for MST.
 - **The CAT** is the norns visualizer: the dancing cat, full screen, its speed following the tempo, in front of a
-  greyscale fractal that turns with each bar and pulses on each beat (0.6.2; it drifts slowly while stopped). B11 or
+  greyscale fractal (0.6.3: a different algorithm each time it opens, never the same twice running: Julia, Mandelbrot
+  zooms, Burning Ship, Tricorn, a quartic Julia, Phoenix, Newton; always evolving, faster while playing, pulsing on
+  each beat and harder on the bar). B11 or
   any mode button leaves it (EDIT: back to MIX). The track keys keep working while it shows; the knobs don't.
 - Mutes are the pattern's (saved); solos are the session's. When any track is soloed only soloed ones play.
 - LEDs: W1-W9 the selected one bright, the others by their level, muted (or silenced by a solo) off, soloed
@@ -1289,8 +1302,11 @@ docs/UX-REDESIGN.md, docs/MOD-MATRIX.md.
 
 What the code does where the spec says otherwise (or says nothing):
 
-- **FX's black keys:** B1 INSERT, **B2 SENDS** (there is one insert per track, no INSERT 2), B3 / B4 / B5 the S1 / S2 /
-  MST bus pages (they select the bus).
+- **FX's black keys** (0.6.3): B1-B4 the EFFECTS rows INSERT 1, INSERT 2, SEND 1, SEND 2 (the send rows select the
+  bus), B5 steps SENDS and MASTER's knob pages (the spec's "toggles": MASTER P2 .. are on the same key, so its knob
+  pages are reachable by B5 too).
+- **SENDS's AMP block** (0.6.3): the track's level and pan act at the filter's output, before the inserts (as since
+  0.2), so PRE taps after them too; the picture draws AMP after the inserts as the spec does.
 - **A source key's tap** (0.6.1) opens its page only inside the mode that has it (MODULATION: LFO 1, LFO 2, VEL, AT
   = the MATRIX, M1-M4 = the macro's page; AMP: MOD ENV). Elsewhere a tap does nothing: no key changes the mode.
 - **The header's held-key text** shows 0.15 s into a hold (a tap shows none); a message newer than the last key

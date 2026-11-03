@@ -44,6 +44,10 @@ static int hm_header(char *out, int cap)
 {
     if (!g.key || (!g.on && !ec_hdr_holding()))
         return -1;
+    if (g.kind == EC_HM_SWAP && g.on) {          /* 0.6.3: done: say so while still held */
+        snprintf(out, (size_t)cap, "%s", g.id ? "SENDS SWAPPED" : "INSERTS SWAPPED");
+        return EC_C_L12;
+    }
     snprintf(out, (size_t)cap, "%s", g.head);
     return EC_C_L12;
 }
@@ -61,7 +65,9 @@ void ec_hm_arm(int key, int kind, int id, const char *head)
     g.id = kind == EC_HM_INS2 ? EC_P_INS2_MACHINE : id;
     g.ms = A->ms;
     snprintf(g.head, sizeof g.head, "%s", head ? head : "");
-    if (kind == EC_HM_ADVANCE) {
+    if (kind == EC_HM_SWAP) {
+        g.id = id;
+    } else if (kind == EC_HM_ADVANCE) {
         g.n = 2;
         g.now = ec_as->advance ? 1 : 0;
     } else {
@@ -81,8 +87,8 @@ void ec_hm_cancel(void)
 }
 
 int ec_hm_armed(void) { return g.key; }
-int ec_hm_shown(void) { return g.key && g.on; }
-const char *ec_hm_head(void) { return g.key && g.on ? g.head : 0; }
+int ec_hm_shown(void) { return g.key && g.on && g.kind != EC_HM_SWAP; }
+const char *ec_hm_head(void) { return ec_hm_shown() ? g.head : 0; }
 int ec_hm_count(void) { return g.n; }
 int ec_hm_cursor(void) { return g.cur; }
 int ec_hm_current(void) { return g.now; }
@@ -108,14 +114,20 @@ static void show(void)
 
 void ec_hm_tick(void)
 {
-    if (g.key && !g.on && A->ms - g.ms >= EC_HOLD_MS)
-        show();
+    if (g.key && !g.on && A->ms - g.ms >= EC_HOLD_MS) {
+        if (g.kind == EC_HM_SWAP) {               /* 0.6.3: the swap happens at the threshold, once */
+            g.on = 1;
+            ec_fx_swap(g.id ? 3 : 1);
+            A->redraw = 1;
+        } else
+            show();
+    }
 }
 
 int ec_hm_knob(int role, int det)
 {
     int c;
-    if (!g.key)
+    if (!g.key || g.kind == EC_HM_SWAP)
         return 0;
     if (role != EC_E_SELECT && role != EC_E_K1)
         return g.on;                              /* the other knobs do nothing while it shows */
@@ -183,7 +195,7 @@ int ec_hm_up(int key)
     if (!g.key || g.key != key)
         return 0;
     shown = g.on;
-    if (shown)
+    if (shown && g.kind != EC_HM_SWAP)
         apply();
     ec_hm_cancel();
     A->redraw = 1;

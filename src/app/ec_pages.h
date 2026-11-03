@@ -119,6 +119,7 @@ int ec_page_pic(int cat, int page, int bus);
  * record (project.bus[bus - 1]) or NULL */
 void ec_page_items(int cat, int page, const float *v, int bus, ec_page_t *out);
 void ec_page_items_bus(int cat, int page, const float *v, int bus, const float *bv, ec_page_t *out);   /* E4 */
+void ec_page_bus_k4(ec_page_t *o, int fx_machine);   /* 0.6.3: a bus FX page's cells as K1..K3 + K4 MIX lanes */
 int ec_settings_items_bus(int cat, int bus, ec_page_t *out);                                          /* E4 */
 /* 0.3.0: F3's cells: the track's pattern LEN and RATE, the global length, the quantize */
 void ec_page_f3(ec_page_t *out);

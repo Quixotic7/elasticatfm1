@@ -51,6 +51,119 @@ void ec_project_swap_slots(ec_project_t *p, int a, int b)
         }
 }
 
+/* an id map (0xFF: unmapped) applied to track t of pattern q: the values move (new[map[x]] = old[x]), and the step /
+ * slice locks and the matrix destinations follow */
+#define MAPPED(x) ((x) < EC_NP && map[(x)] != 0xFF)
+static void remap_ptrack(ec_project_t *p, int q, int t, const uint8_t *map)
+{
+    ec_ptrack_t *tr = &p->pat[q].tr[t];
+    ec_slicemap_t *m = &p->pe5[q].slices[t];
+    float old[EC_NP];
+    int i, k, x;
+    memcpy(old, tr->v, sizeof old);
+    for (x = 0; x < EC_NP; x++)
+        if (map[x] != 0xFF)
+            tr->v[map[x]] = old[x];
+    for (k = 0; k < EC_MTX_SLOTS; k++) {
+        const int d = (int)floorf(tr->v[ec_mtx_dst_id(k)] + 0.5f) - 1;
+        if (d >= 0 && MAPPED(d))
+            tr->v[ec_mtx_dst_id(k)] = (float)(map[d] + 1);
+    }
+    for (i = 0; i < EC_MAXSTEPS; i++)
+        for (k = 0; k < tr->steps[i].nlock && k < EC_STEP_LOCKS; k++)
+            if (MAPPED(tr->steps[i].lock_id[k]))
+                tr->steps[i].lock_id[k] = map[tr->steps[i].lock_id[k]];
+    for (i = 0; i < 32; i++)
+        for (k = 0; k < m->nlock[i] && k < EC_SLICE_LOCKS; k++)
+            if (MAPPED(m->lock_id[i][k]))
+                m->lock_id[i][k] = map[m->lock_id[i][k]];
+}
+
+static void remap_scenes(ec_project_t *p, int row, const uint8_t *map)   /* the A / B scenes' values of a row */
+{
+    ec_scenes_t *sc = &p->e5.sc;
+    int s, x;
+    for (s = 0; s < 2; s++) {
+        uint8_t oh[EC_NP];
+        float ov[EC_NP];
+        memcpy(oh, sc->has[s][row], sizeof oh);
+        memcpy(ov, sc->val[s][row], sizeof ov);
+        for (x = 0; x < EC_NP; x++)
+            if (map[x] != 0xFF) {
+                sc->has[s][row][map[x]] = oh[x];
+                sc->val[s][row][map[x]] = ov[x];
+            }
+    }
+}
+
+/* the insert swap's map for machines m1 (INS 1) and m2 (INS 2): INS 1's params (the layout's order) -> INS 2's P1..,
+ * INS 2's P1.. -> m2's params, the MIXes (fx_wet where the machine has no blend) and the machines across */
+static void ins_map(uint8_t *map, int m1, int m2)
+{
+    int k, id;
+    memset(map, 0xFF, EC_NP);
+    map[EC_P_FX_MACHINE] = EC_P_INS2_MACHINE;
+    map[EC_P_INS2_MACHINE] = EC_P_FX_MACHINE;
+    map[ec_fx_mix_id(m1)] = EC_P_INS2_MIX;
+    map[EC_P_INS2_MIX] = (uint8_t)ec_fx_mix_id(m2);
+    for (k = 0; k < EC_INS2_NP; k++) {
+        if ((id = ec_ins2_param(m1, k)) >= 0 && map[id] == 0xFF)
+            map[id] = (uint8_t)(EC_P_INS2_P1 + k);
+        if ((id = ec_ins2_param(m2, k)) >= 0)
+            map[EC_P_INS2_P1 + k] = (uint8_t)id;
+    }
+}
+static int mach(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
+
+void ec_project_swap_inserts(ec_project_t *p, int t)
+{
+    uint8_t map[EC_NP];
+    int q;
+    if (t < 0 || t >= EC_NTRACK)
+        return;
+    {   /* the scenes: by the current pattern's machines */
+        const float *v = p->pat[p->current].tr[t].v;
+        ins_map(map, mach(v, EC_P_FX_MACHINE), mach(v, EC_P_INS2_MACHINE));
+        remap_scenes(p, t, map);
+    }
+    for (q = 0; q < EC_NPAT; q++) {                   /* every pattern by its own machines */
+        const float *v = p->pat[q].tr[t].v;
+        ins_map(map, mach(v, EC_P_FX_MACHINE), mach(v, EC_P_INS2_MACHINE));
+        remap_ptrack(p, q, t, map);
+    }
+}
+
+void ec_project_swap_sends(ec_project_t *p)
+{
+    uint8_t map[EC_NP];
+    float tmp[EC_NP];
+    int q, t;
+    memset(map, 0xFF, sizeof map);
+    map[EC_P_SEND1] = EC_P_SEND2;
+    map[EC_P_SEND2] = EC_P_SEND1;
+    for (t = 0; t < EC_NTRACK; t++) {
+        for (q = 0; q < EC_NPAT; q++)
+            remap_ptrack(p, q, t, map);
+        remap_scenes(p, t, map);
+    }
+    memcpy(tmp, p->bus[0], sizeof tmp);
+    memcpy(p->bus[0], p->bus[1], sizeof tmp);
+    memcpy(p->bus[1], tmp, sizeof tmp);
+    {   /* the scenes' S1 / S2 rows trade places */
+        ec_scenes_t *sc = &p->e5.sc;
+        int s;
+        for (s = 0; s < 2; s++) {
+            uint8_t h[EC_NP];
+            memcpy(h, sc->has[s][EC_NTRACK], sizeof h);
+            memcpy(sc->has[s][EC_NTRACK], sc->has[s][EC_NTRACK + 1], sizeof h);
+            memcpy(sc->has[s][EC_NTRACK + 1], h, sizeof h);
+            memcpy(tmp, sc->val[s][EC_NTRACK], sizeof tmp);
+            memcpy(sc->val[s][EC_NTRACK], sc->val[s][EC_NTRACK + 1], sizeof tmp);
+            memcpy(sc->val[s][EC_NTRACK + 1], tmp, sizeof tmp);
+        }
+    }
+}
+
 void ec_project_init(ec_project_t *p)
 {
     int i, t;

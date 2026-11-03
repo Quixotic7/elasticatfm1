@@ -130,7 +130,7 @@ ctest --test-dir build-rfm1 -R rfm1_elasticat -V        # rfm1_check + rfm1_run 
 CPU in wasm3 (must stay >= 2x real time): `build/ec_make_heavy heavy.flash` writes the worst-case project for
 `build/demo_folder` (six busy tracks across the E3 modes, every insert, both sends, master COMP, LFOs), then
 `rfm1_run --folder build/demo_folder --flash-in heavy.flash --settle 3000 --seconds 10 --press PLAY@1500 <the .rfm1>`:
-2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0, 2.3x in 0.4.0, 2.3x in 0.6.0 at MEMORY_MIB 256 (chord 2.1x), 2.2x in 0.6.1 (chord 2.1x; every track with two heavy inserts, `ec_make_heavy out --ins1 8 --ins2 3`: 1.6x); 0.6.2's CAT fractal costs ~0.18 ms a redraw (~0.6 % of a core), no change in the speed with the CAT up (the same with `--audio-in` fed);
+2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0, 2.3x in 0.4.0, 2.3x in 0.6.0 at MEMORY_MIB 256 (chord 2.1x), 2.2x in 0.6.1 (chord 2.1x; every track with two heavy inserts, `ec_make_heavy out --ins1 8 --ins2 3`: 1.6x); 0.6.2's CAT fractal costs ~0.18 ms a redraw (~0.6 % of a core), no change in the speed with the CAT up (the same with `--audio-in` fed); 0.6.3's seven CAT fractals cost 0.32-0.60 ms a redraw in wasm3 (1.2-2.3 % of a core): 2.1x with the CAT off, 2.0-2.1x with it up on a loaded machine;
 the v020 demo's project 5.9x.
 
 ## Trying it in the RemoteFM1 web player

@@ -646,6 +646,18 @@ void ec_undo_slots(ec_undo_t *u, int a, int b, uint32_t ms)
     snprintf(e->label, sizeof e->label, "MOVE");
 }
 
+void ec_undo_fxswap(ec_undo_t *u, int track, uint32_t ms)
+{
+    ec_undo_entry_t *e;
+    u->last_ok = 0;
+    e = ec_undo_record(u, mix(mix(EC_U_FXSWAP, (uint32_t)(track + 1)), ms), ms);
+    if (!e)
+        return;
+    e->kind = EC_U_FXSWAP;
+    e->track = (int8_t)track;
+    snprintf(e->label, sizeof e->label, track >= 0 ? "INS SWAP" : "SEND SWAP");
+}
+
 /* apply entry e to the project, leaving in e what it replaced (so applying it again undoes the apply) */
 static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *track, int *gid, float *gval, char *label,
                      int cap)
@@ -696,6 +708,12 @@ static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *tra
         e->vals[0] = s1;
         e->vals[1] = st;
     } break;
+    case EC_U_FXSWAP:                              /* 0.6.3: the swap again */
+        if (e->track >= 0)
+            ec_project_swap_inserts(p, e->track);
+        else
+            ec_project_swap_sends(p);
+        break;
     case EC_U_SLOTS:
         ec_project_swap_slots(p, e->ids[0], e->ids[1]);
         if (gid)

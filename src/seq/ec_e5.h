@@ -79,7 +79,8 @@ void ec_e5_random_name(char *out, int cap, uint32_t *rng);   /* namesizer: "desc
 /* ---- quick undo (lib/undo.lua): gesture-coalesced, 16 deep ---- */
 enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1: several params at once */,
        EC_U_TRIM /* 0.6.1: a pool slot's trim (start, end, steps) */,
-       EC_U_SLOTS /* 0.6.1: two pool slots swapped (FILE / POOL MOVE) with every reference */ };
+       EC_U_SLOTS /* 0.6.1: two pool slots swapped (FILE / POOL MOVE) with every reference */,
+       EC_U_FXSWAP /* 0.6.3: INSERT 1 / 2 of a track, or SEND 1 / 2, swapped (FX SENDS: a held key) */ };
 #define EC_U_NV 10              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8) */
 typedef struct {
     uint8_t kind;
@@ -120,6 +121,7 @@ void ec_undo_trim(ec_undo_t *u, const ec_project_t *p, int slot, int fresh, uint
 /* 0.6.1: slots a and b swapped (ec_project_swap_slots, done by the caller); undo / redo swap them again and hand the
  * caller a in *gid and b in *gval (the app's runtime slots follow) */
 void ec_undo_slots(ec_undo_t *u, int a, int b, uint32_t ms);
+void ec_undo_fxswap(ec_undo_t *u, int track, uint32_t ms);   /* 0.6.3: track >= 0 its inserts, -1 the sends */
 /* pop the last entry into the project; returns its kind (0: nothing to undo). EC_U_GLOBAL: *gid / *gval are the
  * global's id and value for the caller to apply (the project globals belong to the app) */
 int ec_undo_pop(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap);

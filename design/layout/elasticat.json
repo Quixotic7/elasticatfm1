@@ -363,7 +363,7 @@
       "order": 1,
       "pages": [
         {
-          "title": "INSERT",
+          "title": "EFFECTS",
           "key": 1,
           "picture": "fx",
           "lanes": [],
@@ -486,12 +486,11 @@
         },
         {
           "title": "SENDS",
-          "key": 2,
+          "key": 5,
           "picture": "sends",
           "lanes": [
-            [null, null, {"item": "send1_level", "label": "SEND 1"}, {"item": "send2_level", "label": "SEND 2"}]
-          ],
-          "note": "Lets add 2 insert effects. On the SENDS page lets also add dry/wet knobs for each insert"
+            [{"item": "fx_mix", "label": "INS 1"}, null, {"item": "send1_level", "label": "SEND 1"}, {"item": "send2_level", "label": "SEND 2"}]
+          ]
         },
         {
           "title": "MIX",
@@ -704,7 +703,7 @@
       "page": {
         "title": "SEND 1",
         "picture": "fx",
-        "same_as": "FX/INSERT"
+        "same_as": "FX/EFFECTS"
       },
       "setup": [
         [{"item": "fx_insert1_machine", "label": "SEND 1 FX"}]
@@ -716,7 +715,7 @@
       "page": {
         "title": "SEND 2",
         "picture": "fx",
-        "same_as": "FX/INSERT"
+        "same_as": "FX/EFFECTS"
       },
       "setup": [
         [{"item": "fx_insert1_machine", "label": "SEND 2 FX"}]
@@ -724,11 +723,11 @@
     },
     {
       "bus": "MST",
-      "key": 5,
+      "key": 0,
       "page": {
         "title": "MASTER",
         "picture": "fx",
-        "same_as": "FX/INSERT"
+        "same_as": "FX/EFFECTS"
       },
       "setup": [
         [{"item": "fx_insert1_machine", "label": "MASTER FX"}]

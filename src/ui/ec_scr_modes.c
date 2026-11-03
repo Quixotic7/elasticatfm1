@@ -39,7 +39,7 @@ static void cat_screen(const ec_app_t *a)
     const double beats = ec_seq_beats(&a->seq);
     const int frame = playing ? (int)floor(beats * EC_KIT_SPR_FPS / 2.0)
                               : (int)((float)a->ms * 0.001f * (float)EC_KIT_SPR_FPS * a->proj.bpm / 120.0f);
-    ec_scr_cat(frame, beats, playing, a->pn.cat_n);
+    ec_scr_cat(frame, beats, playing, a->pn.cat_t, a->pn.cat_algo1 - 1, a->pn.cat_seed);
 }
 
 /* ------------------------------------------------------------------------------------------- PAGES --- */

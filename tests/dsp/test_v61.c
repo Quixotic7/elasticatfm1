@@ -147,6 +147,38 @@ static void test_wet(void)
     free(o0); free(ow0); free(ow1); free(oh);
 }
 
+/* 0.6.3 (docs/UX-V2.md §10 SENDS): the send mode moves the S1 / S2 tap: PRE after the filter (and the track's level
+ * and pan, applied at the filter's output), before the inserts; POST after both inserts. With an
+ * insert that kills every band, POST sends (almost) nothing, PRE the whole loop. (The track's mute acts after both
+ * taps: muted, the output is S1's return alone.) */
+static void test_send_tap(void)
+{
+    printf("the send mode PRE / POST\n");
+    const size_t n = (size_t)NBLK * BLK * 2;
+    double r[2];
+    for (int post = 0; post < 2; ++post) {
+        ec_dsp_t *d = engine(EC_FX_DJ_EQ, EC_FX_NONE, 1.f);
+        ec_track_params_t p = d->tr[0].p;
+        p.fx.eq_low = p.fx.eq_mid = p.fx.eq_high = -1.f;   /* INS 1: every band killed */
+        p.send1_level = 1.f;
+        p.send_tap = post ? 2 : 1;
+        p.mute = 1;                                        /* (the track's own mix silent: S1's return alone) */
+        ec_dsp_track_params(d, 0, &p);
+        {   /* S1: a flat DJ EQ, fully wet (its return = what the tap sends) */
+            ec_fx_params_t f = d->busp[0];
+            f.machine = EC_FX_DJ_EQ;
+            f.eq_low = f.eq_mid = f.eq_high = 0.f;
+            f.wet = 1.f;
+            ec_dsp_bus_params(d, 0, &f);
+        }
+        float *o = render(d, NBLK);
+        r[post] = rms(o + n / 2, n / 2);
+        free(o);
+    }
+    CHECK(r[0] > 0.005, "PRE: S1 gets the loop before the inserts (rms %.4f)", r[0]);
+    CHECK(r[1] < r[0] * 0.25, "POST: S1 gets the inserts' output (all bands killed: rms %.4f vs PRE %.4f)", r[1], r[0]);
+}
+
 static void test_load(void)
 {
     printf("the counted load\n");
@@ -172,6 +204,7 @@ int main(void)
     g_loop = tk_drum_loop(120.f, &g_frames);
     test_series();
     test_wet();
+    test_send_tap();
     test_load();
     printf("test_v61: %d passed, %d failed\n", g_pass, g_fail);
     return g_fail ? 1 : 0;

@@ -139,13 +139,16 @@ static void test_mode_settings(void)
     CHECK(knob_lbl(0, "HOLD TIME"), "SEL on to the 5th row (0.6.0's second lane): K1 %s", knob_L(0));
     press(FM1P_B_OCTDN, 40);
     CHECK(!A->settings, "F1: closed");
-    /* FX's settings: the blank between INSERT 1 and SEND MODE is no row */
+    /* FX's settings (0.6.3): every slot's type, then SEND MODE */
     to(EC_CAT_FX);
     press(BTN_OF_MB[ec_mode_button(EC_CAT_FX)], 500);
     run(40);
     turn(FM1P_E_SELECT, 1);
     run(40);
-    CHECK(A->settings && knob_lbl(0, "SEND MODE"), "FX's settings, SEL once: SEND MODE (K1 %s)", knob_L(0));
+    CHECK(A->settings && knob_lbl(0, "INSERT 2"), "FX's settings, SEL once: INSERT 2 (K1 %s)", knob_L(0));
+    turn(FM1P_E_SELECT, 4);
+    run(40);
+    CHECK(A->settings && knob_lbl(0, "SEND MODE"), "FX's settings, SEL 5: SEND MODE (K1 %s)", knob_L(0));
     press(FM1P_B_OCTDN, 40);
 }
 

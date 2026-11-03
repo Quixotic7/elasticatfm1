@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "ec_app.h"
+#include "ec_ui_kit.h"
 
 #define A (&ec_app)
 #define P (&ec_app.pn)
@@ -84,6 +85,13 @@ void ec_mix_black(int key)
     if (key == 11) {                               /* the CAT */
         P->cat = !P->cat;
         P->cat_ms = A->ms;
+        if (P->cat) {                              /* 0.6.3: a new fractal each time, never the last one */
+            P->cat_rng ^= A->ms * 0x9E3779B1u ^ P->cat_n * 0x85EBCA77u;
+            P->cat_algo1 = ec_scr_cat_next(&P->cat_rng, P->cat_algo1 - 1) + 1;
+            P->cat_seed = P->cat_rng * 0x2C1B3C6Du + (uint32_t)P->cat_algo1;
+            P->cat_t = 0.0;
+            P->cat_beats = ec_seq_beats(&A->seq);
+        }
         A->redraw = 1;
         return;
     }

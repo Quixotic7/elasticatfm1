@@ -338,15 +338,15 @@ turn K3@128400:1
 png 129000:Mod_held.png
 
 # ======== 0.6.1 (v61-fx): FX's two inserts and the hold menus, stopped
-# ---- FX (its INSERT page, INS 1 = LOFI from above): SEL = INS 2; B1 held = INS 2's type menu, K1 7 = BLACKHOLE
-# (shown while held); let go = picked: both inserts; B1 tapped = P2 (BLACKHOLE's last three params)
+# ---- FX (its EFFECTS page, INSERT 1 = LOFI from above): SEL = INSERT 2; 0.6.3: B2 held = INSERT 2's type menu, K1
+# 7 = BLACKHOLE (shown while held); let go = picked: both inserts; B2 tapped = P2 (BLACKHOLE's last three params)
 press FX@130400
 turn SELECT@131000:1
-upper 0@131400+1000
+upper 1@131400+1000
 turn K1@131900:7
 png 132200:Fx_menu.png
 png 133400:Fx_two_inserts.png
-upper 0@133800
+upper 1@133800
 png 134800:Fx_p2.png
 # ---- LOOP ENGINE (HOME twice from FILE: KEYBOARD, its last, then LOOP ENGINE): B3 held = the warp mode menu, K1 2
 press HOME@135200
@@ -417,3 +417,26 @@ press HOME@162000
 press HOME@162500
 lower 7@163200+1500
 png 164000:Keyboard_held.png
+# ======== 0.6.3 (docs/UX-V2.md §10 "FX layout"): T1 (INSERT 1 LOFI, INSERT 2 BLACKHOLE from above); FX: B3 held +
+# K1 2 = SEND 1 REVERB, B4 held + K1 13 = SEND 2 TAPE ECHO; B3 tapped = SEND 1's row; B5 = SENDS (the routing, PRE),
+# ALGO = POST, back to PRE; B5 again = MASTER, held + K1 4 = COMP (its effect, the load meter); FX held = FX SETUP
+# (every slot's type, SEND MODE), F1 closes it
+press FX@165000
+upper 2@165500+900
+turn K1@165900:2
+upper 3@166800+900
+turn K1@167200:13
+upper 2@168000
+png 168700:Fx_send1.png
+upper 4@169000
+png 169700:Fx_sends.png
+turn ALGO@170000:1
+png 170700:Fx_sends_post.png
+turn ALGO@171000:-1
+upper 4@171400
+upper 4@171900+900
+turn K1@172300:4
+png 174500:Fx_master.png
+press FX@175000+800
+png 176300:Fx_setup.png
+press OCT-@176600

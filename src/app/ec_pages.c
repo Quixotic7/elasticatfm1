@@ -160,6 +160,35 @@ int ec_page_pic(int cat, int page, int bus)
     return L->page[page_index(cat, page)].pic;
 }
 
+/* 0.6.3 (docs/UX-V2.md §10 FX): a bus effect's knobs follow the inserts': K1..K3 its other params in threes, K4 its
+ * MIX on every lane (fx_wet for the machines without a blend of their own). Applied by the app (ec_app_page, ec_nav)
+ * on top of the layout's bus page, so the layout's pages (and host/dump_pages.c's 0.4.0 hash) stay as they are */
+void ec_page_bus_k4(ec_page_t *o, int m)
+{
+    ec_item_t rest[EC_PAGE_ITEMS];
+    int i, n = 0, k;
+    if (m == EC_FX_NONE)
+        return;
+    for (i = 0; i < o->n; i++) {
+        const ec_item_t *it = &o->it[i];
+        if (it->kind == EC_IT_PARAM && (it->id == EC_P_FX_MIX || it->id == EC_P_FX_WET))
+            continue;
+        rest[n++] = *it;
+    }
+    n = n > EC_PAGE_LANES * 3 ? EC_PAGE_LANES * 3 : n;
+    memset(o->it, 0, sizeof o->it);
+    o->n = 0;
+    for (k = 0; k == 0 || k < n; k += 3) {
+        for (i = 0; i < 3; i++)
+            if (k + i < n)
+                o->it[o->n + i] = rest[k + i];
+        o->it[o->n + 3].kind = EC_IT_PARAM;
+        o->it[o->n + 3].id = (uint8_t)ec_fx_mix_id(m);
+        o->it[o->n + 3].label = "MIX";
+        o->n += 4;
+    }
+}
+
 void ec_page_items_bus(int cat, int page, const float *v, int bus, const float *bv, ec_page_t *o)
 {
     memset(o, 0, sizeof *o);

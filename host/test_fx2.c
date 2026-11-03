@@ -14,6 +14,7 @@
 #include "ec_harness.h"
 #include "ec_holdmenu.h"
 #include "ec_load.h"
+#include "ec_mtx.h"
 
 static float *tv(void) { return ec_app_params(A); }
 static int insert_page(void)
@@ -43,30 +44,31 @@ static void test_insert(void)
     to(EC_CAT_FX);
     v = tv();
     v[EC_P_FX_MACHINE] = EC_FX_DELAY;
-    B(2, 40);                                        /* (from SENDS: B1 jumps to its group's first page) */
+    B(5, 40);                                        /* (from SENDS: B1 jumps to its row's first page) */
     B(1, 40);
-    CHECK(A->page[EC_CAT_FX] == insert_page() && !A->bus && ec_src_insert_page(), "B1: the INSERT page");
-    CHECK(A->pn.ins_slot == 0 && A->pn.ins_page == 0 && cell_id(3) == EC_P_FX_MIX, "INS 1 P1, K4 = its MIX (%d)",
+    CHECK(A->page[EC_CAT_FX] == insert_page() && !A->bus && ec_src_insert_page(), "B1: the EFFECTS page");
+    CHECK(ec_fx_slot() == 0 && A->pn.ins_page == 0 && cell_id(3) == EC_P_FX_MIX, "INSERT 1 P1, K4 = its MIX (%d)",
           cell_id(3));
-    turn(FM1P_E_SELECT, 1);                          /* 0.6.2: INS 2 is the next page of the list (DELAY: one P) */
-    CHECK(A->pn.ins_slot == 1 && A->page[EC_CAT_FX] == insert_page(), "SEL: INS 2 P1 (the page stays)");
+    turn(FM1P_E_SELECT, 1);                          /* 0.6.2: INSERT 2 is the next page of the list (DELAY: one P) */
+    CHECK(ec_fx_slot() == 1 && A->page[EC_CAT_FX] == insert_page(), "SEL: INSERT 2 P1 (the page stays)");
     turn(FM1P_E_SELECT, -1);
-    CHECK(A->pn.ins_slot == 0, "SEL back: INS 1");
-    turn(FM1P_E_SELECT, 1);
+    CHECK(ec_fx_slot() == 0, "SEL back: INSERT 1");
+    B(2, 40);
+    CHECK(ec_fx_slot() == 1, "0.6.3: B2: INSERT 2");
 
     /* the type menu: held 400 ms it shows, K1 moves, letting go picks */
-    hold_b(1);
+    hold_b(2);
     run(300);
-    CHECK(!ec_hm_shown(), "B1 held 300 ms: no menu yet");
+    CHECK(!ec_hm_shown(), "B2 held 300 ms: no menu yet");
     run(150);
-    CHECK(ec_hm_shown() && ec_hm_head() && !strcmp(ec_hm_head(), "INS 2 TYPE"), "B1 held 450 ms: INS 2's type menu (%s)",
-          ec_hm_head() ? ec_hm_head() : "-");
+    CHECK(ec_hm_shown() && ec_hm_head() && !strcmp(ec_hm_head(), "INSERT 2 TYPE"),
+          "B2 held 450 ms: INSERT 2's type menu (%s)", ec_hm_head() ? ec_hm_head() : "-");
     CHECK(ec_hm_count() == EC_FX_COUNT && ec_hm_cursor() == 0, "18 types, the cursor on NONE");
     turn(FM1P_E_K1, 7);
     CHECK(ec_hm_cursor() == 7 && !strcmp(ec_hm_label(7), "BLACKHOLE"), "K1 7: BLACKHOLE (%s)", ec_hm_label(ec_hm_cursor()));
     CHECK(tv()[EC_P_INS2_MACHINE] == EC_FX_NONE, "nothing changes before the release");
     v[EC_P_INS2_P1] = 99;
-    let_b(1);
+    let_b(2);
     CHECK(!ec_hm_shown() && v[EC_P_INS2_MACHINE] == EC_FX_BLACKHOLE, "released: INS 2 = BLACKHOLE");
     CHECK(v[EC_P_INS2_P1] == EC_PARAMS[EC_P_REVERB_SIZE].def && v[EC_P_INS2_P2] == EC_PARAMS[EC_P_BH_GRAVITY].def &&
               v[EC_P_INS2_MIX] == EC_PARAMS[EC_P_FX_MIX].def,
@@ -82,11 +84,11 @@ static void test_insert(void)
               ec_app_item_label(&pg.it[1]), b);
     }
     /* K1 on menu: shows at once */
-    hold_b(1);
+    hold_b(2);
     run(40);
     turn(FM1P_E_K1, -1);
-    CHECK(ec_hm_shown(), "B1 held + K1 at 40 ms: the menu at once");
-    let_b(1);
+    CHECK(ec_hm_shown(), "B2 held + K1 at 40 ms: the menu at once");
+    let_b(2);
     CHECK(v[EC_P_INS2_MACHINE] == EC_FX_ECHO, "K1 -1: ECHO (%g)", v[EC_P_INS2_MACHINE]);
     /* one UNDO takes the pick back: the machine and its params */
     btn(FM1P_B_GLO, 1);
@@ -97,19 +99,18 @@ static void test_insert(void)
     CHECK(v[EC_P_INS2_MACHINE] == EC_FX_BLACKHOLE && v[EC_P_INS2_P1] == EC_PARAMS[EC_P_REVERB_SIZE].def,
           "SHIFT + F1: INS 2 back to BLACKHOLE with its params (%g %g)", v[EC_P_INS2_MACHINE], v[EC_P_INS2_P1]);
 
-    /* the insert key tapped on INSERT: P1 -> P2 -> P1 (BLACKHOLE: six params) */
-    B(1, 40);
+    /* the row's key tapped again: P1 -> P2 -> P1 (BLACKHOLE: six params) */
+    B(2, 40);
     CHECK(A->pn.ins_page == 1 && cell_id(0) == EC_P_INS2_P4 && cell_id(3) == EC_P_INS2_MIX,
           "tap: P2 (K1 = P4 %d, K4 still MIX)", cell_id(0));
-    B(1, 40);                                        /* 0.6.2: past the group's last page: its first */
-    CHECK(A->pn.ins_slot == 0 && A->pn.ins_page == 0, "tap again: INS 1 P1 (%d %d)", A->pn.ins_slot,
-          A->pn.ins_page);
+    B(2, 40);                                        /* 0.6.2: past the group's last page: its first */
+    CHECK(ec_fx_slot() == 1 && A->pn.ins_page == 0, "tap again: INSERT 2 P1 (%d %d)", ec_fx_slot(), A->pn.ins_page);
+    B(1, 40);
 
     /* K4 = MIX on several types */
     {
         static const int M[] = {EC_FX_DELAY, EC_FX_LIMIT, EC_FX_DJ_EQ, EC_FX_DESTROY, EC_FX_REVERB};
         unsigned i;
-        turn(FM1P_E_SELECT, -1);
         for (i = 0; i < sizeof M / sizeof M[0]; i++) {
             const int want = ec_fx_has_mix(M[i]) ? EC_P_FX_MIX : EC_P_FX_WET;
             float x0;
@@ -120,8 +121,7 @@ static void test_insert(void)
             CHECK(cell_id(3) == want && v[want] == x0 - 1, "INS 1 %s: K4 = %s (%g -> %g)", ec_fx_name(M[i]),
                   EC_PARAMS[want].name, x0, v[want]);
         }
-        for (i = 0; i < 4 && A->pn.ins_slot != 1; i++)   /* SEL on through INS 1's pages to INS 2 */
-            turn(FM1P_E_SELECT, 1);
+        B(2, 40);                                    /* INSERT 2 */
         {
             const float x0 = v[EC_P_INS2_MIX];
             run(300);
@@ -131,6 +131,245 @@ static void test_insert(void)
         }
         v[EC_P_FX_MACHINE] = EC_FX_DELAY;
     }
+}
+
+/* 0.6.3 (docs/UX-V2.md §10 "FX layout"): the bus effects' knobs follow the inserts': K1..K3 the other params in
+ * threes, K4 the MIX (fx_wet where the machine has no blend) on every knob page; SENDS: K1 / K2 the inserts' MIX, K3 /
+ * K4 the sends; FX MIX the layout's cells */
+static const char *hdr_text(void)                  /* the header's held text ("" none) */
+{
+    static char b[40];
+    b[0] = 0;
+    ec_hdr_title("", b, sizeof b);
+    return ec_hdr_custom() ? b : "";
+}
+static int cell_lbl(int k, const char *want)
+{
+    ec_page_t pg;
+    ec_app_page(A, &pg);
+    if (k >= pg.n)
+        return 0;
+    if (!want)
+        return pg.it[k].kind == 0;
+    return pg.it[k].kind == EC_IT_PARAM && !strcmp(ec_app_item_label(&pg.it[k]), want);
+}
+static int fx_page_of(int pic)
+{
+    int p;
+    for (p = 0; p < ec_cat_pages(EC_CAT_FX, tv()); p++)
+        if (ec_page_pic(EC_CAT_FX, p, 0) == pic)
+            return p;
+    return -1;
+}
+
+static void test_bus_k4(void)
+{
+    float *s1 = A->proj.bus[0], *s2 = A->proj.bus[1], *mst = A->proj.bus[2];
+    float x0;
+    int i;
+    to(EC_CAT_FX);
+    s1[EC_P_FX_MACHINE] = EC_FX_BLACKHOLE;
+    s2[EC_P_FX_MACHINE] = EC_FX_DESTROY;
+    mst[EC_P_FX_MACHINE] = EC_FX_REVERB;
+    B(3, 40);
+    CHECK(A->bus == 1 && ec_fx_slot() == 2 && A->pn.ins_page == 0, "B3: SEND 1");
+    CHECK(cell_lbl(0, "SIZE") && cell_lbl(1, "GRAV") && cell_lbl(2, "MOD") && cell_id(3) == EC_P_FX_MIX &&
+              cell_lbl(3, "MIX"),
+          "SEND 1 BLACKHOLE P1: SIZE GRAV MOD, K4 MIX (%d)", cell_id(3));
+    x0 = s1[EC_P_FX_MIX];
+    run(300);
+    turn(FM1P_E_K4, -1);
+    CHECK(s1[EC_P_FX_MIX] == x0 - 1, "K4 turns S1's MIX (%g -> %g)", x0, s1[EC_P_FX_MIX]);
+    B(3, 40);
+    CHECK(A->bus == 1 && A->pn.ins_page == 1 && cell_lbl(0, "LOW") && cell_lbl(1, "HI") && cell_lbl(2, "PRE") &&
+              cell_id(3) == EC_P_FX_MIX,
+          "B3 again: SEND 1 P2: LOW HI PRE, K4 MIX again (K1 %d)", cell_id(0));
+    x0 = s1[EC_P_FX_MIX];
+    run(300);
+    turn(FM1P_E_K4, 1);
+    CHECK(s1[EC_P_FX_MIX] == x0 + 1, "K4 on P2: S1's MIX (%g -> %g)", x0, s1[EC_P_FX_MIX]);
+    turn(FM1P_E_SELECT, 1);
+    CHECK(A->bus == 2 && A->pn.ins_page == 0, "SEL: SEND 2 P1 (bus %d page %d)", A->bus, A->pn.ins_page);
+    for (i = 0; i < 3; i++) {                        /* DESTROY: eight params (LEVL too), no blend: K4 = fx_wet */
+        x0 = s2[EC_P_FX_WET];
+        CHECK(A->bus == 2 && A->pn.ins_page == i && cell_id(3) == EC_P_FX_WET && cell_lbl(3, "MIX"),
+              "SEND 2 DESTROY P%d: K4 = its wet MIX (%d)", i + 1, cell_id(3));
+        run(300);
+        turn(FM1P_E_K4, -1);
+        CHECK(s2[EC_P_FX_WET] == x0 - 1, "K4: S2's fx_wet (%g -> %g)", x0, s2[EC_P_FX_WET]);
+        if (i < 2)
+            B(4, 40);
+    }
+    CHECK(cell_lbl(0, "TONE") && cell_lbl(1, "LEVL") && cell_lbl(2, 0), "SEND 2 P3: TONE LEVL, K3 empty");
+    B(5, 40);
+    B(5, 40);
+    CHECK(A->bus == 3 && cell_lbl(0, "SIZE") && cell_lbl(1, "DAMP") && cell_lbl(2, 0) && cell_id(3) == EC_P_FX_MIX,
+          "B5 twice: MASTER REVERB: SIZE DAMP, K3 empty, K4 MIX");
+    /* SENDS: K1 INS 1's MIX (fx_wet for DESTROY), K2 INS 2's, K3 / K4 the sends */
+    tv()[EC_P_FX_MACHINE] = EC_FX_DESTROY;
+    B(5, 40);
+    CHECK(!A->bus && ec_fx_on_sends() && cell_id(0) == EC_P_FX_WET && cell_id(1) == EC_P_INS2_MIX &&
+              cell_id(2) == EC_P_SEND1 && cell_id(3) == EC_P_SEND2 && cell_lbl(0, "INS 1") && cell_lbl(1, "INS 2"),
+          "SENDS: K1 INS 1's MIX (DESTROY: fx_wet %d), K2 INS 2's, K3 SEND 1, K4 SEND 2", cell_id(0));
+    tv()[EC_P_FX_MACHINE] = EC_FX_DELAY;
+    CHECK(cell_id(0) == EC_P_FX_MIX, "SENDS: INS 1 DELAY: K1 fx_mix");
+    {   /* FX MIX: the layout's cells, unchanged */
+        const int p = fx_page_of(EC_PIC_STEPS);
+        ec_page_t a, b;
+        A->bus = 0;
+        ec_app_set_page(EC_CAT_FX, p);
+        ec_app_page(A, &a);
+        ec_page_items(EC_CAT_FX, p, tv(), 0, &b);
+        CHECK(p >= 0 && a.n == b.n && !memcmp(a.it, b.it, sizeof(ec_item_t) * (size_t)a.n) && cell_lbl(0, "FX MIX") &&
+                  cell_lbl(1, "DRIVE") && cell_lbl(2, "SEND 1") && cell_lbl(3, "SEND 2"),
+              "FX MIX: the layout's cells (FX MIX DRIVE SEND 1 SEND 2)");
+    }
+    s1[EC_P_FX_MACHINE] = s2[EC_P_FX_MACHINE] = mst[EC_P_FX_MACHINE] = EC_FX_NONE;
+}
+
+/* SENDS: ALGO = the send mode PRE / POST (an edit like a knob's: undo; a held step: a lock) */
+static void test_send_mode(void)
+{
+    float *v;
+    to(EC_CAT_FX);
+    B(5, 40);
+    if (A->bus == 3)
+        B(5, 40);
+    v = tv();
+    v[EC_P_SEND_TAP] = 1;
+    CHECK(ec_fx_on_sends(), "B5: SENDS");
+    turn(FM1P_E_ALGO, 1);
+    CHECK(v[EC_P_SEND_TAP] == 2, "ALGO +1: POST (%g)", v[EC_P_SEND_TAP]);
+    turn(FM1P_E_ALGO, -1);
+    CHECK(v[EC_P_SEND_TAP] == 1, "ALGO -1: PRE (%g)", v[EC_P_SEND_TAP]);
+    run(1200);
+    turn(FM1P_E_ALGO, 1);
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_OCTDN, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(v[EC_P_SEND_TAP] == 1, "SHIFT + F1: undone (PRE)");
+    CHECK(EC_PARAMS[EC_P_SEND_TAP].flags & EC_PF_LOCKABLE, "send_tap is p-lockable");
+}
+
+/* SENDS: a held B1 / B2 swaps the inserts (machines, params, locks, routes; every pattern), B3 / B4 the sends (the
+ * buses and every track's send levels and locks: the sound unchanged); a tap still goes to the row; one undo */
+static void test_swaps(void)
+{
+    float *v, keep_ins[EC_NP];
+    ec_project_t *p = &A->proj;
+    int k, mt;
+    to(EC_CAT_FX);
+    v = tv();
+    v[EC_P_FX_MACHINE] = EC_FX_REVERB;              /* INS 1 REVERB (SIZE 90, MIX 40), INS 2 DELAY */
+    v[EC_P_REVERB_SIZE] = 90;
+    v[EC_P_FX_MIX] = 40;
+    v[EC_P_INS2_MACHINE] = EC_FX_DELAY;
+    ec_ins2_reset(v);
+    v[EC_P_INS2_MIX] = 100;
+    clear_steps(A->track);
+    step(3)->trig = 1;
+    ec_step_lock_set(step(3), EC_P_REVERB_SIZE, 11);   /* a lock on INS 1's SIZE */
+    mt = ec_mtx_free(v);
+    v[ec_mtx_src_id(mt)] = EC_MS_LFO1 + 1;
+    v[ec_mtx_dst_id(mt)] = EC_P_REVERB_SIZE + 1;       /* a route onto INS 1's SIZE */
+    v[ec_mtx_depth_id(mt)] = 50;
+    memcpy(keep_ins, v, sizeof keep_ins);
+    B(5, 40);
+    if (A->bus == 3)
+        B(5, 40);
+    CHECK(ec_fx_on_sends(), "SENDS");
+    hold_b(1);
+    run(250);
+    CHECK(!strcmp(hdr_text(), "SWAP INSERTS") && v[EC_P_FX_MACHINE] == EC_FX_REVERB, "B1 held 250 ms: the header (%s), no swap yet",
+          hdr_text());
+    run(250);
+    let_b(1);
+    k = ec_ins2_index(EC_FX_REVERB, EC_P_REVERB_SIZE);
+    CHECK(ec_fx_on_sends() && v[EC_P_FX_MACHINE] == EC_FX_DELAY && v[EC_P_INS2_MACHINE] == EC_FX_REVERB,
+          "B1 held 500 ms: INSERT 1 DELAY, INSERT 2 REVERB, still SENDS");
+    CHECK(k >= 0 && v[EC_P_INS2_P1 + k] == 90 && v[EC_P_INS2_MIX] == 40 && v[ec_fx_mix_id(EC_FX_DELAY)] == 100,
+          "the params moved: INS 2 SIZE 90 MIX 40, INS 1 MIX 100");
+    CHECK(step(3)->nlock == 1 && step(3)->lock_id[0] == EC_P_INS2_P1 + k && step(3)->lock_val[0] == 11,
+          "the lock on SIZE follows to INS 2 (%d)", step(3)->lock_id[0]);
+    CHECK(v[ec_mtx_dst_id(mt)] == EC_P_INS2_P1 + k + 1, "the route onto SIZE follows to INS 2");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_OCTDN, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(v[EC_P_FX_MACHINE] == EC_FX_REVERB && v[EC_P_REVERB_SIZE] == 90 && v[EC_P_FX_MIX] == 40 &&
+              v[EC_P_INS2_MACHINE] == EC_FX_DELAY && v[EC_P_INS2_MIX] == 100 && step(3)->lock_id[0] == EC_P_REVERB_SIZE &&
+              v[ec_mtx_dst_id(mt)] == EC_P_REVERB_SIZE + 1,
+          "SHIFT + F1: one undo puts the inserts back (machines, params, lock, route)");
+    /* the sends */
+    p->bus[0][EC_P_FX_MACHINE] = EC_FX_REVERB;
+    p->bus[1][EC_P_FX_MACHINE] = EC_FX_TAPE_ECHO;
+    p->bus[1][EC_P_DELAY_FEEDBACK] = 77;
+    p->pat[p->current].tr[2].v[EC_P_SEND1] = 30;
+    p->pat[p->current].tr[2].v[EC_P_SEND2] = 90;
+    ec_step_lock_set(step(3), EC_P_SEND2, 5);
+    hold_b(4);
+    run(500);
+    let_b(4);
+    CHECK(p->bus[0][EC_P_FX_MACHINE] == EC_FX_TAPE_ECHO && p->bus[0][EC_P_DELAY_FEEDBACK] == 77 &&
+              p->bus[1][EC_P_FX_MACHINE] == EC_FX_REVERB,
+          "B4 held: S1 TAPE ECHO (its settings), S2 REVERB");
+    CHECK(p->pat[p->current].tr[2].v[EC_P_SEND1] == 90 && p->pat[p->current].tr[2].v[EC_P_SEND2] == 30 &&
+              step(3)->lock_id[1] == EC_P_SEND1,
+          "every track's sends swap with them (T3 90 / 30), the lock too: the sound unchanged");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_OCTDN, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(p->bus[0][EC_P_FX_MACHINE] == EC_FX_REVERB && p->pat[p->current].tr[2].v[EC_P_SEND1] == 30 &&
+              step(3)->lock_id[1] == EC_P_SEND2,
+          "SHIFT + F1: the sends back");
+    B(3, 40);                                        /* a tap: the row */
+    CHECK(A->bus == 1 && ec_fx_slot() == 2 && p->bus[0][EC_P_FX_MACHINE] == EC_FX_REVERB, "SENDS: B3 tapped: SEND 1, no swap");
+    clear_steps(A->track);
+    v[ec_mtx_src_id(mt)] = 1;
+    v[ec_mtx_dst_id(mt)] = 0;
+    p->bus[0][EC_P_FX_MACHINE] = p->bus[1][EC_P_FX_MACHINE] = EC_FX_NONE;
+    p->pat[p->current].tr[2].v[EC_P_SEND1] = p->pat[p->current].tr[2].v[EC_P_SEND2] = 0;
+    (void)keep_ins;
+}
+
+/* FX SETUP (hold FX): INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER (their types), SEND MODE; K1 changes the row's */
+static void test_fx_setup(void)
+{
+    static const char *const ROW[6] = {"INSERT 1", "INSERT 2", "SEND 1", "SEND 2", "MASTER", "SEND MODE"};
+    ec_page_t pg;
+    int i, ok = 1;
+    to(EC_CAT_FX);
+    A->bus = 0;
+    press(FM1P_B_FX, 500);
+    run(40);
+    ec_app_page(A, &pg);
+    CHECK(A->settings && pg.n == 6, "FX held: its settings, six rows (%d)", pg.n);
+    for (i = 0; i < 6 && i < pg.n; i++)
+        ok &= !strcmp(ec_app_item_label(&pg.it[i]), ROW[i]);
+    CHECK(ok, "the rows: INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER, SEND MODE");
+    turn(FM1P_E_SELECT, 2);
+    run(40);
+    {
+        const float m0 = A->proj.bus[0][EC_P_FX_MACHINE];
+        turn(FM1P_E_K1, 1);
+        run(40);
+        CHECK(A->proj.bus[0][EC_P_FX_MACHINE] == m0 + 1, "SEL 2, K1: SEND 1's type one on (%g -> %g)", m0,
+              A->proj.bus[0][EC_P_FX_MACHINE]);
+        A->proj.bus[0][EC_P_FX_MACHINE] = m0;
+    }
+    turn(FM1P_E_SELECT, -1);
+    run(40);
+    turn(FM1P_E_K1, 3);
+    run(40);
+    CHECK(tv()[EC_P_INS2_MACHINE] > 1 && tv()[EC_P_INS2_MIX] == EC_PARAMS[ec_fx_mix_id((int)tv()[EC_P_INS2_MACHINE])].def,
+          "INSERT 2's row: K1 picks a type, its params at that type's defaults");
+    press(FM1P_B_OCTDN, 40);
+    tv()[EC_P_INS2_MACHINE] = EC_FX_NONE;
 }
 
 /* INS 2 locked on a step, saved and loaded back; an old project */
@@ -295,6 +534,10 @@ int main(int argc, char **argv)
     test_ins2_data();
     test_loop_menus();
     test_meter();
+    test_bus_k4();
+    test_send_mode();
+    test_swaps();
+    test_fx_setup();
     C->shutdown();
     printf("test_fx2: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

@@ -189,6 +189,12 @@ float ec_pn_item_value(int id)
     case EC_UX_BLOCKS: return (float)ec_scene_count(&A->proj.e5.sc, 1);
     case EC_UX_ADVANCE: return (float)ec_as->advance;
     case EC_UX_PLAYING: return (float)A->proj.current;
+    case EC_UX_FXT0:
+    case EC_UX_FXT0 + 1:
+    case EC_UX_FXT0 + 2:
+    case EC_UX_FXT0 + 3:
+    case EC_UX_FXT4: return (float)ec_fx_slot_machine(id - EC_UX_FXT0);
+    case EC_UX_SMODE: return ec_app_params(A)[EC_P_SEND_TAP];
     case EC_UX_NEXT: return (float)A->seq.pending;
     default: return 0;
     }
@@ -247,7 +253,14 @@ void ec_pn_item_format(int id, float x, char *out, int cap)
         else
             snprintf(out, (size_t)cap, "%c%d", 'A' + n / EC_BANK_PATS, n % EC_BANK_PATS + 1);
         break;
-    default: snprintf(out, (size_t)cap, "%d", n); break;
+    case EC_UX_SMODE: snprintf(out, (size_t)cap, "%s", n == 2 ? "POST" : "PRE"); break;
+    default:
+        if (id >= EC_UX_FXT0 && id <= EC_UX_FXT4) {   /* 0.6.3 */
+            snprintf(out, (size_t)cap, "%s", n <= EC_FX_NONE ? "NONE" : ec_fx_name(n));
+            break;
+        }
+        snprintf(out, (size_t)cap, "%d", n);
+        break;
     }
 }
 
@@ -275,7 +288,11 @@ float ec_pn_item_frac(int id, float x)
     case EC_UX_SLEN: return x / 4.0f;
     case EC_UX_SGAIN: return (x + 24.0f) / 48.0f;
     case EC_UX_SMON: return x;
-    default: return 0;
+    case EC_UX_SMODE: return x - 1.0f;
+    default:
+        if (id >= EC_UX_FXT0 && id <= EC_UX_FXT4)
+            return (x - 1.0f) / (float)(EC_FX_COUNT - 1);
+        return 0;
     }
 }
 
@@ -298,7 +315,17 @@ void ec_pn_item_edit(int id, int det)
         break;
     case EC_UX_SGAIN: P->smp_gain_db = (float)clampi((int)P->smp_gain_db + det, -24, 24); break;
     case EC_UX_SMON: P->smp_mon = det > 0; break;
-    default: break;
+    case EC_UX_SMODE: {                            /* the track's (a bus targeted: the knob path would edit the bus) */
+        float *v = ec_app_params(A);
+        ec_e5_edit_param(A->track, EC_P_SEND_TAP, 0);
+        v[EC_P_SEND_TAP] = det > 0 ? 2.0f : 1.0f;
+        ec_seq_touch(&A->seq, A->track);
+        ec_app_mark_dirty();
+    } break;
+    default:
+        if (id >= EC_UX_FXT0 && id <= EC_UX_FXT4)
+            ec_fx_type_step(id - EC_UX_FXT0, det);
+        break;
     }
     A->redraw = 1;
 }

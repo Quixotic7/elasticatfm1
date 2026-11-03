@@ -99,6 +99,10 @@ static ec_step_t *step_at(int index) { return &ec_project_track(&A->proj, A->tra
 void ec_app_page(const ec_app_t *a, ec_page_t *out)
 {
     const float *v = ec_project_track((ec_project_t *)&a->proj, a->track)->v;
+    if (a->settings && a == &ec_app && a->cat == EC_CAT_FX) {   /* 0.6.3: FX SETUP: every slot's type */
+        ec_fx_setup_items(out);
+        return;
+    }
     if (a->settings && a->bus)                                     /* E4: the bus's setup (its machine) */
         if (ec_settings_items_bus(a->cat, a->bus, out))
             return;
@@ -112,10 +116,16 @@ void ec_app_page(const ec_app_t *a, ec_page_t *out)
     if (!a->settings && a == &ec_app && ec_pn_page(out))           /* 0.6.0: the fixed screens' cells */
         return;
     if (a == &ec_app && ec_src_insert_page()) {                     /* 0.6.1: FX INSERT: the slot's knob page */
-        ec_src_ins_items(out);
+        ec_src_ins_items(out);                                      /* (0.6.3: EFFECTS' rows, MASTER) */
+        return;
+    }
+    if (a == &ec_app && ec_fx_on_sends()) {                         /* 0.6.3: SENDS: the inserts' MIX, the sends */
+        ec_fx_sends_items(out);
         return;
     }
     ec_page_items_bus(a->cat, a->page[a->cat], v, a->bus, a->bus ? a->proj.bus[a->bus - 1] : 0, out);
+    if (out->busv && out->pic == EC_PIC_FX)                         /* 0.6.3: K4 = the bus effect's MIX */
+        ec_page_bus_k4(out, (int)(a->proj.bus[out->busv - 1][EC_P_FX_MACHINE] + 0.5f));
 }
 
 /* E4: a bus pseudo-track's FX params live in its record (project.bus), not in the selected track */
@@ -1215,8 +1225,12 @@ void ec_app_frame(void)
         else if (f != A->pn.intro_frame)
             A->pn.intro_frame = f, A->redraw = 1;
     }
-    if (A->pn.cat && now - A->pn.cat_ms >= 25)   /* the CAT dances */
+    if (A->pn.cat && now - A->pn.cat_ms >= 25) {   /* the CAT dances; its fractal evolves (0.6.3: faster playing) */
+        const double b = ec_seq_beats(&A->seq), d = b - A->pn.cat_beats;
+        A->pn.cat_t += A->seq.playing && d > 0.0 && d < 4.0 ? d * EC_CAT_T_BEAT : 1.0 / 40.0;
+        A->pn.cat_beats = b;
         A->pn.cat_ms = now, A->pn.cat_n++, A->redraw = 1;
+    }
     if (!A->redraw && !((A->seq.playing || loading || A->msg_ms) && now - A->last_draw >= 30))
         return;
     if (A->msg_ms && now - A->msg_ms > 1200)

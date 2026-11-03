@@ -943,6 +943,8 @@ static void knob(int r, int d)
     case EC_E_ALGO:
         if (ec_rzui_active(A))
             ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
+        else if (ec_fx_on_sends())
+            ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
         else if (mode == EC_MODE_KEYBOARD)
             ec_kb_target(d);                       /* KEYBOARD: the target step */
         else {                                     /* the step page */
@@ -1150,7 +1152,7 @@ const char *ec_pn_roles(int mode, int *cur)
             for (i = 0; i < EC_NBKEY; i++)
                 r[i] = ec_src_role(mode, i + 1);
             if (mode < EC_NCAT) {
-                const int key = mode == EC_CAT_FX && A->bus ? ec_bus_key(A->bus) : ec_cat_page_key(mode, A->page[mode]);
+                const int key = mode == EC_CAT_FX ? ec_fx_cur_key() : ec_cat_page_key(mode, A->page[mode]);
                 if (key > 0)
                     *cur = key - 1;
             }

@@ -172,13 +172,13 @@ static void test_modes(void)
     CHECK(mode() == EC_CAT_FX, "FX: the mode (0.6.1: no pop-up, host/test_v61ux.c)");
     run(900);
     press(FM1P_B_FX, 40);
-    CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1, "FX again: the next page");
+    CHECK(mode() == EC_CAT_FX && ec_fx_slot() == 1, "FX again: the next group (0.6.3: INSERT 2)");
     press(FM1P_B_SEL, 40);
     CHECK(mode() == EC_CAT_FILT, "SEL: FILTER");
     turn(FM1P_E_K2, 1);
     run(5);
     press(FM1P_B_FX, 40);
-    CHECK(mode() == EC_CAT_FX && A->page[EC_CAT_FX] == 1, "FX keeps its page");
+    CHECK(mode() == EC_CAT_FX && ec_fx_slot() == 1, "FX keeps its page");
     /* HOME: LOOP ENGINE -> TRIG -> KEYBOARD -> LOOP ENGINE */
     press(FM1P_B_HOME, 40);
     CHECK(mode() == EC_CAT_SRC, "HOME: LOOP ENGINE");
@@ -736,12 +736,14 @@ static void test_sources(void)
     key(1, bkey(1), 0);
     run(20);
     CHECK(ec_app_params(A)[EC_P_FX_MACHINE] == 3 && !step(2)->trig, "B1 held + K1 2: the insert's engine 3, no step");
+    tapkey(1, bkey(5), 40);                                   /* 0.6.3: B5 SENDS, again MASTER; held: its type */
+    tapkey(1, bkey(5), 40);
     key(1, bkey(5), 1);
     run(20);
     turn(FM1P_E_K1, 2);
     key(1, bkey(5), 0);
     run(20);
-    CHECK(A->bus == 3 && A->proj.bus[2][EC_P_FX_MACHINE] > 1, "B5 held + K1: the master bus's engine");
+    CHECK(A->bus == 3 && A->proj.bus[2][EC_P_FX_MACHINE] > 1, "MASTER: B5 held + K1: the master bus's engine");
     tapkey(1, bkey(1), 40);
     ec_app_params(A)[EC_P_FX_MACHINE] = 1;
     A->proj.bus[2][EC_P_FX_MACHINE] = 1;
@@ -1062,7 +1064,7 @@ static void test_labels(void)
     btn(FM1P_B_GLO, 0);
     run(20);
     to(EC_CAT_FX);
-    CHECK(lbl(FM1CORE_LBL_BLACK0 + 2, "SEND1") && lbl(FM1CORE_LBL_BLACK0 + 4, "MSTR") &&
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 2, "SEND1") && lbl(FM1CORE_LBL_BLACK0 + 4, "SND/MST") &&
               lbl(FM1CORE_LBL_BLACK0 + 10, "MIX"),
           "FX: B3 %s B5 %s B11 %s", L(FM1CORE_LBL_BLACK0 + 2), L(FM1CORE_LBL_BLACK0 + 4), L(FM1CORE_LBL_BLACK0 + 10));
     {

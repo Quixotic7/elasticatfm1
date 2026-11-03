@@ -133,6 +133,13 @@ void ec_slot_clear(ec_slot_t *s);
 /* 0.6.1 (FILE / POOL MOVE): slots a and b (0-based) change places, and every reference follows: the tracks' slot
  * params and the slot step locks (and slice locks) in all 64 patterns. Its own inverse (undo = the same swap). */
 void ec_project_swap_slots(ec_project_t *p, int a, int b);
+/* 0.6.3 (docs/UX-V2.md §10 FX, SENDS): track t's INSERT 1 and INSERT 2 trade places (machines, params, MIX, the step
+ * and slice locks and the matrix routes on them, the scenes' values: every pattern); the S1 and S2 buses trade places
+ * (their records, every track's send levels with their locks, routes and scene values, the scenes' bus rows), so the
+ * sound is unchanged. Each is its own undo: applying it again puts things back (the inserts: but for the values of
+ * params neither machine shows) */
+void ec_project_swap_inserts(ec_project_t *p, int t);
+void ec_project_swap_sends(ec_project_t *p);
 void ec_bus_default(float *v);           /* E4: a bus record's defaults (NONE) */
 
 /* steps */

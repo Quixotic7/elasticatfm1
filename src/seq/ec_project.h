@@ -12,10 +12,10 @@
 #include "ec_razor.h"   /* E3 */
 
 #define EC_NTRACK 6
-#define EC_NPAT 16
+#define EC_NPAT 64                /* 0.6.0: 4 banks x 16 (pattern index = bank * 16 + n) */
 #define EC_MAXSTEPS 256           /* pattern_steps 1..256 = 16 pages of 16 */
 #define EC_STEP_LOCKS 16          /* p-locks a step holds */
-#define EC_NSLOT 16               /* the sample pool */
+#define EC_NSLOT 128              /* the sample pool (0.6.0: 16 -> 128) */
 #define EC_PATH 192
 
 /* one step record (lib/sequencer/step.lua): the trig, the slices it fires, its p-locks. The trig's pitch, length and

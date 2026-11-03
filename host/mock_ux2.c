@@ -426,17 +426,36 @@ static void scr_pages(void)
     cells(c, 0, 0);
 }
 
+/* LOOP ENGINE / WARP with the GRAIN warp: the live grains over the waveform (docs/UX-V2.md, "Live grains"). Modelled on
+ * src/dsp/ec_grains.c: GDEN grains overlap (spawned every GSIZ / GDEN), each spawned at the emitter +- 2 * SPRD of the
+ * file (gspread_lag * frames) and reading on at RATE for GSIZ; its level is the Hann window at its phase. Here: a
+ * 1.41 s loop over 112 units (79 units / s), GSIZ 80 ms = 6 units, SPRD 60 ms = +-13 units, 14 grains. Each grain is
+ * a block centred on its read position, as wide as its length, in a lane of its own (the scatter), shaded by level
+ * through the grey ramp, the newest in the accent; the emitter is the accent notches on the frame. */
 static void scr_loop(void)
 {
-    static const cell_t c[4] = {{"WARP", "GRAIN", 0.5f, 0, 0}, {"RATE", "1.00", 0.5f, 0, 0},
-                                {"PITCH", "+0", 0.5f, 0, 0}, {"FADE", "20MS", 0.2f, 0, 0}};
-    int i;
+    static const cell_t c[4] = {{"GDEN", "14", 14 / 64.0f, 0, 0}, {"GSIZ", "80MS", 0.16f, 0, 0},
+                                {"SPRD", "60MS", 0.24f, 0, 0}, {"RATE", "1X", 0.12f, 0, 0}};
+    const float ups = 112.0f / 1.41f, len = 0.08f * ups, spread = 2.0f * 0.06f * 112.0f;
+    const int emit = 44, n = 14;
+    int i, k;
     header("T1", "LOOP/WARP", "3", "P01", 0, 0);
     TL(PX_L15, "AMEN_170.WAV", 2, 13);
-    TR(PX_L8, "16", W - 2, 13);
+    TR(PX_L8, "GRAIN", W - 2, 13);
     FR(PX_L8, 2, 20, 116, 42);
-    wave(4, 116, 23, 59, 14, 7, PX_L15, PX_L15, 0, W);
-    playhead(44, 21, 61);
+    wave(4, 116, 23, 59, 14, 7, PX_L3, PX_L3, 0, W);
+    g_rng = 23;
+    for (k = n - 1; k >= 0; k--) {                   /* oldest first, so the newest sit on top */
+        const float ph = ((float)k + 0.6f * rnd()) / (float)n;
+        const float age = ph * len;                  /* how far it has read (rate 1) = how far the emitter moved */
+        const float spawn = (float)emit - age + (2.0f * rnd() - 1.0f) * spread;
+        const float rd = spawn + age * (1.0f + 0.1f * (2.0f * rnd() - 1.0f));
+        const float lv = sinf(3.14159265f * ph) * sinf(3.14159265f * ph);
+        const int lane = (k * 5) % 9, w = (int)(len + 0.5f), x = (int)(rd - len / 2.0f + 0.5f);
+        const int col = k == 0 ? PX_ACC : lv > 0.75f ? PX_L15 : lv > 0.45f ? PX_L12 : lv > 0.2f ? PX_L8 : PX_L5;
+        R(col, x, 23 + lane * 4, w, 3);
+    }
+    R(PX_ACC, emit, 20, 1, 3), R(PX_ACC, emit, 59, 1, 3);
     for (i = 0; i < 16; i++) {                       /* the loop keys W1..W16 */
         const int x = 3 + i * 7;
         R(i == 5 ? PX_ACC : i % 4 ? PX_L5 : PX_L12, x, 66, 5, i % 4 ? 2 : 4);
@@ -505,7 +524,7 @@ static void scr_file_browser(void)
 
 static void scr_file_editor(void)
 {
-    static const cell_t c[4] = {{"START", "0.12S", 0.03f, "L", 0}, {"END", "3.80S", 0.95f, "L", 0},
+    static const cell_t c[4] = {{"START", "0.12S", 0.03f, 0, 0}, {"END", "3.80S", 0.95f, 0, 0},
                                 {"BPM", "96", 0.4f, 0, 0}, {"GAIN", "+0DB", 0.5f, 0, 0}};
     int i;
     header("T1", "FILE/EDIT", "4", "4X", 0, 0);

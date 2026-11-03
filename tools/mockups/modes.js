@@ -34,7 +34,7 @@ export const MODES = [
     black: [...["1/8", "1/4", "1/2", "3/4", "1X", "3/2", "2X", "3X", "4X"].map((t) => [t, "A"]), ["SLOWER", "A"], ["FASTER", "A"]] },
   { file: "Pages", lit: ["EDIT"], btn: { EDIT: "PAGES" }, k: ["LENGTH", "RATE", "LOOP", ""], f1: "COPY PG", f2: "CUT PG",
     white: steps(), black: [["PAGE1", "P"], ["PAGE2", "P"], ["PAGE3", "P"], ["PAGE4", "P"], ...off(7)] },
-  { file: "Loop", lit: ["HOME"], k: ["WARP", "RATE", "PITCH", "FADE"],
+  { file: "Loop", lit: ["HOME"], k: ["GDEN", "GSIZ", "SPRD", "RATE"],
     white: Array.from({ length: 16 }, (_, i) => ["L" + (i + 1), "A"]),
     black: [["LOOP", "P"], ["MACH", "P"], ["WARP", "P"], ["RANGE", "P"], ["NEXT", "P"], ...SRC, ["ZOOM", "X"]] },
   { file: "Trig", lit: ["HOME"], btn: { HOME: "TRIG" }, k: ["CHANCE", "COND", "RATCHET", ""], white: steps(),

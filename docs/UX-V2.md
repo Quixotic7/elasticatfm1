@@ -419,3 +419,13 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
 - **Pitch direction:** a positive PITCH moves the highlighted key up the keyboard, a negative one down (it was
   reversed).
 - Moving the target step (ALGO) shows no pop-up: the highlighted step is enough.
+
+**LOOP ENGINE quick settings** (owner, 2026-11-03)
+- Holding a page key opens a quick menu for one setting, the same kind of menu as FX's type menu: it shows while the
+  key is held, SEL or K1 moves through it, letting go picks.
+  - B1 (LOOP) = loop mode
+  - B2 (MACHINE) = machine
+  - B3 (WARP) = warp mode
+  - B4 (RANGE) = voice mode
+  - B5 = ADVANCE
+- A tap still turns to the page.

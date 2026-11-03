@@ -29,6 +29,8 @@ static char g_root[PATH_MAX], g_id[64];
 static nreq_t g_q[FS_MAX_INFLIGHT];
 static int32_t g_next, g_changed = 1;
 static uint32_t g_served;
+static int32_t g_fail_op, g_fail_err;
+static int g_fail_after;
 
 void ec_fs_native_root(const char *root, const char *cart_id)
 {
@@ -40,6 +42,12 @@ void ec_fs_native_root(const char *root, const char *cart_id)
     g_changed++;
 }
 void ec_fs_native_touch(void) { g_changed++; }
+void ec_fs_native_fail(int32_t op, int after, int32_t err)
+{
+    g_fail_op = op;
+    g_fail_after = after;
+    g_fail_err = err;
+}
 uint32_t ec_fs_native_served(void) { return g_served; }
 
 static int32_t err_of(int e)
@@ -258,7 +266,11 @@ void ec_fs_native_pump(void)
     int i;
     for (i = 0; i < FS_MAX_INFLIGHT; i++)
         if (g_q[i].id && !g_q[i].done) {
-            g_q[i].result = serve(&g_q[i]);
+            if (g_fail_op && g_q[i].op == g_fail_op && g_fail_after-- == 0) {   /* (the test hook) */
+                g_q[i].result = g_fail_err;
+                g_fail_op = 0;
+            } else
+                g_q[i].result = serve(&g_q[i]);
             g_q[i].done = 1;
             g_served++;
         }

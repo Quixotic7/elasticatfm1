@@ -502,6 +502,28 @@ static void load_rec_chunk(ec_project_t *p, const uint8_t *b, uint32_t n)
     r->hard = b[10] ? 1 : 0;
 }
 
+/* 0.6.1: a record's header and checksum, without parsing it: its whole length, or -1 */
+int32_t ec_project_check(const uint8_t *buf, uint32_t n)
+{
+    io_t o;
+    uint32_t len, sum;
+    int ver;
+    if (!buf || n < HDR)
+        return -1;
+    memset(&o, 0, sizeof o);
+    o.r = buf;
+    o.cap = n;
+    if (r32(&o) != EC_PROJECT_MAGIC)
+        return -1;
+    ver = (int)r16(&o);
+    (void)r16(&o);
+    len = r32(&o);
+    sum = r32(&o);
+    if (ver < 1 || ver > EC_PROJECT_VERSION || len > n - HDR || fnv1a(buf + HDR, len) != sum)
+        return -1;
+    return (int32_t)(HDR + len);
+}
+
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
 {
     uint32_t migrated = 0;

@@ -6,10 +6,13 @@ stereo WAV, deterministic, no third-party modules):
   b_bass_bpm120.wav    two bars of a saw bass line
   c_chords_bpm120.wav  two bars of a four-note pad, a chord per half bar
   d_perc16_bpm120.wav  one bar of sixteen different percussion hits (one per 16th: slice material)
+The cart's saved projects (<root>/data/elasticat/projects/, 0.6.1) are cleared, so a run starts with none and its
+first project is PROJ-001.
    make_demo_folder.py <root>"""
 import math
 import os
 import random
+import shutil
 import struct
 import sys
 
@@ -111,3 +114,4 @@ write(os.path.join(audio, 'a_drums_bpm120.wav'), drums())
 write(os.path.join(audio, 'b_bass_bpm120.wav'), bass())
 write(os.path.join(audio, 'c_chords_bpm120.wav'), chords())
 write(os.path.join(audio, 'd_perc16_bpm120.wav'), perc16())
+shutil.rmtree(os.path.join(root, 'data', 'elasticat', 'projects'), ignore_errors=True)

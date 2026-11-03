@@ -988,13 +988,14 @@ click).
 | Control | Does |
 |---|---|
 | SEL | the cursor: the folder's subfolders first, then its files |
-| B1 / B2 | **up a folder / into the folder** under the cursor |
-| B10 | **LOAD**: the file goes into **the next free pool slot**, and the selected track plays it. The cursor stays put. A file already in the pool isn't loaded twice (IN SLOT n). A full pool says FULL |
+| B1 / B2 | **up a folder / into the folder** under the cursor. Up from /audio is the top level: **AUDIO/** and **PROJECTS/** (/data/projects, the saved projects) |
+| B10 | **LOAD**: the file goes into **the next free pool slot**, and the selected track plays it. The cursor stays put. A file already in the pool isn't loaded twice (IN SLOT n). A full pool says FULL. **On a project file (PROJECTS/), LOAD opens that project** (unsaved edits of the current one are saved first), and the mode is LOOP ENGINE |
 | B11 | **preview** play / stop |
 | F2 | **free the pool slot** of the file under the cursor (its tracks fall silent) |
 | SHIFT + B11 | **purge**: free every slot no pattern uses and compact the memory (not while playing) |
 
-- Every cursor move **previews** the file (APP SETTINGS > AUTO-PREVIEW). The preview plays on the main output and
+- Every cursor move **previews** the file (APP SETTINGS > AUTO-PREVIEW); project files have no preview. The open
+  project has the accent mark in PROJECTS/. The preview plays on the main output and
   stops when you leave FILE. LOAD of the previewed file reuses its memory (no second load).
 - Knobs: SLOT (the one LOAD fills), LENGTH, BPM, FREE (MiB). **The pool meter** shows the memory used / free and the
   slots used of 128.
@@ -1114,12 +1115,25 @@ OK, F1 back, HOME closes.
 ## The sample pool
 
 - **128 slots.** A track plays its slot (PRESETS); a step can lock another slot (hold the step + PRESETS).
-- **No per-sample length limit.** The samples share one memory arena of 219 MiB (about 21.7 minutes of stereo at
-  44.1 kHz).
+- **No per-sample length limit.** The samples share one memory arena of 208 MiB (about 20.6 minutes of stereo at
+  44.1 kHz; 0.6.1 keeps 11 MiB for packing the project file).
 - Fill it from FILE (B10 LOAD, the next free slot) or the SAMPLER. Free slots with F2 in FILE's browser, or SHIFT +
   B11 (purge) for every slot no pattern uses.
 - The use shows in FILE's pool meter, the SAMPLER's FREE, and PRESETS' takeover.
 - Older projects load into slots 1-16.
+
+## Projects (0.6.1)
+
+- **A project is a file**, /data/projects/PROJ-001.ecp .. in the cart's own folder; its size has no limit (the
+  largest possible project is about 11 MB). **SHIFT + FILE saves** over the current project's file; the project
+  also saves itself when stopped, 2 s after the last edit. A new project gets the next free name (PROJ-001,
+  PROJ-002 ..) at its first save.
+- Saving never stops the sound: the header says **SAVING** until the file has landed, then SAVED. A failed write
+  says why in the header (NOT SAVED: DISK FULL ..), and the last whole copy of the file stays (a hidden
+  .PROJ-001.ecp is written first).
+- **Power-on loads the last project** (its name is kept in the cart's flash image, beside APP SETTINGS). A project
+  saved by 0.6.0 or older (in the flash) loads once; the next save makes its file.
+- Open another project with FILE > B1 (up to the top level) > PROJECTS/ > B10 LOAD.
 
 ## APP SETTINGS (SHIFT + HOME)
 
@@ -1193,7 +1207,7 @@ survive project loads and new projects.
 | The scene row on the lower keys (MST > SCENE): hold A / B + PLAY clears, SHIFT + A / B captures | CROSSFADER: SHIFT + A / B clears, B11 + A / B captures; the fader on W1-W12 with pressure |
 | SCN A / SCN B on MOD KEYS | CROSSFADER's A / B held |
 | RAZOR: SHIFT + a pad mutes the slice | gone (see the differences) |
-| 16 patterns, 16 pool slots, a 96 MiB store | 64 patterns (4 banks), 128 slots, 219 MiB |
+| 16 patterns, 16 pool slots, a 96 MiB store | 64 patterns (4 banks), 128 slots, 219 MiB (0.6.1: 208) |
 
 The 0.5.0 and older controls (and the 0.3.0 "What moved" table) are in git history: this file before 0.6.0, and
 docs/UX-REDESIGN.md, docs/MOD-MATRIX.md.
@@ -1248,5 +1262,6 @@ What the code does where the spec says otherwise (or says nothing):
   saved with the project. COUNT-IN applies to FIXED and OVERDUB started from stop (CAPTURE has none).
 - **APP SETTINGS** adds INTRO; KNOB SPEED is SLOW / MED / FAST; METRO SOUND is WOOD / BEEP / CLICK / COWBELL. Any
   other button closes it (keeping the values).
-- **The arena** is 219 MiB (the spec said about 224), so about 21.7 minutes of stereo.
+- **The arena** is 219 MiB (the spec said about 224), so about 21.7 minutes of stereo. (0.6.1: 208 MiB, about 20.6
+  minutes, beside the project file's 11 MiB pack buffer.)
 - **CROSSFADER's A / B held** shows the page of the mode you came from (FILTER's when that mode has no template).

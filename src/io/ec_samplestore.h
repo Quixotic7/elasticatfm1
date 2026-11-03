@@ -11,15 +11,16 @@
  *   ec_app_t (holds the 64-pattern ec_project_t)    9.4
  *   the app's memorize record (src/app/ec_e5.c g_memo: ec_e5_memo_save into EC_PLAT_RECORD_MAX)   1.0
  *   the flash image (ec_core.c g_flash; 0.6.0 stages into it: no second copy)   1.0
+ *   0.6.1: the project file's pack buffer (src/app/ec_projfile.c g_pack, EC_PF_PACK_MAX: the largest project)   11.0
  *   the loader's read buffer (ec_loader.c, one FS request)   1.0
  *   every other static + read-only data (screens, tables, lists; 0.45 measured)   <= 1.0
  *   the stack                                       1.0
  *   free above the stack top for the host shim's heap (its flash staging copy, audio blocks) and a margin   >= 4.0
- *   = 44.4 MiB, so the arena gets 256 - 44.4 = 211 MiB (~20.9 min of stereo at 44.1 kHz; 0.6.0: 36.4 and 219).
+ *   = 55.4 MiB, so the arena gets 256 - 55.4 = 200 MiB (~19.8 min of stereo at 44.1 kHz; 0.6.0: 36.4 and 219).
  * (Before memorize became a record, a whole 9.1 MiB ec_project_t copy: 44.5 MiB and 211. 0.5.0, MEMORY_MIB 128:
  * 96 MiB.) Hosts that build smaller (the designer) set their own. */
 #ifndef EC_SS_ARENA_MIB
-#define EC_SS_ARENA_MIB 211         /* ~20.9 minutes of stereo at 44.1 kHz */
+#define EC_SS_ARENA_MIB 200         /* ~19.8 minutes of stereo at 44.1 kHz */
 #endif
 #define EC_SS_MAX 136               /* sample handles: the 128 pool slots, a take, a preview and some slack */
 #define EC_SS_NAME 64               /* a sample's display name (the file name) */

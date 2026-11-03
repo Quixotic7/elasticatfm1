@@ -14,6 +14,7 @@
  *   ec_test_file <folder> */
 #include "ec_harness.h"
 #include "ec_loader.h"
+#include "ec_projfile.h"
 #include "ec_razor_ui.h"
 
 static const char *root;
@@ -109,8 +110,14 @@ static void test_folders(void)
           A->pn.fdir, cursor_name());
     B(1, 40);
     CHECK(!strcmp(A->pn.fdir, "/audio") && !strcmp(cursor_name(), "breaks/"), "B1: up to /audio, on breaks/");
+    B(1, 40);                                      /* 0.6.1: up from /audio: the top level, AUDIO/ and PROJECTS/ */
+    CHECK(!strcmp(A->pn.fdir, "/") && ec_file_count() == 2 && !strcmp(cursor_name(), "AUDIO/") &&
+              !strcmp(ec_file_entry(1, 0, 0), "PROJECTS/"),
+          "B1 at /audio: the top level, on AUDIO/ (%s %d %s)", A->pn.fdir, ec_file_count(), cursor_name());
     B(1, 40);
-    CHECK(!strcmp(A->pn.fdir, "/audio") && !strcmp(A->msg, "TOP FOLDER"), "B1 at the top: stays (%s)", A->msg);
+    CHECK(!strcmp(A->pn.fdir, "/") && !strcmp(A->msg, "TOP FOLDER"), "B1 at the top: stays (%s)", A->msg);
+    B(2, 40);
+    CHECK(!strcmp(A->pn.fdir, "/audio") && A->cursor == 0, "B2 on AUDIO/: back in /audio (%s)", A->pn.fdir);
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "UP") && lbl(FM1CORE_LBL_BLACK0 + 1, "INTO") &&
               lbl(FM1CORE_LBL_BLACK0 + 9, "LOAD") && lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") &&
               lbl(FM1CORE_LBL_BLACK0 + 3, "EDITOR"),
@@ -438,7 +445,7 @@ static void test_patterns_full(void)
     CHECK(pg.n == 4 && !strcmp(pg.it[0].label, "PLAYING") && !strcmp(pg.it[1].label, "NEXT") &&
               !strcmp(pg.it[2].label, "QUANT") && !strcmp(pg.it[3].label, "LENGTH"),
           "PATTERN LAUNCH's cells: PLAYING NEXT QUANT LENGTH (the mock's)");
-    /* a project too big for the record: FULL, the old record kept */
+    /* 0.6.1: a project bigger than the old 1 MiB record: no FULL, it saves (projects are files, host/test_proj.c) */
     shift_down(1);
     press(FM1P_B_SAVE, 40);
     shift_down(0);
@@ -457,10 +464,12 @@ static void test_patterns_full(void)
     shift_down(1);
     press(FM1P_B_SAVE, 40);
     shift_down(0);
-    CHECK(A->msg_alert && strstr(A->msg, "FULL") && A->saves == saves, "too big: FULL in ALERT, not saved (%s)",
-          A->msg);
-    CHECK(chk && ec_project_load(chk, ec_plat_record(&size), size) == 0 && !chk->pat[EC_NPAT - 1].used,
-          "the old record kept");
+    CHECK(!A->msg_alert && !strcmp(A->msg, "SAVING"), "big: SAVING, no FULL (%s)", A->msg);
+    for (i = 0; i < 400 && A->saves == saves; i++)
+        run(5);
+    CHECK(A->saves == saves + 1 && !strcmp(A->msg, "SAVED") && ec_pf_pack(&size) && size > EC_PLAT_RECORD_MAX,
+          "big: SAVED (%u bytes > the old 1 MiB record)", size);
+    CHECK(chk && ec_project_load(chk, ec_pf_pack(0), size) == 0 && chk->pat[EC_NPAT - 1].used, "the big one packed");
     for (p = 0; p < EC_NPAT; p++)
         for (t = 0; t < EC_NTRACK; t++)
             for (i = 0; i < EC_MAXSTEPS; i++)

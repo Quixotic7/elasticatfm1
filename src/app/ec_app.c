@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "ec_app.h"
+#include "ec_projfile.h"
 #include "ec_browse.h"
 #include "ec_fs.h"
 #include "ec_gfx.h"
@@ -615,21 +616,14 @@ static void scan_tick(void)
 }
 
 /* ------------------------------------------------------------------------------------------- save --- */
-void ec_app_save(int quiet)
+/* 0.6.1: the project is a file in /data/projects (ec_projfile.c: packed, then written a chunk a tick) */
+void ec_app_save(int quiet) { ec_pf_save(quiet); }
+
+/* 0.6.1: no project after all (the last one's file is gone): a new one, the first file on T1 once the scan ends */
+void ec_app_fresh_project(void)
 {
-    uint32_t size;
-    uint8_t *rec = ec_plat_record(&size);
-    const int32_t n = ec_project_save(&A->proj, rec, size);
-    if (n > 0) {
-        ec_plat_record_changed();
-        A->dirty = 0;
-        A->saves++;
-        if (!quiet)
-            message("SAVED");
-    } else {                                      /* 0.6.0: the record does not fit (the old one is kept) */
-        A->dirty = 0;                             /* (no autosave loop: the next edit tries again) */
-        ec_app_alert("FULL: NOT SAVED");
-    }
+    A->fresh = 1;
+    scan();
 }
 
 /* ------------------------------------------------------------------------------------------- edits --- */
@@ -1072,14 +1066,15 @@ void ec_app_init(void)
         A->assigned[i] = -1;
     ec_ss_reset();
     rec = ec_plat_record(&size);
-    if (ec_project_load(&A->proj, rec, size) == 0) {
+    i = ec_pf_boot();                              /* 0.6.1: the flash holds the last project's name */
+    if (i == EC_PF_BOOT_FLASH && ec_project_load(&A->proj, rec, size) == 0) {   /* (0.6.0 or older: loads once) */
         for (i = 0; i < EC_NSLOT; i++)
             if (A->proj.slot[i].path[0])
                 A->slot[i].state = EC_SL_QUEUED;
         message("PROJECT LOADED");
     } else {
         ec_project_init(&A->proj);
-        A->fresh = 1;
+        A->fresh = i != EC_PF_BOOT_FILE;           /* (a file: it lands from ec_pf_tick) */
     }
     sink.ctx = 0;
     sink.event = sink_event;
@@ -1113,6 +1108,7 @@ void ec_app_tick(const ec_input_t *in)
     ec_file_tick();                                /* 0.6.0: FILE's preview */
     ec_liverec_tick();                             /* 0.6.0: live REC (FIXED's end) */
     ec_e5_tick();                                  /* E5: prompts, the preview */
+    ec_pf_tick();                                  /* 0.6.1: the project file's save / load */
     /* autosave: stopped, dirty, quiet for a moment */
     if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
         ec_app_save(1);
@@ -1284,6 +1280,10 @@ void ec_app_ui_info(char *buf, uint32_t n)
                      ec_app_mode(), A->scr, A->pn.shift_sticky ? 2 : A->pn.shift_held,
                      A->pn.f_held, A->pn.f_sticky, A->pn.clip_state, A->pn.target, A->pn.oct, A->pn.bank,
                      A->pn.zoom_half, A->pn.cat, A->pn.as_open, ec_gfx_theme(), A->pn.intro, A->step_page + 1);
+        l = (uint32_t)strlen(buf);   /* 0.6.1: the project file */
+        if (l < n)
+            snprintf(buf + l, n - l, " pfile:%s psave:%d pload:%d", ec_pf_name()[0] ? ec_pf_name() : "-",
+                     ec_pf_saving(), ec_pf_loading());
         l = (uint32_t)strlen(buf);   /* 0.6.0 part 2: live REC, FILE */
         if (l < n)
             snprintf(buf + l, n - l, " lrec:%d lwait:%d lwrites:%d fdir:%s pv:%d/%d edzoom:%d pool:%d",
@@ -1301,5 +1301,9 @@ void ec_app_ui_info(char *buf, uint32_t n)
     }
 }
 
-void ec_app_shutdown(void) { ec_load_cancel(); }
+void ec_app_shutdown(void)
+{
+    ec_load_cancel();
+    ec_pf_shutdown();
+}
 uint32_t ec_app_cpu_hint(void) { return 0; }

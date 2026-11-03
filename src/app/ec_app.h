@@ -117,6 +117,7 @@ void ec_app_lane_step(int d);                                /* SELECT on a page
 void ec_app_set_page(int cat, int page);
 int ec_app_has_settings(int cat);
 void ec_app_save(int quiet);
+void ec_app_fresh_project(void);                          /* 0.6.1: a new project (the last one's file gone) */
 void ec_app_load_file(int slot, const char *path);
 void ec_app_toggle_mute(int t);
 void ec_app_toggle_solo(int t);

@@ -19,12 +19,14 @@
 #include "ec_app.h"
 #include "ec_browse.h"
 #include "ec_loader.h"
+#include "ec_projfile.h"
 #include "ec_razor_ui.h"
 
 #define A (&ec_app)
 #define P (&ec_app.pn)
 
 #define ROOT "/audio"
+#define TOP "/"                /* 0.6.1: the top level: AUDIO/ and PROJECTS/ (B1 from /audio or /data/projects) */
 #define PREVIEW_GAIN 0.8f
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
@@ -179,6 +181,10 @@ static char g_key[sizeof P->fdir];
 static int g_key_n = -1, g_key_scan = -1;
 
 static const char *dir(void) { return P->fdir[0] ? P->fdir : ROOT; }
+static int at_top(void) { return !strcmp(dir(), TOP); }
+static int at_projects(void) { return !strcmp(dir(), EC_PF_DIR); }
+static const char *const TOP_ROW[2] = {"AUDIO/", "PROJECTS/"};
+static const char *const TOP_DIR[2] = {ROOT, EC_PF_DIR};
 
 /* the path's component right below the folder (its length), or 0 when the path is not below it; *is_file */
 static int below(const char *path, const char *d, int *is_file)
@@ -228,6 +234,10 @@ static void build(void)
 
 int ec_file_count(void)
 {
+    if (at_top())
+        return 2;
+    if (at_projects())
+        return ec_pf_list_count();
     build();
     return g_nent;
 }
@@ -235,6 +245,14 @@ int ec_file_count(void)
 const char *ec_file_entry(int i, int *is_dir, int *file)
 {
     static char b[EC_SS_NAME + 2];
+    if (at_top() || at_projects()) {               /* 0.6.1: the top level's two folders, the project files */
+        const int n = ec_file_count();
+        if (is_dir)
+            *is_dir = at_top() && i >= 0 && i < n;
+        if (file)
+            *file = -1;
+        return i < 0 || i >= n ? "" : at_top() ? TOP_ROW[i] : ec_pf_list_name(i);
+    }
     build();
     if (i < 0 || i >= g_nent) {
         if (is_dir)
@@ -431,8 +449,15 @@ static void folder_up(void)
     char *sl;
     char was[sizeof P->fdir];
     int i, n;
-    if (!strcmp(dir(), ROOT)) {
+    if (at_top()) {
         ec_app_message("TOP FOLDER");
+        return;
+    }
+    if (!strcmp(dir(), ROOT) || at_projects()) {   /* 0.6.1: up to the top level, the cursor on where we were */
+        A->cursor = at_projects();
+        snprintf(P->fdir, sizeof P->fdir, "%s", TOP);
+        ec_app_message(TOP);
+        moved();
         return;
     }
     snprintf(was, sizeof was, "%s", dir());
@@ -462,6 +487,15 @@ static void folder_in(void)
         ec_app_message("NOT A FOLDER");
         return;
     }
+    if (at_top()) {                                /* 0.6.1: AUDIO/ or PROJECTS/ */
+        snprintf(P->fdir, sizeof P->fdir, "%s", TOP_DIR[A->cursor ? 1 : 0]);
+        if (at_projects())
+            ec_pf_list_refresh();
+        A->cursor = 0;
+        ec_app_message(name);
+        moved();
+        return;
+    }
     snprintf(d, sizeof d, "%s/%.*s", dir(), (int)strlen(name) - 1, name);
     snprintf(P->fdir, sizeof P->fdir, "%s", d);
     A->cursor = 0;
@@ -474,6 +508,13 @@ static void load(void)
     const char *path = cursor_path();
     int s, k;
     char m[24];
+    if (at_projects()) {                           /* 0.6.1: LOAD on a project file opens it */
+        if (A->cursor >= 0 && A->cursor < ec_pf_list_count())
+            ec_pf_open(ec_pf_list_name(A->cursor));
+        else
+            ec_app_message("NO PROJECTS");
+        return;
+    }
     if (!path) {
         ec_app_message(ec_browse_count() <= 0 ? (A->no_folder ? "NO FOLDER" : "NO FILES") : "A FOLDER");
         return;

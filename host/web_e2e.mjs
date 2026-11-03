@@ -3,20 +3,26 @@
 // headless Chromium over the DevTools protocol, a fresh profile, muted, a real AudioContext + AudioWorklet; python's
 // http.server; the browser and the server ended by their PIDs; showDirectoryPicker answered with a folder made in the
 // site's own storage, since the picker can't be clicked headless).
+// 0.6.0's panel (docs/UX-V2.md, docs/FM1-CONTROLS.md): modes; power-on is LOOP ENGINE after the intro (~5.5 s).
 //   1. the cart opened as a file (Your firmware): it boots on the rfm1 engine as a Fantasy CFW, the badge shows
-//   2. the folder prompt, answered with a folder holding audio/ (the E1 demo loops): the first file loads on T1 (the
-//      screen shows its name: read from the LCD's pixels with the cart's own 3x5 font, src/ui/ec_gfx.c)
-//   3. PLAY (the page's panel API, FM1Site.panel): sound (peak + RMS on an AnalyserNode after the worklet)
-//   4. steps on the lower keys, T2 + FILE (SAVE) + SELECT + SAVE loads the second file on T2, a knob turned
+//   2. the folder prompt, answered with a folder holding audio/ (the E1 demo loops): the first file loads on T1 (FILE
+//      > EDITOR (B4) shows the selected track's sample: read from the LCD's pixels with the cart's own 3x5 font,
+//      src/ui/ec_gfx.c); the intro over, power-on is LOOP ENGINE
+//   3. PLAY (on the press; the page's panel API, FM1Site.panel): sound (peak + RMS on an AnalyserNode after the worklet)
+//   4. TRIG (HOME tapped again) + steps on the white keys; FILE while playing opens the SAMPLER (refused); stopped:
+//      SHIFT + W2 = T2, FILE > BROWSE, SEL to the second file, B10 LOAD (the next free pool slot, T2 points at it:
+//      the EDITOR shows it), steps on T2, a knob turned (LOOP ENGINE's K1), both tracks play
 //   5. the worklet's load reports while it plays (render share, busiest 21 ms, late ms)
-//   7. (E6, a site with ain1: RemoteFM1 fw-catalog c5866b9 on) live input from a fake microphone (Chromium's
-//      --use-file-for-fake-audio-capture: the demo's chord loop): T3 on INPUT says NO INPUT while off and is silent
-//      (stopped); input on (the page's hint): the INPUT track sounds; REC (FREE, 1 BAR) takes the input into T3's
-//      slot, lands and saves (SAVED REC-0001). A site without ain1: these are skipped, said so.
-//   6. the live panel labels (0.3.0: the player's "labels" message): OCT- says LOOP KEYS, SHIFT held: UNDO, MEMORIZE
-//   7. stop (SHIFT + PLAY), the autosave, a reload: the project comes back (T1's file, T2's file) and plays
+//   6. the live panel labels (the player's "labels" message): F1 / F2 COPY / CUT, SHIFT held: UNDO / REDO, the black
+//      keys TAP LATCH MEMO RECALL .. FILL, FILE = SAVE (src/app/ec_panel_leds.c)
+//   7. stop (PLAY), SHIFT + FILE saves, a reload: the project comes back (T1's file, T2's file) and plays
+//   8. (E6, a site with ain1) live input from a fake microphone (Chromium's --use-file-for-fake-audio-capture: the
+//      demo's chord loop): T3 on INPUT (hold B1 = the machine, K1) says NO INPUT while off and is silent (stopped);
+//      input on (the page's hint): the INPUT track sounds; the SAMPLER (FILE, FILE) B2 = 1 BAR, B11 arms (stopped:
+//      at once): the take runs, lands in the next free pool slot (POOL 3/128) and saves (SAVED REC-0001). A site
+//      without ain1: these are skipped, said so.
 // Screenshots + SUMMARY.txt to results/web/.
-//   node host/web_e2e.mjs --site=<RemoteFM1 origin/main export> --rfm1=<elasticat .rfm1> [--out=results/web]
+//   node host/web_e2e.mjs --site=<RemoteFM1 origin/main export (fs1 + ain1)> --rfm1=<elasticat .rfm1> [--out=results/web]
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -114,6 +120,11 @@ const btnDown = (l, d) => js(`(FM1Site.panel.button(${toMatrix(B[l])}, ${d}), tr
 async function tap(l, ms = 120) { await btnDown(l, true); await sleep(ms); await btnDown(l, false); await sleep(200); }
 async function keyTap(k, ms = 120) { await js(`(FM1Site.panel.key(${k}, true, 100), true)`); await sleep(ms); await js(`(FM1Site.panel.key(${k}, false, 0), true)`); await sleep(150); }
 async function turn(e, d) { for (let i = 0; i < Math.abs(d); i++) { await js(`(FM1Site.panel.turn(${e}, ${Math.sign(d)}), true)`); await sleep(60); } await sleep(200); }
+// 0.6.0's names (docs/FM1-CONTROLS.md): white keys W1..W16 (the naturals), black keys B1..B11 (the sharps); FILE is the
+// button printed SAVE, F1 / F2 = OCT- / OCT+, GLO = SHIFT
+const W = (n) => LOWER[n - 1], BK = (n) => UPPER[n - 1];
+const keyDown = (k, d) => js(`(FM1Site.panel.key(${k}, ${d}, ${d ? 100 : 0}), true)`);
+async function shifted(fn) { await btnDown("GLO", true); await sleep(150); await fn(); await btnDown("GLO", false); await sleep(250); }
 
 // text on the LCD: the string drawn with the cart's font at a scale (2: the mockup's grid), one colour, the glyphs'
 // unset pixels not that colour; returns { x, y } or null
@@ -135,19 +146,22 @@ function findText(px, str, sc = 2) {
   }
   return null;
 }
-async function untilText(str, ms, what) {
+async function untilText(str, ms, sc = 2) {
   const t0 = Date.now();
-  while (Date.now() - t0 < ms) { const at = findText(await screen(), str); if (at) return at; await sleep(200); }
+  while (Date.now() - t0 < ms) { const at = findText(await screen(), str, sc); if (at) return at; await sleep(150); }
   return null;
 }
 // a whole Escape press (down + up), as a real key: a lone keyDown that reached the panel would leave OCT- held
-// (Escape = OCT- in the page's key map; 0.3.0: an OCT key held is the PAGE scope, its tap the LOOP KEYS mode)
+// (Escape = OCT- in the page's key map; 0.6.0: OCT- is F1, a tap of it = sticky copy / paste)
 const esc = async () => {
   await cdp("Input.dispatchKeyEvent", { type: "keyDown", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
   await cdp("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
 };
-// the FILE page's top line (y 26 at scale 2; the list starts at y 42): the name of the track's sample
-const fileHeader = async (name) => { const at = await untilText(name, 15000); return at && at.y < 36 ? at : null; };
+// FILE > EDITOR's top line (y 13 on the 120 grid = 26 on the LCD; the waveform below): the selected track's sample
+const fileHeader = async (name, ms = 15000) => { const at = await untilText(name, ms); return at && at.y < 36 ? at : null; };
+// the intro (the logo, ~5.5 s from power-on): any key skips it but still acts, so the test waits it out
+let bootAt = 0;
+const introOver = async () => { const left = bootAt + 6500 - Date.now(); if (left > 0) await sleep(left); };
 const diff = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) n += a[i] !== b[i]; return n; };
 
 const nums = {};
@@ -186,6 +200,7 @@ try {
   const tBoot = Date.now();
   await until(`${running} && FM1Site.current().entry.local`, 60000, "the cart running");
   nums.bootMs = Date.now() - tBoot;
+  bootAt = Date.now();
   const info = await js(`(({ info }) => ({ virtual: info.virtual, needs: info.needs, folders: info.folders, version: info.version, mem: info.memoryBytes }))(FM1Site.current())`);
   ok(info.virtual === true && (info.needs || []).includes("fs1"), `the cart boots on the rfm1 engine as a Fantasy CFW in ${nums.bootMs} ms (${basename(RFM1)}, needs ${info.needs}, folders ${JSON.stringify(info.folders)}, memory ${info.mem} bytes)`);
   await js(WATCH);
@@ -194,67 +209,92 @@ try {
   ok(await js(`!!document.querySelector(".cards.mine .card[data-sha] .fantasy-badge")`), "Your firmware: the card has the Fantasy CFW badge");
   await shot("01_your_firmware_badge");
   // Escape only while the sheet is open (aside.sheet.open: the page's own sheet.isOpen); a closing sheet is still
-  // visible but no longer takes the key, which then reaches the panel as OCT- (0.3.0: a tap = the LOOP KEYS mode)
+  // visible but no longer takes the key, which then reaches the panel as OCT- (0.6.0: F1, a tap = sticky copy)
   for (let i = 0; i < 3 && await js(`!!document.querySelector("aside.sheet.open")`); i++) { await esc(); await sleep(400); }
 
-  // 2. the prompt, the folder, the first file on T1
+  // 2. the prompt, the folder, the first file on T1; the intro over: LOOP ENGINE
   await until(`!document.querySelector(".folder-ask").hidden`, 8000, "the folder prompt");
   const ask = await js(`document.querySelector(".folder-ask").innerText.replace(/\\s+/g, " ")`);
-  await sleep(1500);
-  const noFolder = !!findText(await screen(), "NO FOLDER") || !!findText(await screen(), "SCANNING");
-  ok(/Pick your RemoteFM1 folder/.test(ask), `no folder yet: the prompt "${ask}"${noFolder ? ", the screen says NO FOLDER" : ""}`);
+  ok(/Pick your RemoteFM1 folder/.test(ask), `no folder yet: the prompt "${ask}"`);
   await shot("02_folder_prompt");
   await js(`(document.querySelector(".folder-ask .pill.primary").click(), true)`);
   await until(`FM1Folder.state === "ready" && FM1Folder.name === "picked"`, 8000, "the folder picked");
-  const t1 = await untilText("A_DRUMS_BPM120.WAV", 15000);
-  ok(!!t1 && await js(`document.querySelector(".folder-ask").hidden`), `the folder picked (${(put / 1e6).toFixed(1)} MB in audio/): the prompt gone, T1 shows A_DRUMS_BPM120.WAV${t1 ? ` (at ${t1.x},${t1.y})` : " (not found on the screen)"}`);
-  await sleep(800);
-  await shot("03_t1_loaded");
+  await introOver();
+  const home = await untilText("LOOP/LOOP", 8000), homeFile = !!findText(await screen(), "A_DRUMS_BPM120.WAV");
+  await shot("03_power_on_loop_engine");
+  await tap("SAVE");                            // FILE (stopped: it opens)
+  await keyTap(BK(4));                          // EDITOR: the selected track's sample
+  const t1 = await fileHeader("A_DRUMS_BPM120.WAV");
+  ok(!!home && !!t1 && await js(`document.querySelector(".folder-ask").hidden`), `the folder picked (${(put / 1e6).toFixed(1)} MB in audio/): the prompt gone; after the intro LOOP ENGINE${home ? "" : " (no LOOP/LOOP header)"}${homeFile ? " with A_DRUMS_BPM120.WAV" : ""}; FILE > EDITOR (B4): T1 plays A_DRUMS_BPM120.WAV${t1 ? ` (at ${t1.x},${t1.y})` : " (not found on the screen)"}`);
+  await shot("04_t1_file_editor");
+  await turn(E.SELECT, -1);                     // back to BROWSE (in the EDITOR the black keys are zoom keys; FILE
+  await tap("HOME");                            // remembers its page); HOME: LOOP ENGINE (the sub-mode it was on)
+  await sleep(1000);                            // (the mode pop-up, 0.8 s)
 
-  // 3. PLAY
+  // 3. PLAY (on the press)
   const quiet = await level(800);
   await tap("PLAY");
   await sleep(3000);
   const l1 = await level(2500);
   nums.play = l1;
-  ok(l1.rms > 0.005 && l1.peak > 0.02, `PLAY: sound (${fmtL(l1)}; before PLAY ${fmtL(quiet)})`);
-  await shot("04_playing");
+  ok(l1.rms > 0.005 && l1.peak > 0.02, `PLAY in LOOP ENGINE: sound (${fmtL(l1)}; before PLAY ${fmtL(quiet)})`);
+  await shot("05_playing");
 
-  // 4. steps on T1, T2 + FILE + the second file, a knob
+  // 4. steps on T1 (TRIG: HOME tapped again; LOOP ENGINE's white keys play the loop), FILE refused while playing,
+  //    T2 + FILE + LOAD, steps on T2, a knob
+  await tap("HOME");                            // LOOP ENGINE -> TRIG
+  const trig = await untilText("TRIG/", 3000);
+  await sleep(1000);
   const leds0 = await js(`Array.from(FM1Site.leds().levels)`);
-  await tap("SEQ");
-  for (const i of [2, 6, 10, 14]) await keyTap(LOWER[i]);
+  for (const n of [3, 7, 11, 15]) await keyTap(W(n));
   await sleep(400);
   const leds1 = await js(`Array.from(FM1Site.leds().levels)`);
-  ok(diff(leds0, leds1) > 0 && !!findText(await screen(), "TRIG"), `steps 3, 7, 11, 15 on T1 (TRIG page; ${diff(leds0, leds1)} LED levels changed)`);
-  await shot("05_t1_steps");
-  await keyTap(UPPER[1]);                       // T2
-  await tap("SAVE");                            // FILE
-  const fp = await untilText("FILE/", 3000);
-  await turn(E.SELECT, 1);                      // the cursor to the second file
-  await sleep(300);
-  await shot("06_file_browser_t2");
-  await tap("SAVE");                            // load it into T2's slot
-  const t2 = await fileHeader("B_BASS_BPM120.WAV");
+  ok(!!trig && diff(leds0, leds1) > 0, `HOME again = TRIG${trig ? "" : " (not on the screen)"}; steps W3, W7, W11, W15 on T1 (${diff(leds0, leds1)} LED levels changed)`);
+  await shot("06_t1_steps");
+  await tap("SAVE");                            // FILE while playing: the SAMPLER instead
+  const smp = await untilText("SAMPLER", 3000);
+  const noBrowse = !findText(await screen(), "FILE/BROWSE");
+  ok(!!smp && noBrowse, `FILE while playing: refused, the SAMPLER opens instead${smp ? "" : " (no SAMPLER on the screen)"}${noBrowse ? "" : " (the browser opened)"}`);
+  await shot("07_file_while_playing_sampler");
+  await tap("PLAY");                            // stop (on the press)
   await sleep(500);
-  ok(!!fp && !!t2 && !!findText(await screen(), "T2"), `T2: FILE (SAVE), SELECT +1, SAVE: B_BASS_BPM120.WAV loaded${fp ? "" : " (no FILE/ header)"}${t2 ? "" : " (not on the screen)"}`);
-  await shot("07_t2_loaded");
-  await tap("SEL");                             // SRC
-  for (const i of [0, 4, 8, 12]) await keyTap(LOWER[i]);
+  await shifted(() => keyTap(W(2)));            // SHIFT + W2 = T2
+  await tap("SAVE");                            // SAMPLER -> FILE (stopped: it opens)
+  const fp = await untilText("FILE/BROWSE", 3000);
+  await turn(E.SELECT, -8);                     // the cursor to the top (it clamps) ..
+  await turn(E.SELECT, 1);                      // .. then the second file
   await sleep(300);
+  await shot("08_file_browser_t2");
+  await keyTap(BK(10));                         // LOAD: the next free pool slot, T2 points at it
+  await sleep(1500);
+  const pool = !!(await untilText("POOL 2/128", 8000));
+  await keyTap(BK(4));                          // EDITOR: T2's sample
+  const t2 = await fileHeader("B_BASS_BPM120.WAV");
+  await sleep(300);
+  ok(!!fp && !!t2 && pool, `stopped; SHIFT + W2 = T2, FILE > BROWSE, SEL to the second file, B10 LOAD: POOL 2/128${pool ? "" : " (not on the screen)"}, the EDITOR shows B_BASS_BPM120.WAV on T2${fp ? "" : " (no FILE/BROWSE header)"}${t2 ? "" : " (not on the screen)"}`);
+  await shot("09_t2_loaded");
+  await turn(E.SELECT, -1);                     // FILE back on BROWSE
+  await tap("HOME");                            // TRIG (HOME's sub-mode it was on)
+  await sleep(1000);
+  for (const n of [1, 5, 9, 13]) await keyTap(W(n));
+  await tap("HOME"); await tap("HOME");         // TRIG -> KEYBOARD -> LOOP ENGINE
+  const le = await untilText("LOOP/", 3000);
+  await sleep(1000);                            // (the pop-up)
   const before = await screen();
-  await turn(E.K1, 6);
+  await turn(E.K1, 6);                          // PITCH +6
   await sleep(300);
   const after = await screen();
-  ok(diff(before, after) > 20, `steps 1, 5, 9, 13 on T2; KNOB1 +6 on SRC: the screen changed (${diff(before, after)} pixels)`);
-  await shot("08_t2_steps_knob");
+  ok(!!le && diff(before, after) > 20, `steps W1, W5, W9, W13 on T2 (TRIG); HOME x2 = LOOP ENGINE, K1 +6: the screen changed (${diff(before, after)} pixels)`);
+  await shot("10_t2_steps_knob");
+  await tap("PLAY");
   await sleep(4000);
   const l2 = await level(3500);
   nums.play2 = l2;
   ok(l2.rms > 0.005, `T1 + T2 playing: sound (${fmtL(l2)})`);
-  await shot("09_two_tracks_playing");
+  await shot("11_two_tracks_playing");
 
   // 5. load while playing
+  await sleep(4500);
   const ld = await loads(8000);
   const mx = (k) => Math.max(0, ...ld.map((x) => x[k] || 0));
   nums.load = { n: ld.length, load: mx("load"), peak: mx("peak"), late: ld.reduce((s, x) => s + (x.lateMs || 0), 0), p99: mx("p99Ms"), max: mx("maxMs") };
@@ -263,77 +303,94 @@ try {
 
   // 6. the live labels: the slots are FIZZ's 49 (8 + the button's FM1P_B_* index; 38 + the black key)
   const LB = (i) => js(`(window.__w.labels || [])[${i}] ?? null`);
+  const LBS = async () => ({ f1: await LB(8 + B["OCT-"]), f2: await LB(8 + B["OCT+"]), glo: await LB(8 + B.GLO), home: await LB(8 + B.HOME),
+    file: await LB(8 + B.SAVE), play: await LB(8 + B.PLAY), b: await Promise.all([0, 1, 2, 3, 4, 10].map((i) => LB(38 + i))) });
   await until(`window.__w.labels`, 5000, "a labels message");
-  const offDn = await LB(8 + 12), offT1 = await LB(38), offGlo = await LB(8 + 5);
-  await btnDown("GLO", true); await sleep(400);
-  const onDn = await LB(8 + 12), onT1 = await LB(38), onUp = await LB(8 + 13);
-  await shot("10_shift_map");
+  const off = await LBS();
+  await btnDown("GLO", true); await sleep(600);  // held past a tap (a quick tap would be sticky SHIFT)
+  const on = await LBS();
+  await shot("12_shift_map");
   await btnDown("GLO", false); await sleep(400);
-  const backDn = await LB(8 + 12);
-  ok(offDn === "LOOP KEYS" && offGlo === "SHIFT" && offT1 === "T1" && onDn === "UNDO" && onUp === "REDO" && onT1 === "MEMORIZE" && backDn === offDn,
-    `live labels: OCT- "${offDn}", GLO "${offGlo}", T1 "${offT1}"; SHIFT held: OCT- "${onDn}", OCT+ "${onUp}", T1 "${onT1}"; released: OCT- "${backDn}" (${await js("window.__w.nlabels")} labels messages)`);
+  const back = await LBS();
+  const q = (x) => JSON.stringify(x);
+  ok(off.f1 === "COPY" && off.f2 === "CUT" && off.glo === "SHIFT" && off.home === "LOOP" && off.file === "FILE" && off.play === "STOP"
+    && on.f1 === "UNDO" && on.f2 === "REDO" && on.file === "SAVE" && on.home === "SETTINGS"
+    && q(on.b) === q(["TAP", "LATCH", "MEMO", "RECALL", "", "FILL"]) && back.f1 === off.f1 && back.f2 === off.f2 && q(back.b) === q(off.b),
+    `live labels: F1 "${off.f1}", F2 "${off.f2}", GLO "${off.glo}", HOME "${off.home}", FILE "${off.file}", PLAY "${off.play}", B1-B5/B11 ${q(off.b)}; SHIFT held: F1 "${on.f1}", F2 "${on.f2}", FILE "${on.file}", HOME "${on.home}", B1-B5/B11 ${q(on.b)}; released: F1 "${back.f1}", B ${q(back.b)} (${await js("window.__w.nlabels")} labels messages)`);
 
-  // 7. stop (SHIFT + PLAY), the autosave (the cart: stopped + 2 s quiet; the page: the flash read 1.5 s later), a reload
-  await btnDown("GLO", true); await sleep(80); await tap("PLAY"); await btnDown("GLO", false);
-  await sleep(7000);
-  await shot("11_stopped_saved");
+  // 7. stop (PLAY), SHIFT + FILE saves, a reload
+  await tap("PLAY");
+  await sleep(800);
+  await shifted(() => tap("SAVE"));
+  const saved0 = await untilText("SAVED", 4000);
+  await sleep(4000);
+  ok(!!saved0, `stopped; SHIFT + FILE: the project saved${saved0 ? " (SAVED)" : " (no SAVED on the screen)"}`);
+  await shot("13_stopped_saved");
   await js("(window.__before = true)"); await cdp("Page.reload", {});
   await until(`!window.__before && window.FM1Folder && window.FM1Rec && ${running}`, 60000, "the cart after the reload");
+  bootAt = Date.now();
   await js("FM1Folder.ready");
   const fst = await js(`({ state: FM1Folder.state, name: FM1Folder.name })`);
   if (fst.state === "ask") { await js(`(document.querySelector(".folder-ask .pill.primary").click(), true)`); await sleep(500); }
   await js(WATCH);
-  await keyTap(UPPER[1]);                       // T2
-  await tap("SAVE");                            // FILE (from SRC, where a boot starts: one tap)
+  await introOver();
+  const home2 = await untilText("LOOP/LOOP", 8000);
+  await shifted(() => keyTap(W(2)));            // T2
+  await tap("SAVE");                            // FILE
+  await keyTap(BK(4));                          // EDITOR
   const r2 = await fileHeader("B_BASS_BPM120.WAV");
-  await shot("12_reloaded_t2_file");
-  await keyTap(UPPER[0]);                       // T1, FILE stays
+  await shot("14_reloaded_t2_file");
+  await shifted(() => keyTap(W(1)));            // T1, the EDITOR stays
   const r1 = await fileHeader("A_DRUMS_BPM120.WAV");
-  await shot("13_reloaded_t1_file");
-  await tap("SEQ");
-  ok(!!r1 && !!r2, `after a reload (folder ${fst.name}, ${fst.state}): the project is back, T2 B_BASS_BPM120.WAV ${r2 ? "ok" : "missing"}, T1 A_DRUMS_BPM120.WAV ${r1 ? "ok" : "missing"}`);
+  await shot("15_reloaded_t1_file");
+  await turn(E.SELECT, -1);                     // FILE back on BROWSE
+  await tap("HOME");                            // LOOP ENGINE
+  await sleep(1000);
+  ok(!!home2 && !!r1 && !!r2, `after a reload (folder ${fst.name}, ${fst.state}): LOOP ENGINE${home2 ? "" : " (not on the screen)"}; the project is back, T2 B_BASS_BPM120.WAV ${r2 ? "ok" : "missing"}, T1 A_DRUMS_BPM120.WAV ${r1 ? "ok" : "missing"}`);
   await tap("PLAY");
   await sleep(3000);
   const l3 = await level(2500);
   nums.play3 = l3;
   ok(l3.rms > 0.005 && l3.peak > 0.02, `after the reload PLAY plays (${fmtL(l3)})`);
-  await shot("14_reloaded_playing");
+  await shot("16_reloaded_playing");
 
-  // 7. E6: live input (only on a site with ain1)
+  // 8. E6: live input (only on a site with ain1)
   if (await js(`!!(window.FM1Ain && FM1Ain.supported) && FM1Site.current().info.ain === "wants"`)) {
-    await btnDown("GLO", true); await sleep(150); await tap("PLAY"); await btnDown("GLO", false); await sleep(400);   // stop
-    await keyTap(UPPER[2]);                     // T3
-    await tap("HOME");
-    await btnDown("GLO", true); await sleep(150); await tap("SEL"); await btnDown("GLO", false); await sleep(300);   // SRC setup
-    await turn(E.K1, 7);                        // MACHINE: LOOP + 7 = INPUT
-    await tap("HOME");
-    await sleep(800);
+    await tap("PLAY"); await sleep(500);        // stop
+    await shifted(() => keyTap(W(3)));          // T3 (LOOP ENGINE stays)
+    await keyDown(BK(1), true); await sleep(600);   // hold B1 = the machine (the quick setting) ..
+    await turn(E.K1, 7);                        // .. K1: LOOP + 7 = INPUT
+    await keyDown(BK(1), false); await sleep(1200);
     const off = await level(600), noIn = !!findText(await screen(), "NO INPUT", 4);
-    ok(noIn && off.peak < 0.002, `T3 on INPUT, input off: NO INPUT, silent (${fmtL(off)})`);
-    await shot("15_input_off");
+    ok(noIn && off.peak < 0.002, `T3: hold B1 + K1 = the INPUT machine; input off: NO INPUT, silent (${fmtL(off)})`);
+    await shot("17_input_off");
     const hint = await js(`(() => { const b = document.querySelector(".ain-ask:not([hidden]) .pill.primary"); if (b) b.click(); return !!b; })()`);
     if (!hint) await js(`FM1Ain.start().then(() => true)`);
     await until(`!!FM1Ain.live`, 10000, "the input live");
     await sleep(2000);
-    const on = await level(1500), told = await js(`FM1Ain.live && FM1Ain.live.told`);
-    nums.input = { ...on, latency: told, hint };
-    ok(on.peak > 0.02 && !findText(await screen(), "NO INPUT", 4), `input on (${hint ? "the hint's button" : "FM1Ain.start"}; latency ${told} frames): the INPUT track sounds (${fmtL(on)})`);
-    await shot("16_input_live");
-    await tap("REC");
-    await turn(E.K2, -2);                       // LEN 1 BAR
-    await turn(E.K4, 2);                        // SYNC FREE: at once
-    await shot("17_rec_popup");
-    await tap("OCT+");                          // arm = start
-    await sleep(1000);
-    const taking = !!findText(await screen(), "REC 0:0");
-    await shot("18_rec_taking");
+    const lon = await level(1500), told = await js(`FM1Ain.live && FM1Ain.live.told`);
+    nums.input = { ...lon, latency: told, hint };
+    ok(lon.peak > 0.02 && !findText(await screen(), "NO INPUT", 4), `input on (${hint ? "the hint's button" : "FM1Ain.start"}; latency ${told} frames): the INPUT track sounds (${fmtL(lon)})`);
+    await shot("18_input_live");
+    await tap("SAVE");                          // FILE (stopped)
+    await tap("SAVE");                          // .. tapped again: the SAMPLER
+    const sOpen = await untilText("SAMPLER", 3000);
+    await keyTap(BK(2));                        // 1 BAR
+    await sleep(400);
+    await shot("19_sampler");
+    await keyTap(BK(11));                       // arm: stopped, it records at once
+    const taking = await untilText("BAR 1", 3000, 4);     // "REC  BAR 1": the take running
+    await sleep(300);
+    await shot("20_sampler_taking");
     const saved = await untilText("SAVED", 10000);
     await sleep(300);
-    ok(taking && !!saved, `REC (IN, FREE, 1 BAR): the take ran${taking ? "" : " (no REC 0:0x on the screen)"}, landed in T3's slot and was saved${saved ? " (SAVED REC-0001..)" : " (no SAVED)"}`);
-    await shot("19_rec_saved");
+    await shot("21_sampler_saved");
+    await tap("SAVE");                          // the SAMPLER -> FILE: the pool meter
+    const pool3 = await untilText("POOL 3/128", 5000);
+    await shot("22_pool_with_take");
+    ok(!!sOpen && !!taking && !!saved && !!pool3, `the SAMPLER (FILE, FILE): B2 1 BAR, B11 arms: the take ran${taking ? " (REC BAR 1)" : " (no REC BAR 1 on the screen)"}, saved${saved ? " (SAVED REC-0001..)" : " (no SAVED)"}, landed in the next free pool slot${pool3 ? " (POOL 3/128)" : " (no POOL 3/128)"}`);
     await tap("HOME");
     await sleep(500);
-    await shot("20_src_take");
   } else
     log("  (this site has no ain1: the live input checks skipped)");
 

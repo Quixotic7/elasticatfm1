@@ -166,6 +166,8 @@ void ec_pn_enter(int mode)
         ec_sampler_enter(0);
     if (was == EC_CAT_FILE && mode != EC_CAT_FILE)
         ec_file_leave();                           /* the preview stops */
+    if (mode == EC_CAT_FILE && was != EC_CAT_FILE)
+        ec_liverec_stop();                         /* (no live REC inside FILE: a CAPTURE waiting ends) */
     if (mode >= EC_NCAT)
         A->scr = mode;
     else {

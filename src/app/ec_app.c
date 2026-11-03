@@ -1256,6 +1256,11 @@ void ec_app_ui_info(char *buf, uint32_t n)
                      ec_app_mode(), A->scr, A->pn.pop ? A->pn.pop - 1 : -1, A->pn.shift_sticky ? 2 : A->pn.shift_held,
                      A->pn.f_held, A->pn.f_sticky, A->pn.clip_state, A->pn.target, A->pn.oct, A->pn.bank,
                      A->pn.zoom_half, A->pn.cat, A->pn.as_open, ec_gfx_theme(), A->pn.intro, A->step_page + 1);
+        l = (uint32_t)strlen(buf);   /* 0.6.0 part 2: live REC, FILE */
+        if (l < n)
+            snprintf(buf + l, n - l, " lrec:%d lwait:%d lwrites:%d fdir:%s pv:%d/%d edzoom:%d pool:%d",
+                     A->pn.lr_on, A->pn.lr_wait || A->pn.lr_ci, A->pn.lr_writes, A->pn.fdir, A->pn.pv_state,
+                     A->pn.pv_play, 1 << A->pn.ed_zoom, ec_file_slots_used());
     }
 }
 

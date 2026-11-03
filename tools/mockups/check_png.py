@@ -5,7 +5,19 @@ colours, at most 16).
 
   python3 check_png.py <dir>              every mockup PNG in <dir> (palette.json there); exit 1 on any failure
   python3 check_png.py --survey <root>    the firmware's own screenshots under <root> (240 or 480 square): which break
-                                          the grid rule, and how many blocks (a report; exit 0)
+                                          the grid rule, and how many blocks; and (0.6.1) their hairlines (a report;
+                                          exit 0)
+  python3 check_png.py --survey --strict <root>   the same, exit 1 if any screenshot breaks the grid rule or has a
+                                          hairline that isn't a cell rule
+
+The hairline survey (0.6.1, the owner's 1-unit depth bar, docs/UX-V2.md section 10): the grid rule passes anything
+drawn on the 120 grid, so a bar 1 grid unit thick passes it. On the 120x120 grid (one pixel per 2x2 / 4x4 block), a
+hairline is a straight run of one colour exactly 1 unit thick (both neighbours across it another colour) and at least
+HAIR_MIN (6) units long, in a colour that is neither the image's ground (its commonest colour) nor the local ground
+(the commonest within 7 units, e.g. LOCK in a filled cell): 1-unit gaps between things are not counted. Text never
+makes one: the glyphs are 3x5 units at scale 1 and 2 units thick at scale 2. The
+param cells' dividing rules (row 76 and row 98 across, column 60 down from 76: 1 unit by design, UX-V2 section 7) are
+listed apart as "rules"; everything else (bars, ticks, outlines, gaps) is reported with its colour and place.
 """
 import json
 import os
@@ -128,7 +140,55 @@ def check_dir(d):
     return 1 if fails else 0
 
 
-def survey(root):
+HAIR_MIN = 6
+
+
+def grid_of(rows, w):
+    n = w // 120
+    return [[rows[y * n][x * n] for x in range(120)] for y in range(120)]
+
+
+def local_ground(g, x, y, r=7):
+    """the commonest colour in the (2r+1)^2 window round (x, y): the ground there (BG, or LOCK in a filled cell)"""
+    from collections import Counter
+    return Counter(g[j][i] for j in range(max(0, y - r), min(120, y + r + 1))
+                   for i in range(max(0, x - r), min(120, x + r + 1))).most_common(1)[0][0]
+
+
+def hairlines(g):
+    """-> [(dir, x, y, length, colour)]: 1-unit-thick straight runs of one colour other than the local ground (the
+    commonest colour round the run's middle: a 1-unit gap between two things is not a detail drawn), >= HAIR_MIN long
+    nor the image's ground (its commonest colour), ('-' across at row y from x, '|' down at column x from y)"""
+    from collections import Counter
+    ground = Counter(c for r in g for c in r).most_common(1)[0][0]
+    out = []
+    for y in range(120):
+        x = 0
+        while x < 120:
+            c, x0 = g[y][x], x
+            while x < 120 and g[y][x] == c and (y == 0 or g[y - 1][x] != c) and (y == 119 or g[y + 1][x] != c):
+                x += 1
+            if x - x0 >= HAIR_MIN and c != ground and c != local_ground(g, (x0 + x) // 2, y):
+                out.append(("-", x0, y, x - x0, c))
+            x = max(x, x0 + 1)
+    for x in range(120):
+        y = 0
+        while y < 120:
+            c, y0 = g[y][x], y
+            while y < 120 and g[y][x] == c and (x == 0 or g[y][x - 1] != c) and (x == 119 or g[y][x + 1] != c):
+                y += 1
+            if y - y0 >= HAIR_MIN and c != ground and c != local_ground(g, x, (y0 + y) // 2):
+                out.append(("|", x, y0, y - y0, c))
+            y = max(y, y0 + 1)
+    return out
+
+
+def is_rule(h):
+    d, x, y, n, _ = h
+    return (d == "-" and y in (76, 98)) or (d == "|" and x == 60 and y >= 76)
+
+
+def survey(root, strict=False):
     hits = []
     for dp, _, fs in os.walk(root):
         if "ux-v2-mockups" in dp:
@@ -144,16 +204,26 @@ def survey(root):
             if w != h or w not in (240, 480):
                 continue
             b = bad_blocks(rows, 0, 0, w, h, w // 120)
-            hits.append((b, os.path.relpath(p, root)))
-    for b, p in sorted(hits, key=lambda t: t[1]):
-        print(f"{'BREAKS' if b else 'ok    '} {p}" + (f": {b} of 14400 grid pixels not uniform" if b else ""))
-    print(f"{sum(1 for b, _ in hits if b)} of {len(hits)} firmware screenshots break the 120x120 grid rule")
-    return 0
+            hs = hairlines(grid_of(rows, w))
+            hits.append((b, os.path.relpath(p, root), [x for x in hs if not is_rule(x)], [x for x in hs if is_rule(x)]))
+    for b, p, hs, rules in sorted(hits, key=lambda t: t[1]):
+        print(f"{'BREAKS' if b else 'ok    '} {p}" + (f": {b} of 14400 grid pixels not uniform" if b else "") +
+              f"; {len(hs)} hairlines, {len(rules)} rules")
+        for d, x, y, n, c in hs[:6]:
+            print(f"         hairline {d} at ({x}, {y}) {n} units, #{c[0]:02X}{c[1]:02X}{c[2]:02X}")
+        if len(hs) > 6:
+            print(f"         ... {len(hs) - 6} more")
+    nb, nh = sum(1 for t in hits if t[0]), sum(1 for t in hits if t[2])
+    print(f"{nb} of {len(hits)} firmware screenshots break the 120x120 grid rule; {nh} have hairlines (1-unit-thick "
+          f"runs >= {HAIR_MIN} units, not the cell rules): {sum(len(t[2]) for t in hits)} in all")
+    return 1 if strict and (nb or nh) else 0
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--survey":
         sys.exit(survey(sys.argv[2]))
+    if len(sys.argv) == 4 and sys.argv[1] == "--survey" and sys.argv[2] == "--strict":
+        sys.exit(survey(sys.argv[3], True))
     if len(sys.argv) != 2:
         print(__doc__)
         sys.exit(2)

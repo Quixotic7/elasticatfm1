@@ -182,3 +182,8 @@ add_executable(ec_test_liverec host/test_liverec.c)
 target_link_libraries(ec_test_liverec PRIVATE elasticat)
 target_compile_options(ec_test_liverec PRIVATE -Wall -Wextra)
 add_test(NAME liverec COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/liverec_folder >/dev/null && $<TARGET_FILE:ec_test_liverec> ${CMAKE_BINARY_DIR}/liverec_folder")
+# 0.6.1 gfx: the param cells' three step-lock states and the held source's SRC depth bars, through the panel
+add_executable(ec_test_cells host/test_cells.c)
+target_link_libraries(ec_test_cells PRIVATE elasticat)
+target_compile_options(ec_test_cells PRIVATE -Wall -Wextra)
+add_test(NAME cells COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/cells_folder >/dev/null && $<TARGET_FILE:ec_test_cells> ${CMAKE_BINARY_DIR}/cells_folder")

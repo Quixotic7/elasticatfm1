@@ -217,7 +217,8 @@ void ec_fx_sends_items(void *out);
 void ec_fx_setup_items(void *out);             /* (ec_page_t *) FX SETUP: the five slots' types, SEND MODE */
 void ec_fx_type_step(int slot, int det);       /* a slot's effect type one on (INSERT 2: its params reset) */             /* (ec_page_t *) SENDS's cells */
 void ec_fx_send_mode(int det);                 /* SENDS: ALGO, the send mode PRE / POST */
-void ec_fx_swap(int key);                      /* SENDS: B1 / B2 swap the inserts, B3 / B4 the sends */
+void ec_fx_swap_do(int which);                /* SENDS: swap the inserts (0) / the sends (1), no undo */
+void ec_fx_swap_undo(int which);              /* SENDS: record that swap's undo */
 int ec_fx_cur_key(void);                       /* the key of the place shown (1..5, 11) */
 int ec_src_ins_pages(void);                   /* the selected slot's knob pages (P1..): its params in threes, >= 1 */
 int ec_src_ins_param(int slot, int i);        /* the id knob K(i%3+1) of page i/3 edits (INS 2: EC_P_INS2_Pn), -1 */

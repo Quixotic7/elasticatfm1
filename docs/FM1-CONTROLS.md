@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.2)
+# Elasticat on the FM-1: controls (0.6.4)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -262,10 +262,13 @@ patterns (PATTERN LAUNCH's white keys).
   tap in accent where the send mode puts it, down to S1 and S2's effects and on to MST) and the four levels; its knobs
   are **K1 INSERT 1's MIX, K2 INSERT 2's MIX, K3 SEND 1, K4 SEND 2**, and **ALGO is the send mode PRE / POST**
   (p-lockable, undoable). PRE taps after the filter and the track's level and pan (the AMP block: applied at the
-  filter's output), before the inserts; POST taps after both inserts. **Holding B1 or B2 on SENDS swaps INSERT 1 and
-  INSERT 2** (machines, params, MIX, the step and slice locks and matrix routes on them, every pattern); **B3 or B4
-  swaps SEND 1 and SEND 2** (both buses' effects and settings, every track's send levels and their locks, the scenes:
-  the sound stays the same). The header names the swap while held; it happens at 400 ms; one UNDO puts it back.
+  filter's output), before the inserts; POST taps after both inserts. The routing boxes say only **I 1, I 2, S 1,
+  S 2**. **Moving an effect: hold its key on SENDS** (B1 I 1, B2 I 2, B3 S 1, B4 S 2): after 400 ms its box is
+  **raised** (lifted, bright, a shadow under it) and the header says MOVE and the effect's name; nothing has moved
+  yet. **Turn K1 while holding** to move it right or left: moving an insert swaps INSERT 1 and INSERT 2 (machines,
+  params, MIX, the step and slice locks and matrix routes on them, every pattern); moving a send swaps SEND 1 and
+  SEND 2 (both buses' effects and settings, every track's send levels and their locks, the scenes: the sound stays
+  the same). Let go to put it down: one UNDO puts the whole move back. Let go without turning K1: nothing changes.
   **MASTER** is the master bus's effect (its knob pages) and the **load meter** (the cart's counted load: 100 % =
   the hosts' 2x real-time budget). The header shows the place (FX/INSERT 2, P2). Targeting S1 / S2 / MST with the
   track keys shows that row / MASTER in FX.
@@ -906,8 +909,8 @@ The page tables above give each mode's pages and knobs. This part gives the keys
 
 | Key | Does |
 |---|---|
-| B1 / B2 | **INSERT 1 / INSERT 2** (EFFECTS, that row); tapped again: its knob pages. Hold: its type menu (SENDS: swap the inserts) |
-| B3 / B4 | **SEND 1 / SEND 2** (EFFECTS, that row: the target becomes the bus); tapped again: its knob pages. Hold: its type menu (SENDS: swap the sends) |
+| B1 / B2 | **INSERT 1 / INSERT 2** (EFFECTS, that row); tapped again: its knob pages. Hold: its type menu (SENDS: raise its box; K1 moves it) |
+| B3 / B4 | **SEND 1 / SEND 2** (EFFECTS, that row: the target becomes the bus); tapped again: its knob pages. Hold: its type menu (SENDS: raise its box; K1 moves it) |
 | B5 | **SENDS**, then **MASTER** P1 .. (the master effect, the load meter), then SENDS again. Hold on MASTER: its type menu |
 | ALGO | on SENDS: the send mode PRE / POST |
 | B6-B10 | the sources |

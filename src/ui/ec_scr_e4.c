@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "ec_gfx.h"
+#include "ec_holdmenu.h"
 #include "ec_mtx.h"
 #include "ec_scr_e4.h"
 
@@ -126,13 +127,23 @@ static void master_page(const ec_app_t *a)
     T(EC_C_L15, b, 117, 41, EC_AL_RIGHT);
 }
 
-/* SENDS (§10): the track's routing, FILT -> INSERT 1 -> INSERT 2 -> AMP -> MIX, the send tap (ACC) where the send
- * mode puts it (PRE: after the filter; POST: after AMP), down to S1 / S2's effects and on to MST; then K1-K4's
- * levels: I1 / I2 (the inserts' MIX), S1 / S2 (the sends), each with its effect's name */
+/* SENDS (§10): the track's routing, FILT -> I 1 -> I 2 -> AMP -> MIX, the send tap (ACC) where the send mode puts it
+ * (PRE: after the filter; POST: after AMP), down to S 1 / S 2 and on to MST; then K1-K4's levels: I1 / I2 (the
+ * inserts' MIX), S1 / S2 (the sends), each with its effect's name. 0.6.4: the boxes say only I 1, I 2, S 1, S 2; a
+ * held B1-B4 raises its box (lifted 2 units, bright, a shadow under it) and K1 moves it left / right */
 static void block(int x, int w, int y, int c, const char *s)
 {
     R(c, x, y, w, 10);
     T(EC_C_BG, s, x + w / 2, y + 3, EC_AL_CENTER);
+}
+static void slot_block(int x, int w, int y, int c, const char *s, int raised)
+{
+    if (!raised) {
+        block(x, w, y, c, s);
+        return;
+    }
+    R(EC_C_L3, x + 2, y, w, 10);                   /* the shadow where it sat */
+    block(x, w, y - 2, EC_C_L15, s);
 }
 static const char *mach_name(const ec_app_t *a, int slot)
 {
@@ -141,30 +152,31 @@ static const char *mach_name(const ec_app_t *a, int slot)
 }
 static void sends_page(const ec_app_t *a)
 {
-    static const char *const N[4] = {"I1", "I2", "S1", "S2"};
-    const int post = opt(a, EC_P_SEND_TAP) == 2, y = 12, yb = 32;
+    static const char *const N[4] = {"I1", "I2", "S1", "S2"}, *const BOX[4] = {"I 1", "I 2", "S 1", "S 2"};
+    const int post = opt(a, EC_P_SEND_TAP) == 2, y = 12, yb = 32, up = ec_hm_raised();
     const int tx = post ? 98 : 18, x0 = post ? 38 : tx, x1 = post ? tx + 2 : 80;
     char b[16];
     int i;
     /* the chain, left to right; MIX down to MST */
     block(2, 16, y, EC_C_L5, "FILT");
-    block(22, 26, y, EC_C_L12, mach_name(a, 0));
-    block(52, 26, y, EC_C_L12, mach_name(a, 1));
     block(82, 16, y, EC_C_L5, "AMP");
     block(102, 16, y, EC_C_L5, "MIX");
     for (i = 0; i < 4; i++)
         R(EC_C_L8, 18 + i * 30 + (i == 3 ? -10 : 0), y + 4, 4, 2);
     R(EC_C_L8, 108, y + 10, 2, yb - (y + 10));
-    /* the sends: S1 and S2's effects, on to MST */
-    block(22, 34, yb, EC_C_L8, mach_name(a, 2));
-    block(62, 34, yb, EC_C_L8, mach_name(a, 3));
+    /* the sends on to MST */
     block(102, 16, yb, EC_C_L5, "MST");
     R(EC_C_L8, 56, yb + 4, 6, 2), R(EC_C_L8, 96, yb + 4, 6, 2);
-    /* the tap (the send mode): down from the chain, along, down into S1 and S2 */
+    /* the tap (the send mode): down from the chain, along, down into S 1 and S 2 */
     R(EC_C_ACC, tx, y + 4, 4, 2);
     R(EC_C_ACC, tx + 1 - (tx & 1), y + 6, 2, 8);
     R(EC_C_ACC, x0 < x1 ? x0 : x1, y + 12, (x0 < x1 ? x1 - x0 : x0 - x1) + 2, 2);
     R(EC_C_ACC, 38, y + 12, 2, yb - (y + 12)), R(EC_C_ACC, 78, y + 12, 2, yb - (y + 12));
+    /* the four slots last, so a raised one sits on top */
+    slot_block(22, 26, y, EC_C_L12, BOX[0], up == 0);
+    slot_block(52, 26, y, EC_C_L12, BOX[1], up == 1);
+    slot_block(22, 34, yb, EC_C_L8, BOX[2], up == 2);
+    slot_block(62, 34, yb, EC_C_L8, BOX[3], up == 3);
     T(EC_C_L12, post ? "POST" : "PRE", 2, yb + 3, EC_AL_LEFT);
     /* K1-K4's levels, each with its effect's name */
     for (i = 0; i < 4; i++) {

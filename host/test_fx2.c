@@ -253,8 +253,9 @@ static void test_send_mode(void)
     CHECK(EC_PARAMS[EC_P_SEND_TAP].flags & EC_PF_LOCKABLE, "send_tap is p-lockable");
 }
 
-/* SENDS: a held B1 / B2 swaps the inserts (machines, params, locks, routes; every pattern), B3 / B4 the sends (the
- * buses and every track's send levels and locks: the sound unchanged); a tap still goes to the row; one undo */
+/* SENDS (0.6.4): a held B1-B4 raises its box; K1 moves it left / right, each step swapping the inserts (machines,
+ * params, locks, routes; every pattern) or the sends (the buses and every track's send levels and locks: the sound
+ * unchanged); letting go lowers it, one undo for the move; a tap still goes to the row */
 static void test_swaps(void)
 {
     float *v, keep_ins[EC_NP];
@@ -282,10 +283,21 @@ static void test_swaps(void)
     CHECK(ec_fx_on_sends(), "SENDS");
     hold_b(1);
     run(250);
-    CHECK(!strcmp(hdr_text(), "SWAP INSERTS") && v[EC_P_FX_MACHINE] == EC_FX_REVERB, "B1 held 250 ms: the header (%s), no swap yet",
-          hdr_text());
+    CHECK(!strcmp(hdr_text(), "MOVE INSERT") && ec_hm_raised() < 0 && v[EC_P_FX_MACHINE] == EC_FX_REVERB,
+          "B1 held 250 ms: the header (%s), not raised yet", hdr_text());
     run(250);
+    CHECK(ec_hm_raised() == 0 && v[EC_P_FX_MACHINE] == EC_FX_REVERB && !strcmp(hdr_text(), "MOVE REVERB"),
+          "B1 held 500 ms: I 1 raised (%s), nothing moved", hdr_text());
+    turn(FM1P_E_K1, 1);
+    CHECK(ec_hm_raised() == 1 && v[EC_P_FX_MACHINE] == EC_FX_DELAY && v[EC_P_INS2_MACHINE] == EC_FX_REVERB,
+          "K1 +1: the raised box moves right: REVERB is INSERT 2");
+    turn(FM1P_E_K1, 3);
+    CHECK(ec_hm_raised() == 1 && v[EC_P_INS2_MACHINE] == EC_FX_REVERB, "K1 +3: already on the right, stays");
+    turn(FM1P_E_K1, -1);
+    CHECK(ec_hm_raised() == 0 && v[EC_P_FX_MACHINE] == EC_FX_REVERB, "K1 -1: back left");
+    turn(FM1P_E_K1, 1);
     let_b(1);
+    CHECK(ec_hm_raised() < 0, "let go: lowered");
     k = ec_ins2_index(EC_FX_REVERB, EC_P_REVERB_SIZE);
     CHECK(ec_fx_on_sends() && v[EC_P_FX_MACHINE] == EC_FX_DELAY && v[EC_P_INS2_MACHINE] == EC_FX_REVERB,
           "B1 held 500 ms: INSERT 1 DELAY, INSERT 2 REVERB, still SENDS");
@@ -312,10 +324,15 @@ static void test_swaps(void)
     ec_step_lock_set(step(3), EC_P_SEND2, 5);
     hold_b(4);
     run(500);
+    CHECK(ec_hm_raised() == 3 && p->bus[0][EC_P_FX_MACHINE] == EC_FX_REVERB, "B4 held: S 2 raised, nothing moved");
+    turn(FM1P_E_K1, 1);
+    CHECK(ec_hm_raised() == 3 && p->bus[0][EC_P_FX_MACHINE] == EC_FX_REVERB, "K1 +1: S 2 is already right, stays");
+    turn(FM1P_E_K1, -1);
+    CHECK(ec_hm_raised() == 2, "K1 -1: moves left");
     let_b(4);
     CHECK(p->bus[0][EC_P_FX_MACHINE] == EC_FX_TAPE_ECHO && p->bus[0][EC_P_DELAY_FEEDBACK] == 77 &&
               p->bus[1][EC_P_FX_MACHINE] == EC_FX_REVERB,
-          "B4 held: S1 TAPE ECHO (its settings), S2 REVERB");
+          "S 2 moved left: S1 TAPE ECHO (its settings), S2 REVERB");
     CHECK(p->pat[p->current].tr[2].v[EC_P_SEND1] == 90 && p->pat[p->current].tr[2].v[EC_P_SEND2] == 30 &&
               step(3)->lock_id[1] == EC_P_SEND1,
           "every track's sends swap with them (T3 90 / 30), the lock too: the sound unchanged");
@@ -327,6 +344,12 @@ static void test_swaps(void)
     CHECK(p->bus[0][EC_P_FX_MACHINE] == EC_FX_REVERB && p->pat[p->current].tr[2].v[EC_P_SEND1] == 30 &&
               step(3)->lock_id[1] == EC_P_SEND2,
           "SHIFT + F1: the sends back");
+    hold_b(2);
+    run(500);
+    CHECK(ec_hm_raised() == 1, "B2 held: I 2 raised");
+    let_b(2);
+    CHECK(v[EC_P_FX_MACHINE] == EC_FX_REVERB && v[EC_P_INS2_MACHINE] == EC_FX_DELAY && ec_fx_on_sends(),
+          "let go without K1: nothing moved, still SENDS");
     B(3, 40);                                        /* a tap: the row */
     CHECK(A->bus == 1 && ec_fx_slot() == 2 && p->bus[0][EC_P_FX_MACHINE] == EC_FX_REVERB, "SENDS: B3 tapped: SEND 1, no swap");
     clear_steps(A->track);

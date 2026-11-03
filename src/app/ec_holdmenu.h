@@ -14,7 +14,8 @@
 enum { EC_HM_PARAM,      /* a track param (an option list): id; FX's INS 1 type on a bus targets the bus's record */
        EC_HM_INS2,       /* INS 2's type (EC_P_INS2_MACHINE: picking resets its MIX and P1..P8, one undo) */
        EC_HM_ADVANCE,    /* KEYBOARD's ADVANCE (APP SETTINGS) */
-       EC_HM_SWAP };     /* 0.6.3: FX SENDS: no list; held EC_HOLD_MS it swaps (id 0 the inserts, 1 the sends) */
+       EC_HM_SWAP };     /* FX SENDS (0.6.4): no list; held EC_HOLD_MS the key's box is raised, K1 moves it left / right
+                          * (each step swaps the pair: id 0 the inserts, 1 the sends); letting go = one undo */
 
 /* arm the menu on black key `key` (1..11): kind, the param (EC_HM_PARAM), the header while it shows */
 void ec_hm_arm(int key, int kind, int id, const char *head);
@@ -24,6 +25,7 @@ int ec_hm_up(int key);                    /* the key let go: 1 = it showed (a va
 void ec_hm_cancel(void);                  /* drop it, nothing picked */
 int ec_hm_armed(void);                    /* armed or showing: its key (1..11), 0 none */
 int ec_hm_shown(void);                    /* showing */
+int ec_hm_raised(void);                   /* FX SENDS: the raised box's place (0..3), -1 none */
 const char *ec_hm_head(void);             /* the header text while it shows, NULL otherwise */
 int ec_hm_count(void);                    /* its values */
 int ec_hm_cursor(void);                   /* 0..count-1 */

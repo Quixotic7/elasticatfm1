@@ -271,24 +271,20 @@ void ec_fx_send_mode(int det)
     ec_app_message(iv(ec_app_params(A), EC_P_SEND_TAP) == 2 ? "SEND POST" : "SEND PRE");
 }
 
-/* SENDS: a held B1 / B2 swaps the inserts, B3 / B4 the sends (one undo: the swap again) */
-static void fx_swap(int key)
+/* SENDS (0.6.4): a raised box moved by K1: which 0 swaps the inserts, 1 the sends; the undo (the swap again) is
+ * recorded once, when the key is let go with the box moved */
+void ec_fx_swap_do(int which)
 {
-    if (key <= 2) {
-        ec_undo_fxswap(&A->e5.undo, A->track, A->ms);
-        ec_project_swap_inserts(&A->proj, A->track);
-        ec_app_message("INSERTS SWAPPED");
-    } else {
-        ec_undo_fxswap(&A->e5.undo, -1, A->ms);
+    if (which)
         ec_project_swap_sends(&A->proj);
-        ec_app_message("SENDS SWAPPED");
-    }
+    else
+        ec_project_swap_inserts(&A->proj, A->track);
     ec_seq_touch_all(&A->seq);
     ec_e5_xf_apply(A->proj.e5.sc.pos);
     ec_app_mark_dirty();
 }
 
-void ec_fx_swap(int key) { fx_swap(key); }
+void ec_fx_swap_undo(int which) { ec_undo_fxswap(&A->e5.undo, which ? -1 : A->track, A->ms); }
 
 /* FX's key for the place shown (the lit key): B1..B4 the EFFECTS rows, B5 SENDS / MASTER, else the layout's */
 int ec_fx_cur_key(void)
@@ -451,7 +447,7 @@ void ec_src_down(int key)
      * bus); inside its group the tap (on release, when the hold did nothing) steps through the group */
     if (mode == EC_CAT_FX && key >= 1 && key <= 4 && ec_fx_on_sends()) {   /* 0.6.3: SENDS: a hold swaps */
         swap_key = key;
-        ec_hm_arm(key, EC_HM_SWAP, key <= 2 ? 0 : 1, key <= 2 ? "SWAP INSERTS" : "SWAP SENDS");
+        ec_hm_arm(key, EC_HM_SWAP, key <= 2 ? 0 : 1, key <= 2 ? "MOVE INSERT" : "MOVE SEND");
         A->redraw = 1;
         return;
     }

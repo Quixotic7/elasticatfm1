@@ -432,6 +432,11 @@ upper 4@169000
 png 169700:Fx_sends.png
 turn ALGO@170000:1
 png 170700:Fx_sends_post.png
+# 0.6.4: B1 held = I 1 raised; K1 +1 moves it right (the inserts swap), K1 -1 back before letting go
+upper 0@170750+600
+turn K1@171200:1
+png 171300:Fx_sends_move.png
+turn K1@171330:-1
 turn ALGO@171000:-1
 upper 4@171400
 upper 4@171900+900

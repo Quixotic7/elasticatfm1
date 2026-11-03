@@ -763,3 +763,12 @@ them:
   kit's CAT frames over every algorithm), fx2 (bus K4 MIX on every page, SENDS cells, ALGO send mode and its undo, both
   swaps with undo and a lock and a route following, the FX settings rows), nav (FX's list and keys), ux / v61ux /
   v61list (keys, headers, the settings list), real screens Fx_send1, Fx_sends, Fx_sends_post, Fx_master, Fx_setup.
+
+**SENDS: short boxes, raise and move** (owner, 2026-11-03; replaces "holding a black key on SENDS swaps")
+- The routing boxes say only **I 1, I 2, S 1, S 2** (the effect names stay on the level bars below).
+- Holding B1-B4 on SENDS **raises** that box (lifted 2 units, bright, a shadow where it sat) without moving it; the
+  header says MOVE and the effect's name. **K1, still holding, moves it** left or right; each step swaps the pair
+  (inserts: everything on them; sends: the buses and every track's send levels, the sound unchanged). Letting go puts
+  it down: one undo for the whole move; let go without K1 and nothing changes.
+- Built in 0.6.4 (by hand): ec_holdmenu.c's EC_HM_SWAP (ec_hm_raised), ec_fx_swap_do / ec_fx_swap_undo in
+  ec_srckeys.c, slot_block in ec_scr_e4.c; test_fx2's test_swaps; the real shot Fx_sends_move.

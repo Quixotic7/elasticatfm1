@@ -78,6 +78,20 @@ int ec_app_held_step(const ec_app_t *a)
     return -1;
 }
 
+/* 0.6.1: the lock of param id on the held steps (the first held step that has one): 1 = locked, *x its value */
+int ec_app_held_lock(const ec_app_t *a, int id, float *x)
+{
+    const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
+    int i;
+    for (i = 0; i < EC_NLOWER; i++)
+        if (a->step_held >> i & 1u) {
+            const int s = a->step_page * 16 + i;
+            if (s < EC_MAXSTEPS && ec_step_lock_get(&tr->steps[s], id, x))
+                return 1;
+        }
+    return 0;
+}
+
 static ec_step_t *step_at(int index) { return &ec_project_track(&A->proj, A->track)->steps[index]; }
 
 /* ------------------------------------------------------------------------------------------- items --- */
@@ -144,12 +158,10 @@ float ec_app_item_value(const ec_app_t *a, const ec_item_t *it, int *locked)
     switch (it->kind) {
     case EC_IT_PARAM: {
         const ec_ptrack_t *tr = &p->pat[p->current].tr[a->track];
-        const int hs = ec_app_held_step(a);
         float x;
         if (ec_app_bus_params((ec_app_t *)a, it->id))
             return ec_app_bus_params((ec_app_t *)a, it->id)[it->id];
-        if (hs >= 0 && !a->settings && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE) &&
-            ec_step_lock_get(&tr->steps[hs], it->id, &x)) {
+        if (!a->settings && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE) && ec_app_held_lock(a, it->id, &x)) {
             if (locked)
                 *locked = 1;
             return x;

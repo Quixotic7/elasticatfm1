@@ -311,3 +311,25 @@ lower 14@118800
 png 120200:FileEditor_screen.png
 press SAVE@120600
 press SAVE@121200
+
+# ======== 0.6.1 gfx (docs/UX-V2.md section 10): the param cells' three step-lock states, a held source's depth bars
+# ---- FILTER (SEL: its next page, FILTER ENV): step 3 held + K2 = a HOLD lock: K2's whole box in LOCK with the lock's
+# value (Lock_held); let go: the track's value in a 2-unit LOCK outline (Lock_outline); F1 (sticky) + K2 clears HOLD's
+# locks: plain (Lock_none)
+press SEL@122400
+lower 2@123000+1400
+turn K2@123300:-1
+turn K2@123500:-20
+png 124200:Lock_held.png
+png 125200:Lock_outline.png
+press OCT-@125600
+turn K2@125900:1
+press OCT-@126300
+png 127000:Lock_none.png
+# ---- LFO 1 (B6) held: its depth bars in SRC: routes made on HOLD (+20 detents) and RELEASE (one detent: tiny)
+upper 5@127600+2000
+turn K2@127800:1
+turn K2@128000:20
+turn K3@128200:1
+turn K3@128400:1
+png 129000:Mod_held.png

@@ -129,6 +129,15 @@ static float wave_at(int w, float ph)
     }
 }
 
+/* 0.6.1: the held source key's EC_MS_* (0 none) */
+static int held_src(const ec_app_t *a) { return a->mk.held >= 0 ? ec_mk_src_of_key(a->mk.held) : 0; }
+/* 0.6.1: a depth -100..100 as 2-unit lattice cells 0..half; a non-zero depth at least one */
+static int depth_cells(float d, int half)
+{
+    const int n = (int)(fabsf(d) / 100.0f * (float)half + 0.5f);
+    return n > half ? half : n == 0 && d != 0 ? 1 : n;
+}
+
 /* 0.5.0: the source's routes in the matrix ("> CUT +30%", more: "+2"), dim "> OFF" when it has none, and its live
  * value as a bipolar meter at the right */
 static void routes(const ec_app_t *a, int src, int small)
@@ -209,7 +218,7 @@ static void vel_page(const ec_app_t *a)
         const float v = (k + 1) / 8.0f * d;
         const int x = VX0 + 4 + k * 12, h = (int)(fabsf(v) * hh);
         R(EC_C_L3, x, VT, 8, VB - VT);
-        R(EC_C_L12, x, v >= 0 ? (int)mid - h : (int)mid, 8, h > 0 ? h : 1);
+        R(EC_C_L12, x, v >= 0 ? (int)mid - (h > 2 ? h : 2) : (int)mid, 8, h > 2 ? h : 2);   /* 0.6.1: >= 2 units */
     }
 }
 
@@ -225,7 +234,7 @@ static void macros_page(const ec_app_t *a, int single)
             char b[4];
             R(EC_C_L3, x, 16, 14, VB - 16);
             R(EC_C_L12, x, VB - h, 14, h);
-            R(EC_C_ACC, x - 2, VB - (int)(st.macro[k] * (VB - 16)), 18, 1);
+            R(EC_C_ACC, x - 2, VB - (int)(st.macro[k] * (VB - 16)), 18, 2);
             snprintf(b, sizeof b, "M%d", k + 1);
             T(EC_C_L8, b, x + 7, VB + 2, EC_AL_CENTER);
         }
@@ -237,7 +246,7 @@ static void macros_page(const ec_app_t *a, int single)
         int y = 16, n = 0;
         R(EC_C_L3, 4, 16, 10, VB - 16);
         R(EC_C_L15, 4, VB - (int)(v * (VB - 16)), 10, (int)(v * (VB - 16)));
-        R(EC_C_ACC, 2, VB - (int)(st.macro[single] * (VB - 16)), 14, 1);
+        R(EC_C_ACC, 2, VB - (int)(st.macro[single] * (VB - 16)), 14, 2);
         for (k = 0; k < EC_MTX_SLOTS && n < 6; k++) {
             char nm[16], dp[12];
             float d;
@@ -249,10 +258,13 @@ static void macros_page(const ec_app_t *a, int single)
             ec_param_format(ec_mtx_depth_id(k), d, 3, dp, sizeof dp);
             T(EC_C_L12, nm, 20, y + 1, EC_AL_LEFT);
             T(EC_C_L8, dp, 76, y + 1, EC_AL_RIGHT);
-            R(EC_C_L3, 80, y + 3, 36, 1);
-            w = (int)(fabsf(d) / 100.0f * 18.0f + 0.5f);
-            R(EC_C_L15, d >= 0 ? 98 : 98 - w, y + 2, w > 0 ? w : 1, 3);
-            R(EC_C_L8, 98, y + 1, 1, 5);
+            /* 0.6.1: on a 2-unit lattice (18 cells from x 80, the centre tick cell 9, 8 each side), a tiny depth one cell; the
+             * held source's bars in SRC */
+            R(EC_C_L3, 80, y + 2, 36, 3);
+            w = depth_cells(d, 8);
+            if (w)
+                R(held_src(a) == EC_MS_M1 + single ? EC_C_SRC : EC_C_L15, d >= 0 ? 100 : 98 - 2 * w, y + 2, 2 * w, 3);
+            R(EC_C_L8, 98, y + 1, 2, 5);
             y += 9;
             n++;
         }
@@ -285,11 +297,14 @@ static void matrix_page(const ec_app_t *a)
         T(c, ec_mtx_dst(v, k) >= 0 ? nm : "--", 29, y + 2, EC_AL_LEFT);
         ec_param_format(ec_mtx_depth_id(k), d, 3, dp, sizeof dp);
         T(c, dp, 78, y + 2, EC_AL_RIGHT);
-        R(EC_C_L5, 84, y + 4, 34, 1);
-        w = (int)(fabsf(d) / 100.0f * 16.0f + 0.5f);
+        /* 0.6.1: on a 2-unit lattice (17 cells from x 84, the centre tick cell 8), a tiny depth one cell; the held
+         * source's bars in SRC */
+        R(EC_C_L5, 84, y + 3, 34, 2);
+        w = depth_cells(d, 8);
         if (w)
-            R(sel ? EC_C_L15 : used ? EC_C_L12 : EC_C_L5, d >= 0 ? 101 : 101 - w, y + 3, w, 3);
-        R(EC_C_L12, 101, y + 2, 1, 5);
+            R(used && src == held_src(a) ? EC_C_SRC : sel ? EC_C_L15 : used ? EC_C_L12 : EC_C_L5,
+              d >= 0 ? 102 : 100 - 2 * w, y + 3, 2 * w, 2);
+        R(EC_C_L12, 100, y + 2, 2, 5);
         if (live) {                                 /* the amount now: source x depth */
             float x = 0;
             if (src >= EC_MS_LFO1 && src <= EC_MS_EXPR)
@@ -297,7 +312,7 @@ static void matrix_page(const ec_app_t *a)
             else if (src >= EC_MS_M1)
                 x = st.macro[src - EC_MS_M1];
             x = clampf(x * d / 100.0f, -1, 1);
-            R(EC_C_ACC, 101 + (int)(x * 16.0f), y + 2, 1, 5);
+            R(EC_C_ACC, 84 + 2 * (8 + (int)lrintf(x * 8.0f)), y + 2, 2, 5);
         }
     }
 }

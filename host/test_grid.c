@@ -5,6 +5,10 @@
  * held steps with locks, the machines and warps), not by gestures; plus the kit's parts (ec_ui_kit.h) drawn alone:
  * the mode pop-up, the norns filter / envelope bars, the grains, the intro and the CAT frames. For every LCD frame,
  * in each of the six themes: every 2x2 block is one colour, and every colour is one of the theme's 16.
+ * 0.6.1 (docs/UX-V2.md §10): SRC is each theme's blue, clear of ACC / LOCK / ALERT; the frames that showed the
+ * owner's 1-unit depth bar (every page with its params modulated, a held source key, held / outlined / no step locks,
+ * the cells alone with tiny depths); and on every frame with param cells, no 1-unit run in the cells' bar areas
+ * (bar_runs: the 2x2 rule passes anything on the 120 grid, a 1-unit bar too).
  *   ec_test_grid <folder> [png dir]     (png dir: the CREAM frames, for a look; results are not committed) */
 #include <math.h>
 #include <stdio.h>
@@ -13,12 +17,13 @@
 #include "ec_app.h"
 #include "ec_fs_native.h"
 #include "ec_gfx.h"
+#include "ec_mtx.h"
 #include "ec_png.h"
 #include "ec_screens.h"
 #include "ec_ui_kit.h"
 #include "fm1core.h"
 
-static int fails, checks, shots;
+static int fails, checks, shots, fine_frames;
 #define CHECK(c, ...)                                                                                              \
     do {                                                                                                           \
         checks++;                                                                                                  \
@@ -51,8 +56,56 @@ static void run(int n)
     }
 }
 
-/* the rules on one LCD frame */
-static void check_lcd(const uint16_t *lcd, const char *name)
+/* 0.6.1: the bar-area check (docs/UX-V2.md §10, the owner's 1-unit depth bar). The 2x2 rule above only says the
+ * frame is on the 120 grid: a bar 1 grid unit high is 2x2 blocks and passes it. So, on the grid as shown (every
+ * other LCD pixel), in each param cell's bar rows and below them to the box's bottom (the outline): no run of a
+ * colour other than the cell's ground (BG, or LOCK on a filled cell) exactly 1 unit long, across or down. A run is
+ * measured over the whole row / column and counts only when it lies inside the cell's box / those rows (the rules
+ * between the cells, col 60 and row 98, are 1 unit by design). Not under a pop-up (it covers the cells). Returns the bad runs; *where:
+ * the first */
+#define G(x, y) lcd[(2 * (y)) * LW + 2 * (x)]
+static int bar_runs(const uint16_t *lcd, char *where, size_t cap)
+{
+    const uint16_t rule = ec_gfx_lcd_colour(g_theme, EC_C_L3);
+    int i, bad = 0;
+    for (i = 0; i < 4; i++) {
+        int bx, by, bw, bh, x, y;
+        ec_kit_cell_box(i, &bx, &by, &bw, &bh);
+        {
+            const int y0 = by + 2 + EC_KIT_BAR_DY, y1 = by + bh - 1;
+            const uint16_t ground = G(bx + 2, y0);        /* the column left of the bar */
+            for (y = y0; y <= y1; y++)
+                for (x = bx; x < bx + bw; x++) {
+                    const uint16_t c = G(x, y);
+                    int a = x, b = x;
+                    if (c == ground)
+                        continue;
+                    while (a > 0 && G(a - 1, y) == c)
+                        a--;
+                    while (b < EC_GW - 1 && G(b + 1, y) == c)
+                        b++;
+                    if (a == b && a >= bx && b < bx + bw) {
+                        if (!bad++)
+                            snprintf(where, cap, "K%d: a 1-unit run across at (%d, %d)", i + 1, x, y);
+                    }
+                    a = b = y;
+                    while (a > 0 && G(x, a - 1) == c)
+                        a--;
+                    while (b < EC_GH - 1 && G(x, b + 1) == c)
+                        b++;
+                    if (a == b && a >= y0 && b <= y1 && !(a == 98 && c == rule)) {
+                        if (!bad++)
+                            snprintf(where, cap, "K%d: a 1-unit run down at (%d, %d)", i + 1, x, y);
+                    }
+                }
+        }
+    }
+    return bad;
+}
+#undef G
+
+/* the rules on one LCD frame (cells: the frame drew param cells, so the bar-area check too) */
+static void check_lcd_cells(const uint16_t *lcd, const char *name, int cells)
 {
     uint16_t pal[EC_NPAL];
     int x, y, i, bad = 0, off = 0, used = 0;
@@ -77,6 +130,13 @@ static void check_lcd(const uint16_t *lcd, const char *name)
     CHECK(!bad, "%s (%s): %d 2x2 blocks of more than one colour", name, ec_gfx_theme_name(g_theme), bad);
     CHECK(!off, "%s (%s): %d pixels outside the theme's 16 colours", name, ec_gfx_theme_name(g_theme), off);
     CHECK(used >= 2 || !strcmp(name, "kit_intro"), "%s (%s): a blank screen", name, ec_gfx_theme_name(g_theme));
+    if (cells) {
+        char where[64] = "";
+        const int runs = bar_runs(lcd, where, sizeof where);
+        CHECK(!runs, "%s (%s): %d 1-unit runs in the cells' bar areas (%s)", name, ec_gfx_theme_name(g_theme), runs,
+              where);
+        fine_frames++;
+    }
     if (g_png && g_theme == EC_TH_CREAM) {
         char path[512];
         snprintf(path, sizeof path, "%s/%03d_%s.png", g_png, shots, name);
@@ -88,20 +148,22 @@ static void check_lcd(const uint16_t *lcd, const char *name)
 /* the app's own frame of the state set up */
 static void shot(const char *name)
 {
+    const unsigned n0 = ec_kit_cells_drawn;
     A->redraw = 1;
     C->frame();
-    check_lcd(P->lcd, name);
+    check_lcd_cells(P->lcd, name, ec_kit_cells_drawn != n0 && !A->pn.pop);
 }
 
 /* the kit alone: draw(), presented to a buffer of our own */
 static void kit_shot(const char *name, void (*draw)(int), int arg)
 {
+    const unsigned n0 = ec_kit_cells_drawn;
     ec_gfx_begin(g_kitlcd);
     ec_gfx_fill(EC_C_BG);
     draw(arg);
     ec_gfx_present();
     ec_gfx_begin(ec_plat_lcd());
-    check_lcd(g_kitlcd, name);
+    check_lcd_cells(g_kitlcd, name, ec_kit_cells_drawn != n0 && strcmp(name, "kit_popup"));
 }
 
 static void reset_state(void)
@@ -140,6 +202,21 @@ static void k_popup(int i)
     ec_kit_header("T1", "LOOP/LOOP", "1", "P01", i, 0);
     ec_kit_cells(c, 3, i % 3);
     ec_kit_popup(NM[i], "PAGE", RL[i], i - 1);
+}
+/* 0.6.1: the cells alone in every state: values and depths from tiny to full (the owner's 1-unit bar), the step
+ * lock fill, the outline, a held source (SRC), the actual mark, dim */
+static void k_cells(int i)
+{
+    static const float D[10] = {0.001f, -0.001f, 0.03f, -0.04f, 0.5f, -1.0f, 1.0f, 0.96f, -0.96f, 0.08f};
+    static const float F[6] = {0.001f, 0.02f, 0.5f, 0.97f, 0.999f, 1.0f};
+    static const unsigned FL[6] = {0, EC_KC_LOCK, EC_KC_SOME, EC_KC_HOT, EC_KC_DIM | EC_KC_ACC, EC_KC_LOCK | EC_KC_HOT};
+    const unsigned fl = FL[i % 6];
+    ec_kit_cell_t c[4] = {{"CUTOFF", "2.4K", F[i % 6], fl | EC_KC_ACTUAL, "LFO1", F[(i + 3) % 6]},
+                          {"LFO1>RESO", "+1%", D[i % 10], fl | EC_KC_DEPTH, 0, 0},
+                          {"DEPTH", "-4%", D[(i + 5) % 10], (fl ^ EC_KC_SOME) | EC_KC_DEPTH | EC_KC_ACTUAL, 0, F[i % 6]},
+                          {"A LONG VALUE", "AMEN_BREAK_170", F[(i + 1) % 6], fl, "2 MOD", 0}};
+    ec_kit_header("T1", "FILTER/FILTER", "1", "P01", i & 1, 0);
+    ec_kit_cells(c, 2, i & 1);
 }
 static void k_filter(int i)
 {
@@ -205,6 +282,8 @@ static void test_kit(void)
     int i;
     for (i = 0; i < 3; i++)
         kit_shot("kit_popup", k_popup, i);
+    for (i = 0; i < 30; i++)
+        kit_shot("kit_cells", k_cells, i);
     for (i = 0; i < 8; i++)
         kit_shot("kit_filter_bars", k_filter, i);
     for (i = 0; i < 6; i++)
@@ -223,6 +302,31 @@ static void test_kit(void)
           ec_scr_intro_frames(), ec_scr_cat_frames());
 }
 
+/* ------------------------------------------------------------------------------------------- the palette --- */
+/* 0.6.1 (docs/UX-V2.md §10): SRC is each theme's blue (blue its strongest channel) and stays clear of ACC, LOCK and
+ * ALERT (RGB distance >= 150), of the ground (>= 120: a fill you can read text on) and of every other slot (>= 60) */
+static double rgb_dist(uint32_t a, uint32_t b)
+{
+    const double dr = (double)(a >> 16 & 255) - (b >> 16 & 255), dg = (double)(a >> 8 & 255) - (b >> 8 & 255),
+                 db = (double)(a & 255) - (b & 255);
+    return sqrt(dr * dr + dg * dg + db * db);
+}
+static void test_palette(void)
+{
+    int t, k;
+    for (t = 0; t < EC_NTHEME; t++) {
+        const uint32_t *p = ec_themes[t], s = p[EC_C_SRC];
+        const int r = s >> 16 & 255, g = s >> 8 & 255, b = s & 255;
+        CHECK(b > r && b > g, "%s: SRC %06X is blue", ec_theme_names[t], (unsigned)s);
+        for (k = 0; k < EC_NPAL; k++) {
+            const double min = k == EC_C_ACC || k == EC_C_LOCK || k == EC_C_ALERT ? 150 : k == EC_C_BG ? 120 : 60;
+            if (k != EC_C_SRC)
+                CHECK(rgb_dist(s, p[k]) >= min, "%s: SRC %06X vs %s %06X: distance %.0f < %.0f", ec_theme_names[t],
+                      (unsigned)s, ec_pal_names[k], (unsigned)p[k], rgb_dist(s, p[k]), min);
+        }
+    }
+}
+
 /* ------------------------------------------------------------------------------------------- the app --- */
 static void every_page(const char *tag)
 {
@@ -238,6 +342,123 @@ static void every_page(const char *tag)
         }
     }
 }
+
+/* 0.6.1 (docs/UX-V2.md §10): the frames that showed the owner's 1-unit depth bar, which 0.6.0's set never had (no
+ * route on a shown param, no held source key, no lock on a depth). On every page of every mode: the page's own params
+ * modulated (sources LFO 1 / LFO 2 / MOD ENV / VEL by turns, depths tiny to full), then a held source key (its depth
+ * bars in SRC), then every lockable param of the page (and the routes' depths) locked on step 1 with step 1 held (the
+ * LOCK cells), not held (the outlines), the depth locks under a held source, and no locks (plain). The track's params
+ * and step 1 come back after. */
+static const float DEPTHS[8] = {1, -1, 4, -50, 100, -100, 96, 2};
+static void route_page(float *v, const ec_page_t *pg)
+{
+    static const int SRC[4] = {EC_MS_LFO1, EC_MS_LFO2, EC_MS_ENV, EC_MS_VEL};
+    int i, k = 0;
+    for (i = 0; i < EC_MTX_SLOTS; i++) {
+        v[ec_mtx_src_id(i)] = EC_MS_OFF + 1;
+        v[ec_mtx_dst_id(i)] = 0;
+        v[ec_mtx_depth_id(i)] = 0;
+    }
+    for (i = 0; i < pg->n && k < EC_MTX_SLOTS; i++) {
+        ec_item_t it;
+        ec_mk_item(&pg->it[i], &it);
+        if (it.kind != EC_IT_PARAM || !ec_param_mod_dest(it.id))
+            continue;
+        v[ec_mtx_src_id(k)] = (float)(SRC[k % 4] + 1);
+        v[ec_mtx_dst_id(k)] = (float)(it.id + 1);
+        v[ec_mtx_depth_id(k)] = DEPTHS[k];
+        k++;
+    }
+}
+static void lock_page(ec_step_t *st, const float *v, const ec_page_t *pg)
+{
+    int i;
+    st->nlock = 0;
+    for (i = 0; i < pg->n; i++) {
+        ec_item_t it;
+        ec_mk_item(&pg->it[i], &it);
+        if (it.kind == EC_IT_PARAM && (EC_PARAMS[it.id].flags & EC_PF_LOCKABLE))
+            ec_step_lock_set(st, it.id, EC_PARAMS[it.id].min + (EC_PARAMS[it.id].max - EC_PARAMS[it.id].min) * 0.7f);
+    }
+    for (i = 0; i < EC_MTX_SLOTS; i++)
+        if (ec_mtx_src(v, i) && ec_mtx_dst(v, i) >= 0)
+            ec_step_lock_set(st, ec_mtx_depth_id(i), -DEPTHS[i] / 2);
+}
+static void mod_lock_page(const char *tag)
+{
+    ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+    float *v = tr->v;
+    ec_page_t pg;
+    char name[80];
+    ec_app_page(A, &pg);
+    route_page(v, &pg);
+    snprintf(name, sizeof name, "%s_mod", tag);
+    shot(name);
+    A->mk.held = EC_MK_LFO1;
+    snprintf(name, sizeof name, "%s_mod_held_lfo1", tag);
+    shot(name);
+    A->mk.held = EC_MK_LFO2;
+    snprintf(name, sizeof name, "%s_mod_held_lfo2", tag);
+    shot(name);
+    A->mk.held = -1;
+    lock_page(&tr->steps[0], v, &pg);
+    tr->steps[0].trig = 1;
+    A->step_page = 0;
+    A->step_held = 1;
+    snprintf(name, sizeof name, "%s_lock_held", tag);
+    shot(name);
+    A->mk.held = EC_MK_LFO1;
+    snprintf(name, sizeof name, "%s_lock_held_mod_held", tag);
+    shot(name);
+    A->step_held = 0;
+    snprintf(name, sizeof name, "%s_lock_outline_mod_held", tag);
+    shot(name);
+    A->mk.held = -1;
+    snprintf(name, sizeof name, "%s_lock_outline", tag);
+    shot(name);
+    tr->steps[0].nlock = 0;
+    snprintf(name, sizeof name, "%s_lock_none", tag);
+    shot(name);
+}
+static void test_mod_lock(void)
+{
+    ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+    static float v0[EC_NP];
+    const ec_step_t s0 = tr->steps[0];
+    char name[64];
+    int cat, pg, m;
+    memcpy(v0, tr->v, sizeof v0);
+    reset_state();
+    for (cat = 0; cat < EC_NCAT; cat++) {
+        const int n = ec_cat_pages(cat, tr->v);
+        for (pg = 0; pg < n; pg++) {
+            A->cat = cat;
+            A->page[cat] = pg;
+            snprintf(name, sizeof name, "ml_%s_%d", ec_cat_name(cat), pg + 1);
+            mod_lock_page(name);
+        }
+    }
+    for (m = EC_NCAT; m < EC_NMODE; m++) {               /* the fixed mode screens (KEYBOARD, PAGES, ..) */
+        A->scr = m;
+        snprintf(name, sizeof name, "ml_mode_%d", m);
+        mod_lock_page(name);
+    }
+    A->scr = 0;
+    A->seq.playing = 1;                                   /* playing: the actual marks beside the bars */
+    run(200);
+    A->cat = EC_CAT_FILT;
+    A->page[EC_CAT_FILT] = 0;
+    mod_lock_page("ml_playing_filter");
+    A->seq.playing = 0;
+    memcpy(tr->v, v0, sizeof v0);
+    tr->steps[0] = s0;
+    A->mk.held = -1;
+    reset_state();
+}
+
+/* v61-fx and later: more frames (the FX type menu, the LOOP ENGINE quick menus) go here; shot(name) checks a frame of
+ * the state set up, in every theme */
+static void test_more_frames(void) {}
 
 /* 0.6.0: the mode screens (src/ui/ec_scr_modes.c) and the mode pop-up, by setting the panel's state */
 static void test_modes(void)
@@ -420,6 +641,8 @@ static void test_app(void)
     shot("rec");
     A->rec.open = 0;
     test_modes();
+    test_mod_lock();
+    test_more_frames();
     A->ux.to_ms = A->ms ? A->ms : 1;
     A->ux.to_kind = EC_TO_SAMPLE;
     snprintf(A->ux.to_label, sizeof A->ux.to_label, "SAMPLE");
@@ -481,6 +704,7 @@ int main(int argc, char **argv)
     CHECK(ec_gfx_themes() == 6 && !strcmp(ec_gfx_theme_name(0), "CREAM") && !strcmp(ec_gfx_theme_name(5), "PAPER") &&
               !ec_gfx_theme_name(6)[0],
           "the six themes");
+    test_palette();
     for (t = 0; t < ec_gfx_themes(); t++) {
         int before = shots;
         g_theme = t;
@@ -495,6 +719,7 @@ int main(int argc, char **argv)
     CHECK(ec_gfx_theme() == EC_NTHEME - 1, "set_theme clamps");
     ec_gfx_set_theme(EC_TH_CREAM);
     C->shutdown();
-    printf("test_grid: %d frames, %d checks, %d failed\n", shots, checks, fails);
+    printf("test_grid: %d frames (%d with param cells: the bar-area check), %d checks, %d failed\n", shots, fine_frames,
+           checks, fails);
     return fails ? 1 : 0;
 }

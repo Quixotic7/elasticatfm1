@@ -17,7 +17,7 @@ enum {
     EC_C_L12,      /* the header bar, markers */
     EC_C_L15,      /* values, active content */
     EC_C_ACC,      /* the accent: playhead, alerts */
-    EC_C_SRC,      /* role: a modulation source key */
+    EC_C_SRC,      /* role: a modulation source key; 0.6.1: each theme's blue (a held source's depth bars) */
     EC_C_SPECIAL,  /* role: the mode's special key */
     EC_C_ACTION,   /* role: an action key */
     EC_C_LOCK,     /* a parameter lock (a step-locked cell fills with it) */

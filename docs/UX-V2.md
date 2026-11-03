@@ -467,3 +467,9 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
   as the strip with a marker on it, the centre marked, the marker left / right of centre with the pan. A p-locked or
   modulated pan shows where it is now.
 - 120-grid rules: the track and marker are at least 2 units; the selected track's marker in ACC.
+
+**CAT stage** (owner, 2026-11-03)
+- The CAT's background is black (the sprite's own background colour becomes BG; the cat's outline stays readable).
+- Animated stage light beams behind the cat: a few chunky beams from the top corners that sweep and change colour
+  in time with the tempo (one sweep per bar, a colour change on the beat), drawn with the theme's colours (ACC,
+  SPECIAL, ACTION, SRC) in 2-unit steps, never over the cat. Stopped: the beams rest, dimmed.

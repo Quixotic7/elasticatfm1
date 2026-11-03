@@ -652,3 +652,15 @@ them:
   from every page (it lands in the list; a jump lands on its group's first; taps step exactly its group), every entry
   reached by a key (bar the exemptions), SEL on both ways after a key jump; FX with two-page inserts and a two-lane
   bus, the header's place, a bus target.
+
+**CAT fractals: always evolving, a new one each time** (owner, 2026-11-03; replaces the single Julia loop)
+- **Each time the CAT opens it picks a fractal algorithm at random** from a set of several (e.g. Julia sets,
+  Mandelbrot zooms into its detailed edges, Burning Ship, Tricorn, higher-power Multibrot / Julia, Phoenix, Newton),
+  never the same one twice in a row. The randomness is the cart's own generator, seeded from the tick count, never
+  the host clock.
+- **It never settles into a short loop**: its parameters drift along paths that don't repeat (several slow motions at
+  unrelated speeds: the constant, the zoom, the centre, rotation), so the picture keeps changing for as long as the
+  CAT is open. Zooms stay inside detailed regions and recover before running out of precision.
+- The music still drives it: faster drift while playing, the beat pulse and bar accents as now. Stopped: slow drift.
+- Same rules as before: the theme's greys only, 2-unit cells, never over the cat, cheap enough to cost audio nothing
+  measurable.

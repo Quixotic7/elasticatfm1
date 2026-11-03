@@ -406,6 +406,7 @@ typedef struct {
     ec_w3_t w3;
     /* E4: insert FX, sends, mod, the idle CPU saver */
     ec_fx_t fx;
+    ec_fx_t fx2;                 /* 0.6.1: the second insert */
     ec_mod_t mod;
     float  mods[EC_MOD_NDEST];   /* this chunk's mod sums (pitch cutoff res amp pan) */
     float  snd1, snd2;           /* send levels, Lag 0.02 */
@@ -451,7 +452,12 @@ struct ec_dsp {
     float  s1l[EC_KR], s1r[EC_KR], s2l[EC_KR], s2r[EC_KR], kl[EC_KR], kr[EC_KR];
     float  bus_peak[3][2];       /* S1 / S2 returns, the master insert's output */
     float  idle_grace;           /* s */
+    float  load;                 /* 0.6.1: the counted load, smoothed (ec_load.c) */
+    int    load_init;
 };
+
+/* 0.6.1: ec_load.c */
+void  ec_load_update(ec_dsp_t *d, int frames);
 
 /* lag tables */
 void  ec_lag_table(float *tab, float lag_s, float fs);

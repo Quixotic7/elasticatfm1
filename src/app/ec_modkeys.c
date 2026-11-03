@@ -115,7 +115,10 @@ void ec_mk_dst_name(float x, char *out, int cap)
     order_build();
     if (id < 0 || id >= EC_NP)
         snprintf(out, (size_t)cap, "OFF");
-    else
+    else if (id == EC_P_INS2_MIX || (id >= EC_P_INS2_P1 && id < EC_P_INS2_P1 + EC_INS2_NP)) {
+        const int d = ec_param_def_id(tv(), id);   /* 0.6.1: INS 2's: "2:" + the param it stands for now */
+        snprintf(out, (size_t)cap, "2:%s", d >= 0 ? EC_PARAMS[d].label : EC_PARAMS[id].label);
+    } else
         snprintf(out, (size_t)cap, "%s", id == EC_P_PITCH ? "PITCH" : g_lbl[id] ? g_lbl[id] : EC_PARAMS[id].label);
 }
 

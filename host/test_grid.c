@@ -18,6 +18,7 @@
 #include "ec_fs_native.h"
 #include "ec_gfx.h"
 #include "ec_mtx.h"
+#include "ec_holdmenu.h"
 #include "ec_png.h"
 #include "ec_screens.h"
 #include "ec_ui_kit.h"
@@ -683,6 +684,44 @@ static void test_app(void)
     reset_state();
 }
 
+/* 0.6.1 (v61-fx): FX's INSERT page with both slots, its P2, the type menu, a LOOP ENGINE quick menu */
+static void test_v61_fx(void)
+{
+    float *v = ec_app_params(A);
+    const float m1 = v[EC_P_FX_MACHINE], m2 = v[EC_P_INS2_MACHINE];
+    int p;
+    reset_state();
+    A->cat = EC_CAT_FX;
+    for (p = 0; p < ec_cat_pages(EC_CAT_FX, v) && ec_page_pic(EC_CAT_FX, p, 0) != EC_PIC_FX; p++)
+        ;
+    A->page[EC_CAT_FX] = p;
+    v[EC_P_FX_MACHINE] = EC_FX_REVERB;
+    v[EC_P_INS2_MACHINE] = EC_FX_BLACKHOLE;
+    ec_ins2_reset(v);
+    A->pn.ins_slot = 1;
+    A->pn.ins_page = 0;
+    run(30);
+    shot("fx_insert_two");
+    A->pn.ins_page = 1;
+    shot("fx_insert_p2");
+    A->pn.ins_page = 0;
+    ec_hm_arm(1, EC_HM_INS2, 0, "INS 2 TYPE");
+    ec_hm_knob(EC_E_K1, 3);                                    /* (shows it at once) */
+    shot("fx_type_menu");
+    ec_hm_knob(EC_E_K1, 12);
+    shot("fx_type_menu_end");
+    ec_hm_cancel();
+    A->cat = EC_CAT_SRC;
+    ec_hm_arm(3, EC_HM_PARAM, EC_P_MODE, "WARP MODE");
+    ec_hm_knob(EC_E_SELECT, 2);
+    shot("loop_warp_menu");
+    ec_hm_cancel();
+    v[EC_P_FX_MACHINE] = m1;
+    v[EC_P_INS2_MACHINE] = m2;
+    A->pn.ins_slot = 0;
+    reset_state();
+}
+
 int main(int argc, char **argv)
 {
     int t;
@@ -711,6 +750,7 @@ int main(int argc, char **argv)
         ec_gfx_set_theme(t);
         CHECK(ec_gfx_theme() == t, "set_theme %d", t);
         test_app();
+        test_v61_fx();
         test_kit();
         if (t == 0)
             printf("test_grid: %d frames per theme\n", shots - before);

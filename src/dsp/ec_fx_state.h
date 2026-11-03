@@ -128,6 +128,7 @@ typedef struct ec_fx {
     int      asleep;
     int32_t  quiet;            /* silent samples in a row (sleep detector) */
     float    gd, gw, gd_t, gw_t;   /* fxMixBlend gains (current, target) */
+    int      wetmix;               /* 0.6.1: a machine without a blend, blended by wet (2; 1: its last chunk) */
     int      dirty;
     ec_fx_params_t pc;         /* params the derived values were computed from */
     /* constants (init) */

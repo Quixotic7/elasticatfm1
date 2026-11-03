@@ -276,6 +276,7 @@ typedef struct ec_track_params {
     int   send_tap;               /* 1 pre insert, 2 post insert */
     float send1_level, send2_level;   /* 0..1, Lag 0.02 */
     ec_fx_params_t fx;            /* the track's insert (fx_insert1_machine + its params) */
+    ec_fx_params_t fx2;           /* 0.6.1: the second insert, after the first (NONE: skipped, costs nothing) */
     ec_mod_params_t mod;          /* LFO 1/2, mod env, velocity, macros */
 } ec_track_params_t;
 
@@ -384,6 +385,7 @@ typedef struct ec_track_status {
     /* E4 */
     int   fx_running;       /* the insert machine audible now (EC_FX_*) */
     ec_fx_meter_t fx_meter; /* COMP / DUCK / LIMIT gain reduction */
+    int   fx2_running;      /* 0.6.1: the second insert's */
     float mod[EC_MOD_NDEST];/* the live mod sums (pitch cutoff res amp pan, -1..1) */
     float macro[4];         /* the macros' effective values */
     int   idle;             /* paused by the idle CPU saver */
@@ -401,10 +403,10 @@ typedef struct ec_dsp ec_dsp_t;
 
 /* Bytes of memory the engine needs (one block, 16-byte aligned): the state
  * (E3: 6 x 512 KB post-stage delay lines + FFT state) plus 9 FX slots' delay
- * memory (6 inserts, S1, S2, master): 17 523 904 bytes = 16.7 MiB in 0.2.0.
- * EC_DSP_MEM_MAX bounds it for static arenas; ec_dsp.c fails to compile when
- * ec_dsp_mem_size() > EC_DSP_MEM_MAX. */
-#define EC_DSP_MEM_MAX ((size_t)18u << 20)
+ * memory (6 inserts, S1, S2, master): 17 523 904 bytes = 16.7 MiB in 0.2.0;
+ * 0.6.1: 15 slots (two inserts a track). EC_DSP_MEM_MAX bounds it for static
+ * arenas; ec_dsp.c fails to compile when ec_dsp_mem_size() > EC_DSP_MEM_MAX. */
+#define EC_DSP_MEM_MAX ((size_t)26u << 20)
 size_t ec_dsp_mem_size(void);
 /* Initialise in mem (ec_dsp_mem_size() bytes, 16-byte aligned) at rate fs.
  * Every track starts with ec_track_params_default(), no sample, 120 BPM,
@@ -455,6 +457,9 @@ void  ec_dsp_bus_params(ec_dsp_t *dsp, int bus, const ec_fx_params_t *p);
 void  ec_dsp_bus_status(const ec_dsp_t *dsp, int bus, ec_bus_status_t *st);
 void  ec_dsp_master_peak(const ec_dsp_t *dsp, float *l, float *r);
 int   ec_dsp_total_voices(const ec_dsp_t *dsp);
+/* 0.6.1: the counted load (ec_load.c), smoothed over ~0.25 s: what runs, weighted by its measured wasm3 cost; 1.0 =
+ * the hosts' budget (2x real time). Counted, never timed: it follows the audio state only. */
+float ec_dsp_load(const ec_dsp_t *dsp);
 int   ec_dsp_playing(const ec_dsp_t *dsp);
 float ec_dsp_tempo(const ec_dsp_t *dsp);
 

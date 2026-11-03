@@ -1,8 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.6.0: the source template (docs/UX-V2.md §1) in FILTER, AMP, MODULATION, LOOP ENGINE, TRIG and FX:
  *   B1..B5   the mode's pages from the layout (ec_cat_key_page; FX: B3..B5 the buses S1 / S2 / MST, ec_cat_key_bus).
- *            Hold B1 = the quick setting (FILTER the filter type, AMP the env mode, LOOP ENGINE the machine, FX the
- *            insert's engine; FX's bus keys: that bus's engine), changed with K1 or SEL (FX: also a white key).
+ *            Hold B1 = the quick setting (FILTER the filter type, AMP the env mode), changed with K1 or SEL.
+ *            0.6.1 (§9, §10): FX and LOOP ENGINE hold menus (ec_holdmenu.h). FX: B1 is the insert key: a tap opens
+ *            the INSERT page (both slots, INS 1 / INS 2: SEL picks one; K1-K3 its params, K4 its MIX), a tap on it
+ *            there turns the knob page (P1, P2, ..), a hold = the selected slot's effect type menu; B3..B5 held = that
+ *            bus's effect type menu. LOOP ENGINE: B1 LOOP = loop mode (slice machines: the slice play mode, else the
+ *            chop loop mode), B2 MACHINE = machine, B3 WARP = warp mode, B4 RANGE = voice mode (trig polyphony),
+ *            B5 = ADVANCE (hold only: LOOP ENGINE has four pages); a tap still turns to the page.
  *   B6..B10  the sources LFO 1, LFO 2, MOD ENV, VEL, AT (MODULATION: B2..B5 too, the macros M1..M4): hold one + turn a
  *            value knob = route that source to that param, its depth (ec_mk_turn, the 0.5.0 matrix; F2 while turning
  *            removes the route; held steps = depth locks). 0.6.1: a tap or hold never changes the mode (the header shows
@@ -15,6 +20,7 @@
 #include <string.h>
 
 #include "ec_app.h"
+#include "ec_holdmenu.h"
 #include "ec_mtx.h"
 
 #define A (&ec_app)
@@ -48,15 +54,149 @@ int ec_src_mk_index(int key)
 /* the quick setting B1 (or FX's slot key) holds: the param, 0 none */
 static int quick_param(int mode, int key)
 {
-    if (mode == EC_CAT_FX && (key == 1 || ec_cat_key_bus(EC_CAT_FX, key)))
-        return EC_P_FX_MACHINE;
     if (key != 1)
         return 0;
     switch (mode) {
     case EC_CAT_FILT: return EC_P_FILTER_TYPE;
     case EC_CAT_AMP: return EC_P_ENV_MODE;
-    case EC_CAT_SRC: return EC_P_MACHINE;
-    default: return 0;
+    default: return 0;                         /* 0.6.1: FX and LOOP ENGINE: the hold menus */
+    }
+}
+
+/* ------------------------------------------------------------------------------------- 0.6.1: FX INSERT --- */
+static int ins_turn;                           /* the insert key went down on the INSERT page: its tap turns P */
+
+static int fx_insert_page(int page) { return ec_page_pic(EC_CAT_FX, page, 0) == EC_PIC_FX; }
+
+int ec_src_insert_page(void)
+{
+    return ec_app_mode() == EC_CAT_FX && !A->bus && !A->settings && fx_insert_page(A->page[EC_CAT_FX]);
+}
+
+static int slot_machine(int slot)
+{
+    const float *v = ec_app_params(A);
+    return iv(v, slot ? EC_P_INS2_MACHINE : EC_P_FX_MACHINE);
+}
+
+int ec_src_ins_mix(int slot) { return slot ? EC_P_INS2_MIX : ec_fx_mix_id(slot_machine(0)); }
+
+/* the slot's params in the layout's FX/INSERT order for its machine (its MIX / WET left out): ids (INS 2: the
+ * EC_P_INS2_Pn they map to) and their labels; returns the count */
+static int ins_list(int slot, int *ids, const char **lb, int max)
+{
+    float w[EC_NP];
+    ec_page_t pg;
+    int i, n = 0, p;
+    const int m = slot_machine(slot);
+    memcpy(w, ec_app_params(A), sizeof w);
+    w[EC_P_FX_MACHINE] = (float)m;
+    for (p = 0; p < ec_cat_pages(EC_CAT_FX, w) && !fx_insert_page(p); p++)
+        ;
+    if (m == EC_FX_NONE)
+        return 0;
+    ec_page_items(EC_CAT_FX, p, w, 0, &pg);
+    for (i = 0; i < pg.n && n < max; i++) {
+        const ec_item_t *it = &pg.it[i];
+        int id = it->id;
+        if (it->kind != EC_IT_PARAM || id == EC_P_FX_MIX || id == EC_P_FX_WET || id == EC_P_FX_MACHINE)
+            continue;
+        if (slot) {
+            const int k = ec_ins2_index(m, id);
+            if (k < 0)
+                continue;
+            lb[n] = it->label ? it->label : EC_PARAMS[id].label;
+            id = EC_P_INS2_P1 + k;
+        } else
+            lb[n] = it->label;
+        ids[n++] = id;
+    }
+    return n;
+}
+
+int ec_src_ins_pages(void)
+{
+    int ids[EC_PAGE_ITEMS];
+    const char *lb[EC_PAGE_ITEMS];
+    const int n = ins_list(A->pn.ins_slot, ids, lb, EC_PAGE_ITEMS);
+    return n > 3 ? (n + 2) / 3 : 1;
+}
+
+int ec_src_ins_param(int slot, int i)
+{
+    int ids[EC_PAGE_ITEMS];
+    const char *lb[EC_PAGE_ITEMS];
+    const int n = ins_list(slot, ids, lb, EC_PAGE_ITEMS);
+    return i >= 0 && i < n ? ids[i] : -1;
+}
+
+void ec_src_ins_items(void *o)
+{
+    ec_page_t *pg = (ec_page_t *)o;
+    int ids[EC_PAGE_ITEMS], i, n;
+    const char *lb[EC_PAGE_ITEMS];
+    const int slot = A->pn.ins_slot;
+    memset(pg, 0, sizeof *pg);
+    pg->title = slot ? "INS 2" : "INS 1";
+    pg->pic = EC_PIC_FX;
+    pg->arg = -1;
+    n = ins_list(slot, ids, lb, EC_PAGE_ITEMS);
+    if (A->pn.ins_page * 3 >= n)
+        A->pn.ins_page = 0;
+    for (i = 0; i < 3; i++) {
+        const int k = A->pn.ins_page * 3 + i;
+        ec_item_t *it = &pg->it[i];
+        if (k < n) {
+            it->kind = EC_IT_PARAM;
+            it->id = (uint8_t)ids[k];
+            it->label = lb[k];
+        }
+    }
+    if (slot_machine(slot) != EC_FX_NONE) {        /* K4: the effect's MIX, on every type */
+        pg->it[3].kind = EC_IT_PARAM;
+        pg->it[3].id = (uint8_t)ec_src_ins_mix(slot);
+        pg->it[3].label = "MIX";
+    }
+    pg->n = 4;
+}
+
+void ec_src_select(int d)
+{
+    const int s = d > 0 ? 1 : 0;
+    if (s != A->pn.ins_slot) {
+        A->pn.ins_slot = s;
+        A->pn.ins_page = 0;
+    }
+    A->redraw = 1;
+}
+
+float ec_src_load(void) { return ec_dsp_load(A->dsp); }
+
+/* the hold menus' arming (a key going down in FX / LOOP ENGINE) */
+static void arm_menu(int mode, int key)
+{
+    if (mode == EC_CAT_FX) {
+        const int bus = ec_cat_key_bus(EC_CAT_FX, key);
+        if (bus)
+            ec_hm_arm(key, EC_HM_PARAM, EC_P_FX_MACHINE, bus == 1 ? "S1 TYPE" : bus == 2 ? "S2 TYPE" : "MST TYPE");
+        else if (ec_cat_key_page(EC_CAT_FX, key) >= 0 && fx_insert_page(ec_cat_key_page(EC_CAT_FX, key)))
+            ec_hm_arm(key, A->pn.ins_slot ? EC_HM_INS2 : EC_HM_PARAM, EC_P_FX_MACHINE,
+                      A->pn.ins_slot ? "INS 2 TYPE" : "INS 1 TYPE");
+        return;
+    }
+    if (mode != EC_CAT_SRC)
+        return;
+    switch (key) {
+    case 1: {
+        const int m = iv(ec_app_params(A), EC_P_MACHINE);
+        const int slice = m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY;
+        ec_hm_arm(key, EC_HM_PARAM, slice ? EC_P_SLICE_PLAY_MODE : EC_P_CHOP_LOOP_MODE, "LOOP MODE");
+    } break;
+    case 2: ec_hm_arm(key, EC_HM_PARAM, EC_P_MACHINE, "MACHINE"); break;
+    case 3: ec_hm_arm(key, EC_HM_PARAM, EC_P_MODE, "WARP MODE"); break;
+    case 4: ec_hm_arm(key, EC_HM_PARAM, EC_P_TRIG_POLY, "VOICE MODE"); break;
+    case 5: ec_hm_arm(key, EC_HM_ADVANCE, 0, "ADVANCE"); break;
+    default: break;
     }
 }
 
@@ -182,15 +322,17 @@ void ec_src_down(int key)
         if (bus) {
             A->bus = bus;
             ec_app_set_page(EC_CAT_FX, 0);
-            P->slot_key = key;
+            arm_menu(mode, key);                   /* 0.6.1: held = that bus's effect type menu */
             A->redraw = 1;
             return;
         }
+        ins_turn = ec_src_insert_page() && ec_cat_key_page(EC_CAT_FX, key) == A->page[EC_CAT_FX];
         if (ec_cat_key_page(EC_CAT_FX, key) >= 0)
             A->bus = 0;
     }
+    arm_menu(mode, key);                           /* 0.6.1: FX's insert key, LOOP ENGINE's B1..B5 */
     p = ec_cat_key_page(mode, key);
-    if (p >= 0) {
+    if (p >= 0 && !(mode == EC_CAT_FX && ins_turn)) {
         ec_app_set_page(mode, p);
         if (mode == EC_CAT_MOD && ec_page_pic(mode, p, 0) == EC_PIC_MATRIX)
             A->mk.row = A->mk.row < 0 ? 0 : A->mk.row;
@@ -202,6 +344,14 @@ void ec_src_down(int key)
 
 void ec_src_up(int key)
 {
+    if (ec_hm_armed() == key) {                    /* 0.6.1: a hold menu: let go = the pick; else a tap */
+        const int picked = ec_hm_up(key);
+        if (!picked && ins_turn && ec_src_insert_page()) {   /* the insert key tapped on INSERT: the next P page */
+            A->pn.ins_page = (A->pn.ins_page + 1) % ec_src_ins_pages();
+            A->redraw = 1;
+        }
+        ins_turn = 0;
+    }
     if (P->src_key == key) {
         const int mk = ec_src_mk_index(key);
         P->src_key = 0;
@@ -227,6 +377,11 @@ int ec_src_knob(int role, int det)
 {
     const int mode = ec_app_mode();
     int id;
+    if (ec_hm_knob(role, det)) {                   /* 0.6.1: a hold menu (SEL / K1 move it) */
+        if (ec_hm_armed())
+            P->bk_used |= (uint16_t)(1u << (ec_hm_armed() - 1));
+        return 1;
+    }
     if (!P->slot_key || (role != EC_E_SELECT && role != EC_E_K1))
         return 0;
     id = quick_param(mode, P->slot_key);
@@ -238,26 +393,15 @@ int ec_src_knob(int role, int det)
     return 1;
 }
 
+/* 0.6.1: the FX engine pick by white keys is gone (the type menu replaces it) */
 int ec_src_white(int i)
 {
-    const int mode = ec_app_mode();
-    float *bv;
-    if (mode != EC_CAT_FX || quick_param(mode, P->slot_key) != EC_P_FX_MACHINE)
-        return 0;
-    if ((float)(i + 1) > EC_PARAMS[EC_P_FX_MACHINE].max)
-        return 1;
-    bv = ec_app_bus_params(A, EC_P_FX_MACHINE);
-    if (bv)
-        bv[EC_P_FX_MACHINE] = (float)(i + 1);
-    else {
-        ec_e5_edit_param(A->track, EC_P_FX_MACHINE, 0);
-        ec_app_params(A)[EC_P_FX_MACHINE] = (float)(i + 1);
-        ec_seq_touch(&A->seq, A->track);
-    }
-    P->bk_used |= (uint16_t)(1u << (P->slot_key - 1));
-    ec_app_mark_dirty();
-    show(EC_P_FX_MACHINE);
-    return 1;
+    (void)i;
+    return 0;
 }
 
-int ec_src_hold_tick(void) { return 0; }
+int ec_src_hold_tick(void)
+{
+    ec_hm_tick();
+    return 0;
+}

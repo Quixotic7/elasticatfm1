@@ -218,8 +218,19 @@ patterns (PATTERN LAUNCH's white keys).
 | page 1 (hold: quick setting) | page 2 | page 3 | page 4 | page 5 | LFO 1 | LFO 2 | MOD ENV | VEL | AT | the mode's special key |
 
 - **B1-B5 open the mode's pages** (the "Key" column of the tables below). A key with no page is dark.
-- **Hold B1 = the quick setting**, changed with K1 or SEL while held: FILTER the filter type, AMP the envelope mode,
-  LOOP ENGINE the machine, FX the insert's FX machine.
+- **Hold B1 = the quick setting**, changed with K1 or SEL while held: FILTER the filter type, AMP the envelope mode.
+- **Hold menus** (0.6.1) in FX and LOOP ENGINE: holding the key (400 ms, or at once with SEL / K1) shows a list of
+  one setting's values over the screen, the header saying what the key does; SEL or K1 moves the cursor, letting go
+  picks (nothing changes if the cursor never moved). A tap still opens the key's page.
+  - LOOP ENGINE: B1 LOOP = loop mode (the slice play mode on slice machines, else the chop loop mode), B2 MACHINE =
+    machine, B3 WARP = warp mode (STOP FIRST while playing), B4 RANGE = voice mode (MONO / POLY), B5 = ADVANCE
+    (hold only).
+  - FX: B1 = the selected insert's effect type, B3 / B4 / B5 = S1's / S2's / the master's.
+- **FX INSERT** (0.6.1): two inserts per track, INS 1 then INS 2 in series (an empty slot costs nothing). The page
+  lists both (the engine, its MIX bar), the buses' engines and the **load meter** (the cart's counted load: 100 % =
+  the hosts' 2x real-time budget). **SEL picks INS 1 / INS 2**; K1-K3 are its params, **K4 always its MIX**; an
+  effect with more than three params has more knob pages: **tap B1 again** (header P1, P2, P3). INS 2's params
+  follow its machine (a new type starts from that type's defaults; one UNDO takes the pick back).
 - **B6-B10 are the sources.** Hold one + turn any value knob = route that source to that param:
   - the first detent puts the route in a matrix slot (that source's slot on that param, else the first free one);
     the next detents set its DEPTH. The cell shows SOURCE > PARAM and the depth.

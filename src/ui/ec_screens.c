@@ -12,6 +12,7 @@
 #include "ec_mtx.h"
 #include "ec_scr_e5.h"
 #include "ec_screens.h"
+#include "ec_holdmenu.h"
 #include "ec_scr_e4.h"
 #include "ec_scr_modes.h"
 #include "ec_scr_ux.h"
@@ -75,6 +76,33 @@ static void header(const ec_app_t *a, const char *title, int page, const char *r
     else
         pg[0] = 0;
     ec_scr_header_s(a, title, pg, right);
+}
+
+/* 0.6.1: the hold menu (ec_holdmenu.h), the only thing over the screen: its values as a list under the header, the
+ * cursor's row bright on a band, the value set now marked, the list scrolled to keep the cursor in view */
+static void hold_menu(const ec_app_t *a)
+{
+    const int n = ec_hm_count(), cur = ec_hm_cursor(), now = ec_hm_current(), rows = 8, rh = 13;
+    int top = cur - rows / 2, i;
+    char r[16];
+    if (top > n - rows)
+        top = n - rows;
+    if (top < 0)
+        top = 0;
+    snprintf(r, sizeof r, "%d/%d", cur + 1, n);
+    ec_scr_header_s(a, "", "", r);
+    for (i = 0; i < rows && top + i < n; i++) {
+        const int k = top + i, y = 12 + i * rh, on = k == cur;
+        if (on)
+            R(EC_C_L3, 0, y, W, rh - 1);
+        if (k == now)
+            R(on ? EC_C_ACC : EC_C_L8, 2, y + 3, 3, 6);
+        T2(on ? EC_C_L15 : EC_C_L8, ec_hm_label(k), 9, y + 1, EC_AL_LEFT);
+    }
+    if (top > 0)                                   /* more above / below: a block at the right edge */
+        R(EC_C_L8, W - 4, 12, 3, 4);
+    if (top + rows < n)
+        R(EC_C_L8, W - 4, 12 + rows * rh - 5, 3, 4);
 }
 
 /* the default right-hand info: the held step, else the pattern (and the queued one) */
@@ -528,7 +556,12 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     char t[32], r[16], left[40];
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
-    header(a, t, a->settings ? 1 : a->page[a->cat] + 1, r);
+    if (pg->pic == EC_PIC_FX && !a->bus && !a->settings && a == &ec_app && ec_src_insert_page()) {
+        char pp[8];                                /* 0.6.1: the INSERT page's knob page: P1, P2, .. */
+        snprintf(pp, sizeof pp, "P%d", a->pn.ins_page + 1);
+        ec_scr_header_s(a, t, pp, r);
+    } else
+        header(a, t, a->settings ? 1 : a->page[a->cat] + 1, r);
     if (pg->pic == EC_PIC_MENV) {                 /* MOD ENV: the norns bars, the source's routes over them */
         ec_scr_e4(a, pg);
         env_bars(a, pg, pg->pic, 20, 75);
@@ -733,6 +766,11 @@ void ec_screens_draw(const ec_app_t *a)
     ec_gfx_fill(EC_C_BG);
     if (a->pn.intro) {                            /* 0.6.0: the intro (any key or knob skips it) */
         ec_scr_intro(a->pn.intro_frame);
+        ec_gfx_present();
+        return;
+    }
+    if (a == &ec_app && ec_hm_shown()) {           /* 0.6.1: a hold menu covers everything while its key is held */
+        hold_menu(a);
         ec_gfx_present();
         return;
     }

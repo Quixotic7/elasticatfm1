@@ -730,13 +730,12 @@ static void test_sources(void)
     CHECK(A->bus == 1, "FX B3: the S1 bus");
     tapkey(1, bkey(1), 40);
     CHECK(A->bus == 0 && A->page[EC_CAT_FX] == 0, "FX B1: the track's INSERT");
-    key(1, bkey(1), 1);
+    key(1, bkey(1), 1);                                       /* 0.6.1: B1 held = the type menu (test_fx2) */
     run(20);
-    CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "FX 3"), "B1 held: the white keys are engines (%s)", L(FM1CORE_LBL_WHITE0 + 2));
-    tapkey(0, wkey(3), 40);
+    turn(FM1P_E_K1, 2);
     key(1, bkey(1), 0);
     run(20);
-    CHECK(ec_app_params(A)[EC_P_FX_MACHINE] == 3 && !step(2)->trig, "B1 held + W3: the insert's engine 3, no step");
+    CHECK(ec_app_params(A)[EC_P_FX_MACHINE] == 3 && !step(2)->trig, "B1 held + K1 2: the insert's engine 3, no step");
     key(1, bkey(5), 1);
     run(20);
     turn(FM1P_E_K1, 2);

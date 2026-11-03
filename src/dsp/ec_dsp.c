@@ -95,6 +95,7 @@ void ec_track_params_default(ec_track_params_t *p)
     p->wt_lfo_shape = 1;
     p->send_tap = 1;                      /* E4 */
     ec_fx_params_default(&p->fx);
+    ec_fx_params_default(&p->fx2);
     ec_mod_params_default(&p->mod);
 }
 
@@ -489,7 +490,7 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
     case EC_EV_PANIC:
         ec_voice_steal_all(d, -1);
         /* E4 (panicClearFx): ringing insert / send / master tails stop too */
-        for (int i = 0; i < EC_TRACKS; ++i) ec_fx_clear(&d->tr[i].fx);
+        for (int i = 0; i < EC_TRACKS; ++i) { ec_fx_clear(&d->tr[i].fx); ec_fx_clear(&d->tr[i].fx2); }
         for (int b = 0; b < 3; ++b) ec_fx_clear(&d->bus[b]);
         break;
     default:
@@ -528,11 +529,11 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
 }
 
 /* ------------------------------------------------------------ init / api */
-/* E4: the state, then the 9 FX slots' delay memory (inserts 0..5, S1, S2, master) */
+/* E4: the state, then the FX slots' delay memory (inserts 0..5, S1, S2, master; 0.6.1: then the second inserts) */
 #define EC_DSP_STATE_BYTES ((sizeof(ec_dsp_t) + 15u) & ~(size_t)15u)
 #define EC_DSP_MEM_BYTES (EC_DSP_STATE_BYTES + (size_t)EC_FX_SLOTS * EC_FX_MEM_FLOATS * sizeof(float))
 /* compile-time: the engine fits the static arenas sized EC_DSP_MEM_MAX (C99: a negative array size fails) */
-#define EC_FX_SLOTS (EC_TRACKS + 3)
+#define EC_FX_SLOTS (2 * EC_TRACKS + 3)
 typedef char ec_dsp_mem_fits[EC_DSP_MEM_BYTES <= EC_DSP_MEM_MAX ? 1 : -1];
 size_t ec_dsp_mem_size(void)
 {
@@ -597,6 +598,9 @@ ec_dsp_t *ec_dsp_init(void *mem, float fs)
         ec_fx_init(&d->bus[b], fxmem + (size_t)(EC_TRACKS + b) * EC_FX_MEM_FLOATS, d->fs, b < 2, 0xBEEFu + (uint32_t)b);
         ec_fx_params_default(&d->busp[b]);
     }
+    for (int i = 0; i < EC_TRACKS; ++i)   /* 0.6.1: the second inserts */
+        ec_fx_init(&d->tr[i].fx2, fxmem + (size_t)(EC_TRACKS + 3 + i) * EC_FX_MEM_FLOATS, d->fs, 0,
+                   0x5A5Au + (uint32_t)i * 1031u);
     d->idle_grace = 4.0f;
     return d;
 }
@@ -906,7 +910,10 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     t->snd2 = ec_lag(t->snd2, ec_clampf(p->send2_level, 0.f, 1.f), d->lag02, n);
     int post = p->send_tap == 2, sends = s10 > 0.f || s20 > 0.f || t->snd1 > 0.f || t->snd2 > 0.f;
     if (sends && !post) send_taps(d, t, s10, s20, L, R, n);
-    ec_fx_process(&t->fx, &p->fx, d->bpm, d->ml, d->mr, L, R, n);   /* duck key: the tracks mixed so far */
+    if (!ec_fx_bypassed(&t->fx, &p->fx))                          /* 0.6.1: an empty insert costs nothing */
+        ec_fx_process(&t->fx, &p->fx, d->bpm, d->ml, d->mr, L, R, n);   /* duck key: the tracks mixed so far */
+    if (!ec_fx_bypassed(&t->fx2, &p->fx2))                        /* 0.6.1: INS 2, after INS 1 */
+        ec_fx_process(&t->fx2, &p->fx2, d->bpm, d->ml, d->mr, L, R, n);
     if (sends && post) send_taps(d, t, s10, s20, L, R, n);
     {
         float g0 = mute0 * 0.70710678f, g1 = t->mute_gain * 0.70710678f, gi = (g1 - g0) / (float)n, g = g0;
@@ -1042,6 +1049,7 @@ void ec_dsp_process(ec_dsp_t *d, float *out, int frames)
     while (ei < q->n) handle_event(d, &q->ev[ei++]);
     q->n = 0;
     for (int i = 0; i < EC_TRACKS; ++i) d->tr[i].ui_pos = track_pos(&d->tr[i]);
+    ec_load_update(d, frames);                         /* 0.6.1: the counted load */
 }
 
 /* ------------------------------------------------------------ status */
@@ -1077,6 +1085,7 @@ void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
     st->filter_env = t->f.env_semis;
     st->mode_implemented = !t->w3_fallback;
     st->fx_running = ec_fx_running(&t->fx);               /* E4 */
+    st->fx2_running = ec_fx_running(&t->fx2);             /* 0.6.1 */
     ec_fx_meter(&t->fx, &st->fx_meter);
     for (int k = 0; k < EC_MOD_NDEST; ++k) st->mod[k] = t->mods[k];
     for (int k = 0; k < 4; ++k) st->macro[k] = t->mod.alive ? t->mod.macro_val[k] : 0.f;

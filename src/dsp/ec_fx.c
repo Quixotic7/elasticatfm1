@@ -325,7 +325,7 @@ void ec_fx_params_default(ec_fx_params_t *p)
     const float k = 1.f / 127.f;
     memset(p, 0, sizeof *p);
     p->machine = EC_FX_NONE;
-    p->mix = 64 * k; p->drive = 0.f;
+    p->mix = 64 * k; p->drive = 0.f; p->wet = 1.f;
     p->delay_beats = 1.f; p->delay_feedback = 38 * k; p->delay_tone = 1.f;
     p->reverb_size = 64 * k; p->reverb_damp = 64 * k;
     p->lofi_bits = 24.f; p->lofi_rate = 48000.f;
@@ -345,6 +345,8 @@ void ec_fx_params_default(ec_fx_params_t *p)
     p->rings_mode = 0; p->rings_freq = 0.5f; p->rings_fine = 0.f; p->rings_feedback = 0.f;
     p->limit_gain = 0.f; p->limit_ceil = 124 * k; p->limit_release = 38 * k;
 }
+
+int ec_fx_has_mix(int m) { return m >= 1 && m <= EC_FX_COUNT && FX_HAS_MIX[m]; }
 
 const char *ec_fx_name(int m)
 {
@@ -366,7 +368,13 @@ static void derive(ec_fx_t *fx)
     const float fs = fx->fs;
     ec_fxm_t *u = &fx->u;
     if (FX_HAS_MIX[fx->running]) fx_xfade(fx_clip(p->mix, 0.f, 1.f), &fx->gd_t, &fx->gw_t);
-    else { fx->gd_t = 0.f; fx->gw_t = 1.f; }
+    else if (fx->running != EC_FX_NONE && p->wet < 1.f) {   /* 0.6.1: K4 MIX on the machines without a blend */
+        fx_xfade(fx_clip(p->wet, 0.f, 1.f), &fx->gd_t, &fx->gw_t);
+        fx->wetmix = 2;
+    } else {
+        fx->gd_t = 0.f; fx->gw_t = 1.f;
+        if (fx->wetmix) fx->wetmix = 1;                     /* one more blended chunk: the ramp back to wet */
+    }
 
     switch (fx->running) {
     case EC_FX_DELAY:
@@ -1286,7 +1294,8 @@ static void chunk(ec_fx_t *fx, float bpm, const float *kl, const float *kr, floa
     float *wet[2] = {wl, wr};
     run_machine(fx, bpm, kl, kr, in, wet, n);
 
-    const int mixm = FX_HAS_MIX[fx->running];
+    const int mixm = FX_HAS_MIX[fx->running] || fx->wetmix;
+    if (fx->wetmix == 1) fx->wetmix = 0;
     float gd = fx->gd, gw = fx->gw;
     const float inv = 1.f / (float)n;
     const float gdi = (fx->gd_t - gd) * inv, gwi = (fx->gw_t - gw) * inv;
@@ -1385,5 +1394,12 @@ void ec_fx_clear(ec_fx_t *fx)
 }
 
 int ec_fx_running(const ec_fx_t *fx) { return fx->running; }
+
+int ec_fx_bypassed(const ec_fx_t *fx, const ec_fx_params_t *p)
+{
+    int want = p->machine;
+    if (want < 1 || want > EC_FX_COUNT) want = EC_FX_NONE;
+    return !fx->is_send && want == EC_FX_NONE && fx->running == EC_FX_NONE && fx->fdir == 0 && !fx->restart_req;
+}
 
 void ec_fx_meter(const ec_fx_t *fx, ec_fx_meter_t *m) { *m = fx->meter; }

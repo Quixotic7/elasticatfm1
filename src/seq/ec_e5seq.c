@@ -570,6 +570,28 @@ void ec_undo_xfade(ec_undo_t *u, const ec_project_t *p, uint32_t ms)
     snprintf(e->label, sizeof e->label, "XFADE");
 }
 
+void ec_undo_params(ec_undo_t *u, const ec_project_t *p, int t, const uint8_t *ids, int n, const char *label,
+                    uint32_t ms)
+{
+    ec_undo_entry_t *e;
+    int i;
+    if (n <= 0)
+        return;
+    u->last_ok = 0;                            /* (a pick is a gesture of its own: never coalesced) */
+    e = ec_undo_record(u, mix(mix(mix(EC_U_PARAMS, (uint32_t)p->current), (uint32_t)t), ids[0]), ms);
+    if (!e)
+        return;
+    e->kind = EC_U_PARAMS;
+    e->track = (int8_t)t;
+    e->pat = (int8_t)p->current;
+    e->nv = (uint8_t)(n < EC_U_NV ? n : EC_U_NV);
+    for (i = 0; i < e->nv; i++) {
+        e->ids[i] = ids[i];
+        e->vals[i] = p->pat[p->current].tr[t].v[ids[i]];
+    }
+    snprintf(e->label, sizeof e->label, "%s", label);
+}
+
 void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int t, int page, uint16_t mask, const char *label,
                    uint32_t key, uint32_t ms)
 {
@@ -608,6 +630,15 @@ static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *tra
             *v = e->val;
             e->val = old;
         }
+        break;
+    case EC_U_PARAMS:
+        if (e->pat >= 0 && e->pat < EC_NPAT && e->track >= 0 && e->track < EC_NTRACK)
+            for (i = 0; i < e->nv; i++) {
+                float *v = &p->pat[(int)e->pat].tr[(int)e->track].v[e->ids[i]];
+                const float old = *v;
+                *v = e->vals[i];
+                e->vals[i] = old;
+            }
         break;
     case EC_U_GLOBAL:
         if (gid)

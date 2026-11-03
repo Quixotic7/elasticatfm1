@@ -29,6 +29,7 @@ void ec_params_fx(const float *v, ec_fx_params_t *f)
     f->machine = clampi(iv(v, EC_P_FX_MACHINE), 1, EC_FX_COUNT);
     f->mix = amt(v, EC_P_FX_MIX);
     f->drive = amt(v, EC_P_FX_DRIVE);
+    f->wet = amt(v, EC_P_FX_WET);            /* 0.6.1 */
     f->delay_beats = DELAY_BEATS[clampi(iv(v, EC_P_DELAY_TIME), 1, 15) - 1];
     f->delay_feedback = amt(v, EC_P_DELAY_FEEDBACK);
     f->delay_tone = amt(v, EC_P_DELAY_TONE);
@@ -93,6 +94,98 @@ void ec_params_fx(const float *v, ec_fx_params_t *f)
     f->limit_gain = amt(v, EC_P_LIMIT_GAIN);
     f->limit_ceil = amt(v, EC_P_LIMIT_CEIL);
     f->limit_release = amt(v, EC_P_LIMIT_RELEASE);
+}
+
+/* ------------------------------------------------------------------------------------- 0.6.1: INS 2 --- */
+/* each machine's params in the layout's FX/INSERT order (design/layout/elasticat.json, 0.6.0), the MIX left out.
+ * NEVER reorder: a saved INS 2's P1..P8 are these by index. DESTROY has DRIVE (fx_drive) where the others have MIX */
+static const uint8_t INS2_MAP[EC_FX_COUNT + 1][EC_INS2_NP] = {
+    [EC_FX_DELAY] = {EC_P_DELAY_TIME, EC_P_DELAY_FEEDBACK, EC_P_DELAY_TONE},
+    [EC_FX_REVERB] = {EC_P_REVERB_SIZE, EC_P_REVERB_DAMP},
+    [EC_FX_LOFI] = {EC_P_LOFI_BITS, EC_P_LOFI_RATE},
+    [EC_FX_COMP] = {EC_P_COMP_THRESH, EC_P_COMP_RATIO, EC_P_COMP_ATTACK, EC_P_COMP_RELEASE, EC_P_COMP_MAKEUP},
+    [EC_FX_DESTROY] = {EC_P_DESTROY_CRUSH, EC_P_DESTROY_SRR, EC_P_DESTROY_WARBLE, EC_P_FX_DRIVE, EC_P_DESTROY_FOLD,
+                       EC_P_DESTROY_SAT, EC_P_DESTROY_TONE, EC_P_DESTROY_LEVEL},
+    [EC_FX_ECHO] = {EC_P_ECHO_TIME, EC_P_ECHO_OFFSET, EC_P_DELAY_FEEDBACK, EC_P_ECHO_MODE, EC_P_ECHO_TONE,
+                    EC_P_ECHO_WOBBLE},
+    [EC_FX_BLACKHOLE] = {EC_P_REVERB_SIZE, EC_P_BH_GRAVITY, EC_P_BH_MOD, EC_P_BH_LOW, EC_P_REVERB_DAMP,
+                         EC_P_BH_PREDELAY},
+    [EC_FX_CHORUS] = {EC_P_MODFX_RATE, EC_P_MODFX_DEPTH, EC_P_CHORUS_WIDTH, EC_P_MODFX_TONE},
+    [EC_FX_FLANGER] = {EC_P_MODFX_RATE, EC_P_MODFX_DEPTH, EC_P_FLANGER_FEEDBACK, EC_P_MODFX_TONE},
+    [EC_FX_PHASER] = {EC_P_MODFX_RATE, EC_P_MODFX_DEPTH, EC_P_PHASER_CENTER, EC_P_PHASER_STAGES,
+                      EC_P_PHASER_FEEDBACK},
+    [EC_FX_DJ_EQ] = {EC_P_EQ_LOW, EC_P_EQ_MID, EC_P_EQ_HIGH, EC_P_EQ_XLOW, EC_P_EQ_XHI},
+    [EC_FX_DUCK] = {EC_P_DUCK_AMOUNT, EC_P_DUCK_SENS, EC_P_DUCK_ATTACK, EC_P_DUCK_RELEASE},
+    [EC_FX_TAPE_ECHO] = {EC_P_ECHO_TIME, EC_P_DELAY_FEEDBACK, EC_P_TAPE_WOW, EC_P_TAPE_FLUTTER, EC_P_TAPE_SAT,
+                         EC_P_ECHO_TONE},
+    [EC_FX_CASSETTE] = {EC_P_TAPE_WOW, EC_P_TAPE_FLUTTER, EC_P_CASS_NOISE, EC_P_CASS_CRACKLE, EC_P_CASS_DROP,
+                        EC_P_CASS_TONE},
+    [EC_FX_MOTION] = {EC_P_MOTION_WIDTH, EC_P_MOTION_RATE, EC_P_MOTION_TREM, EC_P_MOTION_PAN, EC_P_MOTION_SHAPE},
+    [EC_FX_RINGS] = {EC_P_RINGS_MODE, EC_P_RINGS_FREQ, EC_P_RINGS_FINE, EC_P_RINGS_FEEDBACK, EC_P_MODFX_TONE},
+    [EC_FX_LIMIT] = {EC_P_LIMIT_GAIN, EC_P_LIMIT_CEIL, EC_P_LIMIT_RELEASE},
+};
+
+int ec_ins2_param(int m, int k)
+{
+    if (m < 1 || m > EC_FX_COUNT || k < 0 || k >= EC_INS2_NP || !INS2_MAP[m][k])
+        return -1;
+    return INS2_MAP[m][k];
+}
+
+int ec_ins2_count(int m)
+{
+    int k = 0;
+    while (ec_ins2_param(m, k) >= 0)
+        k++;
+    return k;
+}
+
+int ec_ins2_index(int m, int id)
+{
+    int k;
+    for (k = 0; k < EC_INS2_NP; k++)
+        if (ec_ins2_param(m, k) == id)
+            return k;
+    return -1;
+}
+
+int ec_fx_mix_id(int m) { return ec_fx_has_mix(m) || m == EC_FX_NONE ? EC_P_FX_MIX : EC_P_FX_WET; }
+
+int ec_param_def_id(const float *v, int id)
+{
+    if (id == EC_P_INS2_MIX)
+        return ec_fx_mix_id(v ? iv(v, EC_P_INS2_MACHINE) : EC_FX_NONE);
+    if (id >= EC_P_INS2_P1 && id < EC_P_INS2_P1 + EC_INS2_NP)
+        return v ? ec_ins2_param(iv(v, EC_P_INS2_MACHINE), id - EC_P_INS2_P1) : -1;
+    return id;
+}
+
+void ec_ins2_reset(float *v)
+{
+    const int m = iv(v, EC_P_INS2_MACHINE);
+    int k;
+    v[EC_P_INS2_MIX] = EC_PARAMS[ec_fx_mix_id(m)].def;
+    for (k = 0; k < EC_INS2_NP; k++) {
+        const int id = ec_ins2_param(m, k);
+        v[EC_P_INS2_P1 + k] = id >= 0 ? EC_PARAMS[id].def : EC_PARAMS[EC_P_INS2_P1 + k].def;
+    }
+}
+
+void ec_params_fx2(const float *v, ec_fx_params_t *f)
+{
+    float w[EC_NP];
+    const int m = clampi(iv(v, EC_P_INS2_MACHINE), 1, EC_FX_COUNT);
+    int id, k;
+    for (id = 0; id < EC_NP; id++)           /* INS 1's own values must not leak in: every FX param at its default */
+        w[id] = (EC_PARAMS[id].flags & EC_PF_FX) ? EC_PARAMS[id].def : v[id];
+    w[EC_P_FX_MACHINE] = (float)m;
+    w[EC_P_FX_MIX] = w[EC_P_FX_WET] = v[EC_P_INS2_MIX];
+    for (k = 0; k < EC_INS2_NP; k++) {
+        const int id2 = ec_ins2_param(m, k);
+        if (id2 >= 0)
+            w[id2] = ec_param_clamp(id2, v[EC_P_INS2_P1 + k]);
+    }
+    ec_params_fx(w, f);
 }
 
 void ec_params_mod(const float *v, ec_mod_params_t *m)

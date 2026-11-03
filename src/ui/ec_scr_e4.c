@@ -87,6 +87,49 @@ static void fx_page(const ec_app_t *a, const ec_page_t *pg)
     }
 }
 
+/* 0.6.1 (docs/UX-V2.md §9): the track's INSERT page: its two inserts in series, one a row (the slot, its engine big,
+ * its MIX as a bar; the slot SEL picked highlighted, an engine swap still fading: an accent block under its name),
+ * the buses' engines small, and the load meter: the counted engine load (ec_dsp_load: 1.0 = the hosts' 2x real
+ * time budget) as a chunky bar. No warning colour: the bar is the bar. */
+static void insert_page(const ec_app_t *a)
+{
+    const float *tv = a->proj.pat[a->proj.current].tr[a->track].v;
+    ec_track_status_t st;
+    char b[40];
+    int i;
+    ec_dsp_track_status(a->dsp, a->track, &st);
+    for (i = 0; i < 2; i++) {
+        const int y = 12 + i * 15, on = i == a->pn.ins_slot;
+        const int m = (int)floorf(tv[i ? EC_P_INS2_MACHINE : EC_P_FX_MACHINE] + 0.5f);
+        const int running = i ? st.fx2_running : st.fx_running;
+        const float mix = tv[i ? EC_P_INS2_MIX : ec_fx_mix_id(m)];
+        if (on)
+            R(EC_C_L3, 0, y, W, 14);
+        T(on ? EC_C_L15 : EC_C_L8, i ? "INS 2" : "INS 1", 3, y + 5, EC_AL_LEFT);
+        T2(m == EC_FX_NONE ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, m == EC_FX_NONE ? "--" : ec_fx_name(m), 28, y + 2,
+           EC_AL_LEFT);
+        if (running != m)                          /* the swap fade in progress */
+            R(EC_C_ACC, 28, y + 12, 8, 2);
+        if (m != EC_FX_NONE) {
+            R(on ? EC_C_L5 : EC_C_L3, 98, y + 5, 19, 4);
+            R(on ? EC_C_ACC : EC_C_L12, 98, y + 5, (int)(19.0f * clampf(mix / 127.0f, 0, 1) + 0.5f), 4);
+        }
+    }
+    snprintf(b, sizeof b, "S1 %s  S2 %s  M %s", ec_fx_short_name((int)(a->proj.bus[0][EC_P_FX_MACHINE] + 0.5f)),
+             ec_fx_short_name((int)(a->proj.bus[1][EC_P_FX_MACHINE] + 0.5f)),
+             ec_fx_short_name((int)(a->proj.bus[2][EC_P_FX_MACHINE] + 0.5f)));
+    T(EC_C_L5, b, 3, 45, EC_AL_LEFT);
+    {   /* the load meter */
+        const float ld = clampf(ec_src_load(), 0, 1);
+        const int w = (int)(ld * 76.0f + 0.5f);
+        snprintf(b, sizeof b, "%d%%", (int)floorf(ec_src_load() * 100.0f + 0.5f));
+        T(EC_C_L8, "LOAD", 3, 59, EC_AL_LEFT);
+        R(EC_C_L3, 22, 56, 76, 10);
+        R(EC_C_L12, 22, 56, w, 10);
+        T(EC_C_L15, b, 117, 59, EC_AL_RIGHT);
+    }
+}
+
 static void sends_page(const ec_app_t *a)
 {
     const float s1 = amt(a, EC_P_SEND1), s2 = amt(a, EC_P_SEND2);
@@ -320,7 +363,12 @@ static void matrix_page(const ec_app_t *a)
 void ec_scr_e4(const ec_app_t *a, const ec_page_t *pg)
 {
     switch (pg->pic) {
-    case EC_PIC_FX: fx_page(a, pg); break;
+    case EC_PIC_FX:
+        if (!pg->busv && a == &ec_app && ec_src_insert_page())
+            insert_page(a);                         /* 0.6.1: both inserts + the load meter */
+        else
+            fx_page(a, pg);
+        break;
     case EC_PIC_SENDS: sends_page(a); break;
     case EC_PIC_LFO1: lfo_page(a, 0); break;
     case EC_PIC_LFO2: lfo_page(a, 1); break;

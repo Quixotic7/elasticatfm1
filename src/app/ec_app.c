@@ -110,6 +110,10 @@ void ec_app_page(const ec_app_t *a, ec_page_t *out)
     }
     if (!a->settings && a == &ec_app && ec_pn_page(out))           /* 0.6.0: the fixed screens' cells */
         return;
+    if (a == &ec_app && ec_src_insert_page()) {                     /* 0.6.1: FX INSERT: the slot's knob page */
+        ec_src_ins_items(out);
+        return;
+    }
     ec_page_items_bus(a->cat, a->page[a->cat], v, a->bus, a->bus ? a->proj.bus[a->bus - 1] : 0, out);
 }
 
@@ -117,6 +121,13 @@ void ec_app_page(const ec_app_t *a, ec_page_t *out)
 float *ec_app_bus_params(ec_app_t *a, int id)
 {
     return a->bus && (EC_PARAMS[id].flags & EC_PF_FX) ? a->proj.bus[a->bus - 1] : 0;
+}
+
+/* 0.6.1: the definition a param borrows (INS 2's P1..P8 and MIX: the mapped FX param's; ec_param_def_id) */
+static int def_id(const ec_app_t *a, int id)
+{
+    const int d = ec_param_def_id(ec_project_track((ec_project_t *)&a->proj, a->track)->v, id);
+    return d >= 0 ? d : id;
 }
 
 const char *ec_app_item_label(const ec_item_t *it)
@@ -129,7 +140,7 @@ const char *ec_app_item_label(const ec_item_t *it)
     if (it->label)
         return it->label;
     if (it->kind == EC_IT_PARAM)
-        return EC_PARAMS[it->id].label;
+        return EC_PARAMS[def_id(&ec_app, it->id)].label;
     return "";
 }
 
@@ -224,8 +235,8 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
         return;
     }
     if (it->kind == EC_IT_PARAM) {
-        ec_param_format(it->id, x, iv(ec_project_track((ec_project_t *)&a->proj, a->track)->v, EC_P_ENV_RANGE), out,
-                        cap);
+        ec_param_format(def_id(a, it->id), x, iv(ec_project_track((ec_project_t *)&a->proj, a->track)->v,
+                                                 EC_P_ENV_RANGE), out, cap);
         return;
     }
     if (it->kind == EC_IT_GLOBAL) {
@@ -268,7 +279,7 @@ float ec_app_item_frac(const ec_app_t *a, const ec_item_t *it, float x)
     }
     switch (it->kind) {
     case EC_IT_E5: return ec_e5_item_frac(it, x);  /* E5 */
-    case EC_IT_PARAM: return ec_param_frac(it->id, x);
+    case EC_IT_PARAM: return ec_param_frac(def_id(a, it->id), x);
     case EC_IT_GLOBAL:
         switch (it->id) {
         case EC_G_BPM: return (x - 20) / 280;
@@ -638,6 +649,7 @@ float ec_app_move_param(int id, float x, int det, int mult)
 {
     if (EC_PARAMS[id].fmt == EC_PF_MDST)          /* 0.5.0: a matrix DST: the layout's order, SHIFT a category */
         return ec_mk_dst_step(x, det, A->fn);
+    id = def_id(A, id);                           /* 0.6.1: INS 2's params move as the FX param they stand for */
     if (A->fn)
         return ec_param_clamp(id, ec_param_snap(id, x, det));
     return ec_param_clamp(id, ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det));
@@ -646,7 +658,7 @@ float ec_app_move_param(int id, float x, int det, int mult)
 /* the finest steps over a param's range (the knob speed: lists never speed up) */
 static int param_steps(int id)
 {
-    const ec_param_def_t *d = &EC_PARAMS[id];
+    const ec_param_def_t *d = &EC_PARAMS[def_id(A, id)];
     if (d->kind != EC_PK_NUM || (d->flags & EC_PF_EXPSTEP))
         return 1;
     return (int)((d->max - d->min) / (d->step > 0 ? d->step : 1) + 0.5f);

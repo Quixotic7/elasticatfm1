@@ -67,6 +67,7 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult);   /* a cell turn: s
 void ec_e5_step_down(int i);                             /* a step key went down (preview while stopped) */
 void ec_e5_step_up(void);
 void ec_e5_edit_param(int track, int id, int plock);    /* before an edit: undo, the knob takes over */
+void ec_e5_edit_params(int track, const uint8_t *ids, int n, const char *label);   /* 0.6.1: several as one undo */
 void ec_e5_edit_global(int id, float old);
 void ec_e5_steps_edit(uint16_t mask, const char *label, uint32_t key);   /* before a step edit on the step page */
 int ec_e5_item_value(const ec_item_t *it, float *x, int *locked);       /* a cell's value under a held anchor / pad */

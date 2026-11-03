@@ -8,7 +8,16 @@ sh tools/mockups/make_mockups.sh            # build/ec_mock_ux2 -> results/ux-v2
 ```
 
 The norns sprites are read from `../Elasticat/images/` (or `ELASTICAT_NORNS=<path>`), never copied into this repo;
-`sprite_to_c.py --c out.h` turns a sheet into the C array (4-bit palette indices) the firmware build can include.
+`sprite_to_c.py --c out.h` turns a sheet into the C array (4-bit palette indices, two per byte) the firmware build
+includes.
+
+**The firmware's sprites** (`src/ui/ec_spr_intro.h`, `src/ui/ec_spr_cat.h`, committed; drawn by `ec_scr_intro()` /
+`ec_scr_cat()` in `src/ui/ec_ui_kit.c`) are regenerated from the owner's norns art with:
+
+```sh
+python3 -I tools/mockups/sprite_to_c.py --c src/ui/ec_spr_intro.h --name ec_spr_intro ../Elasticat/images/q7logoanim.png
+python3 -I tools/mockups/sprite_to_c.py --c src/ui/ec_spr_cat.h --name ec_spr_cat ../Elasticat/images/dancingcat.png
+```
 
 It needs a configured `build/` (`cmake -S . -B build`), node, python3 and Chromium at
 `/Applications/Chromium.app` (or `CHROMIUM=...`); Chromium runs headless with a fresh profile, never a window.
@@ -31,7 +40,7 @@ It needs a configured `build/` (`cmake -S . -B build`), node, python3 and Chromi
   drawn as palette indices into a 120x120 buffer, in the mockup grid's units (the units of ec_screens.c's `R()` / `T()`),
   with the firmware's own 3x5 font (`ec_gfx_glyph`) and the real header / cell geometry. Every 4x4 block of a 480 PNG is
   one colour. In a panel PNG only its LCD is checked (minus the bezel's rounded corners): the rest is RemoteFM1's.
-- **16 colours**: one table per theme (`host/mock_palette.h`), slots BG BLACK L3 L5 L8 L12 L15 ACC (today's `EC_C_*`)
+- **16 colours**: one table per theme (`src/ui/ec_palette.[ch]`, named for the mockups by `host/mock_palette.h`), slots BG BLACK L3 L5 L8 L12 L15 ACC (today's `EC_C_*`)
   plus SRC SPECIAL ACTION LOCK ALERT ACC_DIM SHADE OK. A theme is a table swap. Each PNG uses only its theme's colours.
 
 `python3 tools/mockups/check_png.py --survey results` reports which of the firmware's own screenshots break the grid rule.

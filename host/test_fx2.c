@@ -291,6 +291,12 @@ static void test_swaps(void)
     turn(FM1P_E_K1, 1);
     CHECK(ec_hm_raised() == 1 && v[EC_P_FX_MACHINE] == EC_FX_DELAY && v[EC_P_INS2_MACHINE] == EC_FX_REVERB,
           "K1 +1: the raised box moves right: REVERB is INSERT 2");
+    CHECK(ec_hm_raised_from() == 0 && ec_hm_slide() >= 0 && ec_hm_slide() < 0.5f,
+          "it keeps its name (FX 1) and slides: just begun (%g)", ec_hm_slide());
+    run(80);
+    CHECK(ec_hm_slide() > 0.2f && ec_hm_slide() < 1.0f, "80 ms on: on its way (%g)", ec_hm_slide());
+    run(200);
+    CHECK(ec_hm_slide() == 1.0f && ec_hm_raised_from() == 0, "the slide done: on the right, still FX 1");
     turn(FM1P_E_K1, 3);
     CHECK(ec_hm_raised() == 1 && v[EC_P_INS2_MACHINE] == EC_FX_REVERB, "K1 +3: already on the right, stays");
     turn(FM1P_E_K1, -1);

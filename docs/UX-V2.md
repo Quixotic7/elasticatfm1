@@ -766,11 +766,13 @@ them:
 
 **SENDS: short boxes, raise and move** (owner, 2026-11-03; replaces "holding a black key on SENDS swaps")
 - The routing boxes say **FX 1, FX 2, SEND 1, SEND 2** (owner, second pass; the effect names stay on the level bars
-  below, labelled FX1 / FX2 / S1 / S2). The orange send path is one 2-unit line with square corners, its run ending
+  below show only the effect names). The orange send path is one 2-unit line with square corners, its run ending
   flush with the outer drops.
 - Holding B1-B4 on SENDS **raises** that box (lifted 2 units, bright, a shadow where it sat) without moving it; the
   header says MOVE and the effect's name. **K1, still holding, moves it** left or right; each step swaps the pair
   (inserts: everything on them; sends: the buses and every track's send levels, the sound unchanged). Letting go puts
   it down: one undo for the whole move; let go without K1 and nothing changes.
+- While held, each box keeps the name it had when the key went down (FX 1 moved right still says FX 1), and a
+  move slides the boxes past each other over 160 ms (device time) instead of jumping.
 - Built in 0.6.4 (by hand): ec_holdmenu.c's EC_HM_SWAP (ec_hm_raised), ec_fx_swap_do / ec_fx_swap_undo in
   ec_srckeys.c, slot_block in ec_scr_e4.c; test_fx2's test_swaps; the real shot Fx_sends_move.

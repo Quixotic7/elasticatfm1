@@ -18,6 +18,8 @@ static struct {
     int n, cur, now;      /* values, the cursor, the value set when it armed */
     int moved;
     int pos, start;       /* EC_HM_SWAP: the raised box's place (0 / 1 the inserts, 2 / 3 the sends), where it began */
+    float vfrom;          /* EC_HM_SWAP: the slide's start (0 left .. 1 right in its pair) */
+    uint32_t anim_ms;     /* when the slide began */
     uint32_t ms;
     char head[24];
 } g;
@@ -70,6 +72,7 @@ void ec_hm_arm(int key, int kind, int id, const char *head)
     if (kind == EC_HM_SWAP) {
         g.id = id;
         g.pos = g.start = key - 1;
+        g.vfrom = (float)(g.pos & 1);
     } else if (kind == EC_HM_ADVANCE) {
         g.n = 2;
         g.now = ec_as->advance ? 1 : 0;
@@ -92,6 +95,21 @@ void ec_hm_cancel(void)
 int ec_hm_armed(void) { return g.key; }
 int ec_hm_shown(void) { return g.key && g.on && g.kind != EC_HM_SWAP; }
 int ec_hm_raised(void) { return g.key && g.on && g.kind == EC_HM_SWAP ? g.pos : -1; }
+int ec_hm_raised_from(void) { return g.key && g.on && g.kind == EC_HM_SWAP ? g.start : -1; }
+
+/* 0.6.4: the raised box slides to its new place over EC_SLIDE_MS (device time, so every host draws the same) */
+#define EC_SLIDE_MS 160u
+float ec_hm_slide(void)
+{
+    const float to = (float)(g.pos & 1);
+    uint32_t dt;
+    if (ec_hm_raised() < 0)
+        return -1.0f;
+    dt = A->ms - g.anim_ms;
+    if (dt >= EC_SLIDE_MS)
+        return to;
+    return g.vfrom + (to - g.vfrom) * (float)dt / (float)EC_SLIDE_MS;
+}
 const char *ec_hm_head(void) { return ec_hm_shown() ? g.head : 0; }
 int ec_hm_count(void) { return g.n; }
 int ec_hm_cursor(void) { return g.cur; }
@@ -118,6 +136,8 @@ static void show(void)
 
 void ec_hm_tick(void)
 {
+    if (ec_hm_raised() >= 0 && A->ms - g.anim_ms < EC_SLIDE_MS + 40u)
+        A->redraw = 1;                            /* 0.6.4: draw every frame of the slide */
     if (g.key && !g.on && A->ms - g.ms >= EC_HOLD_MS) {
         if (g.kind == EC_HM_SWAP) {               /* 0.6.4: held: the box is raised, nothing moves yet */
             g.on = 1;
@@ -141,8 +161,11 @@ int ec_hm_knob(int role, int det)
         for (; det; det += det > 0 ? -1 : 1) {
             const int left = !(g.pos & 1);
             if ((det > 0 && left) || (det < 0 && !left)) {
+                const float now = ec_hm_slide();  /* a slide starts from where the box is drawn now */
                 ec_fx_swap_do(g.id);
                 g.pos ^= 1;
+                g.vfrom = now;
+                g.anim_ms = A->ms;
             }
         }
         A->redraw = 1;

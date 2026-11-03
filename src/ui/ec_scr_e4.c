@@ -145,6 +145,23 @@ static void slot_block(int x, int w, int y, int c, const char *s, int raised)
     R(EC_C_L3, x + 2, y, w, 10);                   /* the shadow where it sat */
     block(x, w, y - 2, EC_C_L15, s);
 }
+/* a pair of slot boxes (the inserts: base 0, the sends: base 2) at xl / xr. 0.6.4: while one is raised, each box keeps
+ * the name it had when the key went down, and both slide (the raised one over the other) to their places */
+static int even(float x) { return 2 * (int)floorf(x * 0.5f + 0.5f); }
+static void slot_pair(int xl, int xr, int w, int y, int c, const char *const *box, int base, int up)
+{
+    float f;
+    int from;
+    if (up < 0 || (up & ~1) != base) {
+        slot_block(xl, w, y, c, box[base], 0);
+        slot_block(xr, w, y, c, box[base + 1], 0);
+        return;
+    }
+    f = ec_hm_slide();                             /* the raised box: 0 left .. 1 right */
+    from = ec_hm_raised_from();
+    slot_block(even(xl + (1.0f - f) * (float)(xr - xl)), w, y, c, box[from ^ 1], 0);
+    slot_block(even(xl + f * (float)(xr - xl)), w, y, c, box[from], 1);
+}
 static const char *mach_name(const ec_app_t *a, int slot)
 {
     const int m = slot_mach(a, slot);
@@ -152,8 +169,7 @@ static const char *mach_name(const ec_app_t *a, int slot)
 }
 static void sends_page(const ec_app_t *a)
 {
-    static const char *const N[4] = {"FX1", "FX2", "S1", "S2"},
-                            *const BOX[4] = {"FX 1", "FX 2", "SEND 1", "SEND 2"};
+    static const char *const BOX[4] = {"FX 1", "FX 2", "SEND 1", "SEND 2"};
     const int post = opt(a, EC_P_SEND_TAP) == 2, y = 12, yb = 32, up = ec_hm_raised();
     /* the tap's drop: centred in the gap it leaves the chain from (PRE: FILT | FX 1, POST: AMP | MIX) */
     const int vx = post ? 99 : 19, s1x = 38, s2x = 78;
@@ -176,16 +192,14 @@ static void sends_page(const ec_app_t *a)
     R(EC_C_ACC, hx0, y + 12, hx1 - hx0, 2);
     R(EC_C_ACC, s1x, y + 12, 2, yb - (y + 12)), R(EC_C_ACC, s2x, y + 12, 2, yb - (y + 12));
     /* the four slots last, so a raised one sits on top */
-    slot_block(22, 26, y, EC_C_L12, BOX[0], up == 0);
-    slot_block(52, 26, y, EC_C_L12, BOX[1], up == 1);
-    slot_block(22, 34, yb, EC_C_L8, BOX[2], up == 2);
-    slot_block(62, 34, yb, EC_C_L8, BOX[3], up == 3);
+    slot_pair(22, 52, 26, y, EC_C_L12, BOX, 0, up);
+    slot_pair(22, 62, 34, yb, EC_C_L8, BOX, 2, up);
     T(EC_C_L12, post ? "POST" : "PRE", 2, yb + 3, EC_AL_LEFT);
     /* K1-K4's levels, each with its effect's name */
     for (i = 0; i < 4; i++) {
         const int x = 2 + (i % 2) * 60, yy = 46 + (i / 2) * 14;
         const float lv = clampf(slot_level(a, i) / 127.0f, 0, 1);
-        snprintf(b, sizeof b, "%s %s", N[i], mach_name(a, i));
+        snprintf(b, sizeof b, "%s", mach_name(a, i));   /* 0.6.4: the effect's name only */
         T(EC_C_L8, b, x, yy, EC_AL_LEFT);
         R(EC_C_L3, x, yy + 6, 54, 4);
         R(lv > 0 ? EC_C_L12 : EC_C_L3, x, yy + 6, (int)(lv * 27.0f + 0.5f) * 2, 4);

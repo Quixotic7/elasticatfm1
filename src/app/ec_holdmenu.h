@@ -26,6 +26,8 @@ void ec_hm_cancel(void);                  /* drop it, nothing picked */
 int ec_hm_armed(void);                    /* armed or showing: its key (1..11), 0 none */
 int ec_hm_shown(void);                    /* showing */
 int ec_hm_raised(void);                   /* FX SENDS: the raised box's place (0..3), -1 none */
+int ec_hm_raised_from(void);              /* FX SENDS: the place it was raised from (its name), -1 none */
+float ec_hm_slide(void);                  /* FX SENDS: where it is drawn, 0 left .. 1 right of its pair; -1 none */
 const char *ec_hm_head(void);             /* the header text while it shows, NULL otherwise */
 int ec_hm_count(void);                    /* its values */
 int ec_hm_cursor(void);                   /* 0..count-1 */

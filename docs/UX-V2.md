@@ -429,3 +429,9 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
   - B4 (RANGE) = voice mode
   - B5 = ADVANCE
 - A tap still turns to the page.
+
+**List menus** (owner, 2026-11-03): APP SETTINGS, the record settings, every mode's settings and any other list
+- SEL scrolls; **one row is selected**, and **K1 changes the selected row's value**. Rows are not mapped to the
+  knobs in groups of four.
+- A row whose label and value don't fit on one line uses two: the label, then the value on the second line (THEME
+  first: the theme's name goes on the second line, so longer names fit).

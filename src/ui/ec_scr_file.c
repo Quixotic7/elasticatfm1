@@ -134,12 +134,11 @@ void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg)
     char t[32], r[16], buf[64];
     int i;
     snprintf(t, sizeof t, "%s/EDIT", ec_cat_tag(EC_CAT_FILE));
-    snprintf(r, sizeof r, "%dX", (int)zf);
-    ec_scr_header(a, t, ec_cat_page_key(EC_CAT_FILE, a->page[EC_CAT_FILE]), r);
+    ec_scr_header(a, t, ec_cat_page_key(EC_CAT_FILE, a->page[EC_CAT_FILE]), a->pn.ed_point ? "END" : "START");
     fit(buf, sizeof buf, x ? x->name : sl->path[0] ? (strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1 : sl->path)
-                                                 : "EMPTY", 20);
+                                                 : "EMPTY", 16);
     T(x ? EC_C_L15 : EC_C_L5, buf, 2, 13, EC_AL_LEFT);
-    snprintf(r, sizeof r, "SLOT %d", s + 1);
+    snprintf(r, sizeof r, "SLOT %d %dX", s + 1, (int)zf);   /* (0.6.1: the slot, the zoom; the header the point) */
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     {   /* the view's columns: each one's peak, read from the sample (at most 256 frames a column) */
         static uint8_t ov[EC_GW];
@@ -167,14 +166,17 @@ void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg)
             ec_kit_wave(ov, cols, x0, x1, 22, 58, EC_C_L15, EC_C_L5, sx, ex);
         } else
             T2(EC_C_L5, "NO SAMPLE", W / 2, 34, EC_AL_CENTER);
-        if (sx >= x0 && sx < x1) {                 /* the trim's start and end markers */
-            R(EC_C_ACC, sx, 20, 1, 40);
-            R(EC_C_ACC, sx, 20, 4, 3);
+        if (sx >= x0 && sx < x1) {                 /* the trim's start and end markers (the point F1 / F2 picked: ACC) */
+            const int c = a->pn.ed_point ? EC_C_L12 : EC_C_ACC;
+            const int m = sx > x1 - 2 ? x1 - 2 : sx;
+            R(c, m, 20, 2, 40);
+            R(c, m, 20, 5, 3);
         }
         if (ex > x0 && ex <= x1) {
-            const int e = ex > x1 - 1 ? x1 - 1 : ex;
-            R(EC_C_ACC, e, 20, 1, 40);
-            R(EC_C_ACC, e - 3, 20, 4, 3);
+            const int c = a->pn.ed_point ? EC_C_ACC : EC_C_L12;
+            const int e = ex > x1 - 2 ? x1 - 2 : ex;
+            R(c, e, 20, 2, 40);
+            R(c, e - 3, 20, 5, 3);
         }
     }
     for (i = 0; i < 16; i++) {                     /* the trim keys W1..W16 (across the view) */
@@ -184,9 +186,68 @@ void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg)
     }
     R(EC_C_L3, 2, 71, W - 4, 2);                   /* where the view sits in the file */
     R(EC_C_L12, 2 + (int)(v0 * (float)(W - 4)), 71, clampi((int)(vw * (float)(W - 4) + 0.5f), 1, W - 4), 2);
-    if (a->pn.ed_tap)
-        T(EC_C_ACC, "END", W - 2, 64, EC_AL_RIGHT);
     ec_scr_cells(a, pg);
+}
+
+/* ------------------------------------------------------------------------------------------- the pool --- */
+/* 0.6.1 (docs/UX-V2.md 10 "FILE / POOL page"): the 128 slots, empty ones included: the number, the file (or a dash),
+ * its length, the six tracks of the live pattern that play it (T1..T6 marks; one only step-locked: a LOCK bar). The
+ * header: the pool meter (slots used, the arena's use, its bar under the header); MOVE n while a slot is carried. */
+void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg)
+{
+    static uint8_t tracks[EC_NSLOT], locks[EC_NSLOT];
+    const int cur = clampi(a->pn.pool_cur, 0, EC_NSLOT - 1), carry = a->pn.pool_carry, rows = 12;
+    const uint32_t cap = ec_ss_capacity_bytes(), use = cap - ec_ss_free_frames() * 4u;
+    const int bw = cap ? (int)((uint64_t)use * (uint32_t)(W - 4) / cap) : 0;
+    char t[24], r[16], buf[40];
+    int first = cur - rows / 2, i, k;
+    (void)pg;
+    ec_file_pool_scan(tracks, locks);
+    if (carry >= 0)
+        snprintf(t, sizeof t, "MOVE %d", carry + 1);
+    else
+        snprintf(t, sizeof t, "POOL %d/%d", ec_file_slots_used(), EC_NSLOT);
+    snprintf(r, sizeof r, "%d%%", cap ? (int)((uint64_t)use * 100u / cap) : 0);
+    ec_scr_header(a, t, ec_cat_page_key(EC_CAT_FILE, a->page[EC_CAT_FILE]), r);
+    R(EC_C_L3, 2, 12, W - 4, 4);                   /* the arena: used / free */
+    R(EC_C_L12, 2, 12, bw, 4);
+    if (bw > 1)
+        R(EC_C_ACC, 2 + bw - 2, 12, 2, 4);
+    if (first > EC_NSLOT - rows)
+        first = EC_NSLOT - rows;
+    if (first < 0)
+        first = 0;
+    for (i = 0; i < rows; i++) {
+        const int s = first + i, y = 21 + i * 8, on = s == cur;
+        const ec_slot_t *sl = &a->proj.slot[s];
+        const ec_ss_sample_t *x = a->slot[s].handle >= 0 ? ec_ss_ready(a->slot[s].handle) : 0;
+        const int used = sl->path[0] || x || a->slot[s].state != EC_SL_EMPTY;
+        const int fg = on ? EC_C_BG : used ? EC_C_L15 : EC_C_L5;
+        if (on)
+            R(carry >= 0 ? EC_C_ACC : EC_C_L15, 0, y - 2, W, 9);   /* the cursor (carrying: where it drops) */
+        snprintf(r, sizeof r, "%d", s + 1);
+        T(on ? EC_C_BG : s == carry ? EC_C_ACC : EC_C_L8, r, 14, y, EC_AL_RIGHT);
+        if (s == carry && !on)
+            R(EC_C_ACC, 0, y - 2, 2, 9);           /* the slot in hand */
+        if (used) {
+            const char *n = x ? x->name : sl->path[0] ? (strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1
+                                                                                  : sl->path) : "...";
+            fit(buf, sizeof buf, n, 13);
+            T(fg, buf, 18, y, EC_AL_LEFT);
+            if (x && x->rate) {
+                const float sec = (float)x->frames / (float)x->rate;
+                snprintf(r, sizeof r, sec < 10.0f ? "%.1fS" : "%.0fS", (double)sec);
+                T(on ? EC_C_BG : EC_C_L8, r, 94, y, EC_AL_RIGHT);
+            }
+        } else
+            R(fg, 18, y + 2, 6, 2);                /* (empty: a dash) */
+        if (tracks[s]) {
+            for (k = 0; k < EC_NTRACK; k++)        /* T1..T6 */
+                R(tracks[s] >> k & 1u ? (on ? EC_C_BG : k == a->track && !a->bus ? EC_C_ACC : EC_C_L15)
+                                      : on ? EC_C_L12 : EC_C_L3, 97 + k * 4, y, 2, 5);   /* (the selected: ACC) */
+        } else if (locks[s])
+            R(EC_C_LOCK, 97, y, 22, 5);            /* only a step lock plays it */
+    }
 }
 
 /* ------------------------------------------------------------------------------------------- SAMPLER --- */

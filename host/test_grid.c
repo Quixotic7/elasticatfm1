@@ -528,12 +528,21 @@ static void test_modes(void)
             A->page[EC_CAT_FILE] = f;
     A->pn.ed_zoom = 3;
     A->pn.ed_view = 0.3f;
-    A->pn.ed_tap = 1;
+    A->pn.ed_point = 1;
     shot("file_editor_8x");
     A->pn.ed_zoom = 0;
     A->pn.ed_view = 0;
-    A->pn.ed_tap = 0;
+    A->pn.ed_point = 0;
     shot("file_editor_1x");
+    for (f = 0; f < ec_cat_pages(EC_CAT_FILE, v); f++)    /* 0.6.1: POOL, a slot carried for MOVE */
+        if (ec_page_pic(EC_CAT_FILE, f, 0) == EC_PIC_POOL)
+            A->page[EC_CAT_FILE] = f;
+    A->pn.pool_cur = 2;
+    shot("file_pool");
+    A->pn.pool_carry = 0;
+    shot("file_pool_move");
+    A->pn.pool_carry = -1;
+    A->pn.pool_cur = 0;
     A->page[EC_CAT_FILE] = 0;
     A->scr = EC_MODE_SAMPLER;                              /* the SAMPLER: idle, armed, taking */
     A->rec.in_meter[0] = 0.5f;

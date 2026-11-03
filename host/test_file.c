@@ -126,7 +126,7 @@ static void test_folders(void)
     {
         int cur;
         const char *r = ec_pn_roles(EC_CAT_FILE, &cur);
-        CHECK(!strcmp(r, "AAPPPOOOOAX"), "the browser's pop-up roles (the mock's): %s", r);
+        CHECK(!strcmp(r, "AAPPPPOOOAX"), "the browser's roles (0.6.1: B6 POOL): %s", r);
     }
 }
 
@@ -295,33 +295,249 @@ static void test_editor(void)
     CHECK(fabsf(A->pn.ed_view - 0.75f) < 1e-4f, "B11: stops at the end (%g)", A->pn.ed_view);
     B(1, 40);
     CHECK(fabsf(A->pn.ed_view - 0.625f) < 1e-4f, "B1: scrolled left (%g)", A->pn.ed_view);
-    W(1, 40);                                      /* the first tap: the start (the view's left edge) */
-    CHECK(fabsf(sl->trim_start - 0.625f) < 1e-4f && A->pn.ed_tap == 1, "W1: the start at the view's edge (%g)",
-          sl->trim_start);
-    W(16, 40);                                     /* the second: the end (the view's right edge) */
-    CHECK(fabsf(sl->trim_end - 0.875f) < 1e-4f && A->pn.ed_tap == 0, "W16: the end (%g)", sl->trim_end);
+    /* 0.6.1: F1 / F2 pick the point the keys place (START / END); a tap places it */
+    CHECK(A->pn.ed_point == 0 && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "START") &&
+              lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "END") && lbl(FM1CORE_LBL_WHITE0 + 4, "START"),
+          "the editor: START by default, F1 START / F2 END (%s %s)", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN),
+          L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP));
+    W(1, 40);                                      /* START: the view's left edge */
+    CHECK(fabsf(sl->trim_start - 0.625f) < 1e-4f && fabsf(sl->trim_end - 1.0f) < 1e-4f && A->pn.ed_point == 0,
+          "START: W1 places the start at the view's edge (%g %g)", sl->trim_start, sl->trim_end);
+    W(1, 40);
+    CHECK(fabsf(sl->trim_start - 0.625f) < 1e-4f && A->pn.ed_point == 0, "START: a second tap places START again");
+    press(FM1P_B_OCTUP, 40);                       /* F2: END */
+    CHECK(A->pn.ed_point == 1 && !A->pn.f_sticky && lbl(FM1CORE_LBL_WHITE0 + 4, "END"),
+          "F2: the keys place END (no CUT) (%d %d)", A->pn.ed_point, A->pn.f_sticky);
+    W(16, 40);                                     /* END: the view's right edge */
+    CHECK(fabsf(sl->trim_end - 0.875f) < 1e-4f && fabsf(sl->trim_start - 0.625f) < 1e-4f,
+          "END: W16 places the end (%g)", sl->trim_end);
     CHECK(sl->steps == 8, "the steps follow the trim (%g)", sl->steps);
     CHECK(led_key(0, 0) == FM1P_LED_LIT && led_key(0, 15) == FM1P_LED_LIT && led_key(0, 7) == FM1P_LED_FAINT,
           "the white keys at the trim lit");
     B(2, 40);                                      /* B2: 1X */
     CHECK(ec_file_zoom() == 1.0f && A->pn.ed_view == 0.0f, "B2: 1X");
+    press(FM1P_B_OCTDN, 40);                       /* F1: START */
     W(4, 40);
+    press(FM1P_B_OCTUP, 40);
     W(13, 40);
-    CHECK(fabsf(sl->trim_start - 0.2f) < 1e-4f && fabsf(sl->trim_end - 0.8f) < 1e-4f, "1X: W4 / W13 = 0.2 / 0.8");
-    W(13, 40);
-    W(4, 40);                                      /* (an end before the start: they swap) */
-    CHECK(fabsf(sl->trim_start - 0.2f) < 1e-4f && fabsf(sl->trim_end - 0.8f) < 1e-4f, "the end before: swapped");
+    CHECK(fabsf(sl->trim_start - 0.2f) < 1e-4f && fabsf(sl->trim_end - 0.8f) < 1e-4f && !A->pn.f_sticky,
+          "1X: START W4, END W13 = 0.2 / 0.8");
+    W(2, 40);                                      /* END before START: they swap */
+    CHECK(fabsf(sl->trim_start - 1.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 0.2f) < 1e-4f,
+          "END at W2, before START: swapped (%g %g)", sl->trim_start, sl->trim_end);
+    press(FM1P_B_OCTDN, 40);
+    W(16, 40);                                     /* START after END: they swap */
+    CHECK(fabsf(sl->trim_start - 0.2f) < 1e-4f && fabsf(sl->trim_end - 1.0f) < 1e-4f,
+          "START at W16, after END: swapped (%g %g)", sl->trim_start, sl->trim_end);
+    /* two keys: hold one (the chosen point), a second places the other */
+    key(0, 4, 1);                                  /* START: W5 held = the start */
+    run(200);
+    {
+        char h[40];
+        CHECK(ec_hdr_held(h, sizeof h) >= 0 && !strcmp(h, "START + KEY = END"), "W5 held: the header says (%s)", h);
+    }
+    W(9, 40);                                      /*   W9 = the end */
+    key(0, 4, 0);
+    run(10);
+    CHECK(fabsf(sl->trim_start - 4.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 8.0f / 15.0f) < 1e-4f &&
+              A->pn.ed_hold < 0,
+          "START: W5 held + W9 = start / end (%g %g)", sl->trim_start, sl->trim_end);
+    press(FM1P_B_OCTUP, 40);                       /* END: W12 held = the end, W3 = the start */
+    key(0, 11, 1);
+    run(20);
+    W(3, 40);
+    key(0, 11, 0);
+    run(10);
+    CHECK(fabsf(sl->trim_start - 2.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 11.0f / 15.0f) < 1e-4f,
+          "END: W12 held + W3 = end / start (%g %g)", sl->trim_start, sl->trim_end);
+    press(FM1P_B_OCTDN, 40);                       /* START: W12 held = start (after END: swapped), W3 = end */
+    key(0, 11, 1);
+    run(20);
+    W(3, 40);
+    key(0, 11, 0);
+    run(10);
+    CHECK(fabsf(sl->trim_start - 2.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 11.0f / 15.0f) < 1e-4f,
+          "START: W12 held + W3 (the end before the start): swapped (%g %g)", sl->trim_start, sl->trim_end);
+    key(0, 0, 1);                                  /* one more gesture, then UNDO takes it back whole */
+    run(20);
+    W(16, 40);
+    key(0, 0, 0);
+    run(10);
+    CHECK(sl->trim_start == 0.0f && sl->trim_end == 1.0f, "W1 held + W16: all of it");
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(fabsf(sl->trim_start - 2.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 11.0f / 15.0f) < 1e-4f,
+          "UNDO: the two-key gesture undone as one (%g %g, %s)", sl->trim_start, sl->trim_end, A->msg);
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(fabsf(sl->trim_start - 2.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 11.0f / 15.0f) < 1e-4f,
+          "UNDO again: the gesture before (the same points, swapped) (%g %g)", sl->trim_start, sl->trim_end);
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(fabsf(sl->trim_start - 4.0f / 15.0f) < 1e-4f && fabsf(sl->trim_end - 8.0f / 15.0f) < 1e-4f,
+          "UNDO: the END gesture's before (%g %g)", sl->trim_start, sl->trim_end);
     {
         int cur;
         const char *r = ec_pn_roles(EC_CAT_FILE, &cur);
         CHECK(!strcmp(r, "APPPPPPPPPA") && cur == 1, "the editor's roles (the mock's): %s %d", r, cur);
     }
     sl->trim_start = 0, sl->trim_end = 1;
+    press(FM1P_B_OCTDN, 40);
     ec_seq_touch_all(&A->seq);
     B(3, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR && ec_file_zoom() == 2.0f, "editor: B3 = 2X (no page key here)");
     turn(FM1P_E_SELECT, -1);
     CHECK(ec_file_page() == EC_PIC_FILE, "SEL: back to the browser");
+}
+
+/* ------------------------------------------------------------------------------------------- FILE's pages --- */
+/* 0.6.1: SEL turns the page on EDITOR and RAZOR (lanes, then pages) both ways; on BROWSE / POOL it is the cursor and
+ * the page keys B3 B4 B5 B6 leave; RAZOR's slice is ALGO's */
+static void test_file_pages(void)
+{
+    const int t = A->track;
+    int sel0, cur0;
+    to(EC_CAT_FILE);
+    B(3, 40);
+    CHECK(ec_file_page() == EC_PIC_FILE && lbl(FM1CORE_LBL_BLACK0 + 5, "POOL") &&
+              lbl(FM1CORE_LBL_BLACK0 + 3, "EDITOR") && lbl(FM1CORE_LBL_BLACK0 + 4, "RAZOR"),
+          "BROWSE: B4 EDITOR, B5 RAZOR, B6 POOL (%s)", L(FM1CORE_LBL_BLACK0 + 5));
+    B(6, 40);
+    CHECK(ec_file_page() == EC_PIC_POOL, "BROWSE: B6 leaves for POOL");
+    B(3, 40);
+    CHECK(ec_file_page() == EC_PIC_FILE, "POOL: B3 leaves for BROWSE");
+    B(6, 40);
+    B(5, 40);
+    CHECK(ec_file_page() == EC_PIC_RAZOR, "POOL: B5 leaves for RAZOR");
+    B(6, 40);
+    B(4, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: B4 leaves for EDITOR");
+    turn(FM1P_E_SELECT, 1);                        /* EDITOR's second lane, then RAZOR */
+    turn(FM1P_E_SELECT, 1);
+    CHECK(ec_file_page() == EC_PIC_RAZOR && ec_rzui_active(A), "EDITOR: SEL on to RAZOR");
+    trk(t)->v[EC_P_SLICE_COUNT] = 16;
+    ec_rzui.sel = 3;
+    sel0 = ec_rzui.sel;
+    turn(FM1P_E_SELECT, -1);
+    CHECK(ec_file_page() == EC_PIC_EDITOR && ec_rzui.sel == sel0, "RAZOR: SEL back to EDITOR (the slice stays)");
+    turn(FM1P_E_SELECT, 1);
+    CHECK(ec_file_page() == EC_PIC_RAZOR, "EDITOR: SEL to RAZOR again");
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "SLICE"), "RAZOR: ALGO's label SLICE (%s)",
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
+    turn(FM1P_E_ALGO, 1);
+    CHECK(ec_rzui.sel == sel0 + 1 && ec_file_page() == EC_PIC_RAZOR, "RAZOR: ALGO picks the next slice (%d)",
+          ec_rzui.sel);
+    turn(FM1P_E_ALGO, -2);
+    CHECK(ec_rzui.sel == sel0 - 1, "RAZOR: ALGO back two (%d)", ec_rzui.sel);
+    turn(FM1P_E_SELECT, 1);                        /* RAZOR's second lane, then POOL */
+    turn(FM1P_E_SELECT, 1);
+    CHECK(ec_file_page() == EC_PIC_POOL, "RAZOR: SEL on to POOL");
+    cur0 = A->pn.pool_cur;
+    turn(FM1P_E_SELECT, 1);
+    CHECK(ec_file_page() == EC_PIC_POOL && A->pn.pool_cur == cur0 + 1, "POOL: SEL scrolls the slots (%d)",
+          A->pn.pool_cur);
+    turn(FM1P_E_SELECT, -1);
+    B(3, 40);
+}
+
+/* ------------------------------------------------------------------------------------------- POOL --- */
+static void test_pool(void)
+{
+    uint8_t tracks[EC_NSLOT], locks[EC_NSLOT];
+    const int h0 = A->slot[0].handle, t = A->track;
+    char drums[EC_PATH];
+    int i;
+    to(EC_CAT_FILE);
+    A->pn.as.preview = 1;
+    B(6, 40);
+    CHECK(ec_file_page() == EC_PIC_POOL && lbl(FM1CORE_LBL_BLACK0 + 9, "ASSIGN") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "MOVE") &&
+              lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "FREE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "SLOT"),
+          "B6: POOL, B10 ASSIGN, B11 PREVIEW, F1 MOVE, F2 FREE, SEL SLOT");
+    {
+        int cur;
+        const char *r = ec_pn_roles(EC_CAT_FILE, &cur);
+        CHECK(r[9] == 'A' && r[10] == 'X' && r[5] == 'P' && cur == 5, "POOL's roles: %s %d", r, cur);
+    }
+    turn(FM1P_E_SELECT, -A->pn.pool_cur);
+    snprintf(drums, sizeof drums, "%s", A->proj.slot[0].path);
+    /* the list: slot 2 played by every track, slot 1 only by a step lock (pattern A3), slot 5 empty */
+    ec_file_pool_scan(tracks, locks);
+    CHECK(tracks[1] == 0x3F && !tracks[0] && locks[0] && !tracks[4] && !locks[4] && !A->proj.slot[4].path[0],
+          "POOL lists slot 2 on T1-T6, slot 1 lock-only, slot 5 empty (%x %x %d)", tracks[1], tracks[0], locks[0]);
+    turn(FM1P_E_SELECT, 1);                        /* onto slot 2 (used): auto-preview */
+    run(20);
+    CHECK(A->pn.pool_cur == 1 && A->pn.pv_play && A->pn.pv_handle == A->slot[1].handle,
+          "SEL onto slot 2: it previews (%d %d)", A->pn.pv_play, A->pn.pv_handle);
+    B(11, 40);
+    CHECK(!A->pn.pv_play, "B11: the preview stops");
+    B(11, 40);
+    CHECK(A->pn.pv_play, "B11: it plays again");
+    turn(FM1P_E_SELECT, 3);                        /* slot 5: empty, the preview stops */
+    CHECK(A->pn.pool_cur == 4 && !A->pn.pv_play, "SEL onto an empty slot: silence");
+    B(10, 40);
+    CHECK(!strcmp(A->msg, "EMPTY SLOT") && ec_app_track_slot(A, t) == 1, "ASSIGN on an empty slot: refused (%s)",
+          A->msg);
+    turn(FM1P_E_SELECT, -4);                       /* slot 1: ASSIGN */
+    B(10, 40);
+    CHECK(ec_app_track_slot(A, t) == 0 && A->assigned[t] == h0, "B10 ASSIGN: T%d plays slot 1 (%s)", t + 1, A->msg);
+    /* MOVE: slot 1 (T1's, and a step lock in pattern A3, not the current one) to slot 10 */
+    CHECK(A->proj.current != 2 && ec_step_lock_get(&A->proj.pat[2].tr[3].steps[7], EC_P_SLOT, &(float){0}),
+          "(a slot-1 lock in A3, which is not playing)");
+    press(FM1P_B_OCTDN, 40);
+    CHECK(A->pn.pool_carry == 0 && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "DROP"), "F1: slot 1 picked up (MOVE 1)");
+    turn(FM1P_E_SELECT, 9);
+    press(FM1P_B_OCTDN, 40);
+    {
+        float lk = 0;
+        ec_step_lock_get(&A->proj.pat[2].tr[3].steps[7], EC_P_SLOT, &lk);
+        CHECK(A->pn.pool_carry < 0 && !strcmp(A->proj.slot[9].path, drums) && !A->proj.slot[0].path[0] &&
+                  A->slot[9].handle == h0 && A->slot[0].state == EC_SL_EMPTY,
+              "F1 on slot 10: slot 1 moved there (%s)", A->msg);
+        CHECK(ec_app_track_slot(A, t) == 9 && A->assigned[t] == h0, "the track follows: slot 10, the same sample");
+        CHECK((int)lk == 10, "the step lock in A3 follows: slot 10 (%g)", lk);
+        CHECK(A->proj.pat[2].tr[0].v[EC_P_SLOT] == 2.0f, "A3's tracks on slot 2 untouched");
+    }
+    shift_down(1);                                 /* UNDO: one step back */
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    {
+        float lk = 0;
+        ec_step_lock_get(&A->proj.pat[2].tr[3].steps[7], EC_P_SLOT, &lk);
+        CHECK(!strcmp(A->proj.slot[0].path, drums) && !A->proj.slot[9].path[0] && A->slot[0].handle == h0 &&
+                  ec_app_track_slot(A, t) == 0 && (int)lk == 1 && A->assigned[t] == h0,
+              "UNDO: MOVE undone (slot 1, the track, the lock) (%s)", A->msg);
+    }
+    /* FREE: a slot whose file went missing */
+    snprintf(A->proj.slot[20].path, EC_PATH, "/audio/gone.wav");
+    A->slot[20].state = EC_SL_MISSING;
+    turn(FM1P_E_SELECT, 20 - A->pn.pool_cur);
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!A->proj.slot[20].path[0] && A->slot[20].state == EC_SL_EMPTY && !strcmp(A->msg, "SLOT 21 FREED"),
+          "F2: FREE slot 21 (%s)", A->msg);
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!strcmp(A->msg, "EMPTY SLOT"), "F2 on an empty slot (%s)", A->msg);
+    shift_down(1);                                 /* SHIFT + B11: purge, as in BROWSE */
+    B(11, 40);
+    shift_down(0);
+    CHECK(!strncmp(A->msg, "PURGED", 6) && A->slot[0].state == EC_SL_READY && A->slot[1].state == EC_SL_READY,
+          "SHIFT + B11: purge (%s)", A->msg);
+    /* a slot in hand is put down when POOL is left */
+    turn(FM1P_E_SELECT, -A->pn.pool_cur);
+    press(FM1P_B_OCTDN, 40);
+    B(3, 40);
+    CHECK(A->pn.pool_carry < 0 && ec_file_page() == EC_PIC_FILE, "B3 with a slot in hand: BROWSE, MOVE dropped");
+    /* gated while playing, as the rest of FILE */
+    to(EC_CAT_SRC);
+    press(FM1P_B_PLAY, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_MODE_SAMPLER && A->seq.playing, "playing: FILE (and POOL) can't open (%d)", mode());
+    press(FM1P_B_PLAY, 40);
+    for (i = 0; i < 2 && mode() != EC_CAT_FILE; i++)
+        to(EC_CAT_FILE);
 }
 
 /* ------------------------------------------------------------------------------------------- SAMPLER --- */
@@ -521,6 +737,8 @@ int main(int argc, char **argv)
     test_load();
     test_free_purge();
     test_editor();
+    test_file_pages();
+    test_pool();
     test_razor_keys();
     test_sampler();
     test_slot_locks();

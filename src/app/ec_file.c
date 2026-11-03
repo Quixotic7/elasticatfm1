@@ -5,9 +5,13 @@
  *            AUTO-PREVIEW), B11 previews (play / stop); B10 LOADs it into the next free pool slot (the selected track
  *            plays it; the cursor stays put; FULL when the 128 are used); F2 frees the slot of the file under the
  *            cursor. The pool meter: the arena used / free, the slots used of 128.
- *   EDITOR   the track's slot: B2..B10 the zoom (1X..256X), B1 / B11 scroll; the white keys set the trim across the
- *            view, the first tap the start, the second the end.
- *   RAZOR    0.4's (ec_razor_ui.c).
+ *   EDITOR   the track's slot: B2..B10 the zoom (1X..256X), B1 / B11 scroll; the white keys are 16 places across the
+ *            view: F1 / F2 pick the point they place (START / END), a held key + a second key place both (0.6.1).
+ *   RAZOR    0.4's (ec_razor_ui.c); 0.6.1: ALGO picks the slice.
+ *   POOL     0.6.1: the 128 slots: SEL the slot (auto-preview), B10 ASSIGN (the selected track plays it), B11
+ *            preview, F1 MOVE (pick up, SEL, drop: a swap, every reference follows; one undo), F2 FREE.
+ *   SEL turns the page on EDITOR and RAZOR (lanes, then pages); on BROWSE and POOL it is the cursor, and the page keys
+ *   B3 BROWSE, B4 EDITOR, B5 RAZOR, B6 POOL leave (the EDITOR's black keys are its zoom: SEL leaves it).
  *   SHIFT + B11 (FILE, SAMPLER): purge: every slot no pattern uses is freed and the arena compacted.
  * The preview loads through the one loader (ec_loader.c) when no slot load runs, into a store handle of its own; LOAD
  * of the previewed file adopts that handle (no second load). It plays on the main output after the master bus (FILE
@@ -19,6 +23,7 @@
 #include "ec_app.h"
 #include "ec_browse.h"
 #include "ec_loader.h"
+#include "ec_palette.h"
 #include "ec_projfile.h"
 #include "ec_razor_ui.h"
 
@@ -378,7 +383,11 @@ void ec_file_tick(void)
     }
 }
 
-void ec_file_leave(void) { preview_drop(); }
+void ec_file_leave(void)
+{
+    preview_drop();
+    P->ed_hold = P->pool_carry = -1;               /* (a MOVE in hand is put down) */
+}
 
 void ec_file_preview_mix(int16_t *out, uint32_t n)
 {
@@ -599,36 +608,220 @@ static void steps_recalc(ec_slot_t *sl, int s)
     }
 }
 
+/* 0.6.1 (docs/UX-V2.md 10 "FILE / EDIT trim"): the white keys are 16 places across the view; F1 / F2 pick the point a
+ * key places (START / END). A tap places it; holding a key and pressing a second places the other point at the second
+ * (START: held = start, second = end; END: the reverse). START never passes END: they swap. Each placement by a first
+ * key is an undo of its own; the second key joins the held key's (one gesture, one undo). */
+void ec_file_ed_point(int end)
+{
+    P->ed_point = end ? 1 : 0;
+    ec_app_message(end ? "PLACE END" : "PLACE START");
+}
+
+static void place(ec_slot_t *sl, int end, float pos)
+{
+    if (end)
+        sl->trim_end = pos;
+    else
+        sl->trim_start = pos;
+    if (sl->trim_start > sl->trim_end) {           /* (START after END: they swap) */
+        const float t = sl->trim_start;
+        sl->trim_start = sl->trim_end;
+        sl->trim_end = t;
+    }
+    if (sl->trim_end < sl->trim_start + 0.005f) {   /* (the shortest trim) */
+        if (sl->trim_start + 0.005f <= 1.0f)
+            sl->trim_end = sl->trim_start + 0.005f;
+        else
+            sl->trim_start = sl->trim_end - 0.005f;
+    }
+}
+
 void ec_file_white(int i, int down)
 {
     const int s = ec_app_track_slot(A, A->track);
     ec_slot_t *sl = &A->proj.slot[s];
+    int end;
     float pos;
-    if (!down || A->bus)
+    if (!down) {
+        if (i == P->ed_hold)
+            P->ed_hold = -1;
+        return;
+    }
+    if (A->bus)
         return;
     pos = P->ed_view + (float)clampi(i, 0, 15) / 15.0f / ec_file_zoom();
     pos = pos < 0 ? 0 : pos > 1 ? 1 : pos;
-    if (!P->ed_tap) {
-        sl->trim_start = pos;
-        if (sl->trim_end < pos + 0.005f)
-            sl->trim_end = pos + 0.005f > 1 ? 1 : pos + 0.005f;
-        if (sl->trim_start > sl->trim_end - 0.005f)
-            sl->trim_start = sl->trim_end - 0.005f;
-        ec_app_message("TRIM START");
-    } else {
-        if (pos < sl->trim_start) {                /* (before the start: they swap) */
-            sl->trim_end = sl->trim_start;
-            sl->trim_start = pos;
-        } else
-            sl->trim_end = pos;
-        if (sl->trim_end < sl->trim_start + 0.005f)
-            sl->trim_end = sl->trim_start + 0.005f > 1 ? 1 : sl->trim_start + 0.005f;
-        ec_app_message("TRIM END");
+    if (P->ed_hold >= 0 && P->ed_hold != i)        /* a second key: the other point */
+        end = !P->ed_point;
+    else {
+        ec_undo_trim(&A->e5.undo, &A->proj, s, 1, A->ms);
+        end = P->ed_point;
+        P->ed_hold = i;
     }
-    P->ed_tap = !P->ed_tap;
+    place(sl, end, pos);
+    ec_app_message(end ? "TRIM END" : "TRIM START");
     steps_recalc(sl, s);
     ec_seq_touch_all(&A->seq);
     ec_app_mark_dirty();
+}
+
+/* the header while a trim key is held: what a second key does */
+static int hdr_held(char *out, int cap)
+{
+    if (P->ed_hold < 0 || !ec_hdr_holding() || ec_app_mode() != EC_CAT_FILE || A->fn || ec_file_page() != EC_PIC_EDITOR)
+        return -1;
+    snprintf(out, (size_t)cap, "%s", P->ed_point ? "END + KEY = START" : "START + KEY = END");
+    return EC_C_L12;
+}
+void ec_file_hdr_init(void) { ec_hdr_provider(hdr_held); }
+
+/* ------------------------------------------------------------------------------------------- the pool page --- */
+void ec_file_pool_scan(uint8_t *tracks, uint8_t *locks)
+{
+    int p, t, i, k;
+    memset(tracks, 0, EC_NSLOT);
+    memset(locks, 0, EC_NSLOT);
+    for (t = 0; t < EC_NTRACK; t++)                /* the live pattern's tracks */
+        tracks[clampi((int)floorf(ec_project_track(&A->proj, t)->v[EC_P_SLOT] + 0.5f), 1, EC_NSLOT) - 1] |=
+            (uint8_t)(1u << t);
+    for (p = 0; p < EC_NPAT; p++) {                /* the step locks of every pattern */
+        const ec_pattern_t *pt = &A->proj.pat[p];
+        if (!pt->used && p != A->proj.current)
+            continue;
+        for (t = 0; t < EC_NTRACK; t++)
+            for (i = 0; i < EC_MAXSTEPS; i++)
+                for (k = 0; k < pt->tr[t].steps[i].nlock; k++)
+                    if (pt->tr[t].steps[i].lock_id[k] == EC_P_SLOT)
+                        locks[clampi((int)floorf(pt->tr[t].steps[i].lock_val[k] + 0.5f), 1, EC_NSLOT) - 1] = 1;
+    }
+}
+
+/* preview slot s (play: sounding at once) */
+static void pool_preview(int s, int play)
+{
+    const ec_slotrt_t *r = &A->slot[s];
+    if (r->state != EC_SL_READY || r->handle < 0) {
+        P->pv_play = 0;
+        return;
+    }
+    if (P->pv_state == EC_PV_READY && P->pv_handle == r->handle) {
+        P->pv_play = play;
+        P->pv_pos = 0;
+        return;
+    }
+    preview_drop();
+    snprintf(P->pv_path, sizeof P->pv_path, "%s", A->proj.slot[s].path[0] ? A->proj.slot[s].path : "#slot");
+    P->pv_handle = r->handle;
+    P->pv_owned = 0;
+    P->pv_state = EC_PV_READY;
+    P->pv_play = play;
+    P->pv_pos = 0;
+}
+
+void ec_file_pool_select(int d)
+{
+    const int was = P->pool_cur;
+    P->pool_cur = clampi(P->pool_cur + d, 0, EC_NSLOT - 1);
+    A->redraw = 1;
+    if (P->pool_cur == was)
+        return;
+    if (slot_has(P->pool_cur)) {
+        if (ec_as->preview && P->pool_carry < 0)   /* (carrying: no previews on the way) */
+            pool_preview(P->pool_cur, 1);
+    } else
+        P->pv_play = 0;
+}
+
+static void pool_assign(void)
+{
+    const int s = P->pool_cur;
+    char m[24];
+    if (A->bus) {
+        ec_app_message("PICK A TRACK");
+        return;
+    }
+    if (!slot_has(s)) {
+        ec_app_message("EMPTY SLOT");
+        return;
+    }
+    ec_e5_edit_param(A->track, EC_P_SLOT, 0);
+    ec_app_params(A)[EC_P_SLOT] = (float)(s + 1);
+    ec_seq_touch(&A->seq, A->track);
+    ec_app_mark_dirty();
+    snprintf(m, sizeof m, "T%d > SLOT %d", A->track + 1, s + 1);
+    ec_app_message(m);
+}
+
+void ec_file_slots_swapped(int a, int b)
+{
+    ec_slotrt_t tmp;
+    int t;
+    if (a < 0 || b < 0 || a >= EC_NSLOT || b >= EC_NSLOT || a == b)
+        return;
+    tmp = A->slot[a];
+    A->slot[a] = A->slot[b];
+    A->slot[b] = tmp;
+#define SWAP0(x) ((x) == a ? b : (x) == b ? a : (x))
+    A->load_slot = A->load_slot >= 0 ? SWAP0(A->load_slot) : A->load_slot;
+    A->rec.slot = A->rec.slot >= 0 ? SWAP0(A->rec.slot) : A->rec.slot;
+#undef SWAP0
+    for (t = 0; t < EC_NTRACK; t++) {              /* (a slot lock still sounding) */
+        int *sl = &A->seq.tr[t].slot_lock;
+        *sl = *sl == a + 1 ? b + 1 : *sl == b + 1 ? a + 1 : *sl;
+    }
+    ec_app_assign_samples();
+    ec_seq_touch_all(&A->seq);
+    ec_app_mark_dirty();
+    A->redraw = 1;
+}
+
+void ec_file_pool_f1(void)
+{
+    const int s = P->pool_cur, c = P->pool_carry;
+    char m[24];
+    if (A->seq.playing) {
+        ec_app_alert("STOP FIRST");
+        return;
+    }
+    if (c < 0) {                                   /* pick it up */
+        if (!slot_has(s)) {
+            ec_app_message("EMPTY SLOT");
+            return;
+        }
+        P->pool_carry = s;
+        P->pv_play = 0;
+        A->redraw = 1;
+        return;
+    }
+    P->pool_carry = -1;
+    if (c == s) {                                  /* dropped where it was */
+        ec_app_message("NOT MOVED");
+        return;
+    }
+    ec_undo_slots(&A->e5.undo, c, s, A->ms);       /* one undo: the swap again */
+    ec_project_swap_slots(&A->proj, c, s);
+    ec_file_slots_swapped(c, s);
+    snprintf(m, sizeof m, "MOVED %d > %d", c + 1, s + 1);
+    ec_app_message(m);
+}
+
+void ec_file_pool_f2(void)
+{
+    const int s = P->pool_cur;
+    char m[24];
+    if (!slot_has(s)) {
+        ec_app_message("EMPTY SLOT");
+        return;
+    }
+    if (P->pool_carry == s)
+        P->pool_carry = -1;
+    if (free_slot(s) < 0) {
+        ec_app_alert("BUSY: TRY AGAIN");
+        return;
+    }
+    snprintf(m, sizeof m, "SLOT %d FREED", s + 1);
+    ec_app_message(m);
 }
 
 /* ------------------------------------------------------------------------------------------- the keys --- */
@@ -663,9 +856,22 @@ void ec_file_black(int key, int down)
             zoom(key - 2);
         return;
     }
-    if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B4 EDITOR, B5 RAZOR (the layout's keys) */
+    if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B4 EDITOR, B5 RAZOR, B6 POOL (the layout's keys) */
         ec_app_set_page(EC_CAT_FILE, ec_file_key_page(key));
-        P->ed_tap = 0;
+        P->pool_carry = -1;
+        A->redraw = 1;
+        return;
+    }
+    if (pic == EC_PIC_POOL) {                      /* B10 ASSIGN, B11 preview */
+        if (key == 10)
+            pool_assign();
+        else if (key == 11) {
+            const ec_slotrt_t *r = &A->slot[P->pool_cur];
+            if (P->pv_play && r->handle >= 0 && P->pv_handle == r->handle)
+                P->pv_play = 0;
+            else if (slot_has(P->pool_cur))
+                pool_preview(P->pool_cur, 1);
+        }
         A->redraw = 1;
         return;
     }

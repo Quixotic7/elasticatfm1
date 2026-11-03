@@ -25,7 +25,7 @@
 
 /* what a key does from its press to its release */
 enum { R_NONE, R_STEP, R_LOOP_LIVE, R_PAD, R_KB, R_RAZOR, R_F3, R_SWALLOW, R_TRK, R_XFD, R_SRCB, R_PAGEB, R_SHIFTB,
-       R_FILEB };
+       R_FILEB, R_FILEW };
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
 static int iv(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
@@ -77,6 +77,8 @@ void ec_pn_init(void)
     ec_as_load();
     ec_gfx_set_theme(ec_as->theme);
     P->pv_handle = -1;                             /* FILE: the browser at /audio, no preview */
+    P->ed_hold = P->pool_carry = -1;
+    ec_file_hdr_init();
     snprintf(P->fdir, sizeof P->fdir, "/audio");
     P->lr_end = -1;
     ec_click_init(&P->click, (float)EC_FS);
@@ -404,9 +406,16 @@ static void button_down(int b)
     }
     if (b == EC_B_OCTDN || b == EC_B_OCTUP) {
         const int bit = b == EC_B_OCTDN ? 1 : 2;
-        if (!A->fn && b == EC_B_OCTUP && ec_app_mode() == EC_CAT_FILE && !A->settings &&
-            ec_file_page() == EC_PIC_FILE) {      /* FILE: F2 on a pool file frees its slot */
+        const int fpic = !A->fn && ec_app_mode() == EC_CAT_FILE && !A->settings ? ec_file_page() : -1;
+        if (fpic == EC_PIC_FILE && b == EC_B_OCTUP) {   /* FILE: F2 on a pool file frees its slot */
             ec_file_f2();
+        } else if (fpic == EC_PIC_EDITOR) {        /* 0.6.1: the EDITOR: F1 START, F2 END (what a white key places) */
+            ec_file_ed_point(b == EC_B_OCTUP);
+        } else if (fpic == EC_PIC_POOL) {          /* 0.6.1: POOL: F1 MOVE, F2 FREE */
+            if (b == EC_B_OCTUP)
+                ec_file_pool_f2();
+            else
+                ec_file_pool_f1();
         } else if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
@@ -654,10 +663,10 @@ static void white_down(int k, int i, int vel, int lean)
         case EC_CAT_FILE:
             if (ec_file_page() == EC_PIC_EDITOR) { /* the editor: the trim */
                 ec_file_white(i, 1);
-                A->key_role[k] = R_SWALLOW;
+                A->key_role[k] = R_FILEW;
                 return;
             }
-            if (ec_file_page() == EC_PIC_FILE) {   /* (the browser: nothing to step) */
+            if (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) {   /* (the lists: nothing to step) */
                 A->key_role[k] = R_SWALLOW;
                 return;
             }
@@ -694,6 +703,7 @@ static void white_up(int k, int i, int vel)
     case R_PAD: ec_seq_slice_pad(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0, 0); break;
     case R_KB: ec_kb_key(k, 0, 0); break;
     case R_RAZOR: ec_rzui_key(A, i, 0, 0); break;
+    case R_FILEW: ec_file_white(i, 0); break;
     case R_TRK: ec_mix_track_up(i); break;
     case R_XFD: ec_xfd_white(i, 0, 0); break;
     default: break;
@@ -860,10 +870,6 @@ static void presets(int d)
 static void select_knob(int d)
 {
     const int mode = ec_app_mode();
-    if (ec_rzui_active(A)) {
-        ec_rzui_select(A, d);                      /* E3: SELECT picks the slice on the RAZOR page */
-        return;
-    }
     if (A->settings) {
         ec_page_t pg;
         ec_app_page(A, &pg);
@@ -885,6 +891,10 @@ static void select_knob(int d)
         ec_src_select(d);                          /* 0.6.1: FX's INSERT page: SEL picks INS 1 / INS 2 */
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
         ec_file_select(d);                         /* the browser: the cursor (folders, files) */
+    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_POOL) {
+        ec_file_pool_select(d);                    /* 0.6.1: POOL: the slot */
+    } else if (mode == EC_CAT_FILE) {
+        ec_app_lane_step(d > 0 ? 1 : -1);          /* 0.6.1: EDITOR, RAZOR: the page (a lane), one a turn */
     } else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX) {
         if (!ec_mk_select(d))                      /* 0.5.0: the MATRIX page's row, then on to the next page */
             ec_app_lane_step(d > 0 ? 1 : -1);
@@ -942,7 +952,9 @@ static void knob(int r, int d)
     switch (r) {
     case EC_E_SELECT: select_knob(d); break;
     case EC_E_ALGO:
-        if (mode == EC_MODE_KEYBOARD)
+        if (ec_rzui_active(A))
+            ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
+        else if (mode == EC_MODE_KEYBOARD)
             ec_kb_target(d);                       /* KEYBOARD: the target step */
         else {                                     /* the step page */
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
@@ -1130,6 +1142,10 @@ const char *ec_pn_roles(int mode, int *cur)
         if (pic == EC_PIC_FILE) {                  /* B1 up, B2 in, B10 LOAD, B11 preview */
             r[0] = r[1] = r[9] = 'A';
             r[10] = 'X';
+        } else if (pic == EC_PIC_POOL) {           /* 0.6.1: B10 ASSIGN, B11 preview; the page's key */
+            r[9] = 'A';
+            r[10] = 'X';
+            *cur = ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) - 1;
         } else if (ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) > 0)
             *cur = ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) - 1;
     } break;

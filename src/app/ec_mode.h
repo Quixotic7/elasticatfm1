@@ -140,7 +140,10 @@ typedef struct {
     char pv_path[256];
     int ed_zoom;               /* the editor: 0..8 = 1X..256X */
     float ed_view;             /*   its left edge 0..1 */
-    int ed_tap;                /*   the next white key sets 0 the start, 1 the end */
+    int ed_point;              /*   0.6.1: the point a white key places: 0 START (F1), 1 END (F2) */
+    int ed_hold;               /*   the white key held (0..15; the second key places the other point), -1 */
+    int pool_cur;              /* 0.6.1: POOL's cursor (slot 0..127) */
+    int pool_carry;            /*   MOVE: the slot picked up, -1 none */
     /* SAMPLER (ec_sampler.c) */
     float smp_gain_db;         /* the input gain */
     int smp_mon;               /* the input monitor */
@@ -269,10 +272,12 @@ int ec_rs_row_dim(int row);
 /* ---- ec_file.c: FILE (docs/UX-V2.md §3) ---- */
 void ec_file_settings(void);                  /* FILE held / SHIFT + FILE: the recorder's setup (0.4's REC pop-up) */
 void ec_file_black(int key, int down);        /* FILE's and SAMPLER's black keys (SHIFT + B11: purge) */
-void ec_file_white(int i, int down);          /* the editor's white keys (the trim) */
+void ec_file_white(int i, int down);          /* the editor's white keys (the trim): press and release */
+void ec_file_hdr_init(void);                  /* 0.6.1: the header's text for a held trim key (ec_hdr_provider) */
+void ec_file_ed_point(int end);               /* 0.6.1: the EDITOR's F1 / F2: a white key places 0 START, 1 END */
 int ec_file_f2(void);                         /* F2 in the browser: free the pool slot of the file under the cursor */
 void ec_file_select(int d);                   /* SEL in the browser */
-int ec_file_page(void);                       /* FILE's page: its picture (EC_PIC_FILE / EDITOR / RAZOR) */
+int ec_file_page(void);                       /* FILE's page: its picture (EC_PIC_FILE / EDITOR / RAZOR / POOL) */
 int ec_file_key_page(int key);                /* the FILE page black key 1..11 opens, -1 */
 int ec_file_count(void);                      /* the browser's rows in this folder */
 const char *ec_file_entry(int i, int *is_dir, int *file);   /* row i's name, a folder?, its file (ec_browse index) */
@@ -286,6 +291,12 @@ void ec_file_leave(void);                     /* FILE left: the preview stops (i
 void ec_file_preview_yield(void);             /* a slot load starts: a preview load in flight gives way */
 void ec_file_preview_mix(int16_t *out, uint32_t n);
 float ec_file_zoom(void);                     /* the editor's zoom factor 1..256 */
+/* 0.6.1: FILE / POOL (docs/UX-V2.md 10): the 128 slots; SEL the cursor, B10 ASSIGN, B11 preview, F1 MOVE, F2 FREE */
+void ec_file_pool_select(int d);
+void ec_file_pool_f1(void);                   /* MOVE: pick the slot up / drop it (a swap, every reference follows) */
+void ec_file_pool_f2(void);                   /* FREE the slot under the cursor */
+void ec_file_pool_scan(uint8_t *tracks, uint8_t *locks);   /* per slot: the tracks playing it (bits), step-locked */
+void ec_file_slots_swapped(int a, int b);     /* slots a, b swapped in the project: the runtime follows (undo too) */
 /* ---- ec_sampler.c: SAMPLER ---- */
 void ec_sampler_enter(int on);                /* SAMPLER entered (1) / left (0) */
 void ec_sampler_black(int key, int down);     /* B11 arms / stops */

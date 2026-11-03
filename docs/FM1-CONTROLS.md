@@ -95,7 +95,8 @@ These hold in every mode unless the mode says otherwise.
   **cut / paste steps**. The knob labels say UNMOD.
 - **F1 + F2 together = F3** (below).
 - They do something else in KEYBOARD (the octave), on the RAZOR page (split / delete), in FILE's browser (F2 frees a
-  slot) and in every pop-up (F1 = back / cancel, F2 = OK / yes).
+  slot), FILE's EDITOR (F1 / F2: START / END, the point the white keys place), FILE's POOL (F1 MOVE, F2 FREE) and in
+  every pop-up (F1 = back / cancel, F2 = OK / yes).
 
 ### SHIFT (GLO)
 
@@ -178,6 +179,7 @@ show at once. A message newer than the last key press wins over it; an older one
 | steps (white keys) | the step modes | STEP 5, or 3 STEPS, on the **LOCK** bar |
 | a white key | LOOP ENGINE | LOOP KEY n (slice tracks: PAD n) |
 | a black key | PAGES | LOOP PAGE n |
+| a white key | FILE / EDITOR | START + KEY = END (F1), END + KEY = START (F2): what a second key places |
 | a white key | F3 | LOOP PAGE n |
 | W1-W6 | MIX | MUTE Tn (UNMUTE Tn when muted) |
 | F1 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | COPY / CLR LOCK; COPY PAGE; COPY PATTERN (PASTE ... once the buffer holds something) |
@@ -418,6 +420,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 |  |  | 2 | STEPS |  |  |  |
 | RAZOR | B5 | 1 | PLAY | ZOOM | SLCE START | SLCE END |
 |  |  | 2 | SNAP MODE | CHOKE | PITCH | TRANS SENS |
+| POOL | B6 | - | | | | |
 
 ### CROSSFADER (ARP · XFD)
 
@@ -981,7 +984,11 @@ click).
 
 - **FILE can't open while playing.** The button flashes and the screen says STOP FIRST. Tapping FILE while playing
   opens the SAMPLER instead. Inside FILE, PLAY and REC do nothing.
-- Pages: **BROWSE (B3)**, **EDITOR (B4)**, **RAZOR (B5)**.
+- Pages: **BROWSE (B3)**, **EDITOR (B4)**, **RAZOR (B5)**, **POOL (B6)**, in that order.
+- **SEL turns the page on EDITOR and RAZOR**, both ways (lane by lane: EDITOR and RAZOR have two lanes each, then the
+  next page): BROWSE < EDITOR < RAZOR < POOL. On **BROWSE and POOL, SEL is the list's cursor**; their way out is a page
+  key (B3 B4 B5 B6). The EDITOR's black keys are all zoom keys, so **SEL** leaves it (back to BROWSE, on to RAZOR).
+  Tapping FILE goes on to the SAMPLER, as always.
 
 **BROWSE**
 
@@ -1006,24 +1013,46 @@ click).
 |---|---|
 | B2-B10 | the zoom: 1X, 2X, 4X .. 256X |
 | B1 / B11 | scroll left / right half a view (when zoomed) |
-| White keys | **the trim** across the view: the first tap sets the start, the second the end (an end before the start: they swap) |
-| SEL | back to BROWSE (the editor's black keys are all zoom keys) |
+| F1 / F2 | **START / END**: the point the white keys place (the header's right side says which; no copy / cut here) |
+| White keys | **16 places across the view** (the zoom sets how fine): a tap places the chosen point there |
+| A white key held + a second | **both points**: START: the held key is the start, the second the end; END: the reverse |
+| SEL | the page: back to BROWSE, on to RAZOR |
 | K1-K4 | START, END, BPM, GAIN / STEPS |
 
-The steps follow the trim. LEDs: the keys at the trim points lit.
+START never passes END: a placement that would put START after END swaps them. Each placement is one undo (SHIFT +
+F1); a two-key gesture is one. The knobs' START / END are undoable too. The steps follow the trim. The chosen point's
+marker is ACC, the other light grey. LEDs: the keys at the trim points lit.
 
 **RAZOR** (the razor slice editor, 0.4's)
 
 | Control | Does |
 |---|---|
-| SEL | select the slice |
+| ALGO | **select the slice** (0.6.1; it was SEL) |
+| SEL | the page: back to EDITOR, on to POOL (lane by lane) |
 | K1-K4 | PLAY, ZOOM, SLCE START, SLCE END / SNAP MODE, CHOKE, PITCH, TRANS SENS |
 | F2 / F1 | **split** the selected slice / **delete** it |
 | SHIFT + F2 / SHIFT + F1 | **Auto-Chop** (one slice per transient) / **even** (redistribute the slices) |
-| White keys | the selected track's steps (the labels say SLICE n; see the differences) |
+| White keys | the slices (select and play); SHIFT + one mutes the slice |
 
 The razor machines (RAZOR, R.POLY) play each slice from its own start / end. The table is per track and saved with
 the project. Split and delete renumber the slices after it; the track's steps follow.
+
+**POOL** (all 128 slots, 0.6.1)
+
+| Control | Does |
+|---|---|
+| SEL | the slot (empty ones included). Moving onto a used slot **previews** it (APP SETTINGS > AUTO-PREVIEW) |
+| B10 | **ASSIGN**: the selected track plays this slot |
+| B11 | **preview** play / stop |
+| F1 | **MOVE**: picks the slot up (the header says MOVE n); SEL to another slot; F1 again drops it there, **swapping** with what is there. Every reference follows: the tracks' slots and the slot step locks (and slice locks) in all 64 patterns. One undo. F1 on the slot it came from puts it back (NOT MOVED); leaving POOL drops the move |
+| F2 | **FREE** the slot (its tracks fall silent), as in BROWSE |
+| SHIFT + B11 | **purge**, as in BROWSE |
+| B3 / B4 / B5 | BROWSE / EDITOR / RAZOR |
+
+- A row: the slot's number, its file (or a dash), its length, and six marks T1-T6: lit for the tracks of the playing
+  pattern on that slot (the selected track's in ACC). A slot only step locks play shows a LOCK bar instead.
+- The header is the pool meter: POOL n/128 (slots used) and the memory used in %, with its bar under the header.
+- Like the rest of FILE, POOL can't open while playing. Memorized projects (SHIFT + B3) keep the pool as it was.
 
 **FILE held: the recorder's setup** (0.4's REC pop-up). It samples the live input or the master out into a pool
 slot: SEL the slot, K1 SOURCE (IN / MST), K2 LENGTH, K3 THRESHOLD (with SYNC FREE), K4 SYNC (PLAY / BAR / FREE).
@@ -1117,8 +1146,9 @@ OK, F1 back, HOME closes.
 - **128 slots.** A track plays its slot (PRESETS); a step can lock another slot (hold the step + PRESETS).
 - **No per-sample length limit.** The samples share one memory arena of 208 MiB (about 20.6 minutes of stereo at
   44.1 kHz; 0.6.1 keeps 11 MiB for packing the project file).
-- Fill it from FILE (B10 LOAD, the next free slot) or the SAMPLER. Free slots with F2 in FILE's browser, or SHIFT +
-  B11 (purge) for every slot no pattern uses.
+- Fill it from FILE (B10 LOAD, the next free slot) or the SAMPLER. Free slots with F2 in FILE's browser or POOL, or
+  SHIFT + B11 (purge) for every slot no pattern uses. FILE / POOL lists every slot, assigns one to the track and moves
+  slots (references follow).
 - The use shows in FILE's pool meter, the SAMPLER's FREE, and PRESETS' takeover.
 - Older projects load into slots 1-16.
 

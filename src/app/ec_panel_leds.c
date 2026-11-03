@@ -316,6 +316,9 @@ static void leds_black(void)
                 l[0] = l[1] = EC_LED_DIM;
                 l[9] = ec_file_next_free() >= 0 ? EC_LED_MID : EC_LED_FAINT;
                 l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
+            } else if (pic == EC_PIC_POOL) {       /* 0.6.1: ASSIGN, preview */
+                l[9] = EC_LED_MID;
+                l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
             }
         } break;
         case EC_MODE_SAMPLER: {
@@ -449,12 +452,11 @@ static void knob_labels(void)
     } else {
         ec_app_page(A, &pg);
         lane = ec_app_lane(A, &pg);
-        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD ? "TARGET" : "STEP PG");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD ? "TARGET" : ec_rzui_active(A) ? "SLICE"
+                                                                                                : "STEP PG");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
-        else if (ec_rzui_active(A))
-            L(EC_LBL_KNOB0 + EC_E_SELECT, "SLICE");
         else if (A->settings)
             L(EC_LBL_KNOB0 + EC_E_SELECT, ec_ux_lanes(pg.n) > 1 ? "LANE" : "");
         else if (mode == EC_MODE_KEYBOARD || mode == EC_MODE_PAGES || mode == EC_CAT_XFD || mode == EC_MODE_SAMPLER)
@@ -463,6 +465,8 @@ static void knob_labels(void)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BANK");
         else if (ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_FILE)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "FILE");
+        else if (ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_POOL)
+            L(EC_LBL_KNOB0 + EC_E_SELECT, "SLOT");
         else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");
         else if (ec_ux_lanes(pg.n) > 1) {
@@ -550,6 +554,12 @@ static void button_labels(void)
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "COPY");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "FREE SLOT");
+    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR) {   /* 0.6.1: the point the keys place */
+        L(EC_LBL_BTN0 + EC_B_OCTDN, "START");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, "END");
+    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_POOL) {
+        L(EC_LBL_BTN0 + EC_B_OCTDN, P->pool_carry >= 0 ? "DROP" : "MOVE");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, "FREE");
     } else if (P->f_held && P->f_held != 3) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, P->f_held & 1 ? "COPY" : "F3");
         L(EC_LBL_BTN0 + EC_B_OCTUP, P->f_held & 2 ? "CUT" : "F3");
@@ -576,8 +586,9 @@ static void white_labels(void)
         else if (mode == EC_MODE_SAMPLER && !A->fn)
             snprintf(b, sizeof b, "%ddB", -48 + 3 * (i + 1));   /* (the VU's scale) */
         else if (mode == EC_CAT_FILE && !A->fn && !A->settings && ec_file_page() == EC_PIC_EDITOR)
-            snprintf(b, sizeof b, "%s", A->pn.ed_tap ? "END" : "START");
-        else if (mode == EC_CAT_FILE && !A->fn && !A->settings && ec_file_page() == EC_PIC_FILE)
+            snprintf(b, sizeof b, "%s", A->pn.ed_point ? "END" : "START");
+        else if (mode == EC_CAT_FILE && !A->fn && !A->settings &&
+                 (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL))
             ;
         else if (UX->f3)
             snprintf(b, sizeof b, "PAGE %d", i + 1);
@@ -684,6 +695,8 @@ static void black_labels(void)
                     s = pg.title ? pg.title : "";
                 } else if (pic == EC_PIC_FILE)
                     s = BR[i];
+                else if (pic == EC_PIC_POOL)
+                    s = i == 9 ? "ASSIGN" : i == 10 ? "PREVIEW" : "";
             } break;
             case EC_MODE_SAMPLER: {
                 static const char *const SL[5] = {"FREE", "1 BAR", "2 BARS", "4 BARS", "8 BARS"};

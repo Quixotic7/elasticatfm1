@@ -20,6 +20,7 @@ void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
 /* 0.6.0: ec_scr_file.c (FILE's browser and editor, the SAMPLER, the record settings) */
 void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg);
 void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg);
+void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg);   /* 0.6.1: FILE / POOL */
 void ec_scr_sampler(const ec_app_t *a);
 void ec_scr_record(const ec_app_t *a);
 

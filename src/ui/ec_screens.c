@@ -753,6 +753,7 @@ static void draw_main(const ec_app_t *a)
     case EC_PIC_RAZOR: ec_scr_razor(a, &pg); break;   /* E3 */
     case EC_PIC_FILE: ec_scr_file_browser(a, &pg); break;      /* 0.6.0 */
     case EC_PIC_EDITOR: ec_scr_file_editor(a, &pg); break;
+    case EC_PIC_POOL: ec_scr_file_pool(a, &pg); break;   /* 0.6.1 */
     case EC_PIC_PATTERN: pat_screen(a, &pg); break;
     default: generic_screen(a, &pg); break;
     }

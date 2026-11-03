@@ -43,8 +43,8 @@ export function pageKeys(c) {
   });
 }
 export const PICS = ["steps", "wave", "wave-machine", "wave-warp", "wave-range", "filter", "fenv", "aenv", "fx", "sends",
-  "lfo1", "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix", "editor"];
-export const FIXED = { mix: "MST", scene: "XFD", file: "FILE", razor: "FILE", pattern: "PAT", matrix: "MOD", editor: "FILE" };
+  "lfo1", "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix", "editor", "pool"];
+export const FIXED = { mix: "MST", scene: "XFD", file: "FILE", razor: "FILE", pattern: "PAT", matrix: "MOD", editor: "FILE", pool: "FILE" };
 // the MATRIX page (0.5.0): its knobs are fixed (SELECT picks the row; KNOB 1-3 its SRC, DST, DEPTH)
 export const MATRIX_LANES = [["mtx.src", "mtx.dst", "mtx.depth", null]];
 export const MATRIX_PAGE = () => ({ title: "MATRIX", picture: "matrix", lanes: JSON.parse(JSON.stringify(MATRIX_LANES)) });
@@ -417,8 +417,8 @@ export function compile(design, catalog) {
   for (let [pic, cat] of Object.entries(FIXED)) {
     if (legacy && pic === "scene") cat = "MST";
     if (pic === "matrix" && fixedCount[pic] === 0) warn(cat, "no MATRIX page (0.5.0): the mod matrix is reached by MOD KEYS only; add it as MOD's first page");
-    else if (pic === "editor" && fixedCount[pic] > 1) err(cat, `the editor page must be there at most once (${fixedCount[pic]})`);
-    else if (pic !== "mix" && pic !== "editor" && fixedCount[pic] !== 1) err(cat, `the ${pic} page must be there once (${fixedCount[pic]})`);
+    else if ((pic === "editor" || pic === "pool") && fixedCount[pic] > 1) err(cat, `the ${pic} page must be there at most once (${fixedCount[pic]})`);
+    else if (pic !== "mix" && pic !== "editor" && pic !== "pool" && fixedCount[pic] !== 1) err(cat, `the ${pic} page must be there once (${fixedCount[pic]})`);
     if (pic === "mix" && fixedCount[pic] < 1) err(cat, "the mix page is missing");
   }
   let bus = design.bus;

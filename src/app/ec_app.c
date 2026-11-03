@@ -1241,7 +1241,7 @@ void ec_app_frame(void)
             A->pn.intro_frame = f, A->redraw = 1;
     }
     if (A->pn.cat && now - A->pn.cat_ms >= 25)   /* the CAT dances */
-        A->pn.cat_ms = now, A->redraw = 1;
+        A->pn.cat_ms = now, A->pn.cat_n++, A->redraw = 1;
     if (!A->redraw && !((A->seq.playing || loading || A->msg_ms) && now - A->last_draw >= 30))
         return;
     if (A->msg_ms && now - A->msg_ms > 1200)

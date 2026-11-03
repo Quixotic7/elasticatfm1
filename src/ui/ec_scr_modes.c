@@ -31,15 +31,15 @@ static void pat_name(int p, char *b, size_t cap)
 
 /* ------------------------------------------------------------------------------------------- the CAT --- */
 /* 0.6.1 (docs/UX-V2.md §10 "CAT stage"): the whole screen is the stage (no header, no track keys). Playing, the cat
- * and the beams follow the transport's clock (5 frames a beat = 10 fps at 120 BPM); stopped, the cat dances on the
- * app's clock at the tempo and the beams rest */
+ * and the fractal follow the transport's clock (5 frames a beat = 10 fps at 120 BPM); stopped, the cat dances on the
+ * app's clock at the tempo and the fractal drifts on the CAT's redraw count (pn.cat_n, one per >= 25 ms) */
 static void cat_screen(const ec_app_t *a)
 {
     const int playing = a->seq.playing;
     const double beats = ec_seq_beats(&a->seq);
     const int frame = playing ? (int)floor(beats * EC_KIT_SPR_FPS / 2.0)
                               : (int)((float)a->ms * 0.001f * (float)EC_KIT_SPR_FPS * a->proj.bpm / 120.0f);
-    ec_scr_cat(frame, beats, playing);
+    ec_scr_cat(frame, beats, playing, a->pn.cat_n);
 }
 
 /* ------------------------------------------------------------------------------------------- PAGES --- */

@@ -262,9 +262,9 @@ static void k_settings(int i)
     ec_kit_list(r, 11, i, 12, EC_GH, 0);     /* 0.6.1: the list menu */
 }
 static void k_intro(int f) { ec_scr_intro(f); }
-/* 0.6.1: the CAT stage, f = 0..23: the frame f / 2, playing at beat 0.5 + f * 0.7 (beam sweeps and colours), the
- * last four stopped */
-static void k_cat(int f) { ec_scr_cat(f / 2, 0.5 + f * 0.7, f < 20); }
+/* 0.6.1: the CAT stage, f = 0..23: the frame f / 2, playing at beat f * 0.37 (the fractal's bar loop and beat
+ * pulses), the last four stopped (drift f * 97) */
+static void k_cat(int f) { ec_scr_cat(f / 2, f * 0.37, f < 20, (uint32_t)f * 97u); }
 static void k_misc(int i)
 {
     ec_kit_header("MST", "SEQ/PAT", "A", "Q 1 BAR", 0, i);

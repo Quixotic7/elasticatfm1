@@ -465,13 +465,21 @@ void ec_scr_intro(int frame)
     ec_kit_sprite(ec_spr_intro[frame], EC_SPR_INTRO_W, EC_SPR_INTRO_H, (W - EC_SPR_INTRO_W) / 2, 28);
 }
 
-/* 0.6.1 (docs/UX-V2.md §10 "CAT stage"): the stage light beams, on the grid in 2x2 cells (every edge 2 units). Four
- * wedges, two from each top corner, measured from straight down towards the middle; a cell is lit when its centre is
- * in a wedge and none of its four pixels is the cat (so a beam never touches the cat: at most a 1-unit gap, BG next to
- * the cat's outline). Playing: each wedge sweeps 15..70 degrees and back once per bar (the second pair half a bar
- * behind), its colour ACC / SPECIAL / ACTION / SRC turning one step on every beat. Stopped: they rest, in ACC_DIM */
+/* 0.6.2 (docs/UX-V2.md §10 "CAT stage"): a generative Julia set behind the cat, in the theme's grey ramp only (BG, L3,
+ * L5, L8, L12, L15), in 2x2 cells of the 120 grid (60 x 60: every edge 2 units), never on a cell that touches the cat
+ * (at most a 1-unit gap, BG next to the cat's outline). c goes once round the main cardioid's edge of the Mandelbrot
+ * set (c = e^it / 2 - e^2it / 4: connected sets, from a round blob to dragons and back): playing, once a bar
+ * (t = 2 pi beats / 4), the view zooming in 12 % on every beat and easing out, the bands one step on for the first
+ * quarter of the beat; stopped, once every 1280 CAT redraws (drift: ~38 s at the CAT's 30 ms). A cell's grey is its
+ * escape count as a triangle over the ramp (BG L3 L5 L8 L12 L15 L12 L8 L5 L3: smooth contour bands); points still
+ * bounded after CAT_IT steps are the inside, BG, so the cat stands in the set's dark middle. Q12 fixed point; the set
+ * is symmetric through the centre (z -> -z), so a cell and its mirror share one count: half the cells are computed.
+ * Everything comes from beats / drift: never the host clock */
 #define CAT_KEY EC_C_SHADE                         /* the sprite's ground (sprite_to_c.py): not drawn */
-#define DEG(d) ((float)(d) * 3.14159265f / 180.0f)
+#define CAT_N 60                                   /* cells a side */
+#define CAT_IT 10                                  /* the iteration cap: still bounded = the inside */
+#define CAT_HALF 1.3                               /* the view's half width */
+#define CAT_Q 12                                   /* fixed point: Q12 */
 static int cat_px(const uint8_t *spr, int x, int y)
 {
     const uint8_t b = spr[(y * EC_SPR_CAT_W + x) >> 1];
@@ -490,45 +498,50 @@ static int cat_covers(const uint8_t *spr, int sx, int sy, int px, int py)   /* a
     return 0;
 }
 
-int ec_scr_cat_beam_colour(double beats, int playing, int k)
+static void cat_fractal(const uint8_t *spr, int sx, int sy, double beats, int playing, uint32_t drift)
 {
-    static const uint8_t COL[4] = {EC_C_ACC, EC_C_SPECIAL, EC_C_ACTION, EC_C_SRC};
-    return playing ? COL[(unsigned)((int)floor(beats) + k) & 3u] : EC_C_ACC_DIM;
-}
-
-static void cat_beams(const uint8_t *spr, int sx, int sy, double beats, int playing)
-{
-    const float lo = DEG(15), hi = DEG(70), tw = tanf(DEG(6));
-    float dx[4], dy[4];
-    int col[4], k, cx, cy;
-    for (k = 0; k < 4; k++) {
-        float a;
-        if (playing) {
-            double ph = beats / 4.0 + (k >= 2 ? 0.5 : 0.0);
-            ph -= floor(ph);
-            a = lo + (hi - lo) * (float)(1.0 - fabs(2.0 * ph - 1.0));
-        } else
-            a = k >= 2 ? DEG(55) : DEG(28);
-        col[k] = ec_scr_cat_beam_colour(beats, playing, k);
-        dx[k] = sinf(a);
-        dy[k] = cosf(a);
-    }
-    for (cy = 0; cy < H / 2; cy++)
-        for (cx = 0; cx < W / 2; cx++) {
-            const int px = 2 * cx, py = 2 * cy;
-            int lit = -1;
-            for (k = 0; k < 4; k++) {
-                const float ox = (float)(k & 1 ? W - (px + 1) : px + 1), oy = (float)(py + 1);   /* from the corner */
-                const float along = ox * dx[k] + oy * dy[k], across = ox * dy[k] - oy * dx[k];
-                if (along > 0 && fabsf(across) <= along * tw)
-                    lit = k;
+    static const uint8_t BAND[10] = {EC_C_BG,  EC_C_L3,  EC_C_L5, EC_C_L8, EC_C_L12,
+                                     EC_C_L15, EC_C_L12, EC_C_L8, EC_C_L5, EC_C_L3};
+    const double PI2 = 6.283185307179586;
+    double t, env = 0.0;
+    int32_t cr, ci, hs;
+    int cx, cy, lift;
+    if (playing) {
+        const double ph = beats - floor(beats);   /* the beat's phase: the pulse */
+        env = (1.0 - ph) * (1.0 - ph) * (1.0 - ph);
+        t = PI2 * (beats / 4.0);
+    } else
+        t = PI2 * (double)(drift % 1280u) / 1280.0;
+    cr = (int32_t)((0.5 * cos(t) - 0.25 * cos(2.0 * t)) * (1 << CAT_Q));
+    ci = (int32_t)((0.5 * sin(t) - 0.25 * sin(2.0 * t)) * (1 << CAT_Q));
+    hs = (int32_t)(CAT_HALF * (1.0 - 0.12 * env) / CAT_N * (1 << CAT_Q));   /* half a cell; zoomed in on the beat */
+    lift = env > 0.4;
+    for (cy = 0; cy < CAT_N / 2; cy++)            /* the top half; the bottom is its mirror */
+        for (cx = 0; cx < CAT_N; cx++) {
+            const int px = 2 * cx, py = 2 * cy, mx = 2 * (CAT_N - 1 - cx), my = 2 * (CAT_N - 1 - cy);
+            const int here = !cat_covers(spr, sx, sy, px, py), there = !cat_covers(spr, sx, sy, mx, my);
+            int32_t zx = (2 * cx - (CAT_N - 1)) * hs, zy = (2 * cy - (CAT_N - 1)) * hs;   /* the cell's centre */
+            int n, c;
+            if (!here && !there)
+                continue;
+            for (n = 0; n < CAT_IT; n++) {
+                const int32_t xx = (zx * zx) >> CAT_Q, yy = (zy * zy) >> CAT_Q;
+                if (xx + yy > (4 << CAT_Q))
+                    break;
+                zy = ((zx * zy) >> (CAT_Q - 1)) + ci;
+                zx = xx - yy + cr;
             }
-            if (lit >= 0 && !cat_covers(spr, sx, sy, px, py))
-                R(col[lit], px, py, 2, 2);
+            c = n < CAT_IT ? BAND[(n + lift) % 10] : EC_C_BG;
+            if (c == EC_C_BG)
+                continue;
+            if (here)
+                R(c, px, py, 2, 2);
+            if (there)
+                R(c, mx, my, 2, 2);
         }
 }
 
-void ec_scr_cat(int frame, double beats, int playing)
+void ec_scr_cat(int frame, double beats, int playing, uint32_t drift)
 {
     const int sx = (W - EC_SPR_CAT_W) / 2, sy = EC_KIT_CAT_Y;
     const uint8_t *spr;
@@ -537,9 +550,9 @@ void ec_scr_cat(int frame, double beats, int playing)
     frame = frame < 0 ? frame + EC_SPR_CAT_FRAMES : frame;
     spr = ec_spr_cat[frame];
     R(EC_C_BG, 0, 0, W, H);
-    cat_beams(spr, sx, sy, beats, playing);
+    cat_fractal(spr, sx, sy, beats, playing, drift);
     ec_gfx_art(1);
-    for (y = 0; y < EC_SPR_CAT_H; y++)            /* the cat over them: its ground keyed out, its outline BLACK */
+    for (y = 0; y < EC_SPR_CAT_H; y++)            /* the cat over it: its ground keyed out, its outline BLACK */
         for (x = 0; x < EC_SPR_CAT_W; x++) {
             const int c = cat_px(spr, x, y);
             if (c != CAT_KEY)

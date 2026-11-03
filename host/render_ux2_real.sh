@@ -48,8 +48,8 @@ done
 for n in FileEditor_end Pool; do
     test -s "$OUT/${n}.png" || { echo "missing $n"; exit 1; }
 done
-# 0.6.1 (v61b-gfx): MIX's pan tracks, the CAT stage at two beats
-for n in Mix_pan Cat_beat1 Cat_beat2; do
+# 0.6.1 (v61b-gfx): MIX's pan tracks, the CAT stage at two beats; 0.6.2: and stopped
+for n in Mix_pan Cat_beat1 Cat_beat2 Cat_stopped; do
     test -s "$OUT/$n.png" || { echo "missing $n"; exit 1; }
 done
 # 0.6.1 (lead): FX with a held source key, KEYBOARD with a key held (stopped: the loop sounds)

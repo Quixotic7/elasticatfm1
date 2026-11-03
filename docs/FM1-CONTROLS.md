@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.1)
+# Elasticat on the FM-1: controls (0.6.2)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -927,8 +927,9 @@ click).
 | B11 | **the CAT** on / off |
 
 - The knobs show TRACK MIX (LEVEL PAN SEND 1 SEND 2 / MUTE) for a track, MASTER (BPM, SWING, GLO LENGTH) for MST.
-- **The CAT** is the norns visualizer: the dancing cat, full screen, its speed following the tempo. B11 or any mode
-  button leaves it (EDIT: back to MIX). The track keys keep working while it shows; the knobs don't.
+- **The CAT** is the norns visualizer: the dancing cat, full screen, its speed following the tempo, in front of a
+  greyscale fractal that turns with each bar and pulses on each beat (0.6.2; it drifts slowly while stopped). B11 or
+  any mode button leaves it (EDIT: back to MIX). The track keys keep working while it shows; the knobs don't.
 - Mutes are the pattern's (saved); solos are the session's. When any track is soloed only soloed ones play.
 - LEDs: W1-W9 the selected one bright, the others by their level, muted (or silenced by a solo) off, soloed
   blinking. B1-B8 the current rate bright.

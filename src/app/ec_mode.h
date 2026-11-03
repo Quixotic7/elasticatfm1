@@ -108,6 +108,7 @@ typedef struct {
     uint32_t trk_ms[9];
     int cat;                   /* MIX's CAT shows */
     uint32_t cat_ms;
+    uint32_t cat_n;            /* 0.6.2: the CAT's redraws (the stopped fractal's drift) */
     /* LOOP ENGINE: the zoom's half (32: 0 first, 1 second) */
     int zoom_half;
     /* KEYBOARD */

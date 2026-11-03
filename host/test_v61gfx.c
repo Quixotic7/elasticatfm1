@@ -79,7 +79,8 @@ static void test_mix_pan_lock(void)
           marker_x(0, EC_C_ACC));
 }
 
-/* the CAT: full screen (no header), beams by the transport, B11 / a mode button leave, the track keys work */
+/* the CAT: full screen (no header), 0.6.2: a greyscale fractal by the transport, B11 / a mode button leave, the track
+ * keys work */
 static int count(int col)
 {
     int i, n = 0;
@@ -87,46 +88,68 @@ static int count(int col)
         n += ec_gfx_canvas()[i] == col;
     return n;
 }
-static int top_is_stage(void)
+static int is_grey(int c)
+{
+    return c == EC_C_BG || c == EC_C_BLACK || c == EC_C_L3 || c == EC_C_L5 || c == EC_C_L8 || c == EC_C_L12 ||
+           c == EC_C_L15;
+}
+static int all_grey(void)
+{
+    int i;
+    for (i = 0; i < EC_GW * EC_GH; i++)
+        if (!is_grey(ec_gfx_canvas()[i]))
+            return 0;
+    return 1;
+}
+static int top_is_stage(void)   /* no header: the top rows are the stage (the fractal's greys) */
 {
     int x, y;
     for (y = 0; y < 10; y++)
-        for (x = 0; x < EC_GW; x++) {
-            const int c = px(x, y);
-            if (c != EC_C_BG && c != EC_C_BLACK && c != EC_C_ACC && c != EC_C_SPECIAL && c != EC_C_ACTION &&
-                c != EC_C_SRC && c != EC_C_ACC_DIM)
+        for (x = 0; x < EC_GW; x++)
+            if (!is_grey(px(x, y)))
                 return 0;
-        }
     return 1;
+}
+static int greys(void) { return count(EC_C_L3) + count(EC_C_L5) + count(EC_C_L8) + count(EC_C_L12) + count(EC_C_L15); }
+static int changed(const uint8_t *was)   /* canvas pixels that differ from was */
+{
+    int i, n = 0;
+    for (i = 0; i < EC_GW * EC_GH; i++)
+        n += ec_gfx_canvas()[i] != was[i];
+    return n;
 }
 
 static void test_cat(void)
 {
-    int beam, c0, c1;
-    double b0;
+    static uint8_t was[EC_GW * EC_GH];
+    int beat, n;
     to(EC_CAT_MASTER);
     W(1, 40);
     clear_steps(0);
     B(11, 40);
     redraw();
     CHECK(A->pn.cat, "B11: the CAT");
-    CHECK(top_is_stage(), "the CAT has no header: the top rows are the stage");
-    CHECK(count(EC_C_ACC_DIM) > 200 && !count(EC_C_SPECIAL) && !count(EC_C_SRC) && !count(EC_C_ACTION),
-          "stopped: the beams rest, dimmed (ACC_DIM %d)", count(EC_C_ACC_DIM));
+    CHECK(top_is_stage() && all_grey(), "the CAT has no header, greys only");
+    CHECK(greys() > 1500, "stopped: the fractal shows (%d grey px)", greys());
+    memcpy(was, ec_gfx_canvas(), sizeof was);
+    run(2000);
+    redraw();
+    n = changed(was);
+    CHECK(n > 50 && all_grey(), "stopped: it drifts (%d px in 2 s)", n);
     press(FM1P_B_PLAY, 20);
     run(100);
     redraw();
-    b0 = ec_seq_beats(&A->seq);
-    c0 = ec_scr_cat_beam_colour(b0, 1, 0);
-    CHECK(A->seq.playing && top_is_stage() && !count(EC_C_ACC_DIM) && count(c0) > 50,
-          "playing: lit beams, beam 1 in its beat's colour (%d px)", count(c0));
-    beam = (int)floor(b0);
-    while ((int)floor(ec_seq_beats(&A->seq)) == beam)          /* the next beat: the colours turn */
+    CHECK(A->seq.playing && top_is_stage() && all_grey() && greys() > 1500, "playing: greys only, the fractal (%d px)",
+          greys());
+    beat = (int)floor(ec_seq_beats(&A->seq));
+    while ((int)floor(ec_seq_beats(&A->seq)) == beat)          /* the next beat: the pulse */
         run(10);
-    run(30);
     redraw();
-    c1 = ec_scr_cat_beam_colour(ec_seq_beats(&A->seq), 1, 0);
-    CHECK(c1 != c0 && count(c1) > 50, "the next beat: beam 1's colour changes (%d -> %d)", c0, c1);
+    memcpy(was, ec_gfx_canvas(), sizeof was);
+    run(300);
+    redraw();
+    n = changed(was);
+    CHECK(n > 200, "the beat's pulse eases out (%d px in 300 ms)", n);
     W(3, 40);                                                 /* a track key still selects the track */
     redraw();
     CHECK(A->pn.cat && A->track == 2 && top_is_stage(), "W3 on the CAT: T3, still the CAT, no header");

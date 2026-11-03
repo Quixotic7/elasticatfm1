@@ -393,13 +393,15 @@ lower 3@153000
 turn K2@153300:20
 lower 2@153700
 png 154400:Mix_pan.png
-# ---- playing: the CAT (B11) at two beats (500 ms apart at 120 BPM: the beams' colours turn), then B11 out, stopped
+# ---- playing: the CAT (B11) at two points in beats (500 ms apart at 120 BPM: the fractal moves on with the bar, pulsing
+# on each beat), stopped (it drifts), then B11 out
 press PLAY@154800
 upper 10@155200
 png 156000:Cat_beat1.png
-png 156500:Cat_beat2.png
-upper 10@157000
-press PLAY@157400
+png 156400:Cat_beat2.png
+press PLAY@156800
+png 157300:Cat_stopped.png
+upper 10@157500
 # ======== 0.6.1 (lead): FX with a held source key, KEYBOARD with a key held while stopped
 # ---- MIX (still shown): W1 = T1 (its INS 1 LOFI, INS 2 BLACKHOLE from above); FX (its INSERT page, INS 2 selected): B6 (LFO 1)
 # held + K1 +10 = a route onto BLACKHOLE's first param: blue header, its bar in SRC

@@ -522,7 +522,7 @@ them:
 - Why `grid` missed the 1-unit bar: it checked that every 2x2 LCD block is one colour, which a 1-grid-unit bar passes
   by construction, and no frame had a route, a held source or a depth lock. It now checks every frame for any
   non-ground run exactly 1 unit thick and >= 3 long (text and sprites masked by draw-call tracking), with frames for
-  modulation, held sources, the three lock states, the hold menus, the lists, POOL, MIX's pans and the CAT's beams;
+  modulation, held sources, the three lock states, the hold menus, the lists, POOL, MIX's pans and the CAT's fractal;
   `check_png.py --survey [--strict]` lists hairlines in PNGs.
 - Lock cells: with several steps held, the lock of the first held step that has one; a held step without the lock
   shows the plain track value (no outline); a filled cell draws its label and value a unit higher, so 2 units of LOCK
@@ -532,10 +532,17 @@ them:
   value (the playing lock and the crossfader plus the live modulation); the selected marker ACC, muted L5. S1 / S2 have
   no pan in the engine: their marker rests at the centre in L5; MST shows none.
 - CAT: full screen, the cat at 1x centred (its art spans 64 x 61 units, so 2x does not fit), its outline in BLACK so it
-  reads on PAPER and DMG too. Four beams from the top corners sweep 15-70 degrees and back once per bar (the second
-  pair half a bar behind), colours ACC / SPECIAL / ACTION / SRC turning on each beat, from the transport's beats only;
-  stopped they rest in ACC_DIM. While playing the dance follows the beats (5 frames a beat). The cat art's own
+  reads on PAPER and DMG too. While playing the dance follows the beats (5 frames a beat). The cat art's own
   8-unit joystick stroke is left as drawn.
+- CAT stage, 0.6.2 (replacing 0.6.1's four colour beams): a Julia set on the 60 x 60 grid of 2x2 cells, never on a
+  cell that touches the cat. c goes once round the edge of the Mandelbrot set's main cardioid (c = e^it/2 - e^2it/4:
+  always a connected set, from a round blob to dragon shapes) once a bar, from the transport's beats; each beat zooms
+  the view in 12 % and eases out, and for the first quarter of the beat the bands step one grey on. Stopped, c goes
+  round once every 1280 CAT redraws (~38 s). A cell's grey is its escape count (cap 10) on a triangle over the ramp,
+  BG L3 L5 L8 L12 L15 L12 L8 L5 L3, so the bands are smooth contours; the inside is BG, so the cat stands in the
+  set's dark middle. Q12 integer maths; the set's point symmetry means half the cells are computed. Cost: ~0.18 ms
+  a redraw in wasm3 (M-series, rfm1_run), ~0.6 % of a core at the CAT's ~33 redraws a second; the heavy project's
+  speed with the CAT up is unchanged (2.0-2.1x on a loaded machine, the same with it off).
 
 **FX**
 - INS 2 = new params `ec_fx_wet` (227), INS2 MACHINE (228), INS2 MIX (229) and INS2 P1..P8 (230..237), mapped by index

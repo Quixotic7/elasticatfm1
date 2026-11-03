@@ -461,3 +461,9 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
   Every reference follows: the tracks' slots and the slot locks in all 64 patterns. Undoable.
 - F2 **FREE** the selected slot (its tracks fall silent), as in BROWSE. SHIFT + B11 purges, as in BROWSE.
 - Like the rest of FILE, it can't open while playing.
+
+**MIX shows each track's pan** (owner, 2026-11-03)
+- Every strip on MIX (T1-T6, S1, S2; MST if it has a pan) shows its pan under the level bar: a short track as wide
+  as the strip with a marker on it, the centre marked, the marker left / right of centre with the pan. A p-locked or
+  modulated pan shows where it is now.
+- 120-grid rules: the track and marker are at least 2 units; the selected track's marker in ACC.

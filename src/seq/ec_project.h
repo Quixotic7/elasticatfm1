@@ -167,6 +167,9 @@ int32_t ec_project_save_v1(const ec_project_t *p, uint8_t *buf, uint32_t cap);
  * version: then p is a fresh project). Versions 1 and 2; a version 1 record's 16 patterns land in bank A (0..15) and
  * its 16 slots in slots 1..16 */
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n);
+/* 0.6.1: a record's header (magic, a known version) and checksum hold: its whole length (header + payload), else -1.
+ * Nothing is parsed: a project file is checked before the project it replaces is let go */
+int32_t ec_project_check(const uint8_t *buf, uint32_t n);
 /* 0.5.0: the mod routes the last load dropped converting a 0.4 project (past a track's 8 matrix slots) */
 int ec_project_mtx_dropped(void);
 

@@ -11,5 +11,8 @@ void ec_fs_native_root(const char *root, const char *cart_id);   /* NULL: no fol
 void ec_fs_native_pump(void);          /* between two ticks: complete what was requested before */
 void ec_fs_native_touch(void);         /* bump the folder-change counter */
 uint32_t ec_fs_native_served(void);    /* requests completed so far */
+/* 0.6.1, tests: the op's request number `after` from now (0 = the next one) fails with err (FS_ENOSPC, FS_EIO ..),
+ * once, without touching the disk. op 0 turns it off */
+void ec_fs_native_fail(int32_t op, int after, int32_t err);
 
 #endif

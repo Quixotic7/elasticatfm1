@@ -1,8 +1,8 @@
 # The firmware's real 0.6.0 screens, one per mockup (host/mock_ux2.c MODES[]), reached through panel input only, with
 # the mockups' file names (host/render_ux2_real.sh -> results/ux-v2-real). The shipped layout, the demo folder plus
 # /audio/breaks and /audio/kit (host/render_ux2_real.sh). Times are device ms; each section starts on its own round
-# time. lower I = W(I+1), upper I = B(I+1). A pop-up is taken 150 ms after its mode button (they last 0.8 s; any input
-# ends them); a screen 1.2 s or more after the last input that shows a toast. A source key's route takes two turns: the
+# time. lower I = W(I+1), upper I = B(I+1). 0.6.1: no mode pop-ups (their shots are gone) and no toasts (messages show
+# in the header). A source key's route takes two turns: the
 # first detent makes the route, the next ones set its depth (one ec_run turn is one knob event). The machine and the
 # warp change only while stopped. Each mode button returns to the mode it showed last (HOME: LOOP ENGINE / TRIG /
 # KEYBOARD, EDIT: MIX / PAGES, SAVE: FILE / SAMPLER), so the presses below follow that.
@@ -14,7 +14,6 @@ png 4250:Intro_screen.png
 # ======== stopped: the content
 # ---- FILTER (SEL): the steps (1 4 5 7 9 11 13 15), CUTOFF / RESO, LFO 1 (B6 held) routed to CUTOFF (+25 %)
 press SEL@4500
-png 4650:Filter_popup.png
 lower 0@5000
 lower 3@5200
 lower 4@5400
@@ -54,7 +53,6 @@ turn ALGO@14400:-1
 # ---- LOOP ENGINE (HOME): its LOOP page playing (TAPE); then stopped: the setup (hold HOME) WARP MODE = GRAIN (K2,
 # three detents); MOD ENV (B8 held) routed to START (-40 %)
 press HOME@15000
-png 15150:Main_popup.png
 press PLAY@15400
 png 16600:Main_screen.png
 press PLAY@16800
@@ -114,24 +112,19 @@ png 33600:Trig_screen.png
 
 # ---- MODULATION (LFO): the MATRIX with the routes made above
 press LFO@35000
-png 35150:Mod_popup.png
 png 36000:Mod_screen.png
 
 # ---- FX: B1 held + W4 = the insert's engine; the screen once the takeover has gone
 press FX@36800
-png 36950:Fx_popup.png
 upper 0@37400+700
 lower 3@37600
 png 39600:Fx_screen.png
 
 # ---- HOME's pop-ups on their remembered pages: TRIG (its last) on COND, KEYBOARD, LOOP ENGINE on WARP; AMP on AMP ENV
 press HOME@40400
-png 40550:Trig_popup.png
 press HOME@41200
 press HOME@42000
-png 42150:Loop_popup.png
 press ENV@42800
-png 42950:Amp_popup.png
 png 43800:Amp_screen.png
 press ENV@44200
 png 44800:Mod_env_screen.png
@@ -148,7 +141,6 @@ upper 3@47600
 press HOME@48000
 press HOME@48400
 press HOME@48800
-png 48950:Keyboard_popup.png
 turn ALGO@49400:5
 png 50800:Keyboard_screen.png
 turn ALGO@51200:-5
@@ -159,12 +151,10 @@ lower 0@51700
 # then all on again (the same gestures) and T1
 press EDIT@52400
 press EDIT@52800
-png 52950:Pages_popup.png
 png 53800:Pages_screen.png
 press GLO@54200+300
 lower 1@54300
 press EDIT@54800
-png 54950:Mix_popup.png
 lower 0@55400+700
 lower 3@56400+700
 press GLO@57400+400
@@ -186,14 +176,12 @@ lower 2@65300
 press GLO@66000+1200
 png 67000:Shift_screen.png
 press GLO@67600
-png 67750:Shift_popup.png
 press GLO@68400
 press GLO@69000+300
 lower 0@69100
 
 # ---- PATTERN LAUNCH (SEQ): F1 on, W1 copies A1, W2..W6 paste; F1 off; A3 launched, A4 queued
 press SEQ@69800
-png 69950:Patterns_popup.png
 press OCT-@70400
 lower 0@70600
 lower 1@70800
@@ -209,7 +197,6 @@ png 77500:Patterns_screen.png
 # ---- CROSSFADER (ARP): from FILTER; A (B1) held + K1 / K2, B (B2) held + K1 = locks; W9 held = the glide
 press SEL@77600
 press ARP@78000
-png 78150:Crossfader_popup.png
 upper 0@78400+600
 turn K1@78600:1
 turn K1@78700:-20
@@ -225,7 +212,6 @@ press SAVE@82400
 upper 2@82800
 press SEL@83200
 press SAVE@83600
-png 83750:Sampler_popup.png
 upper 10@84200
 png 85250:Sampler_screen.png
 
@@ -244,7 +230,6 @@ press HOME@97000
 press PLAY@97600
 press SAVE@98000
 press SAVE@98400
-png 98550:FileBrowser_popup.png
 turn SELECT@99000:1
 upper 1@99200
 upper 9@99600
@@ -326,4 +311,3 @@ lower 14@118800
 png 120200:FileEditor_screen.png
 press SAVE@120600
 press SAVE@121200
-png 121350:FileEditor_popup.png

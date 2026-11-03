@@ -494,11 +494,11 @@ static void test_modkeys(void)
     CHECK(ec_mtx_find(tv(), EC_MS_ENV, EC_P_FILTER_RES) < 0 && ec_mtx_src(tv(), 1) == EC_MS_OFF,
           "released at 0: freed");
 
-    /* NO MOD: an option */
+    /* NOT MODDABLE: an option (0.6.1: in the header, no takeover) */
     key(1, B_LFO1, 1);
     turn(FM1P_E_K3, 1);                                       /* filter TYPE */
     run(30);
-    CHECK(!strcmp(A->ux.to_val, "NO MOD") && A->ux.to_ms, "TYPE: NO MOD (%s)", A->ux.to_val);
+    CHECK(!strcmp(A->msg, "NOT MODDABLE") && A->msg_ms && !A->ux.to_ms, "TYPE: NOT MODDABLE (%s)", A->msg);
     key(1, B_LFO1, 0);
     run(30);
     CHECK(ec_mtx_src(tv(), 1) == EC_MS_OFF && A->cat == EC_CAT_FILT, "nothing made, no page (a turn is no tap)");
@@ -544,11 +544,15 @@ static void test_modkeys(void)
     run(30);
     key(1, B_VEL, 0);
     run(30);
-    CHECK(!strcmp(A->ux.to_val, "FULL") && ec_mtx_find(tv(), EC_MS_VEL, EC_P_FILTER_CUTOFF) < 0, "8 slots: FULL (%s)",
-          A->ux.to_val);
+    CHECK(!strcmp(A->msg, "MATRIX FULL") && A->msg_alert && ec_mtx_find(tv(), EC_MS_VEL, EC_P_FILTER_CUTOFF) < 0,
+          "8 slots: MATRIX FULL in ALERT (%s)", A->msg);
     clear_matrix();
 
-    /* taps: the source's page */
+    /* taps (0.6.1): never another mode; the source's page when it is in the mode shown */
+    tapkey(1, B_LFO1);
+    CHECK(A->cat == EC_CAT_FILT, "FILTER: tap LFO 1: FILTER stays");
+    ec_app_goto(EC_CAT_MOD, 0);
+    run(30);
     tapkey(1, B_LFO1);
     CHECK(A->cat == EC_CAT_MOD && ec_page_pic(EC_CAT_MOD, A->page[EC_CAT_MOD], 0) == EC_PIC_LFO1, "tap LFO 1: its page");
     tapkey(1, B_AT);
@@ -560,8 +564,12 @@ static void test_modkeys(void)
         CHECK(A->cat == EC_CAT_MOD && pg.pic == EC_PIC_MACRO && pg.arg == 2, "MODULATION: tap M3 (B4): MACRO 3");
     }
     tapkey(1, B_ENV);
+    CHECK(A->cat == EC_CAT_MOD, "MODULATION: tap MOD ENV: MODULATION stays");
+    ec_app_goto(EC_CAT_AMP, 0);
+    run(30);
+    tapkey(1, B_ENV);
     CHECK(A->cat == EC_CAT_AMP && ec_page_pic(EC_CAT_AMP, A->page[EC_CAT_AMP], 0) == EC_PIC_MENV,
-          "tap MOD ENV: AMP's MOD ENV page");
+          "AMP: tap MOD ENV: its MOD ENV page");
     /* MODULATION: hold M2 (B3) + a value knob = route the macro */
     ec_app_goto(EC_CAT_MOD, 1);                               /* LFO 1 */
     run(900);

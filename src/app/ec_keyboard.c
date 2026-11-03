@@ -4,7 +4,9 @@
  * time (B11 steps the bank), and the white keys play the selected slice at a pitch. ALGO is the target step: below 1
  * is live (no entry); with a target, a key writes a trig with that note (and slice) there, one note per step, then
  * advances (or stays: KEYBOARD's ADVANCE setting in HOME's settings; SHIFT + the key does the other). Live (no
- * target), REC records the notes (ec_liverec.c). */
+ * target), REC records the notes (ec_liverec.c). 0.6.1: stopped, a key plays the loop (slice tracks: the slice) at its
+ * pitch while held (ec_seq_keyboard); the key lit is the note sounding (the key + PITCH, so a positive PITCH lights a
+ * higher key); ALGO shows nothing but the step; the header names the key held. */
 #include <math.h>
 #include <stdio.h>
 
@@ -36,15 +38,9 @@ void ec_kb_oct(int d)
 void ec_kb_target(int det)
 {
     const int len = ec_seq_pattern_steps(&A->seq, A->track);
-    char b[12];
-    P->target = clampi(P->target + det, 0, len);
+    P->target = clampi(P->target + det, 0, len);   /* 0.6.1: no takeover, no message: the screen's target step */
     if (P->target)
         A->step_page = (P->target - 1) / 16;
-    if (P->target)
-        snprintf(b, sizeof b, "%d", P->target);
-    else
-        snprintf(b, sizeof b, "LIVE");
-    ec_ux_takeover("STEP", b, len ? (float)P->target / (float)len : 0);
     A->redraw = 1;
 }
 
@@ -84,9 +80,15 @@ void ec_kb_key(int k, int down, int vel)
     if (A->bus)
         return;
     if (!down) {
-        ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
+        if (P->kb_held >> k & 1u) {
+            P->kb_held &= ~(1u << k);
+            ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
+        }
+        A->redraw = 1;
         return;
     }
+    P->kb_held |= 1u << k;                         /* 0.6.1: the header's key */
+    P->kb_last = k;
     if (!P->target && !(slice && up == 10))
         ec_liverec_capture();                      /* live REC: CAPTURE's first note starts playback */
     if (slice && up >= 0) {                        /* slice tracks: the black keys pick the slice */
@@ -128,4 +130,34 @@ void ec_kb_key(int k, int down, int vel)
             ec_liverec_note(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
     }
     A->redraw = 1;
+}
+
+/* 0.6.1: the key lit as sounding: the note held plus the track's PITCH (ec_seq_value: v[PITCH] + the key's semitones),
+ * on the keybed at the octave shown; -1 none (or off the keybed) */
+int ec_kb_lit_key(void)
+{
+    int k;
+    if (A->bus || ec_kb_slice_track() || !A->seq.tr[A->track].live_pitch_on)
+        return -1;
+    k = (int)floorf(ec_seq_value(&A->seq, A->track, EC_P_PITCH) + 0.5f) + 7 - 12 * P->oct;
+    return k >= 0 && k < EC_NKEY ? k : -1;
+}
+
+const char *ec_kb_held_text(void)
+{
+    static const char *const N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    static char b[16];
+    const int k = P->kb_last;
+    int s;
+    if (A->bus || ec_app_mode() != EC_MODE_KEYBOARD || k < 0 || k >= EC_NKEY || !(P->kb_held >> k & 1u))
+        return 0;
+    if (ec_kb_slice_track() && ec_key_upper(k) >= 0) {   /* a slice pick (B11: the bank) */
+        if (ec_key_upper(k) == 10)
+            return 0;
+        snprintf(b, sizeof b, "SLICE %d", P->kb_bank * 10 + ec_key_upper(k) + 1);
+        return b;
+    }
+    s = ec_kb_semis(k);
+    snprintf(b, sizeof b, "NOTE %s%d", N[(s % 12 + 12) % 12], 4 + (s >= 0 ? s / 12 : -((11 - s) / 12)));
+    return b;
 }

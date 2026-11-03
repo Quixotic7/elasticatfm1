@@ -25,9 +25,9 @@ cp "$F/audio/b_bass_bpm120.wav" "$F/audio/breaks/jungle/reese.wav"
 rm -f "$F/data/elasticat/rec/"rec-*.wav
 "$B/ec_run" --folder "$F" --out "$OUT" --script "$H/ux2_real.txt" --ms 122000 \
     --audio-in "$F/audio/c_chords_bpm120.wav" --expect-ui pool:36 --expect-ui takes:1 --expect-ui fdir:/audio/breaks
-# every mockup has its real screen (host/mock_ux2.c MODES[]; Shift_popup: sticky SHIFT, which shows SHIFT's screen)
+# every mockup has its real screen (host/mock_ux2.c MODES[]; 0.6.1: no mode pop-ups, so no *_popup shots)
 for n in Main Shift Fx Filter Amp Mod Mix Pages Loop Trig Keyboard FileBrowser FileEditor Sampler Crossfader Patterns; do
-    test -s "$OUT/${n}_screen.png" && test -s "$OUT/${n}_popup.png" || { echo "missing $n"; exit 1; }
+    test -s "$OUT/${n}_screen.png" || { echo "missing $n"; exit 1; }
 done
 for n in Filter_env Mod_env Record AppSettings Intro Cat; do
     test -s "$OUT/${n}_screen.png" || { echo "missing $n"; exit 1; }

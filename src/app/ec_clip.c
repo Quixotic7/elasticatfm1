@@ -13,13 +13,7 @@
 #define P (&ec_app.pn)
 #define E (&ec_app.e5)
 
-static void toast(const char *s)
-{
-    snprintf(E->toast, sizeof E->toast, "%s", s);
-    E->toast_ms = A->ms ? A->ms : 1;
-    E->toast_keep = 0;
-    A->redraw = 1;
-}
+static void toast(const char *s) { ec_app_message(s); }   /* 0.6.1: a message in the header (no box) */
 
 void ec_clip_reset(void)
 {

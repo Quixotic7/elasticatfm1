@@ -17,6 +17,7 @@ static void say(ec_app_t *a, const char *s)
 {
     snprintf(a->msg, sizeof a->msg, "%s", s);
     a->msg_ms = a->ms ? a->ms : 1;
+    a->msg_alert = 0;
     a->redraw = 1;
 }
 static void changed(ec_app_t *a)

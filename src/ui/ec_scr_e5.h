@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* E5's screens (src/ui/ec_scr_e5.c): MST > SCENE (the A/B fader, its glide keys, the params that morph), the scene
- * strip on any page while the lower keys are the scene row, the naming screen, toasts (copy / clear / paste, memorize, undo) and the pattern name on the PAT screens. */
+ * strip on any page while the lower keys are the scene row, the naming screen and the pattern name on the PAT screens
+ * (0.6.1: no toasts; their messages show in the header). */
 #ifndef EC_SCR_E5_H
 #define EC_SCR_E5_H
 

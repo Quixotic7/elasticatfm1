@@ -16,13 +16,7 @@
 
 #define XF_TICK_MS 10
 
-static void toast(const char *s)
-{
-    snprintf(E->toast, sizeof E->toast, "%s", s);
-    E->toast_ms = A->ms ? A->ms : 1;
-    E->toast_keep = 0;
-    A->redraw = 1;
-}
+static void toast(const char *s) { ec_app_message(s); }   /* 0.6.1: a message in the header (no box) */
 
 float ec_xfd_key_value(int i) { return (float)(i < 0 ? 0 : i > 11 ? 11 : i) / 11.0f; }
 

@@ -14,6 +14,7 @@ void ec_screens_draw(const ec_app_t *a);   /* the whole screen (ec_gfx_begin fir
 void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg);
 void ec_scr_neighbor(const ec_app_t *a, int top, int bot);
 void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right);
+void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, const char *right);   /* page as text */
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
 
 /* 0.6.0: ec_scr_file.c (FILE's browser and editor, the SAMPLER, the record settings) */

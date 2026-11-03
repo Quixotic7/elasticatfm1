@@ -323,7 +323,11 @@ enum {
     EC_EV_SLICE_OFF = 16, /* release slice `slice` (live key up) */
     EC_EV_LOOP_KEY = 17,  /* loop key `slice` = 1..32, value 1 press / 0 release.
                              EC_TF_AUDITION on a press while stopped: the reader
-                             plays the key region until the last key is released. */
+                             plays the key region until the last key is released.
+                             0.6.1: `slice` = 0 (EC_TF_AUDITION, while stopped) =
+                             the whole loop from its start (KEYBOARD: a key held),
+                             each press from the start with the envelopes, until
+                             a release (value 0). */
     EC_EV_RELEASE_ALL = 18, /* release every slice voice of the track (gate off) */
     EC_EV_MOD_TRIG = 19   /* E4 (\trModTrig): EC_TF_LFO retriggers the LFOs (TRIG / ONE /
                              HOLD modes), EC_TF_MENV the mod envelope with gate `length`

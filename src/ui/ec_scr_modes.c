@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.6.0: the screens of the modes without param pages of their own (ec_scr_modes.h), in the approved mockups'
  * geometry (host/mock_ux2.c scr_pages, scr_keyboard, scr_crossfader, scr_patterns, scr_app_settings, scr_cat,
- * scr_intro, popup): the 120x120 grid, palette slots only, the kit's header and cells. */
+ * scr_intro): the 120x120 grid, palette slots only, the kit's header and cells. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -135,9 +135,8 @@ static void keyboard_screen(const ec_app_t *a)
             R(EC_C_BLACK, 3 + GAP[i] * 7 + 4, 20, 4, 18);
         }
         (void)held;
-        if (a->seq.tr[a->track].live_pitch_on) {   /* the note playing */
-            const int s = (int)floorf(a->seq.tr[a->track].live_pitch - v[EC_P_PITCH] + 0.5f);
-            const int k = s + 7 - 12 * a->pn.oct;
+        if (ec_kb_lit_key() >= 0) {                /* the note sounding (0.6.1: the key + PITCH, up for a positive one) */
+            const int k = ec_kb_lit_key();
             const int lo = k >= 0 && k < EC_NKEY ? ec_key_lower(k) : -1, up = k >= 0 && k < EC_NKEY ? ec_key_upper(k) : -1;
             if (lo >= 0)
                 R(EC_C_ACC, 3 + lo * 7 + 1, 40, 4, 8);
@@ -214,9 +213,7 @@ static void patterns_screen(const ec_app_t *a)
         char t[24];
         const char *n = ec_e5_pattern_name(a->proj.current);
         snprintf(t, sizeof t, "%s", n[0] ? n : ec_cat_tag(EC_CAT_PAT));
-        static const char *const N[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
-        ec_kit_header(N[a->bus ? EC_NTRACK - 1 + a->bus : a->track], a->msg_ms ? a->msg : t, pgs, r, 0,
-                      ec_app_popup(a));
+        ec_scr_header_s(a, t, pgs, r);             /* 0.6.1: the shared header (messages, held keys) */
     }
     for (i = 0; i < 16; i++) {
         const int p = ec_pat_index(bank, i), col = i % 4, row = i / 4, x = 2 + col * 29, y = 12 + row * 14, w = 27,
@@ -301,16 +298,3 @@ int ec_scr_modes_full(const ec_app_t *a)
     }
 }
 
-void ec_scr_modes_overlay(const ec_app_t *a)
-{
-    int cur = -1;
-    const char *roles;
-    const int mode = a->pn.pop - 1;
-    if (!a->pn.pop || ec_app_popup(a) || ec_app_shift_map(a))
-        return;
-    roles = ec_pn_roles(mode, &cur);
-    ec_gfx_dim();
-    /* a name too long for scale 2 (PATTERN LAUNCH): the mode's short tag big (the mock's PATTERNS) */
-    ec_kit_popup(mode < EC_NCAT && ec_gfx_text_w(ec_mode_name(mode), 2) > 106 ? ec_cat_tag(mode) : ec_mode_name(mode),
-                 ec_pn_page_name(mode), roles, cur);
-}

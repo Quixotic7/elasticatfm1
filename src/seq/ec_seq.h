@@ -54,8 +54,10 @@ typedef struct {
     int dirty;
     int mtx_gen;                   /* 0.5.0: a matrix slot aims at a generic destination (resent every chunk) */
     /* live */
-    float live_pitch;              /* keyboard transpose while a key is held */
+    float live_pitch;              /* keyboard transpose while a key is held (PITCH + the key's, at the press) */
     int live_pitch_on;
+    float live_semis;              /* 0.6.1: the key's semitones (the pitch follows PITCH while held) */
+    int kb_down;                   /* 0.6.1: keyboard keys held (stopped: the loop auditioned until the last) */
     uint32_t live_keys;            /* held live loop keys (bit k-1), for the UI */
     uint32_t pads;                 /* held slice pads */
     uint32_t fired_slices;         /* the last step's slices (UI) */

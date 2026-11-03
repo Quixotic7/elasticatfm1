@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.6.0: the panel by modes (ec_mode.h, docs/UX-V2.md §0, §1, §3): the input dispatch, the mode model (a tap on a mode
- * button, the lit one again, a hold or SHIFT = the settings, SHIFT + HOME = APP SETTINGS), the mode-entry pop-up, the
+ * button, the lit one again, a hold or SHIFT = the settings, SHIFT + HOME = APP SETTINGS; 0.6.1: no pop-up), the
  * intro, SHIFT (held / sticky) and its layer, F1 / F2 (tap sticky, hold momentary; both = F3), PLAY, REC, the white
  * keys as steps, PRESETS = the track's pool slot, ALGO = the step page. The modes' own keys are in ec_srckeys.c,
  * ec_mix.c, ec_keyboard.c, ec_xfd.c, ec_patlaunch.c, ec_file.c, ec_sampler.c; live REC in ec_liverec.c.
@@ -21,7 +21,6 @@
 #define E (&ec_app.e5)
 
 #define TAP_MS 250            /* a step key released within this (not edited): a tap toggles the trig */
-#define POPUP_MS 800          /* the mode pop-up */
 
 /* what a key does from its press to its release */
 enum { R_NONE, R_STEP, R_LOOP_LIVE, R_PAD, R_KB, R_RAZOR, R_F3, R_SWALLOW, R_TRK, R_XFD, R_SRCB, R_PAGEB, R_SHIFTB,
@@ -58,8 +57,6 @@ int ec_pn_f(int which)
     return ((P->f_held | P->f_sticky) & which) != 0;
 }
 
-int ec_pn_popup_shows(void) { return P->pop != 0; }
-
 int ec_app_popup(const ec_app_t *a)
 {
     return a->e5.naming || a->e5.confirm || a->ux.f3 || a->settings || a->rec.open || a->pn.as_open ||
@@ -91,14 +88,6 @@ void ec_pn_init(void)
 }
 
 /* ------------------------------------------------------------------------------------------- the modes --- */
-static void popup(int mode)
-{
-    if (!ec_as->popup)
-        return;
-    P->pop = mode + 1;
-    P->pop_ms = A->ms ? A->ms : 1;
-}
-
 static void settings_close(void)
 {
     A->settings = 0;
@@ -187,7 +176,6 @@ void ec_pn_enter(int mode)
     if (mode != was) {
         P->shift_sticky = 0;                       /* sticky SHIFT ends with the mode */
         fn_update();
-        popup(mode);
     }
     A->redraw = 1;
 }
@@ -998,23 +986,19 @@ static void holds_tick(void)
         UX->to_ms = 0;
         A->redraw = 1;
     }
-    if (P->pop && A->ms - P->pop_ms >= POPUP_MS) {
-        P->pop = 0;
+    if (!P->hdr_late && ec_hdr_holding()) {        /* 0.6.1: a held key's text in the header */
+        P->hdr_late = 1;
         A->redraw = 1;
     }
     if (P->shift_held && !UX->shift_used && A->ms - UX->shift_ms == EC_SHIFTMAP_MS)
         A->redraw = 1;
 }
 
-/* any knob, key or button: the intro and the pop-up go (what was pressed still acts) */
+/* any knob, key or button: the intro goes (what was pressed still acts) */
 static void dismiss(void)
 {
     if (P->intro) {
         P->intro = 0;
-        A->redraw = 1;
-    }
-    if (P->pop) {
-        P->pop = 0;
         A->redraw = 1;
     }
 }
@@ -1024,8 +1008,11 @@ void ec_pn_tick(const void *vin)
 {
     const ec_input_t *in = (const ec_input_t *)vin;
     int b, k, r;
-    if (in->btn_down || in->key_down)
+    if (in->btn_down || in->key_down) {
         dismiss();
+        P->down_ms = A->ms ? A->ms : 1;            /* 0.6.1: an older message gives way to a held key's text */
+        P->hdr_late = 0;
+    }
     for (r = 0; r < EC_NE; r++)
         if (in->enc[r])
             dismiss();
@@ -1085,52 +1072,7 @@ void ec_pn_tick(const void *vin)
     holds_tick();
 }
 
-/* ------------------------------------------------------------------------------------------- the pop-up --- */
-const char *ec_pn_page_name(int mode)
-{
-    static char b[24];
-    ec_page_t pg;
-    switch (mode) {
-    case EC_CAT_MASTER: {
-        const int sel = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-        snprintf(b, sizeof b, "%s  %s", target_name(sel),
-                 A->bus ? "" : ec_rate_label(iv(ec_app_params(A), EC_P_RATE)));
-        return b;
-    }
-    case EC_MODE_PAGES: snprintf(b, sizeof b, "PAGE %d", A->step_page + 1); return b;
-    case EC_MODE_KEYBOARD:
-        if (ec_kb_slice_track())
-            snprintf(b, sizeof b, "SLICE %d", iv(ec_app_params(A), EC_P_SLICE_INDEX));
-        else
-            snprintf(b, sizeof b, "OCT %+d", P->oct);
-        return b;
-    case EC_CAT_XFD: {
-        static const char *const G[4] = {"INSTANT", "FAST", "MED", "SLOW"};
-        snprintf(b, sizeof b, "GLIDE %s", G[clampi(ec_as->glide, 0, 3)]);
-        return b;
-    }
-    case EC_CAT_PAT: snprintf(b, sizeof b, "BANK %c", 'A' + P->bank); return b;
-    case EC_MODE_SAMPLER:
-        if (ec_sampler_len())
-            snprintf(b, sizeof b, "%d BAR%s", ec_sampler_len(), ec_sampler_len() > 1 ? "S" : "");
-        else
-            snprintf(b, sizeof b, "FREE");
-        return b;
-    case EC_CAT_FILE:
-        if (ec_file_page() == EC_PIC_EDITOR) {
-            snprintf(b, sizeof b, "EDITOR %dX", (int)ec_file_zoom());
-            return b;
-        }
-        break;
-    default: break;
-    }
-    if (mode < 0 || mode >= EC_NCAT)
-        return "";
-    ec_page_items_bus(mode, A->page[mode], ec_app_params(A), A->bus, A->bus ? A->proj.bus[A->bus - 1] : 0, &pg);
-    snprintf(b, sizeof b, "%s", pg.title ? pg.title : "");
-    return b;
-}
-
+/* ------------------------------------------------------------------------------------------- the roles --- */
 const char *ec_pn_roles(int mode, int *cur)
 {
     static char r[EC_NBKEY + 1];

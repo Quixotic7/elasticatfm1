@@ -137,9 +137,13 @@ static void slot_clear(float *v, int k)
     v[ec_mtx_depth_id(k)] = EC_PARAMS[ec_mtx_depth_id(k)].def;
 }
 
-static void bad(const char *why, const char *label)
+/* 0.6.1: a refusal in the header (no takeover): NOT MODDABLE, MATRIX FULL (an alert) */
+static void bad(const char *why, int alert)
 {
-    ec_ux_takeover(label, why, 0.5f);
+    if (alert)
+        ec_app_alert(why);
+    else
+        ec_app_message(why);
     MK->bad_ms = A->ms ? A->ms : 1;
 }
 
@@ -198,7 +202,7 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
     MK->used = 1;
     src = KEY_SRC[i];
     if (it->kind != EC_IT_PARAM || A->bus || A->settings || !ec_param_mod_dest(it->id)) {
-        bad("NO MOD", ec_mk_key_name(i));
+        bad("NOT MODDABLE", 0);
         return 1;
     }
     id = it->id;
@@ -218,7 +222,7 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
     if (k < 0) {                                          /* the first detent: a free slot takes the route */
         k = ec_mtx_free(v);
         if (k < 0) {
-            bad("FULL", ec_mk_key_name(i));
+            bad("MATRIX FULL", 1);
             return 1;
         }
         slot_clear(v, k);

@@ -3,7 +3,8 @@
  * (ec_plat_settings: survives project loads and new projects). A pop-up: SEL the row, K1..K4 the values of the rows
  * in the cursor's lane (row i is on K(i % 4 + 1)), F1 back (every change undone), F2 OK, HOME closes (keeps). THEME
  * changes the palette as it scrolls. KEYBOARD's ADVANCE and CROSSFADER's glide time live in the same record (set in
- * HOME's settings and on W13..W16). */
+ * HOME's settings and on W13..W16). 0.6.1: the MODE POP-UP row is gone; its byte stays in the record (unused0, written
+ * 0), so a 0.6.0 record (version 1) loads with every other value as it was. */
 #include <stdio.h>
 #include <string.h>
 
@@ -23,7 +24,6 @@ static void defaults(ec_appset_t *s)
     s->version = EC_AS_VERSION;
     s->size = (uint16_t)sizeof *s;
     s->theme = 0;            /* CREAM */
-    s->popup = 1;
     s->knob = 1;
     s->preview = 1;
     s->at = 1;
@@ -48,7 +48,7 @@ void ec_as_load(void)
     if (s.magic != EC_AS_MAGIC || s.version != EC_AS_VERSION || s.size != sizeof s)
         return;                                    /* never written (0xFF), or another layout: the defaults */
     s.theme = (uint8_t)clampi(s.theme, 0, ec_gfx_themes() - 1);
-    s.popup = s.popup != 0;
+    s.unused0 = 0;                                 /* (0.6.0's MODE POP-UP: ignored) */
     s.knob = (uint8_t)clampi(s.knob, 0, 2);
     s.preview = s.preview != 0;
     s.at = s.at != 0;
@@ -98,8 +98,8 @@ void ec_as_close(int keep)
 
 const char *ec_as_row_label(int row)
 {
-    static const char *const L[EC_AS_NROW] = {"THEME", "MODE POP-UP", "KNOB SPEED", "AUTO-PREVIEW", "AFTERTOUCH",
-                                              "METRO SOUND", "MIDI CC", "INTRO"};
+    static const char *const L[EC_AS_NROW] = {"THEME", "KNOB SPEED", "AUTO-PREVIEW", "AFTERTOUCH", "METRO SOUND",
+                                              "MIDI CC", "INTRO"};
     return row >= 0 && row < EC_AS_NROW ? L[row] : "";
 }
 
@@ -110,7 +110,6 @@ void ec_as_row_value(int row, char *out, int cap)
     const ec_appset_t *s = &P->as;
     switch (row) {
     case EC_AS_THEME: snprintf(out, (size_t)cap, "%s", ec_gfx_theme_name(s->theme)); break;
-    case EC_AS_POPUP: snprintf(out, (size_t)cap, "%s", s->popup ? "ON" : "OFF"); break;
     case EC_AS_KNOB: snprintf(out, (size_t)cap, "%s", KS[clampi(s->knob, 0, 2)]); break;
     case EC_AS_PREVIEW: snprintf(out, (size_t)cap, "%s", s->preview ? "ON" : "OFF"); break;
     case EC_AS_AT: snprintf(out, (size_t)cap, "%s", s->at ? "ON" : "OFF"); break;
@@ -130,7 +129,6 @@ static void edit(int row, int d)
         s->theme = (uint8_t)(((s->theme + (d > 0 ? 1 : -1)) % n + n) % n);
         ec_gfx_set_theme(s->theme);
         break;
-    case EC_AS_POPUP: s->popup = d > 0; break;
     case EC_AS_KNOB: s->knob = (uint8_t)clampi(s->knob + (d > 0 ? 1 : -1), 0, 2); break;
     case EC_AS_PREVIEW: s->preview = d > 0; break;
     case EC_AS_AT: s->at = d > 0; break;

@@ -355,6 +355,23 @@ static void note_off(ec_dsp_t *d, ec_track_t *t)
 static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
 {
     if (!is_loop_machine(t->p.machine)) return;
+    if (ev->slice == 0) {                       /* 0.6.1: KEYBOARD, stopped: the whole loop while a key is held */
+        float s, e;
+        if (ev->value <= 0.5f) {                /* (a release ends it even if the transport started meanwhile) */
+            if (t->audition && !t->keys) {
+                t->audition = 0;
+                if (!track_playing(d, t)) note_off(d, t);
+            }
+            return;
+        }
+        if (track_playing(d, t) || t->keys || !(ev->flags & EC_TF_AUDITION)) return;
+        resolve(t, &s, &e);
+        set_region_phase(t, s, e, 0.0);
+        ec_env_trigger(&t->amp_env, &t->amp_spec, -1, 0, d->fs);
+        ec_env_trigger(&t->fenv, &t->fenv_spec, -1, 0, d->fs);
+        t->audition = 1;
+        return;
+    }
     int k = ec_clampi(ev->slice, 1, 32) - 1;
     float s, e;
     int playing = track_playing(d, t);

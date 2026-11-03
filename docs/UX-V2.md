@@ -1,7 +1,8 @@
 # Elasticat FM-1 0.6.0: modes and key shortcuts (spec, 2026-11-03)
 
-The owner proposed this on 2026-11-03 and settled it in six rounds of questions. **Status: for review**, with one
-mockup per mode, and **no build until the owner OKs it**.
+The owner proposed this on 2026-11-03 and settled it in six rounds of questions, with one mockup per mode.
+**Status: built in 0.6.0** (2026-11-03); what the build decided where this spec is silent or could not be followed is
+in §8. The panel as built: docs/FM1-CONTROLS.md.
 
 It replaces 0.3.0's category / lane model (docs/UX-REDESIGN.md) and 0.5.0's MOD KEYS mode (docs/MOD-MATRIX.md §3).
 The 0.5.0 matrix itself stays.
@@ -279,3 +280,71 @@ It goes away on its own, or on any knob or key, and that knob or key still does 
 - The layout tool knows the modes: the categories become the modes' page lists.
 - Worst case ≥ 2x real time in wasm3, measured at 256 MiB.
 - 0.6.0.
+
+## 8. Built in 0.6.0
+
+Where the spec was silent, or a point could not be built as written, the build chose the simplest thing consistent
+with the spec, FIZZ and ChoralRoot:
+
+**Modes and keys**
+- FX: there is one insert per track (a second would eat the thin CPU headroom), so **B2 is the track's SENDS page**;
+  B3 / B4 / B5 select the S1 / S2 / MST bus pages, B11 the FX MIX page (FX MIX, DRIVE, SEND 1, SEND 2).
+- AMP gained an AMP page (LEVEL, PAN, VELOCITY, VEL DEPTH / SEND 1, SEND 2); AMP ENV keeps the envelope; MOD ENV
+  moved here from MODULATION. AMP and TRIG have no B11; LOOP ENGINE has four pages (no B5).
+- Hold B1 = the quick setting: FILTER the filter type, AMP the env mode, LOOP ENGINE the machine, FX the insert's
+  engine. FILTER's B11 toggles the filter env mode ADSR / AHR.
+- The source keys' taps: LFO 1 / LFO 2 / VEL open MODULATION's page, MOD ENV opens AMP's MOD ENV page, AT the MATRIX.
+- LOOP ENGINE's zoom (B11) is the track's LOOP DIV param (16, 32 first half, 32 second half): saved, undoable.
+- MIX: B1-B8 are the eight rates 1/8 .. 4X (4X appended to the rate table), B9 slower, B10 faster, B11 the CAT.
+  Holding S1 / S2 / MST selects it (buses have no mute). The rate keys do nothing on a bus.
+- EDIT's settings are the project's MASTER settings; ARP and LFO have no settings ("NO SETTINGS"). HOME's settings
+  are LOOP ENGINE's plus ADVANCE.
+- Settings opened over a mode go back to that mode when closed (F1, F2 or the button).
+- A mode tap acts on release; F1 / F2 stick one at a time and become momentary when used during their hold.
+- PLAY while playing stops (not pause). REC toggles on release, since a hold opens the record settings.
+- CROSSFADER: while A or B is held, K1-K4 are the cells of the param mode CROSSFADER was entered from (FILTER's
+  otherwise), so a scene lock can reach a param. Glide times: instant / 150 ms / 600 ms / 2 s for the full travel,
+  full pressure takes 0.15 of that. The base glide time, ADVANCE and INTRO live in the APP SETTINGS record.
+- KEYBOARD: chromatic over all 27 keys on non-slice tracks (C4 = 0), octave -3..+3; live REC writes notes only when
+  the target step is LIVE (a target step is step entry).
+- PATTERN LAUNCH: SEL also picks the bank; stopped, a launch switches at once. Cells PLAYING / NEXT / QUANT / LENGTH.
+- APP SETTINGS has an INTRO row; METRO SOUND is WOOD / BEEP / CLICK / COWBELL; F1 = back undoes, F2 = OK, HOME or any
+  other button closes and keeps. It is saved in the flash header's sector (magic "ECAS").
+- Gone with the old panel: ghost trigs by SHIFT + step (SHIFT + a white key selects a track), the hold-step +
+  loop-key region lock (LOOP ENGINE's white keys play the loop; regions are still locked by recording loop keys), the
+  slice-program copy / paste, the scope ops, the pattern-clear question and the scene strip.
+
+**FILE, SAMPLER, recording**
+- FILE's pages are BROWSE (B3), EDITOR (B4, a new fixed picture) and RAZOR (B5). In the EDITOR all black keys are
+  zoom (B2-B10 = 1X .. 256X) or scroll (B1 / B11), so SEL changes the page. F2 frees the slot of the file under the
+  browser's cursor. LOAD also points the selected track at the slot, and a file already in the pool is not loaded
+  twice ("IN SLOT n"). Purge refuses while playing (STOP FIRST) or while a load / the WAV writer is busy.
+- **FILE while playing opens the SAMPLER** (its other sub-mode, which is not gated) as well as flashing STOP FIRST;
+  FILE from inside the SAMPLER is refused.
+- SAMPLER: B1-B5 set the length FREE / 1 / 2 / 4 / 8 bars; the knobs are LENGTH, GAIN, MONITOR, FREE. Holding FILE
+  (in FILE or the SAMPLER) opens 0.4's recorder setup (source IN / MASTER, threshold, sync, slot). These SAMPLER
+  settings are runtime only. Takes keep the name rec-NNNN.wav; the slot carries the BPM.
+- Live REC: no record mode clears anything; writes add or replace only what they write, and undo takes them back.
+  CAPTURE differs only in how it starts (when stopped, the first key or loop key starts playback, no count-in); FIXED
+  and OVERDUB start playback on REC after the count-in. FIXED ends bars x 4 beats after the start. The count-in only
+  applies when REC starts the transport and clicks even with the metronome off. PLAY (stop) ends recording; entering
+  FILE turns REC off. Automation skips sequencer, momentary and region params and the slot. Record settings add a
+  CLICK LVL row (OFF, -36 .. 0 dB) and are saved with the project.
+- Micro timing: EC_P_MICRO, 1/24 of a step, +-1/2 step, on TRIG's K4 ("+n/24"); the track value shifts every trig.
+  An early step never fires before a queued pattern switch or the transport's start. Lock-only steps apply their
+  locks for one step without a voice (existing locks-only steps now act too).
+- A slot lock (hold a step + PRESETS) plays that slot's sample on the trig; a slot change declicks the track's voices
+  over 128 samples, so alternating slots can cut a tail.
+
+**Data, memory, graphics**
+- The project record is version 2: sparse (params that differ from the defaults; steps and values packed), 64
+  patterns, 128 slots, the record settings ("ECRS"). A dense 64-pattern project is ~275 KB (0.5's format: ~796 KB), so
+  the flash image stays **1 MiB**; a project that doesn't fit is not saved ("FULL: NOT SAVED") and the old record is
+  kept. Older records load into bank A and slots 1-16; a 0.5 firmware cannot read a 0.6 record.
+- Memory at MEMORY_MIB 256: engine 18 MiB, the app (64 patterns) 9.4 MiB, memorize kept as a record (<= 1 MiB), the
+  flash image 1 MiB, loader 1 MiB, stack 1 MiB, >= 4 MiB margin: the arena is **219 MiB** (~21.7 min of stereo), not
+  224, because 64 patterns cost ~9 MiB.
+- Graphics: ERROR / STOP texts use ALERT; a held step is shown by the header's count on LOCK and the LOCK cells (the
+  old orange frame is gone); "locked on some step" is a LOCK outline. FX's INSERT page is the mock's slot list (the
+  per-engine visuals of E4 were dropped). The envelope pictures light the stage of the knob turned last.
+- Rate labels keep norns' names ("1", "2", "4", not "1X").

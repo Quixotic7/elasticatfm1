@@ -82,7 +82,7 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
 - **E6**: audio input (the `.rfm1` capability `ain1`, FM1VST docs/VIRTUAL-CARTS.md 8; the native ABI later), the
   INPUT machine, REC (sampling).
 
-## Status (0.5.0, 2026-11-02)
+## Status (0.6.0, 2026-11-03)
 
 - **E0-E2** done (0.1.0): the pipe, the core loop, the playable instrument; web player e2e.
 - **E3** done: RAZOR / R.POLY + the FILE / RAZOR page (Auto-Chop, snaps, split / delete, per-slice settings), every
@@ -134,6 +134,21 @@ states. A missing sample shows "missing: /audio/x.wav" and plays on.
   sources), the cells' marks, 0.4 projects converted on load at the same strength. Tests: ctest 23 (+ mtx, 68
   checks), the DSP suites, the designer (56), the web e2e (18). CPU: the heavy project with every slot full
   (generic destinations on every track) 2.3x in wasm3 (its chord section 2.1x).
+
+- **0.6.0 modes** (2026-11-03, docs/UX-V2.md, built as specified; the build's own decisions in its §8): the panel
+  by modes (FX, FILTER, AMP, MODULATION, MIX / the CAT / PAGES, LOOP ENGINE / TRIG / KEYBOARD, FILE / SAMPLER,
+  CROSSFADER, PATTERN LAUNCH), pages remembered per mode, settings by a hold or SHIFT, the mode pop-ups, sticky SHIFT
+  and its layer, F1 / F2 copy / cut / paste, the source template (B6-B10 route through the matrix; MOD KEYS gone),
+  APP SETTINGS in its own flash record (six 16-colour themes), live REC (capture / fixed / overdub, count-in, the
+  click after the master, micro timing, automation as lock-only steps), FILE's folder browser / preview / LOAD into
+  the next free slot / pool meter / editor / purge, the bar-synced SAMPLER, 64 patterns (4 banks) and 128 slots
+  (record version 2, sparse: a dense 64-pattern project ~275 KB, the image stays 1 MiB; 0.5 projects load into bank
+  A), the arena 219 MiB at MEMORY_MIB 256, live grains on the GRAIN warp, slot locks, every screen on a 120x120
+  16-colour grid at 2x (norns bar renders, the intro logo, the CAT). Tests: ctest 28 (new: grid, ux2_real, rec, file,
+  liverec; test_ux 204, mtx 62, liverec 66, rec 69, file 90, e6 49 checks; grid 4848 frames x 6 themes), the DSP
+  suites + test_v6 (74), the designer (67), the web e2e (20, RemoteFM1 main with ain1). CPU: the heavy project 2.3x
+  real time in wasm3 at 256 MiB (its chord section 2.1x). The real screens vs the mockups: host/render_ux2_real.sh ->
+  results/ux-v2-real/.
 
 Remaining / open:
 - **E6 in the hosts**: the web player first (then iOS incl. the AUv3 input bus, Android, FM1VST); the native ABI's

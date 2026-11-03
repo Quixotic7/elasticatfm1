@@ -5,9 +5,11 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (the remotefm1.com web player first), with the FM-1 as its panel and samples from the shared RemoteFM1 folder
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
-**Status: E1-E6 + the UX redesign (0.4.0).** The panel works like ChoralRoot's and FIZZ's (lanes, setup by a hold
-or SHIFT, HOME, F3, pop-ups with OCT- back / OCT+ OK, SHIFT's keys, knob speed and snap, PRESETS = the track's
-sample, live panel labels: docs/UX-REDESIGN.md). Six tracks, each with a sample from `/audio`, a machine (loop, loop_trig, grid_slice,
+**Status: 0.6.0, the panel by modes** ([docs/UX-V2.md](docs/UX-V2.md)): each button opens a mode (FX, FILTER, AMP,
+MODULATION, MIX / PAGES, LOOP ENGINE / TRIG / KEYBOARD, FILE / SAMPLER, CROSSFADER, PATTERN LAUNCH) with its pages,
+the white keys are steps, the black keys the mode's pages and the modulation sources, SHIFT a layer, F1 / F2 copy /
+cut / paste, REC live recording, 64 patterns and 128 pool slots, and every screen on a 120x120 16-colour grid shown
+at 2x (six themes). Six tracks, each with a sample from `/audio`, a machine (loop, loop_trig, grid_slice,
 slice_poly, razor_slice, razor_poly with the RAZOR slice editor, neighbor, input), one of thirteen warp modes, a filter
 machine (classic, morphing, ladder, comb, formant, svf), envelopes, level and pan, an insert FX (18 machines), sends
 to S1 / S2 and MOD (2 LFOs, mod env, velocity, macros); the master insert; 16 patterns of up to 256 steps per track
@@ -74,7 +76,7 @@ results/    proof files: e0/ .. e6/, v020/, ux/ (the screens; WAVs stay untracke
 - **io:** `ec_fs_start / ec_fs_update / ec_fs_cancel` on a caller-owned `ec_fsreq_t` (never blocks, at most 32 in
   flight, at most 1 MiB per request). `ec_browse_start("/audio")` + `ec_browse_step()` per tick. `ec_load_start(path)`
   + `ec_load_step()` per tick: STAT, header reads, then data in ≤ 1 MiB reads, decoded 4096 frames per tick into the
-  store. `ec_ss_alloc / get / ready / reset`: int16 stereo (mono doubled) in a 96 MiB static arena, with rate,
+  store. `ec_ss_alloc / get / ready / reset`: int16 stereo (mono doubled) in a 219 MiB static arena (0.6.0), with rate,
   channels, bpm (`ec_bpm_from_name`, Elasticat's rule) and a 128-column overview.
 - **ui:** `ec_gfx_begin(lcd)`, `ec_gfx_rect / line / dots_h / text_al` in physical pixels; the mockup's 120x120 grid
   is scale `EC_U` = 2. Palette `EC_C_BG, L3, L5, L8, L12, L15, ACC`. `ec_screens_draw(app)`.
@@ -128,7 +130,7 @@ ctest --test-dir build-rfm1 -R rfm1_elasticat -V        # rfm1_check + rfm1_run 
 CPU in wasm3 (must stay >= 2x real time): `build/ec_make_heavy heavy.flash` writes the worst-case project for
 `build/demo_folder` (six busy tracks across the E3 modes, every insert, both sends, master COMP, LFOs), then
 `rfm1_run --folder build/demo_folder --flash-in heavy.flash --settle 3000 --seconds 10 --press PLAY@1500 <the .rfm1>`:
-2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0, 2.3x in 0.4.0 (the same with `--audio-in` fed);
+2.1x real time while playing in 0.2.0 (M-series), 2.4x in 0.3.0, 2.3x in 0.4.0, 2.3x in 0.6.0 at MEMORY_MIB 256 (chord 2.1x) (the same with `--audio-in` fed);
 the v020 demo's project 5.9x.
 
 ## Trying it in the RemoteFM1 web player
@@ -139,7 +141,7 @@ The player at https://remotefm1.com supports Fantasy CFWs (RemoteFM1 `main`: `we
    `testloop_bpm120.wav` from FM1VST's `core-glue/elasticat/test_folder/audio/`).
 2. Open https://remotefm1.com in Chrome or Edge (they can keep a picked folder; Safari and Firefox copy the files
    into the site's own storage instead).
-3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.5.0.rfm1` (or drop the file
+3. Open the firmware browser, choose the **Open a file...** card, and pick `elasticat-0.6.0.rfm1` (or drop the file
    on the page). It goes into "Your firmware" with the Fantasy CFW badge.
 4. When the page asks **Pick your RemoteFM1 folder**, pick the `RemoteFM1/` folder. On a later visit, click
    **Allow**. In Safari or Firefox, use **Add folder...** in the sheet's "RemoteFM1 folder" section.
@@ -155,7 +157,7 @@ and is saved; on a site without ain1 those checks are skipped.
 
 With RFM1Manager on this Mac (it serves its own copy of the site at `http://127.0.0.1:4717/rfm1/site/`): copy the
 `.rfm1` into `RFM1Manager/out/` and open
-`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.5.0.rfm1&rfm1id=elasticat`. That is what its
+`http://127.0.0.1:4717/rfm1/site/?rfm1=%2Ffiles%2Fout%2Felasticat-0.6.0.rfm1&rfm1id=elasticat`. That is what its
 **Test in RemoteFM1** link does, but the link only lists firmwares in its catalog.
 
 ## Licence

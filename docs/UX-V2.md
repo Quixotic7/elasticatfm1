@@ -448,3 +448,16 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
 - In FILE, **SEL always turns the page** (BROWSE, EDITOR, RAZOR, both ways), RAZOR included, so there is always a
   way back.
 - In RAZOR, **ALGO selects the slice** (it was SEL).
+
+**FILE / POOL page** (owner, 2026-11-03): one place to see and manage all 128 slots
+- A new FILE page, POOL, on a free black key of FILE (the build picks it and the pop-up / key labels name it). SEL
+  still scrolls the list here (like BROWSE).
+- A list of all 128 slots, empty ones included: the slot number, the file's name (or a dash), its length, and which
+  tracks play it. A slot only used by step locks is marked too. The header shows the pool meter (memory used / free,
+  slots used).
+- SEL moves through the slots. Moving onto a used slot previews it (APP SETTINGS > AUTO-PREVIEW); B11 plays / stops.
+- B10 **ASSIGN**: the selected track plays this slot.
+- F1 **MOVE**: F1 picks the slot up, SEL to another slot, F1 again drops it there (swapping with whatever is there).
+  Every reference follows: the tracks' slots and the slot locks in all 64 patterns. Undoable.
+- F2 **FREE** the selected slot (its tracks fall silent), as in BROWSE. SHIFT + B11 purges, as in BROWSE.
+- Like the rest of FILE, it can't open while playing.

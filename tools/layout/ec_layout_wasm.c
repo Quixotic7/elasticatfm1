@@ -159,10 +159,9 @@ API void lw_goto(int cat, int page, int lane, int settings)
         ec_app.cat = cat;
         ec_app_set_page(cat, page < 0 ? 0 : page);
     }
-    ec_app.pn.pop = 0;
     ec_app.settings = settings != 0;
     if (settings)
-        ec_app.ux.set_lane = lane < 0 ? 0 : lane;
+        ec_app.ux.set_row = lane < 0 ? 0 : lane * 4;   /* 0.6.1: settings are a list; a lane = its first row */
     else
         ec_app.ux.lane[cat] = lane < 0 ? 0 : lane;
     ec_app.redraw = 1;

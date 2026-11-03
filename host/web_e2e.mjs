@@ -18,7 +18,7 @@
 //   7. stop (PLAY), SHIFT + FILE saves (0.6.1: SAVING, then SAVED: the file /data/projects/PROJ-001.ecp, the flash
 //      keeps its name), a reload: the project comes back from the file (T1's file, T2's file) and plays
 //   8. (E6, a site with ain1) live input from a fake microphone (Chromium's --use-file-for-fake-audio-capture: the
-//      demo's chord loop): T3 on INPUT (hold B1 = the machine, K1) says NO INPUT while off and is silent (stopped);
+//      demo's chord loop): T3 on INPUT (hold B2 = the machine menu, K1) says NO INPUT while off and is silent (stopped);
 //      input on (the page's hint): the INPUT track sounds; the SAMPLER (FILE, FILE) B2 = 1 BAR, B11 arms (stopped:
 //      at once): the take runs, lands in the next free pool slot (POOL 3/128) and saves (SAVED REC-0001). A site
 //      without ain1: these are skipped, said so.
@@ -159,7 +159,8 @@ const esc = async () => {
   await cdp("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
 };
 // FILE > EDITOR's top line (y 13 on the 120 grid = 26 on the LCD; the waveform below): the selected track's sample
-const fileHeader = async (name, ms = 15000) => { const at = await untilText(name, ms); return at && at.y < 36 ? at : null; };
+// 0.6.1: the EDITOR fits the name beside "SLOT n zoom" (14 characters + ".."): its stem is enough
+const fileHeader = async (name, ms = 15000) => { const at = await untilText(name.replace(/\.WAV$/, ""), ms); return at && at.y < 36 ? at : null; };
 // the intro (the logo, ~5.5 s from power-on): any key skips it but still acts, so the test waits it out
 let bootAt = 0;
 const introOver = async () => { const left = bootAt + 6500 - Date.now(); if (left > 0) await sleep(left); };
@@ -359,11 +360,11 @@ try {
   if (await js(`!!(window.FM1Ain && FM1Ain.supported) && FM1Site.current().info.ain === "wants"`)) {
     await tap("PLAY"); await sleep(500);        // stop
     await shifted(() => keyTap(W(3)));          // T3 (LOOP ENGINE stays)
-    await keyDown(BK(1), true); await sleep(600);   // hold B1 = the machine (the quick setting) ..
-    await turn(E.K1, 7);                        // .. K1: LOOP + 7 = INPUT
-    await keyDown(BK(1), false); await sleep(1200);
+    await keyDown(BK(2), true); await sleep(600);   // hold B2 = the machine menu (0.6.1: LOOP ENGINE's hold menus) ..
+    await turn(E.K1, 7);                        // .. K1: LOOP + 7 = INPUT, picked on release
+    await keyDown(BK(2), false); await sleep(1200);
     const off = await level(600), noIn = !!findText(await screen(), "NO INPUT", 4);
-    ok(noIn && off.peak < 0.002, `T3: hold B1 + K1 = the INPUT machine; input off: NO INPUT, silent (${fmtL(off)})`);
+    ok(noIn && off.peak < 0.002, `T3: hold B2 + K1 = the INPUT machine; input off: NO INPUT, silent (${fmtL(off)})`);
     await shot("17_input_off");
     const hint = await js(`(() => { const b = document.querySelector(".ain-ask:not([hidden]) .pill.primary"); if (b) b.click(); return !!b; })()`);
     if (!hint) await js(`FM1Ain.start().then(() => true)`);

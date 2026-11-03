@@ -14,6 +14,7 @@
  *   ec_test_file <folder> */
 #include "ec_harness.h"
 #include "ec_loader.h"
+#include "ec_razor_ui.h"
 
 static const char *root;
 
@@ -467,6 +468,27 @@ static void test_patterns_full(void)
     free(chk);
 }
 
+/* RAZOR (B5): the white keys are its slices (select / pad), SHIFT + one mutes the slice; never steps */
+static void test_razor_keys(void)
+{
+    ec_razor_t *rz = &A->proj.razor[A->track];
+    const int t = A->track, m0 = rz->mute[1];
+    to(EC_CAT_FILE);
+    B(5, 40);
+    CHECK(ec_rzui_active(A), "B5: RAZOR");
+    clear_steps(t);
+    W(2, 40);
+    CHECK(!ec_step_has_content(step(A->step_page * 16 + 1)) && A->track == t, "RAZOR: W2 is a slice, not a step");
+    shift_down(1);
+    W(2, 40);
+    shift_down(0);
+    CHECK(rz->mute[1] == !m0 && A->track == t, "RAZOR: SHIFT + W2 mutes slice 2, the track stays");
+    shift_down(1);
+    W(2, 40);
+    shift_down(0);
+    B(3, 40);
+}
+
 int main(int argc, char **argv)
 {
     char p[1024];
@@ -490,6 +512,7 @@ int main(int argc, char **argv)
     test_load();
     test_free_purge();
     test_editor();
+    test_razor_keys();
     test_sampler();
     test_slot_locks();
     test_rate4x();

@@ -603,6 +603,11 @@ static void white_down(int k, int i, int vel, int lean)
     if (A->fn) {                                   /* SHIFT + a white key */
         UX->shift_used = 1;
         A->key_role[k] = R_SWALLOW;
+        if (mode == EC_CAT_FILE && ec_rzui_active(A)) {   /* RAZOR: SHIFT + a slice key mutes the slice */
+            ec_rzui_key(A, i, 1, vel);
+            A->key_role[k] = R_RAZOR;
+            return;
+        }
         switch (mode) {
         case EC_CAT_XFD:                           /* jump */
             if (i < 12) {
@@ -666,7 +671,7 @@ static void white_down(int k, int i, int vel, int lean)
                 A->key_role[k] = R_SWALLOW;
                 return;
             }
-            break;
+            /* fall through: RAZOR's keys are its slices */
         default:
             if (ec_rzui_active(A)) {               /* E3: the RAZOR page (page-local): the keys are its slices */
                 ec_rzui_key(A, i, 1, vel);

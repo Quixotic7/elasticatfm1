@@ -627,8 +627,8 @@ float ec_app_move_param(int id, float x, int det, int mult)
     if (EC_PARAMS[id].fmt == EC_PF_MDST)          /* 0.5.0: a matrix DST: the layout's order, SHIFT a category */
         return ec_mk_dst_step(x, det, A->fn);
     if (A->fn)
-        return ec_param_snap(id, x, det);
-    return ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det);
+        return ec_param_clamp(id, ec_param_snap(id, x, det));
+    return ec_param_clamp(id, ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det));
 }
 
 /* the finest steps over a param's range (the knob speed: lists never speed up) */

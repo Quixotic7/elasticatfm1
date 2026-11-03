@@ -87,6 +87,33 @@ There is a one-step **buffer**.
 | ARP | CROSSFADER | | scene settings |
 | SEQ | PATTERN LAUNCH | | F3 |
 
+**APP SETTINGS ("everything else"): SHIFT + HOME** (owner, 2026-11-03). This is the one exception to "SHIFT + a button = that mode's settings"; holding HOME still opens the loop / machine settings.
+- The rows:
+  - **THEME**: several 16-colour themes. Each is just a palette table. The theme changes as you scroll, so you see it before you leave.
+  - the mode pop-up on/off
+  - knob speed
+  - auto-preview in FILE
+  - aftertouch on/off
+  - the metronome sound
+  - MIDI CC 1 / 11 inputs on/off
+  - anything else that isn't per pattern or per sound
+- **Saved globally**, not per project: they go in their own record in the cart's flash image, so they survive project loads and new projects.
+- Pop-up rules apply: F1 = back, F2 = OK, and HOME closes.
+- Themes to start with (named in the theme picker):
+  - **CREAM**: today's look, the default
+  - **AMBER**: amber monochrome CRT
+  - **PHOSPHOR**: green on black
+  - **DMG**: four-green handheld
+  - **ICE**: cyan on navy
+  - **PAPER**: dark on cream, inverted
+
+**Entering a mode** (from another mode, or HOME / EDIT / FILE stepping to their next sub-mode) shows a **pop-up** for about 0.8 s. It has:
+- the mode's name, big
+- its current page
+- a strip of the 11 black keys in their roles (page / source / special / unused)
+
+It goes away on its own, or on any knob or key, and that knob or key still does its job. Turning to the next page inside a mode shows no pop-up.
+
 **Power-on / project load:** LOOP ENGINE. The old HOME "back to the main view" is gone: every mode is a main view.
 
 ### FX
@@ -227,6 +254,15 @@ There is a one-step **buffer**.
 | Pop-ups' OCT- = back / OCT+ = OK | stays (F1 = back, F2 = OK) inside pop-ups only |
 
 ## 7. Must hold for the build (after the owner's OK)
+
+- **Every screen is designed at 120x120 and shown at exactly 2x** (owner, 2026-11-03), so every pixel is a chunky 2x2 block.
+  - **No 1-pixel details anywhere:** no hairlines, ticks, borders, dots or gaps finer than one 120-grid pixel, and no anti-aliasing.
+  - **16 colours** (owner, 2026-11-03):
+    - Screens draw 4-bit palette indices into a 120x120 buffer.
+    - One 16-entry table turns the indices into RGB565 at 2x, so a theme is just a different table.
+    - Every colour has a named slot (ground, the grey ramp, accent, role colours). Nothing is drawn outside the palette, and a test checks it.
+  - This applies to the existing screens too.
+  - A test checks that every 2x2 block of the LCD is one colour.
 
 - The 0.5.0 tests are rewritten for the new gestures, and every gesture in this file gets a harness test.
 - The layout tool knows the modes: the categories become the modes' page lists.

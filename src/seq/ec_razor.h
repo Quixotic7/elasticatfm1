@@ -73,7 +73,7 @@ double ec_razor_zero_cross(const int16_t *data, uint32_t frames, float rate, dou
  * left out, the last to the end), the track's slice_count set to match. Returns the count (0: none, unchanged). */
 int ec_razor_autochop(struct ec_project *p, int track, const float *pos01, int n, double lo01, double hi01);
 
-/* the record chunk (ec_project_save / _load) */
+/* the record chunk (ec_project_save / _load; dst NULL: its size only) */
 int32_t ec_razor_save_chunk(const struct ec_project *p, uint8_t *dst, uint32_t cap);
 void ec_razor_load_chunk(struct ec_project *p, const uint8_t *src, uint32_t len);
 

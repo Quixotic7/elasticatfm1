@@ -361,6 +361,8 @@ int32_t ec_razor_save_chunk(const ec_project_t *p, uint8_t *dst, uint32_t cap)
     int t, k;
     if (cap < 8u + len)
         return -1;
+    if (!dst)
+        return (int32_t)(8u + len);    /* (ec_project_save measuring) */
     d = put32(d, EC_RAZOR_TAG);
     d = put32(d, len);
     d = put8(d, 1);                    /* chunk version */

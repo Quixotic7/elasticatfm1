@@ -46,7 +46,9 @@ static void w8(io_t *o, uint32_t v)
         o->bad = 1;
         return;
     }
-    o->w[o->n++] = (uint8_t)v;
+    if (o->w)                          /* (NULL: ec_project_save measuring) */
+        o->w[o->n] = (uint8_t)v;
+    o->n++;
 }
 static void w16(io_t *o, uint32_t v) { w8(o, v & 0xFF), w8(o, (v >> 8) & 0xFF); }
 static void w32(io_t *o, uint32_t v) { w16(o, v & 0xFFFF), w16(o, v >> 16); }

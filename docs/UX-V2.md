@@ -675,3 +675,6 @@ them:
   master effect (COMP) and its knob pages, and **the load meter** (moved here from the INSERT page).
 - B11 stays FX MIX. K4 is MIX on every effect (inserts, sends, master).
 - SEL walks the one page list: INSERT 1 P1.., INSERT 2 P1.., SEND 1 P1.., SEND 2 P1.., SENDS, MASTER P1.., FX MIX.
+- **SENDS page knobs: K1 = INSERT 1, K2 = INSERT 2, K3 = SEND 1, K4 = SEND 2.** The inserts sit in series, so their
+  "send" is each insert's MIX (the same param as K4 on its effect page). The picture gains two bars, I1 and I2, above
+  S1 and S2, each with its effect's name, and the chain shows both inserts.

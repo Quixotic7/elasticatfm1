@@ -62,7 +62,7 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MUTE] = BIN("mute", "MUTE", 0, 0),
     [EC_P_MACHINE] = OPT("machine", "MACH", 1, 0, O_MACH),
     [EC_P_PITCH] = NUM("pitch", "P/T", -24, 24, 1, 0, EC_PF_PITCH, L),
-    [EC_P_SLOT] = NUM("sample_slot", "SLOT", 1, EC_NSLOT, 1, 1, EC_PF_INT, 0),   /* (0.6.0: 16 -> 128) */
+    [EC_P_SLOT] = NUM("sample_slot", "SLOT", 1, EC_NSLOT, 1, 1, EC_PF_INT, L),   /* (0.6.0: 16 -> 128; lockable: a trig plays the locked slot) */
     [EC_P_LOOP_START] = NUM("loop_start", "STRT", 0, 128, 1, 0, EC_PF_INT, L | EC_PF_REGION),
     [EC_P_LOOP_END] = NUM("loop_end", "END", 0, 128, 1, 128, EC_PF_INT, L | EC_PF_REGION),
     [EC_P_RANGE_START] = NUM("range_start", "R-ST", 0, 128, 1, 0, EC_PF_INT, L | EC_PF_REGION),
@@ -285,7 +285,8 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
     {1, 16}, {1, 8}, {1, 6}, {1, 4}, {1, 3}, {3, 8}, {1, 2}, {5, 8}, {2, 3}, {3, 4}, {5, 6},
-    {7, 8},  {1, 1}, {7, 6}, {5, 4}, {4, 3}, {3, 2}, {5, 3}, {7, 4}, {11, 6}, {2, 1}};
+    {7, 8},  {1, 1}, {7, 6}, {5, 4}, {4, 3}, {3, 2}, {5, 3}, {7, 4}, {11, 6}, {2, 1},
+    {4, 1}};   /* (0.6.0: 4X appended: the index is saved) */
 
 const ec_trigcond_t EC_TRIGCOND[EC_TRIGCONDS] = {
     {"--", EC_TC_NONE, 0, 0},  {"1:2", EC_TC_AB, 1, 2}, {"2:2", EC_TC_AB, 2, 2}, {"1:3", EC_TC_AB, 1, 3},
@@ -298,7 +299,7 @@ const char *ec_rate_label(int index)
 {
     static const char *const R[EC_RATES] = {"1/16", "1/8", "1/6", "1/4", "1/3", "3/8", "1/2", "5/8", "2/3", "3/4",
                                             "5/6",  "7/8", "1",   "7/6", "5/4", "4/3", "3/2", "5/3", "7/4", "11/6",
-                                            "2"};
+                                            "2",    "4"};
     return index >= 1 && index <= EC_RATES ? R[index - 1] : "1";
 }
 

@@ -36,6 +36,7 @@ typedef struct {
     int was_playing;
     int stop_req, discard_req, now_req;
     int full;                    /* it ended at the reserve's end */
+    int sampler, ssync;          /* 0.6.0: the SAMPLER's take (B11): its sync (BAR / FREE at once), no threshold */
     uint32_t host_block;         /* the host's audio block (frames of the last ec_app_audio; not in the shift) */
     /* the input meters (the raw input, before any track) */
     float in_pk[2], in_meter[2];
@@ -66,6 +67,8 @@ void ec_rec_frame(void);                    /* the meters' decay */
 void ec_rec_pre(uint32_t n);
 void ec_rec_post(const int16_t *in, uint32_t in_n, const int16_t *out, uint32_t n);
 
+int ec_rec_arm_to(int slot, int sync);      /* 0.6.0, the SAMPLER: arm a take into slot (EC_RSYNC_BAR / FREE); 0 ok */
+void ec_rec_drop(void);                     /* disarm / discard the take */
 int ec_rec_busy(void);                      /* armed, taking or saving: the store must stay as it is */
 int ec_rec_holds(int h);                    /* the recorder fills or saves this store handle */
 uint32_t ec_rec_reserve(void);              /* the frames an armed take would reserve now (LEN, the free arena) */

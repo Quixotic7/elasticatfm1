@@ -3,7 +3,8 @@
  * button, the lit one again, a hold or SHIFT = the settings, SHIFT + HOME = APP SETTINGS), the mode-entry pop-up, the
  * intro, SHIFT (held / sticky) and its layer, F1 / F2 (tap sticky, hold momentary; both = F3), PLAY, REC, the white
  * keys as steps, PRESETS = the track's pool slot, ALGO = the step page. The modes' own keys are in ec_srckeys.c,
- * ec_mix.c, ec_keyboard.c, ec_xfd.c, ec_patlaunch.c; part 2's in ec_liverec.c. */
+ * ec_mix.c, ec_keyboard.c, ec_xfd.c, ec_patlaunch.c, ec_file.c, ec_sampler.c; live REC in ec_liverec.c.
+ * FILE cannot open while playing (STOP FIRST, its button flashes); inside it PLAY and REC do nothing. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,7 +62,8 @@ int ec_pn_popup_shows(void) { return P->pop != 0; }
 
 int ec_app_popup(const ec_app_t *a)
 {
-    return a->e5.naming || a->e5.confirm || a->ux.f3 || a->settings || a->rec.open || a->pn.as_open;
+    return a->e5.naming || a->e5.confirm || a->ux.f3 || a->settings || a->rec.open || a->pn.as_open ||
+           a->pn.rs_open;
 }
 
 /* ------------------------------------------------------------------------------------------- init --- */
@@ -76,6 +78,10 @@ void ec_pn_init(void)
     A->mk.held = A->mk.hot_id = -1;
     ec_as_load();
     ec_gfx_set_theme(ec_as->theme);
+    P->pv_handle = -1;                             /* FILE: the browser at /audio, no preview */
+    snprintf(P->fdir, sizeof P->fdir, "/audio");
+    P->lr_end = -1;
+    ec_click_init(&P->click, (float)EC_FS);
     P->last[EC_MB_HOME] = EC_CAT_SRC;
     if (ec_as->intro) {
         P->intro = 1;
@@ -136,6 +142,8 @@ static void overlays_close(void)
     UX->f3 = 0;
     if (P->as_open)
         ec_as_close(1);
+    if (P->rs_open)
+        ec_rs_close(1);
 }
 
 void ec_pn_enter(int mode)
@@ -144,6 +152,11 @@ void ec_pn_enter(int mode)
     const int b = ec_mode_button(mode);
     if (mode < 0 || mode >= EC_NMODE)
         return;
+    if (mode == EC_CAT_FILE && was != EC_CAT_FILE && (A->seq.playing || ec_seq_counting_in(&A->seq))) {
+        ec_app_alert("STOP FIRST");                /* FILE can't open while playing: its button flashes */
+        P->file_refused_ms = A->ms ? A->ms : 1;
+        return;
+    }
     overlays_close();
     ec_mk_off();                                   /* a source key's hold ends (no tap) */
     P->src_key = P->slot_key = 0;
@@ -151,6 +164,8 @@ void ec_pn_enter(int mode)
     P->cat = 0;
     if (was == EC_MODE_SAMPLER && mode != EC_MODE_SAMPLER)
         ec_sampler_enter(0);
+    if (was == EC_CAT_FILE && mode != EC_CAT_FILE)
+        ec_file_leave();                           /* the preview stops */
     if (mode >= EC_NCAT)
         A->scr = mode;
     else {
@@ -165,6 +180,8 @@ void ec_pn_enter(int mode)
         P->xf_from = ec_src_mode(was) ? was : EC_CAT_FILT;
     if (mode == EC_MODE_SAMPLER && was != EC_MODE_SAMPLER)
         ec_sampler_enter(1);
+    if (mode != was && A->rec.open)                /* (the recorder's setup belongs to the mode it opened in) */
+        ec_rec_close();
     if (mode != was) {
         P->shift_sticky = 0;                       /* sticky SHIFT ends with the mode */
         fn_update();
@@ -218,7 +235,12 @@ static void mode_tap(int b)
         A->redraw = 1;
         return;
     }
-    ec_pn_enter(P->last[mb] >= 0 ? P->last[mb] : modes[0]);
+    {
+        int m = P->last[mb] >= 0 ? P->last[mb] : modes[0];
+        if (m == EC_CAT_FILE && (A->seq.playing || ec_seq_counting_in(&A->seq)))
+            m = EC_MODE_SAMPLER;                   /* playing: FILE can't open, its SAMPLER (not gated) does */
+        ec_pn_enter(m);
+    }
 }
 
 /* a hold or SHIFT + the button: that mode's settings (SEQ: F3; HOME: LOOP ENGINE's, with KEYBOARD's ADVANCE) */
@@ -347,7 +369,17 @@ static int popup_button(int b)
         ec_as_close(1);
         return 0;
     }
-    if (A->rec.open && b != EC_B_HOME && !A->fn)   /* the SAMPLER's stand-in (0.4's REC pop-up): REC, F1, F2, PLAY */
+    if (P->rs_open) {                              /* the record settings: F1 back, F2 / REC OK, HOME closes (keeps) */
+        if (f || b == EC_B_HOME || b == EC_B_REC) {
+            ec_rs_close(b != EC_B_OCTDN);
+            return 1;
+        }
+        if (b == EC_B_PLAY || b == EC_B_FN)
+            return 0;
+        ec_rs_close(1);
+        return 0;
+    }
+    if (A->rec.open && b != EC_B_HOME && b != EC_B_SAVE && !A->fn)   /* the recorder's setup (FILE held): REC, F1, F2 */
         return ec_rec_button(b);
     if (UX->f3 && (f || b == EC_B_HOME || b == EC_B_SEQ)) {
         UX->f3 = 0;
@@ -380,7 +412,10 @@ static void button_down(int b)
     }
     if (b == EC_B_OCTDN || b == EC_B_OCTUP) {
         const int bit = b == EC_B_OCTDN ? 1 : 2;
-        if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
+        if (!A->fn && b == EC_B_OCTUP && ec_app_mode() == EC_CAT_FILE && !A->settings &&
+            ec_file_page() == EC_PIC_FILE) {      /* FILE: F2 on a pool file frees its slot */
+            ec_file_f2();
+        } else if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
             ec_e5_undo(b == EC_B_OCTUP);
@@ -402,18 +437,21 @@ static void button_down(int b)
         return;
     }
     switch (b) {
-    case EC_B_PLAY:                                /* start / stop at once, on press */
-        if (A->seq.playing)
+    case EC_B_PLAY:                                /* start / stop at once, on press (FILE: nothing) */
+        if (ec_app_mode() == EC_CAT_FILE)
+            break;
+        if (A->seq.playing) {
             ec_seq_stop(&A->seq);
-        else
+            ec_liverec_stop();
+        } else
             ec_seq_start(&A->seq);
         if (A->dirty)
             A->dirty_ms = A->ms;
         break;
     case EC_B_REC:
-        if (ec_app_mode() == EC_MODE_SAMPLER && !A->rec.open && !A->fn)
-            ec_rec_open();                         /* (the stand-in: REC opens the recorder again) */
-        else if (A->fn)
+        if (ec_app_mode() == EC_CAT_FILE)          /* (FILE: nothing) */
+            break;
+        if (A->fn)
             ec_liverec_settings();
         else {
             P->rec_down = 1;
@@ -525,6 +563,7 @@ static void loop_down(int k, int i, int vel)
         A->key_role[k] = R_SWALLOW;
         return;
     }
+    ec_liverec_capture();                          /* live REC: CAPTURE's first key starts playback */
     if (is_slice_m(iv(v, EC_P_MACHINE))) {
         ec_seq_slice_pad(&A->seq, A->track, lk, 1, key_vel(vel));
         A->key_role[k] = R_PAD;
@@ -532,6 +571,7 @@ static void loop_down(int k, int i, int vel)
         ec_seq_loop_key(&A->seq, A->track, lk, 1);
         A->key_role[k] = R_LOOP_LIVE;
     }
+    ec_liverec_loop(lk, is_slice_m(iv(v, EC_P_MACHINE)), vel);   /* (recording: a trig + the loop position) */
 }
 
 static void white_down(int k, int i, int vel, int lean)
@@ -613,7 +653,18 @@ static void white_down(int k, int i, int vel, int lean)
             A->key_role[k] = R_SWALLOW;
             ec_pat_white(i);
             return;
-        case EC_MODE_SAMPLER: A->key_role[k] = R_SWALLOW; return;   /* (part 2: the input meter) */
+        case EC_MODE_SAMPLER: A->key_role[k] = R_SWALLOW; return;   /* (the input's VU) */
+        case EC_CAT_FILE:
+            if (ec_file_page() == EC_PIC_EDITOR) { /* the editor: the trim */
+                ec_file_white(i, 1);
+                A->key_role[k] = R_SWALLOW;
+                return;
+            }
+            if (ec_file_page() == EC_PIC_FILE) {   /* (the browser: nothing to step) */
+                A->key_role[k] = R_SWALLOW;
+                return;
+            }
+            break;
         default:
             if (ec_rzui_active(A)) {               /* E3: the RAZOR page (page-local): the keys are its slices */
                 ec_rzui_key(A, i, 1, vel);
@@ -671,7 +722,7 @@ static void black_down(int k, int key, int vel)
             A->key_role[k] = R_XFD;
             return;
         }
-        if ((mode == EC_CAT_FILE || mode == EC_MODE_SAMPLER) && key == 11) {  /* SHIFT + B11: purge (part 2) */
+        if ((mode == EC_CAT_FILE || mode == EC_MODE_SAMPLER) && key == 11) {  /* SHIFT + B11: purge */
             ec_file_black(key, 1);
             A->key_role[k] = R_FILEB;
             return;
@@ -833,10 +884,8 @@ static void select_knob(int d)
         return;
     default: break;
     }
-    if (ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_FILE) {
-        const int n = ec_browse_count();           /* SAMPLE: the file cursor */
-        if (n > 0)
-            A->cursor = ((A->cursor + d) % n + n) % n;
+    if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
+        ec_file_select(d);                         /* the browser: the cursor (folders, files) */
     } else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX) {
         if (!ec_mk_select(d))                      /* 0.5.0: the MATRIX page's row, then on to the next page */
             ec_app_lane_step(d > 0 ? 1 : -1);
@@ -854,6 +903,10 @@ static void knob(int r, int d)
         return;
     if (P->as_open) {
         ec_as_knob(r, d);
+        return;
+    }
+    if (P->rs_open) {                              /* the record settings */
+        ec_rs_knob(r, d);
         return;
     }
     if (!A->fn && ec_rec_knob(r, d))               /* the SAMPLER's stand-in: the REC pop-up's knobs */
@@ -1050,7 +1103,18 @@ const char *ec_pn_page_name(int mode)
         return b;
     }
     case EC_CAT_PAT: snprintf(b, sizeof b, "BANK %c", 'A' + P->bank); return b;
-    case EC_MODE_SAMPLER: return "SAMPLER";
+    case EC_MODE_SAMPLER:
+        if (ec_sampler_len())
+            snprintf(b, sizeof b, "%d BAR%s", ec_sampler_len(), ec_sampler_len() > 1 ? "S" : "");
+        else
+            snprintf(b, sizeof b, "FREE");
+        return b;
+    case EC_CAT_FILE:
+        if (ec_file_page() == EC_PIC_EDITOR) {
+            snprintf(b, sizeof b, "EDITOR %dX", (int)ec_file_zoom());
+            return b;
+        }
+        break;
     default: break;
     }
     if (mode < 0 || mode >= EC_NCAT)
@@ -1099,9 +1163,30 @@ const char *ec_pn_roles(int mode, int *cur)
             r[i] = 'P';
         *cur = P->bank;
         break;
-    case EC_CAT_FILE:
-        r[2] = r[3] = 'P';                         /* (part 2 draws its own: B3 / B4 pages, B10 LOAD for now) */
-        r[9] = 'A';
+    case EC_CAT_FILE: {
+        const int pic = ec_file_page();
+        if (pic == EC_PIC_EDITOR) {                /* B1 / B11 scroll, B2..B10 the zoom */
+            memset(r, 'P', EC_NBKEY);
+            r[0] = r[10] = 'A';
+            *cur = 1 + A->pn.ed_zoom;
+            break;
+        }
+        for (i = 1; i <= EC_NBKEY; i++)
+            if (ec_file_key_page(i) >= 0)
+                r[i - 1] = 'P';
+        if (pic == EC_PIC_FILE) {                  /* B1 up, B2 in, B10 LOAD, B11 preview */
+            r[0] = r[1] = r[9] = 'A';
+            r[10] = 'X';
+        } else if (ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) > 0)
+            *cur = ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) - 1;
+    } break;
+    case EC_MODE_SAMPLER:                          /* B1..B5 the length, B11 arm / stop */
+        memset(r, 'A', 5);
+        r[10] = 'X';
+        {
+            static const int K[6] = {0, 1, 2, 3, 4, 4};
+            *cur = K[A->rec.len < 0 ? 0 : A->rec.len > 5 ? 5 : A->rec.len];
+        }
         break;
     default:
         if (ec_src_mode(mode)) {

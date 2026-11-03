@@ -32,7 +32,7 @@ const PIC_NAMES = { steps: "steps", wave: "waveform · sample", "wave-machine": 
   "wave-warp": "waveform · warp", "wave-range": "waveform · range", filter: "filter curve", fenv: "filter env",
   aenv: "amp env", fx: "FX picture", sends: "sends", lfo1: "LFO 1 shape", lfo2: "LFO 2 shape", menv: "mod env",
   vel: "velocity", macros: "macros", macro: "one macro · its matrix rows", mix: "mixer", scene: "crossfader", file: "file list",
-  razor: "razor editor", pattern: "pattern grid", matrix: "mod matrix" };
+  razor: "razor editor", pattern: "pattern grid", matrix: "mod matrix", editor: "sample editor" };
 const FREE_PICS = L.PICS.filter((p) => !L.FIXED[p]);
 const STORE = "elasticat-layout-design-v1";
 

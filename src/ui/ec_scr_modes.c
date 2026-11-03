@@ -271,6 +271,10 @@ int ec_scr_modes_full(const ec_app_t *a)
         appset_screen(a);
         return 1;
     }
+    if (a->pn.rs_open) {                           /* the record settings (hold REC) */
+        ec_scr_record(a);
+        return 1;
+    }
     if (a->pn.cat && !a->settings) {
         cat_screen(a);
         return 1;
@@ -280,7 +284,12 @@ int ec_scr_modes_full(const ec_app_t *a)
     switch (a->scr) {
     case EC_MODE_PAGES: pages_screen(a); return 1;
     case EC_MODE_KEYBOARD: keyboard_screen(a); return 1;
-    case EC_MODE_SAMPLER: ec_scr_rec(a); return 1;   /* (part 2: the SAMPLER; 0.4's REC pop-up stands in) */
+    case EC_MODE_SAMPLER:                          /* (FILE held: the recorder's setup, 0.4's REC pop-up) */
+        if (a->rec.open)
+            ec_scr_rec(a);
+        else
+            ec_scr_sampler(a);
+        return 1;
     default: break;
     }
     if (a->scr)

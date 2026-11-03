@@ -204,7 +204,7 @@ static void test_modes(void)
     press(FM1P_B_SAVE, 40);
     CHECK(mode() == EC_CAT_FILE, "FILE");
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_MODE_SAMPLER && A->rec.open, "FILE again: SAMPLER (0.4's REC pop-up stands in)");
+    CHECK(mode() == EC_MODE_SAMPLER && !A->rec.open, "FILE again: SAMPLER");
     press(FM1P_B_ARP, 40);
     CHECK(mode() == EC_CAT_XFD && !A->rec.open, "ARP: CROSSFADER, the SAMPLER left");
     press(FM1P_B_SEQ, 40);
@@ -426,11 +426,14 @@ static void test_transport(void)
     btn(FM1P_B_PLAY, 0);
     run(20);
     press(FM1P_B_REC, 40);
-    CHECK(ec_liverec_on() && led_btn(FM1P_B_REC) == FM1P_LED_LIT, "REC tapped: live record on (part 2's hook), lit");
+    CHECK(ec_liverec_on() && ec_liverec_armed() && !A->seq.playing,
+          "REC tapped (stopped, CAPTURE): on, waiting for the first key");
     press(FM1P_B_REC, 40);
     CHECK(!ec_liverec_on(), "REC again: off");
     press(FM1P_B_REC, 500);
-    CHECK(!ec_liverec_on() && !strcmp(A->msg, "REC SETTINGS"), "REC held: the record settings (part 2's hook)");
+    CHECK(!ec_liverec_on() && A->pn.rs_open && ec_app_popup(A), "REC held: the record settings");
+    press(FM1P_B_REC, 40);
+    CHECK(!A->pn.rs_open && !ec_liverec_on(), "REC closes them (no toggle)");
 }
 
 /* ------------------------------------------------------------------------------------------- steps --- */
@@ -1013,8 +1016,13 @@ static void test_xfd_lock(void)
 static void test_file_keys(void)
 {
     to(EC_CAT_FILE);
+    tapkey(1, bkey(5), 40);
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_RAZOR, "FILE B5: RAZOR");
     tapkey(1, bkey(4), 40);
-    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_RAZOR, "FILE B4: RAZOR");
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_EDITOR, "FILE B4: the editor");
+    turn(FM1P_E_SELECT, -1);                                  /* (the editor: SEL turns the page) */
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "editor: SEL back to the browser");
+    tapkey(1, bkey(5), 40);
     tapkey(1, bkey(3), 40);
     CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "FILE B3: the browser");
 }

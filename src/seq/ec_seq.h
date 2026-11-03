@@ -30,6 +30,9 @@ typedef struct {
     /* 0.5.0: the engine's mod sources of a track now (EC_MSRC_N values; NULL: none) for the matrix's generic
      * destinations (ec_mtx.h) */
     void (*sources)(void *ctx, int track, float *src);
+    /* 0.6.0: the pool slot (1-based) the track's engine plays changed: a trig with an EC_P_SLOT lock plays that
+     * slot's sample (it stays until a trig without one, or a stop, gives the track's own slot back). NULL: none */
+    void (*slot)(void *ctx, int track, int slot);
 } ec_seq_sink_t;
 
 typedef struct {
@@ -63,6 +66,7 @@ typedef struct {
     int fire_pass;                 /* the firing step's pattern pass (trig conditions) */
     int fire_reset;                /* the next fire is the first after a (re)start */
     int64_t skip_pos;              /* ec_seq_rec_consume: this position does not fire (-1 none) */
+    int slot_lock;                 /* 0.6.0: the slot the last trig locked (1-based), 0 = the track's own */
 } ec_seq_track_t;
 
 /* 0.6.0: a metronome beat in the block ec_seq_render() just rendered (ec_seq_block_beats) */
@@ -166,6 +170,7 @@ int ec_seq_counting_in(const ec_seq_t *s);   /* count-in beats still to come (0:
 double ec_seq_song_beats(const ec_seq_t *s);
 
 /* reads */
+int ec_seq_track_slot(const ec_seq_t *s, int track);        /* 0.6.0: the slot (1-based) the engine plays (a lock) */
 float ec_seq_value(const ec_seq_t *s, int track, int id);   /* the resolved ("actual") value */
 int ec_seq_step(const ec_seq_t *s, int track);              /* the playing step index (0-based), -1 stopped */
 int ec_seq_pattern_steps(const ec_seq_t *s, int track);

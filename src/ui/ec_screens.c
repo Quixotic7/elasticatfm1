@@ -65,6 +65,10 @@ static void header(const ec_app_t *a, const char *title, int page, const char *r
     else
         pg[0] = 0;
     ec_kit_header(target_name(a), buf, pg, right, held, popup);
+    if (a->msg_ms && a->msg_alert) {               /* 0.6.0: an alert (STOP FIRST, FULL): the title bar in ALERT */
+        R(EC_C_ALERT, 14, 0, W - 14 - (popup ? 21 : 11), 10);
+        T(EC_C_BG, buf, 17, 3, EC_AL_LEFT);
+    }
 }
 
 /* the default right-hand info: the held step, else the pattern (and the queued one) */
@@ -595,78 +599,6 @@ static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
     cells(a, pg);
 }
 
-/* ------------------------------------------------------------------------------------------- FILE --- */
-/* the browser (the mock's FILE BROWSE): the loaded name, five rows round the cursor (in the pool: an accent mark),
- * the pool meter (slots used, the arena) */
-static void file_screen(const ec_app_t *a, const ec_page_t *pg)
-{
-    const int s = ec_app_track_slot(a, a->track);
-    const ec_slot_t *sl = &a->proj.slot[s];
-    const ec_slotrt_t *rt = &a->slot[s];
-    const ec_ss_sample_t *smp = ec_app_track_sample(a, a->track);
-    const int n = ec_browse_count();
-    char t[32], r[16], buf[64];
-    int i, used = 0;
-    title_of(a, pg, t, sizeof t);
-    if (n > 0)
-        snprintf(r, sizeof r, "%d/%d", a->cursor + 1, n);
-    else
-        r[0] = 0;
-    header(a, t, 1, r);
-    fit(buf, sizeof buf, smp || sl->path[0] ? file_name(a) : "EMPTY", 20);
-    T(smp ? EC_C_L15 : EC_C_L5, buf, 2, 13, EC_AL_LEFT);
-    snprintf(r, sizeof r, "SLOT %d", s + 1);
-    T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
-    if (n > 0) {
-        int first = a->cursor - 2;
-        if (first > n - 5)
-            first = n - 5;
-        if (first < 0)
-            first = 0;
-        for (i = 0; i < 5 && first + i < n; i++) {
-            const int idx = first + i, y = 21 + i * 8, cur = idx == a->cursor;
-            int k, pooled = 0;
-            for (k = 0; k < EC_NSLOT && !pooled; k++)
-                pooled = a->proj.slot[k].path[0] && !strcmp(ec_browse_path(idx), a->proj.slot[k].path);
-            fit(buf, sizeof buf, ec_browse_name(idx), 26);
-            if (cur)
-                R(EC_C_L15, 0, y - 1, W, 7);
-            T(cur ? EC_C_BG : EC_C_L8, buf, 6, y, EC_AL_LEFT);
-            if (pooled)
-                R(cur ? EC_C_BG : EC_C_ACC, 2, y + 1, 2, 3);
-        }
-    } else
-        T2(EC_C_L5, a->scanning ? "SCANNING" : a->no_folder ? "NO FOLDER" : "NO FILES", W / 2, 32, EC_AL_CENTER);
-    /* the slot's state, else the pool meter */
-    if (rt->state == EC_SL_LOADING || rt->state == EC_SL_QUEUED) {
-        const int pm = rt->state == EC_SL_LOADING ? (int)ec_load_permille() : 0;
-        snprintf(buf, sizeof buf, "LOADING %d%%", pm / 10);
-        T(EC_C_L8, buf, 2, 61, EC_AL_LEFT);
-        R(EC_C_L3, 2, 68, W - 4, 4);
-        R(EC_C_L15, 2, 68, (W - 4) * pm / 1000, 4);
-    } else if (rt->state == EC_SL_MISSING || rt->state == EC_SL_ERROR) {
-        snprintf(buf, sizeof buf, "%s %s", rt->state == EC_SL_MISSING ? "MISSING:" : "ERROR:",
-                 rt->state == EC_SL_MISSING ? sl->path : rt->err);
-        fit(t, sizeof t, buf, 29);
-        T(EC_C_ALERT, t, 2, 64, EC_AL_LEFT);
-    } else {
-        const uint32_t cap = ec_ss_capacity_bytes(), use = ec_ss_used_bytes();
-        const int pc = cap ? (int)((uint64_t)use * 100u / cap) : 0;
-        const int bw = cap ? (int)((uint64_t)use * (uint32_t)(W - 4) / cap) : 0;
-        for (i = 0; i < EC_NSLOT; i++)
-            used += a->proj.slot[i].path[0] != 0;
-        snprintf(buf, sizeof buf, "POOL %d/%d", used, EC_NSLOT);
-        T(EC_C_L8, buf, 2, 61, EC_AL_LEFT);
-        snprintf(buf, sizeof buf, "%d%%", pc);
-        T(EC_C_L8, buf, W - 2, 61, EC_AL_RIGHT);
-        R(EC_C_L3, 2, 68, W - 4, 4);
-        R(EC_C_L12, 2, 68, bw, 4);
-        if (bw > 1)
-            R(EC_C_ACC, 2 + bw - 2, 68, 2, 4);
-    }
-    cells(a, pg);
-}
-
 /* ------------------------------------------------------------------------------------------- PAT --- */
 /* the pattern grid (the mock's PATTERNS): the bank's 16, the current one filled, the queued one blinking in the
  * accent, used ones framed; the global cycle under them */
@@ -735,7 +667,8 @@ static void draw_main(const ec_app_t *a)
             src_screen(a, &pg);
         break;
     case EC_PIC_RAZOR: ec_scr_razor(a, &pg); break;   /* E3 */
-    case EC_PIC_FILE: file_screen(a, &pg); break;
+    case EC_PIC_FILE: ec_scr_file_browser(a, &pg); break;      /* 0.6.0 */
+    case EC_PIC_EDITOR: ec_scr_file_editor(a, &pg); break;
     case EC_PIC_PATTERN: pat_screen(a, &pg); break;
     default: generic_screen(a, &pg); break;
     }

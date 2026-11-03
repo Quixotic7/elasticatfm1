@@ -1,25 +1,24 @@
 # E6 (host/render_e6.sh -> results/e6): sampling and the INPUT machine through panel input, with a stand-in live
 # input (render_e6.sh: --audio-in the demo folder's chord loop, latency 256 frames). A fresh project with
 # build/demo_folder (host/make_demo_folder.py): T1 plays the drums. 0.6.0's gestures (docs/UX-V2.md): sampling is
-# the SAMPLER (FILE tapped twice; 0.4's REC pop-up stands in until part 2), track select = SHIFT + W1..W9, the HOME
+# the SAMPLER (FILE while playing; B11 arms), track select = SHIFT + W1..W9, the HOME
 # settings = HOME held. Times are device ms; lower I = W(I+1), upper I = B(I+1).
 png-scale 2
 master 640@0
 press PLAY@1200
 
-# ---- FILE, FILE again = the SAMPLER: IN L+R into T1's slot (POOL 01, the drums shown dim), the IN meters, MAX
+# ---- FILE while playing = the SAMPLER (FILE itself opens only while stopped): the input (AIN1) into the next free
+#      pool slot (SLOT 2), the VU
 press SAVE@1400
-press SAVE@1500
 png 1700:01_rec_idle.png
-# K2: LEN 1 BAR; K4: SYNC BAR
-turn K2@1800:-2
-turn K4@1900:1
-# F2 (OCT+): armed, waiting for the next bar line (the bars: 1.2 s + 2 s n)
-press OCT+@2000
+# B2: 1 BAR
+upper 1@1800+60
+# B11: armed, waiting for the next bar line (the bars: 1.2 s + 2 s n)
+upper 10@2000+60
 png 2100:02_rec_armed.png
-# the take runs from the bar at 3.2 s (+ the latency shift), the record head in the accent
+# the take runs from the bar at 3.2 s (+ the latency shift)
 png 4000:03_rec_taking.png
-# a bar later it lands in POOL 01: T1 plays it at once; the writer saves /data/rec/rec-0001.wav
+# a bar later it lands in POOL 02; the writer saves /data/rec/rec-0001.wav
 png 5500:04_rec_landed.png
 # HOME: LOOP ENGINE (the SAMPLER left; a take would go on)
 press HOME@5700
@@ -36,11 +35,12 @@ png 7100:06_input_src.png
 # the input off (the host's state 0, render_e6.sh: --audio-in-off-at 7400): NO INPUT, silence
 png 7700:07_input_none.png
 
-# ---- the SAMPLER without input; then the master out as the source (resample); F1 closes it
+# ---- the SAMPLER without input; FILE held: the recorder's setup (0.4's REC pop-up), K1 = the master out as the
+#      source (resample); F1 closes it
 press SAVE@7900
-press SAVE@8000
 png 8200:08_rec_no_input.png
-turn K1@8300:1
-png 8400:09_rec_resample.png
-press OCT-@8600
-info 8800
+press SAVE@8300+500
+turn K1@8900:1
+png 9000:09_rec_resample.png
+press OCT-@9100
+info 9300

@@ -38,7 +38,13 @@ static void message(const char *s)
 {
     snprintf(A->msg, sizeof A->msg, "%s", s);
     A->msg_ms = A->ms ? A->ms : 1;
+    A->msg_alert = 0;
     A->redraw = 1;
+}
+void ec_app_alert(const char *s)
+{
+    message(s);
+    A->msg_alert = 1;
 }
 
 static void mark_dirty(void)
@@ -299,6 +305,13 @@ static void sink_sources(void *ctx, int t, float *src)
     (void)ctx;
     ec_dsp_mod_sources(A->dsp, t, src);           /* 0.5.0: the matrix's generic destinations */
 }
+static void engine_sample(int t);
+static void sink_slot(void *ctx, int t, int slot)
+{
+    (void)ctx;
+    (void)slot;
+    engine_sample(t);                             /* 0.6.0: a slot lock's trig (sample-accurate: before its events) */
+}
 
 /* ------------------------------------------------------------------------------------------- samples --- */
 static int make_builtin(void)
@@ -341,12 +354,12 @@ static int make_builtin(void)
     return h;
 }
 
-/* give every engine track the sample of its slot (when it changed) */
-static void assign_samples(void)
+/* give an engine track the sample of the slot it plays (its own, or a step's slot lock: ec_seq_track_slot), when it
+ * changed */
+static void engine_sample(int t)
 {
-    int t;
-    for (t = 0; t < EC_NTRACK; t++) {
-        const ec_slotrt_t *r = &A->slot[ec_app_track_slot(A, t)];
+    {
+        const ec_slotrt_t *r = &A->slot[ec_seq_track_slot(&A->seq, t) - 1];
         const int h = r->state == EC_SL_READY ? r->handle : -1;
         if (h != A->assigned[t]) {
             const ec_ss_sample_t *x = h >= 0 ? ec_ss_ready(h) : 0;
@@ -366,6 +379,13 @@ static void assign_samples(void)
         }
     }
 }
+static void assign_samples(void)
+{
+    int t;
+    for (t = 0; t < EC_NTRACK; t++)
+        engine_sample(t);
+}
+void ec_app_assign_samples(void) { assign_samples(); }
 
 static void queue_slot(int s, const char *path, int newmeta)
 {
@@ -462,6 +482,22 @@ void ec_app_slot_take(int s, int h)
     slot_loaded(s, h);
 }
 
+/* 0.6.0: FILE's preview of path (ready in the store) becomes slot s, as a fresh load (BPM, steps from the file) */
+void ec_app_slot_adopt(int s, int h, const char *path)
+{
+    ec_slotrt_t *r = &A->slot[s];
+    if (A->load_slot == s) {
+        ec_load_cancel();
+        A->load_slot = -1;
+    }
+    snprintf(A->proj.slot[s].path, EC_PATH, "%s", path);
+    r->old_handle = r->state == EC_SL_READY ? r->handle : -1;
+    r->builtin = 0;
+    r->newmeta = 1;
+    r->err[0] = 0;
+    slot_loaded(s, h);
+}
+
 static void loader_tick(void)
 {
     const int st = ec_load_state();
@@ -498,6 +534,7 @@ static void loader_tick(void)
         int s;
         for (s = 0; s < EC_NSLOT; s++)
             if (A->slot[s].state == EC_SL_QUEUED) {
+                ec_file_preview_yield();       /* 0.6.0: a preview loading gives way (the loader does one at a time) */
                 A->slot[s].state = EC_SL_LOADING;
                 A->load_slot = s;
                 if (ec_load_start(A->proj.slot[s].path) != 0) {
@@ -566,8 +603,10 @@ void ec_app_save(int quiet)
         A->saves++;
         if (!quiet)
             message("SAVED");
-    } else
-        message("SAVE FULL");
+    } else {                                      /* 0.6.0: the record does not fit (the old one is kept) */
+        A->dirty = 0;                             /* (no autosave loop: the next edit tries again) */
+        ec_app_alert("FULL: NOT SAVED");
+    }
 }
 
 /* ------------------------------------------------------------------------------------------- edits --- */
@@ -642,6 +681,8 @@ void ec_app_edit_param_f(int id, int det, int mult, int flags)
         v[id] = nudge_machine(v[id], det);
     else
         v[id] = ec_app_move_param(id, v[id], det, mult);
+    if (d->flags & EC_PF_LOCKABLE)
+        ec_liverec_param(id, v[id]);              /* 0.6.0: live REC's AUTOMATION (a lock on the step) */
     if (id == EC_P_RATE)
         ec_seq_timing_changed(&A->seq);
     {
@@ -1017,6 +1058,7 @@ void ec_app_init(void)
     sink.params = sink_params;
     sink.process = sink_process;
     sink.sources = sink_sources;
+    sink.slot = sink_slot;
     ec_seq_init(&A->seq, &A->proj, &sink, EC_FS);
     ec_dsp_set_tempo(A->dsp, A->proj.bpm);
     ec_e5_init();                                  /* E5 */
@@ -1040,6 +1082,8 @@ void ec_app_tick(const ec_input_t *in)
     }
     ec_pn_tick(in);                                /* 0.6.0: the panel (ec_panel.c), the live controls */
     ec_rec_tick();                                 /* E6: a take ended -> its slot, the WAV writer */
+    ec_file_tick();                                /* 0.6.0: FILE's preview */
+    ec_liverec_tick();                             /* 0.6.0: live REC (FIXED's end) */
     ec_e5_tick();                                  /* E5: prompts, the preview */
     /* autosave: stopped, dirty, quiet for a moment */
     if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
@@ -1073,7 +1117,13 @@ void ec_app_audio(int16_t *out, uint32_t frames)
         /* E6: this chunk's input (frame i of it lines up with output frame i), silence past what the host gave */
         const uint32_t in_n = ain && ain_n > done ? (ain_n - done < n ? ain_n - done : n) : 0;
         const int16_t *in = in_n ? ain + 2 * done : NULL;
+        static int16_t gin[1024 * 2];
         uint32_t i;
+        if (in) {                                  /* 0.6.0: the SAMPLER's input gain (the take, the INPUT machine) */
+            memcpy(gin, in, (size_t)in_n * 4u);
+            ec_sampler_input(gin, in_n);
+            in = gin;
+        }
         for (i = 0; in && i < 2 * n; i++)
             g_inbuf[i] = i < 2 * in_n ? (float)in[i] / 32768.0f : 0.0f;
         ec_dsp_input(A->dsp, in ? g_inbuf : NULL, (int)n);
@@ -1084,6 +1134,7 @@ void ec_app_audio(int16_t *out, uint32_t frames)
             out[2 * done + i] = (int16_t)(x > 32767.0f ? 32767 : x < -32768.0f ? -32768 : (int)x);
         }
         ec_rec_post(in, in_n, out + 2 * done, n);
+        ec_liverec_audio(out + 2 * done, n, in, in_n);   /* 0.6.0: the click, the monitor, the preview (after) */
         done += n;
     }
     ec_dsp_input(A->dsp, NULL, 0);

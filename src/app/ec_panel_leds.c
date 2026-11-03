@@ -187,9 +187,25 @@ static void leds_white(void)
     int i;
     if (ec_e5_leds_lower())                        /* naming, F3's pages */
         return;
-    if (P->as_open || mode == EC_MODE_SAMPLER) {
+    if (P->as_open || P->rs_open) {
         for (i = 0; i < EC_NLOWER; i++)
             ec_plat_led_lower(i, EC_LED_OFF);
+        return;
+    }
+    if (mode == EC_MODE_SAMPLER && !A->fn) {       /* the input's VU: -48 .. 0 dB, the top four in full */
+        const int lit = (int)floorf(ec_sampler_vu() * 16.0f + 0.5f);
+        for (i = 0; i < EC_NLOWER; i++)
+            ec_plat_led_lower(i, i < lit ? (i >= 12 ? EC_LED_LIT : EC_LED_MID) : EC_LED_OFF);
+        return;
+    }
+    if (mode == EC_CAT_FILE && !A->fn && !A->settings && ec_file_page() != EC_PIC_RAZOR) {
+        const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
+        const float vw = 1.0f / ec_file_zoom();
+        for (i = 0; i < EC_NLOWER; i++) {          /* the editor: the keys at the trim lit; the browser: dark */
+            const float pos = P->ed_view + (float)i / 15.0f * vw;
+            const int set = fabsf(pos - sl->trim_start) < vw / 30.0f || fabsf(pos - sl->trim_end) < vw / 30.0f;
+            ec_plat_led_lower(i, ec_file_page() != EC_PIC_EDITOR ? EC_LED_OFF : set ? EC_LED_LIT : EC_LED_FAINT);
+        }
         return;
     }
     if (A->fn && mode != EC_CAT_XFD) {
@@ -227,7 +243,9 @@ static void leds_black(void)
     int i;
     uint8_t l[EC_NBKEY];
     memset(l, EC_LED_OFF, sizeof l);
-    if (A->e5.naming || P->as_open || UX->f3 || mode == EC_MODE_SAMPLER) {
+    if (A->e5.naming || P->as_open || P->rs_open || UX->f3) {
+    } else if (A->fn && (mode == EC_CAT_FILE || mode == EC_MODE_SAMPLER)) {
+        l[10] = EC_LED_LIT;                                            /* purge */
     } else if (A->fn) {
         if (mode == EC_CAT_XFD) {
             l[0] = l[1] = EC_LED_LIT;
@@ -283,10 +301,30 @@ static void leds_black(void)
             for (i = 0; i < EC_NBANK; i++)
                 l[i] = i == P->bank ? EC_LED_LIT : EC_LED_DIM;
             break;
-        case EC_CAT_FILE:
-            if (ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE)
-                l[9] = EC_LED_DIM;
-            break;
+        case EC_CAT_FILE: {
+            const int pic = ec_file_page();
+            if (pic == EC_PIC_EDITOR) {            /* the zoom lit, the scroll keys while zoomed */
+                for (i = 1; i < 10; i++)
+                    l[i] = i - 1 == P->ed_zoom ? EC_LED_LIT : EC_LED_DIM;
+                l[0] = l[10] = P->ed_zoom ? EC_LED_MID : EC_LED_FAINT;
+                break;
+            }
+            for (i = 1; i <= EC_NBKEY; i++)
+                if (ec_file_key_page(i) >= 0)
+                    l[i - 1] = ec_file_key_page(i) == A->page[EC_CAT_FILE] ? EC_LED_LIT : EC_LED_DIM;
+            if (pic == EC_PIC_FILE) {
+                l[0] = l[1] = EC_LED_DIM;
+                l[9] = ec_file_next_free() >= 0 ? EC_LED_MID : EC_LED_FAINT;
+                l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
+            }
+        } break;
+        case EC_MODE_SAMPLER: {
+            static const int K[6] = {0, 1, 2, 3, 4, 4};
+            for (i = 0; i < 5; i++)
+                l[i] = i == K[clampi(A->rec.len, 0, 5)] ? EC_LED_LIT : EC_LED_DIM;
+            l[10] = A->rec.state == EC_RS_ARMED ? (blink(250) ? EC_LED_LIT : EC_LED_DIM)
+                    : A->rec.state != EC_RS_IDLE ? EC_LED_LIT : EC_LED_MID;
+        } break;
         default:
             if (ec_src_mode(mode)) {
                 int cur = -1;
@@ -322,17 +360,17 @@ static void leds_buttons(void)
             l = EC_LED_FAINT;
         if (mb == EC_MB_SEQ && UX->f3)
             l = EC_LED_LIT;
+        if (mb == EC_MB_FILE && P->file_refused_ms && A->ms - P->file_refused_ms < 800)
+            l = blink(100) ? EC_LED_LIT : EC_LED_OFF;   /* FILE refused while playing: it flashes */
         ec_plat_led_button(mb_button(mb), l);
     }
     ec_plat_led_button(EC_B_FN, P->shift_sticky ? (blink(400) ? EC_LED_LIT : EC_LED_MID) : A->fn ? EC_LED_LIT
                                                                                                   : EC_LED_FAINT);
     ec_plat_led_button(EC_B_PLAY, A->seq.playing ? EC_LED_LIT : EC_LED_DIM);
     ec_plat_led_play_green(A->seq.playing ? EC_LED_LIT : EC_LED_OFF);
-    ec_plat_led_button(EC_B_REC, ec_liverec_on() ? EC_LED_LIT : EC_LED_DIM);
-    if (A->rec.state == EC_RS_ARMED)               /* E6 (the SAMPLER's stand-in): armed blinks, a take lit */
-        ec_plat_led_button(EC_B_REC, blink(250) ? EC_LED_LIT : EC_LED_DIM);
-    else if (A->rec.state == EC_RS_RUN || A->rec.state == EC_RS_STOPPED)
-        ec_plat_led_button(EC_B_REC, EC_LED_LIT);
+    /* live REC: lit while recording, blinking while CAPTURE waits / the count-in runs; FILE: dark */
+    ec_plat_led_button(EC_B_REC, ec_app_mode() == EC_CAT_FILE ? EC_LED_OFF : ec_liverec_armed() ?
+                                 (blink(250) ? EC_LED_LIT : EC_LED_DIM) : ec_liverec_on() ? EC_LED_LIT : EC_LED_DIM);
     if (popup) {                                   /* F1 back lit, F2 OK blinking (ChoralRoot) */
         ec_plat_led_button(EC_B_OCTDN, EC_LED_LIT);
         ec_plat_led_button(EC_B_OCTUP, blink(300) ? EC_LED_LIT : EC_LED_DIM);
@@ -389,6 +427,16 @@ static void knob_labels(void)
         for (k = 0; k < 4; k++) {
             const int row = P->as_row / 4 * 4 + k;
             L(EC_LBL_KNOB0 + EC_E_K1 + k, row < EC_AS_NROW ? ec_as_row_label(row) : "");
+        }
+        return;
+    }
+    if (P->rs_open) {                              /* the record settings */
+        L(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, "");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, "");
+        for (k = 0; k < 4; k++) {
+            const int row = P->rs_row / 4 * 4 + k;
+            L(EC_LBL_KNOB0 + EC_E_K1 + k, row < EC_RS_NROW ? ec_rs_row_label(row) : "");
         }
         return;
     }
@@ -481,8 +529,9 @@ static void button_labels(void)
         L(EC_LBL_BTN0 + mb_button(mb), s);
     }
     L(EC_LBL_BTN0 + EC_B_GLO, "SHIFT");
-    L(EC_LBL_BTN0 + EC_B_PLAY, A->seq.playing ? "STOP" : "PLAY");
-    L(EC_LBL_BTN0 + EC_B_REC, "REC");
+    L(EC_LBL_BTN0 + EC_B_PLAY, mode == EC_CAT_FILE ? "" : A->seq.playing ? "STOP" : "PLAY");
+    L(EC_LBL_BTN0 + EC_B_REC, mode == EC_CAT_FILE ? "" : P->rs_open ? "OK" : A->fn ? "REC SETUP"
+                               : ec_liverec_on() ? "REC OFF" : "REC");
     if (A->e5.confirm) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "NO");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "YES");
@@ -498,6 +547,9 @@ static void button_labels(void)
     } else if (mode == EC_MODE_KEYBOARD) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "OCT-");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "OCT+");
+    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
+        L(EC_LBL_BTN0 + EC_B_OCTDN, "COPY");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, "FREE SLOT");
     } else if (P->f_held && P->f_held != 3) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, P->f_held & 1 ? "COPY" : "F3");
         L(EC_LBL_BTN0 + EC_B_OCTUP, P->f_held & 2 ? "CUT" : "F3");
@@ -519,7 +571,13 @@ static void white_labels(void)
     char b[12];
     for (i = 0; i < EC_NLOWER; i++) {
         b[0] = 0;
-        if (A->e5.naming || P->as_open || mode == EC_MODE_SAMPLER)
+        if (A->e5.naming || P->as_open || P->rs_open)
+            ;
+        else if (mode == EC_MODE_SAMPLER && !A->fn)
+            snprintf(b, sizeof b, "%ddB", -48 + 3 * (i + 1));   /* (the VU's scale) */
+        else if (mode == EC_CAT_FILE && !A->fn && !A->settings && ec_file_page() == EC_PIC_EDITOR)
+            snprintf(b, sizeof b, "%s", A->pn.ed_tap ? "END" : "START");
+        else if (mode == EC_CAT_FILE && !A->fn && !A->settings && ec_file_page() == EC_PIC_FILE)
             ;
         else if (UX->f3)
             snprintf(b, sizeof b, "PAGE %d", i + 1);
@@ -579,8 +637,10 @@ static void black_labels(void)
     for (i = 0; i < EC_NBKEY; i++) {
         const char *s = "";
         b[0] = 0;
-        if (A->e5.naming || P->as_open || UX->f3 || mode == EC_MODE_SAMPLER)
+        if (A->e5.naming || P->as_open || P->rs_open || UX->f3)
             ;
+        else if (A->fn && (mode == EC_CAT_FILE || mode == EC_MODE_SAMPLER))
+            s = i == 10 ? "PURGE" : "";
         else if (A->fn && mode == EC_CAT_XFD)
             s = i == 0 ? "CLEAR A" : i == 1 ? "CLEAR B" : "";
         else if (A->fn)
@@ -611,12 +671,28 @@ static void black_labels(void)
                 if (i < EC_NBANK)
                     snprintf(b, sizeof b, "BANK %c", 'A' + i), s = b;
                 break;
-            case EC_CAT_FILE:
-                if (i == 9 && ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE)
-                    s = "LOAD";
-                else if (i == 2 || i == 3)
-                    s = i == 2 ? "BROWSE" : "RAZOR";
-                break;
+            case EC_CAT_FILE: {
+                static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "", "LOAD", "PREVIEW"};
+                static const char *const ED[EC_NBKEY] = {"<", "1X", "2X", "4X", "8X", "16X", "32X", "64X", "128X",
+                                                          "256X", ">"};
+                const int pic = ec_file_page();
+                if (pic == EC_PIC_EDITOR)
+                    s = ED[i];
+                else if (ec_file_key_page(i + 1) >= 0) {
+                    ec_page_t pg;
+                    ec_page_items(EC_CAT_FILE, ec_file_key_page(i + 1), ec_app_params(A), 0, &pg);
+                    s = pg.title ? pg.title : "";
+                } else if (pic == EC_PIC_FILE)
+                    s = BR[i];
+            } break;
+            case EC_MODE_SAMPLER: {
+                static const char *const SL[5] = {"FREE", "1 BAR", "2 BARS", "4 BARS", "8 BARS"};
+                static const char *const ST[4] = {"ARM", "DISARM", "STOP", ""};
+                if (i < 5)
+                    s = SL[i];
+                else if (i == 10)
+                    s = ST[clampi(A->rec.state, 0, 3)];
+            } break;
             default:
                 if (ec_src_mode(mode))
                     s = ec_src_label(mode, i + 1);

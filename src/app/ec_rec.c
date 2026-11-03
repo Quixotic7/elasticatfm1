@@ -74,21 +74,27 @@ static void drop(void)
     R->handle = -1;
     R->state = EC_RS_IDLE;
     R->n = R->cap = R->target = 0;
+    R->sampler = 0;
     A->redraw = 1;
 }
+void ec_rec_drop(void) { drop(); }
 
-static void arm(void)
+/* the take's sync / threshold: the SAMPLER's own (next bar, or at once) over the setup's */
+static int sync_of(void) { return R->sampler ? R->ssync : R->sync; }
+static int thr_of(void) { return R->sampler ? 0 : R->thr; }
+
+static int arm(void)
 {
     uint32_t cap;
     int h;
     if (R->w) {
         ec_app_message("SAVING THE LAST TAKE");
-        return;
+        return -1;
     }
     cap = ec_rec_reserve();
     if (cap < EC_FS / 2u || (h = ec_ss_alloc(cap)) < 0) {
-        ec_app_message("NO ROOM: POOL FULL");
-        return;
+        ec_app_alert("NO ROOM: POOL FULL");
+        return -1;
     }
     R->handle = h;
     R->cap = cap;
@@ -97,7 +103,20 @@ static void arm(void)
     R->slot = target_slot();
     R->was_playing = A->seq.playing;
     R->state = EC_RS_ARMED;
+    R->sampler = 0;
     A->redraw = 1;
+    return 0;
+}
+
+/* 0.6.0: the SAMPLER's B11: a take into slot s, starting on the next bar (EC_RSYNC_BAR) or at once (FREE) */
+int ec_rec_arm_to(int s, int sync)
+{
+    if (R->state != EC_RS_IDLE || arm() != 0)
+        return -1;
+    R->slot = s;
+    R->sampler = 1;
+    R->ssync = sync;
+    return 0;
 }
 
 /* the take starts at sample time `at` (its frame 0), shifted by `shift` frames */
@@ -125,7 +144,7 @@ void ec_rec_pre(uint32_t n)
     const ec_seq_t *s = &A->seq;
     const uint64_t t0 = s->now;
     if (R->state == EC_RS_ARMED) {
-        switch (R->sync) {
+        switch (sync_of()) {
         case EC_RSYNC_PLAY:                        /* the transport's start: step 1 at its sample_base */
             if (s->playing && !R->was_playing)
                 start(s->sample_base, in_shift());
@@ -140,7 +159,7 @@ void ec_rec_pre(uint32_t n)
             }
             break;
         default:                                   /* FREE: at once (the threshold: in the capture) */
-            if (!R->thr)
+            if (!thr_of())
                 start(t0, 0);
             break;
         }
@@ -164,7 +183,7 @@ void ec_rec_post(const int16_t *in, uint32_t in_n, const int16_t *out, uint32_t 
     R->in_pk[1] = pr > R->in_pk[1] ? pr : R->in_pk[1];
 
     k = 0;
-    if (R->state == EC_RS_ARMED && R->sync == EC_RSYNC_FREE && R->thr) {   /* the threshold: the first frame over */
+    if (R->state == EC_RS_ARMED && sync_of() == EC_RSYNC_FREE && thr_of()) {   /* the threshold: the first frame over */
         const float th = 32768.0f * powf(10.0f, (float)ec_rec_thr_db(R->thr) / 20.0f);
         for (; k < n; k++) {
             int16_t l = 0, r = 0;
@@ -286,6 +305,7 @@ static void land(void)
     R->takes++;
     R->handle = -1;
     R->state = EC_RS_IDLE;
+    R->sampler = 0;
     /* the writer: the header (PCM 16-bit stereo 44.1 kHz), then the frames straight from the arena */
     memcpy(R->hdr, "RIFF", 4);
     put32(R->hdr + 4, 36u + n * 4u);
@@ -437,7 +457,7 @@ int ec_rec_button(int b)
         return 0;
     if (b == EC_B_REC || b == EC_B_OCTUP) {
         switch (R->state) {
-        case EC_RS_IDLE: arm(); break;
+        case EC_RS_IDLE: (void)arm(); break;
         case EC_RS_ARMED: start(A->seq.now, 0); break;   /* punch in: from the next block */
         case EC_RS_RUN:
             if (R->n)

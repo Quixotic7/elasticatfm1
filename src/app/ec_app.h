@@ -66,6 +66,7 @@ typedef struct {
     /* the screen */
     char msg[32];
     uint32_t msg_ms;
+    int msg_alert;               /* 0.6.0: the message in ALERT (STOP FIRST, FULL) */
     int redraw;
     uint32_t last_draw;
     float meter[9], meter_hold[9];

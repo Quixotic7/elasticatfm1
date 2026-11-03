@@ -3,7 +3,8 @@
  * sample's own pitch; F1 / F2 the octave). On slice tracks (SLICE / RAZOR) the black keys pick the slice, ten at a
  * time (B11 steps the bank), and the white keys play the selected slice at a pitch. ALGO is the target step: below 1
  * is live (no entry); with a target, a key writes a trig with that note (and slice) there, one note per step, then
- * advances (or stays: KEYBOARD's ADVANCE setting in HOME's settings; SHIFT + the key does the other). */
+ * advances (or stays: KEYBOARD's ADVANCE setting in HOME's settings; SHIFT + the key does the other). Live (no
+ * target), REC records the notes (ec_liverec.c). */
 #include <math.h>
 #include <stdio.h>
 
@@ -86,6 +87,8 @@ void ec_kb_key(int k, int down, int vel)
         ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
         return;
     }
+    if (!P->target && !(slice && up == 10))
+        ec_liverec_capture();                      /* live REC: CAPTURE's first note starts playback */
     if (slice && up >= 0) {                        /* slice tracks: the black keys pick the slice */
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
         if (up == 10) {                            /* B11: the bank */
@@ -109,6 +112,8 @@ void ec_kb_key(int k, int down, int vel)
             ec_seq_keyboard(&A->seq, A->track, 0, 1, (float)vel / 127.0f);   /* heard */
             if (P->target)
                 enter_step(0, s, vel);
+            else
+                ec_liverec_note(0, s, vel);        /* live REC: the slice */
             A->redraw = 1;
             return;
         }
@@ -119,6 +124,8 @@ void ec_kb_key(int k, int down, int vel)
         ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
         if (P->target)
             enter_step(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
+        else                                       /* live REC: the note (pitch, velocity, slice) */
+            ec_liverec_note(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
     }
     A->redraw = 1;
 }

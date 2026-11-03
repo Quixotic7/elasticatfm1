@@ -237,9 +237,10 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| SAMPLE |  | 1 | BPM | STEP | GAIN | SLOT |
-|  |  | 2 | - | - | TRIM START | TRIM END |
-| RAZOR |  | 1 | PLAY | ZOOM | SLCE START | SLCE END |
+| BROWSE | B3 | - | | | | |
+| EDITOR | B4 | 1 | START | END | BPM | GAIN |
+|  |  | 2 | STEPS |  |  |  |
+| RAZOR | B5 | 1 | PLAY | ZOOM | SLCE START | SLCE END |
 |  |  | 2 | SNAP MODE | CHOKE | PITCH | TRANS SENS |
 
 ### CROSSFADER (ARP · XFD)
@@ -252,7 +253,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| PATTERN |  | 1 | LENGTH | RATE | GLO LENGTH | LNCH MODE |
+| PATTERN |  | 1 | QUANT | LENGTH |  |  |
 | SETUP | hold | 1 | LNCH MODE | GLO LENGTH |  |  |
 
 ### Buses (S1, S2, MST: every mode but MIX, FILE, PATTERN LAUNCH and CROSSFADER shows the bus's page)
@@ -544,7 +545,6 @@ PATTERN LAUNCH (SEQ): the track's pattern length and step rate, the global lengt
 | Item | Label | Name | What it does |
 |---|---|---|---|
 | `pattern_steps` | LEN | Pattern length | The track's pattern length, 1 to 256 steps. Tracks can differ (polymeter). |
-| `pattern_rate` | RATE | Pattern rate | The track's step speed against the tempo, 1/16 to 2 (1 = sixteenth notes; 2 = twice as fast). |
 | `global.quant` | QUANT | Pattern change mode | How a picked pattern engages: SEQ (at the global length boundary), JUMP (now, same step), START (now, from step 1), TEMP (now, back after one pass). |
 
 ### CROSSFADER (XFD)
@@ -554,6 +554,12 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 | Item | Label | Name | What it does |
 |---|---|---|---|
 | `e5.xfd` | XFD | Scene crossfader | The A / B scene fader, 0 (scene A) to 128 (scene B); morphs every param stored in the scenes. |
+
+### OTHER
+
+| Item | Label | Name | What it does |
+|---|---|---|---|
+| `pattern_rate` | RATE | Pattern rate | The track's step speed against the tempo, 1/16 to 2 (1 = sixteenth notes; 2 = twice as fast). |
 
 ### Machines and modes (what a page variant is for)
 
@@ -661,7 +667,6 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 | MST/TRACK MIX | The mixer: all six tracks' levels and the S1 / S2 returns at a glance; the knobs set the selected track's level, pan and two sends, and lane 2 its mute. |
 | MST/MASTER | Project timing: tempo, swing, global pattern length and what the playhead does when the loop keys are let go. |
 | MST/SETUP | Playhead return mode, tempo, global BPM (one tempo for every pattern) and the project's name. |
-| FILE/SAMPLE | The sample browser (SELECT moves the cursor, SAVE loads into the track's slot) and the slot's BPM, length in steps, gain, slot number and trim. |
 | FILE/RAZOR | The razor slice editor for the track's sample: move each slice's start / end with a snap mode, zoom, set its play mode, choke group, pitch and the transient sensitivity. OCT+ splits, OCT- deletes. |
 | PAT/PATTERN | The pattern grid with the track's pattern length and step rate, the global length and the pattern change mode. |
 | PAT/SETUP | How a newly picked pattern engages (quantize mode) and the global length it waits for. |

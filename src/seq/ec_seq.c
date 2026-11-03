@@ -256,7 +256,7 @@ static void ghost_locks(ec_seq_t *s, int t, const ec_step_t *rec, int64_t pos)
     int k;
     for (k = 0; k < rec->nlock; k++) {
         const int id = rec->lock_id[k];
-        if (id >= EC_NP || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)))
+        if (id >= EC_NP || id == EC_P_SLOT || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)))
             continue;
         if (!st->hold_on[id] || st->hold_exp[id] < end)
             st->hold_exp[id] = end;
@@ -313,9 +313,16 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
         }
     }
     if (fires) {
+        float x;                              /* 0.6.0: a slot lock: this trig (and the next ones without) play it */
+        const int sl = ec_step_lock_get(rec, EC_P_SLOT, &x) ? clampi((int)floorf(x + 0.5f), 1, EC_NSLOT) : 0;
+        if (sl != st->slot_lock) {
+            st->slot_lock = sl;
+            if (s->sink.slot)
+                s->sink.slot(s->sink.ctx, t, ec_seq_track_slot(s, t));
+        }
         for (k = 0; k < rec->nlock; k++) {
             const int id = rec->lock_id[k];
-            if (id >= EC_NP || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT)))
+            if (id >= EC_NP || id == EC_P_SLOT || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT)))
                 continue;
             st->hold_on[id] = 1;
             st->hold_val[id] = rec->lock_val[k];
@@ -495,6 +502,12 @@ static void fire(ec_seq_t *s, int t)
 static void reset_track(ec_seq_t *s, int t)
 {
     ec_seq_track_t *st = &s->tr[t];
+    if (st->slot_lock) {                  /* 0.6.0: the track's own slot back */
+        st->slot_lock = 0;
+        st->dirty = 1;
+        if (s->sink.slot)
+            s->sink.slot(s->sink.ctx, t, ec_seq_track_slot(s, t));
+    }
     holds_clear(st);
     st->position = -1;
     st->fpos = -1;
@@ -716,7 +729,7 @@ static void flush(ec_seq_t *s)
                 s->sink.sources(s->sink.ctx, t, live);
             ec_mtx_apply(v, live);
         }
-        sl = &s->proj->slot[clampi(iv(v, EC_P_SLOT), 1, EC_NSLOT) - 1];
+        sl = &s->proj->slot[ec_seq_track_slot(s, t) - 1];
         meta.trim_start = sl->trim_start;
         meta.trim_end = sl->trim_end;
         meta.steps = sl->steps;
@@ -1150,6 +1163,13 @@ void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
 }
 
 /* ------------------------------------------------------------------------------------------- reads --- */
+int ec_seq_track_slot(const ec_seq_t *s, int t)
+{
+    if (t < 0 || t >= EC_NTRACK)
+        return 1;
+    return s->tr[t].slot_lock ? s->tr[t].slot_lock : clampi(iv(ptr(s, t)->v, EC_P_SLOT), 1, EC_NSLOT);
+}
+
 float ec_seq_value(const ec_seq_t *s, int t, int id)
 {
     const ec_seq_track_t *st = &s->tr[t];

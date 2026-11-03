@@ -626,16 +626,26 @@
       "order": 1,
       "pages": [
         {
-          "title": "SAMPLE",
+          "title": "BROWSE",
           "picture": "file",
+          "key": 3,
+          "note": "the browser (docs/UX-V2.md FILE): SEL walks the folders, B1 up, B2 in, B10 LOAD, B11 preview; its cells are fixed in the firmware: SLOT (where LOAD goes), LENGTH, BPM, FREE",
+          "lanes": []
+        },
+        {
+          "title": "EDITOR",
+          "picture": "editor",
+          "key": 4,
+          "note": "the sample editor: B2-B10 the zoom, B1 / B11 scroll, the white keys set the trim (start, then end)",
           "lanes": [
-            [{"item": "slot.bpm", "label": "BPM"}, {"item": "slot.steps", "label": "STEP"}, {"item": "slot.gain", "label": "GAIN"}, "sample_slot"],
-            [null, null, {"item": "slot.trim_start", "label": "TRIM START"}, {"item": "slot.trim_end", "label": "TRIM END"}]
+            [{"item": "slot.trim_start", "label": "START"}, {"item": "slot.trim_end", "label": "END"}, {"item": "slot.bpm", "label": "BPM"}, {"item": "slot.gain", "label": "GAIN"}],
+            [{"item": "slot.steps", "label": "STEPS"}]
           ]
         },
         {
           "title": "RAZOR",
           "picture": "razor",
+          "key": 5,
           "lanes": [
             ["razor.play", "razor.zoom", {"item": "razor.start", "label": "SLCE START"}, {"item": "razor.end", "label": "SLCE END"}],
             [{"item": "razor.snap", "label": "SNAP MODE"}, {"item": "razor.choke", "label": "CHOKE"}, {"item": "razor.pitch", "label": "PITCH"}, {"item": "razor.sens", "label": "TRANS SENS"}]
@@ -653,8 +663,9 @@
         {
           "title": "PATTERN",
           "picture": "pattern",
+          "note": "PATTERN LAUNCH's cells: PLAYING and NEXT (fixed), then these two on K3 / K4",
           "lanes": [
-            [{"item": "pattern_steps", "label": "LENGTH"}, "pattern_rate", {"item": "global.glen", "label": "GLO LENGTH"}, {"item": "global.quant", "label": "LNCH MODE"}]
+            [{"item": "global.quant", "label": "QUANT"}, {"item": "pattern_steps", "label": "LENGTH"}]
           ]
         }
       ],

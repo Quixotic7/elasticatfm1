@@ -79,6 +79,7 @@ enum {
     EC_PIC_RAZOR,          /* fixed: the razor slice editor (SELECT picks the slice) */
     EC_PIC_PATTERN,        /* fixed: the pattern grid */
     EC_PIC_MATRIX,         /* 0.5.0, fixed in MOD: the mod matrix (SELECT picks the row; K1 SRC, K2 DST, K3 DEPTH) */
+    EC_PIC_EDITOR,         /* 0.6.0, fixed in FILE: the sample editor (black keys zoom / scroll, white keys trim) */
     EC_NPIC
 };
 

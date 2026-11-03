@@ -16,6 +16,12 @@ void ec_scr_neighbor(const ec_app_t *a, int top, int bot);
 void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
 
+/* 0.6.0: ec_scr_file.c (FILE's browser and editor, the SAMPLER, the record settings) */
+void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg);
+void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg);
+void ec_scr_sampler(const ec_app_t *a);
+void ec_scr_record(const ec_app_t *a);
+
 /* E6: ec_scr_rec.c (the REC pop-up; the INPUT machine's view on SRC) */
 void ec_scr_rec(const ec_app_t *a);
 void ec_scr_input(const ec_app_t *a, int top, int bot);

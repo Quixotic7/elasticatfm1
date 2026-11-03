@@ -98,13 +98,16 @@ static void press(int b, int dur)
     btn(b, 0);
     run(20);
 }
-/* 0.6.0: the recorder is the SAMPLER's stand-in (FILE, FILE again) */
+/* 0.6.0: the recorder's setup (0.4's REC pop-up) is the SAMPLER's settings: FILE (FILE again) = the SAMPLER, FILE
+ * held there = the pop-up */
 static void open_rec(void)
 {
     int n;
-    for (n = 0; n < 3 && !(ec_app_mode() == EC_MODE_SAMPLER && A->rec.open); n++)
+    for (n = 0; n < 3 && ec_app_mode() != EC_MODE_SAMPLER; n++)
         press(FM1P_B_SAVE, 40);
     run(900);
+    if (!A->rec.open)
+        press(FM1P_B_SAVE, 500);
 }
 static void turn(int role, int n)
 {
@@ -233,7 +236,7 @@ static void test_popup(void)
 {
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "REC"), "REC's label closed: %s", L(FM1CORE_LBL_BTN0 + FM1P_B_REC));
     open_rec();
-    CHECK(A->rec.open && ec_app_popup(A), "the SAMPLER (FILE again): the pop-up");
+    CHECK(A->rec.open && ec_app_popup(A), "the SAMPLER, FILE held: the pop-up");
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "ARM") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "CLOSE") &&
               lbl(FM1CORE_LBL_BTN0 + FM1P_B_REC, "ARM") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K2, "LENGTH") &&
               lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "SLOT"),
@@ -253,8 +256,8 @@ static void test_popup(void)
     }
     press(FM1P_B_OCTDN, 40);
     CHECK(!A->rec.open, "OCT- idle: closed");
-    press(FM1P_B_REC, 40);
-    CHECK(A->rec.open, "REC in the SAMPLER: open again");
+    press(FM1P_B_SAVE, 500);
+    CHECK(A->rec.open, "FILE held in the SAMPLER: open again");
     press(FM1P_B_HOME, 40);
     CHECK(!A->rec.open && ec_app_mode() != EC_MODE_SAMPLER, "HOME closes it (leaves the SAMPLER)");
 }

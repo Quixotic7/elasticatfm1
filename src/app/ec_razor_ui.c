@@ -29,7 +29,7 @@ static void changed(ec_app_t *a)
 
 int ec_rzui_active(const ec_app_t *a)
 {
-    return ec_page_pic(a->cat, a->page[a->cat], a->bus) == EC_PIC_RAZOR && !a->settings && !a->bus &&
+    return ec_page_pic(a->cat, a->page[a->cat], a->bus) == EC_PIC_RAZOR && !a->settings && !a->bus && !a->scr &&
            !a->e5.naming;   /* (E5's naming screen covers it) */
 }
 

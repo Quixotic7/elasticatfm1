@@ -44,7 +44,7 @@ enum {
     EC_P_PORTAMENTO, EC_P_MODE_SWITCH_FADE, EC_P_LOOP_DIVISION, EC_P_TRIG_POLY,
     EC_P_LENGTH,          /* default_length (steps); its step lock is the trig's length */
     EC_P_VELOCITY,        /* default_velocity 0..1; its step lock is the trig's velocity */
-    EC_P_RATE,            /* the track's pattern rate index 1..21 (TrackSequencer.RATE_FRACTIONS; 13 = 1x) */
+    EC_P_RATE,            /* the track's pattern rate index 1..22 (TrackSequencer.RATE_FRACTIONS; 13 = 1x; 0.6.0: 22 = 4x) */
     /* E3: the other warp modes */
     EC_P_HARM_INTERVAL, EC_P_HARM_INTERVAL2, EC_P_HARM_INTERVAL3, EC_P_WSOLA_WINDOW, EC_P_WSOLA_SEARCH,
     EC_P_PV_WINDOW, EC_P_PV_DISPERSION, EC_P_WT_WINDOW, EC_P_WT_CYCLE, EC_P_WT_LFO_RATE, EC_P_WT_LFO_DEPTH,
@@ -120,10 +120,10 @@ typedef struct {
 extern const ec_param_def_t EC_PARAMS[EC_NP];
 
 /* the rate table (TrackSequencer.RATE_FRACTIONS): beats per step = 0.25 * den / num */
-#define EC_RATES 21
+#define EC_RATES 22
 #define EC_RATE_UNITY 13
 extern const uint8_t EC_RATE_FRAC[EC_RATES][2];
-const char *ec_rate_label(int index);      /* 1..21 -> "1/16" .. "2" */
+const char *ec_rate_label(int index);      /* 1..22 -> "1/16" .. "2", "4" (0.6.0: 4X appended) */
 
 /* the 17 trig conditions (lib/sequencer/trig_conditions.lua) */
 enum { EC_TC_NONE, EC_TC_AB, EC_TC_FILL, EC_TC_NFILL, EC_TC_PRE, EC_TC_NPRE, EC_TC_NEI, EC_TC_NNEI, EC_TC_FIRST };

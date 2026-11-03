@@ -44,9 +44,9 @@ BUS_KEY_DEFAULT = [3, 4, 5]
 MODE_MAX, TAG_MAX = 16, 10
 BUS_TAG = "FILTER"   # the widest tag a bus page can show under (the bus pages' titles are checked with it)
 PICS = ["steps", "wave", "wave-machine", "wave-warp", "wave-range", "filter", "fenv", "aenv", "fx", "sends", "lfo1",
-        "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix"]
+        "lfo2", "menv", "vel", "macros", "macro", "mix", "scene", "file", "razor", "pattern", "matrix", "editor"]
 # pictures with behaviour of their own: their category, and how many pages there may carry them
-FIXED = {"mix": "MST", "scene": "XFD", "file": "FILE", "razor": "FILE", "pattern": "PAT", "matrix": "MOD"}
+FIXED = {"mix": "MST", "scene": "XFD", "file": "FILE", "razor": "FILE", "pattern": "PAT", "matrix": "MOD", "editor": "FILE"}
 # the MATRIX page's knobs are fixed (0.5.0): SELECT picks the row, KNOB 1-3 its SRC, DST, DEPTH
 MATRIX_LANES = [["mtx.src", "mtx.dst", "mtx.depth", None]]
 MTX_RE = re.compile(r"^mtx[1-8]_(src|dst|depth)$")
@@ -551,7 +551,9 @@ class Gen:
             if pic == "matrix" and fixed_count[pic] == 0:
                 self.warn(cat, "no MATRIX page (0.5.0): the mod matrix is reached by MOD KEYS only; add it as MOD's "
                                "first page")
-            elif pic != "mix" and fixed_count[pic] != 1:
+            elif pic == "editor" and fixed_count[pic] > 1:   # (0.6.0: FILE's editor; layouts before 0.6.0 have none)
+                self.err(cat, "the editor page must be there at most once (%d)" % fixed_count[pic])
+            elif pic not in ("mix", "editor") and fixed_count[pic] != 1:
                 self.err(cat, "the %s page must be there once (%d)" % (pic, fixed_count[pic]))
             if pic == "mix" and fixed_count[pic] < 1:
                 self.err(cat, "the mix page is missing")

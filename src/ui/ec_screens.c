@@ -78,6 +78,17 @@ static void header(const ec_app_t *a, const char *title, int page, const char *r
     ec_scr_header_s(a, title, pg, right);
 }
 
+void ec_scr_header_page(const ec_app_t *a, const char *title, int page, const char *right)
+{
+    int k, n;
+    if (a == &ec_app && !a->settings && ec_nav_place(&k, &n) && n > 1) {
+        char pp[8];
+        snprintf(pp, sizeof pp, "P%d", k + 1);
+        ec_scr_header_s(a, title, pp, right);
+    } else
+        header(a, title, page, right);
+}
+
 /* 0.6.1: the hold menu (ec_holdmenu.h), the only thing over the screen: its values as a list under the header, the
  * cursor's row bright on a band, the value set now marked, the list scrolled to keep the cursor in view */
 static void hold_menu(const ec_app_t *a)
@@ -474,7 +485,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     char t[32], r[16], left[40];
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
-    header(a, t, a->page[a->cat] + 1, r);
+    ec_scr_header_page(a, t, a->page[a->cat] + 1, r);
     switch (pg->pic) {
     case EC_PIC_WAVE: fit(left, sizeof left, file_name(a), 20); break;
     case EC_PIC_WAVE_MACHINE: snprintf(left, sizeof left, "%s", ec_machine_name(mach)); break;
@@ -556,12 +567,10 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
     char t[32], r[16], left[40];
     title_of(a, pg, t, sizeof t);
     right_info(a, r, sizeof r);
-    if (pg->pic == EC_PIC_FX && !a->bus && !a->settings && a == &ec_app && ec_src_insert_page()) {
-        char pp[8];                                /* 0.6.1: the INSERT page's knob page: P1, P2, .. */
-        snprintf(pp, sizeof pp, "P%d", a->pn.ins_page + 1);
-        ec_scr_header_s(a, t, pp, r);
-    } else
-        header(a, t, a->settings ? 1 : a->page[a->cat] + 1, r);
+    if (a->settings)
+        header(a, t, 1, r);
+    else                                           /* 0.6.2: P1, P2 .. (lanes, INSERT's knob pages), else the page */
+        ec_scr_header_page(a, t, a->page[a->cat] + 1, r);
     if (pg->pic == EC_PIC_MENV) {                 /* MOD ENV: the norns bars, the source's routes over them */
         ec_scr_e4(a, pg);
         env_bars(a, pg, pg->pic, 20, 75);

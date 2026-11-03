@@ -621,3 +621,34 @@ them:
 - This replaces "SEL picks the slot" on FX's INSERT page (INS 1 / INS 2 are pages in the list). Lists (BROWSE,
   POOL, the settings lists, the MATRIX rows) keep SEL for their rows; there the page keys move between pages.
 - The header always shows the page and its place (e.g. INS 2 · P2).
+
+**0.6.2 navigation** (built 2026-11-03, the owner's "FX menu is very inconsistent")
+- One model, `src/app/ec_nav.c`: `ec_nav_list(mode)` builds the mode's list from the layout and the state now (a
+  page's lanes, INSERT's knob pages per slot, the bus pages, PATTERN LAUNCH's banks); SEL (`ec_nav_sel`), the page keys
+  (`ec_nav_key*`) and the lit mode button (`ec_nav_next_group`) all move along it, so they cannot disagree. The state
+  it reads and writes stays where it was (the page, the lane, A->bus, ins_slot / ins_page, the bank).
+- The bug: SEL on INSERT picked the slot and could not leave the page, the bus keys B3-B5 put FX on a bus that SEL then
+  walked as the track's pages, and the INSERT knob pages were reachable only by B1. Now FX is INS 1 P1, INS 1 P2 ..,
+  INS 2 P1 .. (B1), SENDS (B2), S1 .. (B3), S2 .. (B4), MST .. (B5), MIX (B11): the buses go before the first page
+  keyed above theirs; SEL from S1 back to SENDS selects the track again.
+- A key outside its group jumps on press (so a hold menu then edits that page's slot / bus); inside its group it
+  steps on release, and only for a tap (a hold menu shown or a knob turned during the hold: no step). Past the
+  group's last entry it goes back to the first. A key's jump keeps the MATRIX row; SEL onto it takes its near row.
+- The lit mode button goes to the next group's first page and wraps (as the button always cycled): FX INSERT →
+  SENDS → S1 → S2 → MST → MIX → INSERT (it used to skip the buses and leave a bus for INSERT).
+- SEL stops at both ends in every mode (it wrapped before, so turning back from the first page jumped to the last).
+- Lists keep SEL for their rows: BROWSE and POOL scroll and are walls (SEL stops on them; FILE's EDITOR / RAZOR
+  turn onto them, BROWSE first, POOL last, so the FILE rule of §10 holds); the MATRIX walks its rows, then on past
+  either end (at the list's start its row stays). PATTERN LAUNCH: SEL and B1-B4 both pick the bank, now through
+  the list.
+- Exemptions from "every page has a key": MIX (its black keys are the rates; the page follows the target), the
+  EDITOR's second lane (its black keys are zoom / scroll). Both are reached by SEL. With a bus as the target, the
+  modes that show the bus page list only its lanes, and their page keys do nothing.
+- The header's page box shows the place among the page's entries (P1, P2 ..) when it has several (lanes, INSERT's
+  knob pages, a bus's lanes), else the page number as before: FX/INS 2 · P2.
+- A quick-setting key (FILTER / AMP's B1) no longer marks its own hold as used when it goes down, so its tap steps
+  its group like the other page keys.
+- Test: `host/test_nav.c` (ctest `nav`): every mode's list walked by SEL to the end and back, every page key tapped
+  from every page (it lands in the list; a jump lands on its group's first; taps step exactly its group), every entry
+  reached by a key (bar the exemptions), SEL on both ways after a key jump; FX with two-page inserts and a two-lane
+  bus, the header's place, a bus target.

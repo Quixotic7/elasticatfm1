@@ -43,11 +43,13 @@ static void test_insert(void)
     to(EC_CAT_FX);
     v = tv();
     v[EC_P_FX_MACHINE] = EC_FX_DELAY;
+    B(2, 40);                                        /* (from SENDS: B1 jumps to its group's first page) */
     B(1, 40);
     CHECK(A->page[EC_CAT_FX] == insert_page() && !A->bus && ec_src_insert_page(), "B1: the INSERT page");
-    CHECK(A->pn.ins_slot == 0 && cell_id(3) == EC_P_FX_MIX, "INS 1 selected, K4 = its MIX (%d)", cell_id(3));
-    turn(FM1P_E_SELECT, 1);
-    CHECK(A->pn.ins_slot == 1 && A->page[EC_CAT_FX] == insert_page(), "SEL: INS 2 (the page stays)");
+    CHECK(A->pn.ins_slot == 0 && A->pn.ins_page == 0 && cell_id(3) == EC_P_FX_MIX, "INS 1 P1, K4 = its MIX (%d)",
+          cell_id(3));
+    turn(FM1P_E_SELECT, 1);                          /* 0.6.2: INS 2 is the next page of the list (DELAY: one P) */
+    CHECK(A->pn.ins_slot == 1 && A->page[EC_CAT_FX] == insert_page(), "SEL: INS 2 P1 (the page stays)");
     turn(FM1P_E_SELECT, -1);
     CHECK(A->pn.ins_slot == 0, "SEL back: INS 1");
     turn(FM1P_E_SELECT, 1);
@@ -99,8 +101,9 @@ static void test_insert(void)
     B(1, 40);
     CHECK(A->pn.ins_page == 1 && cell_id(0) == EC_P_INS2_P4 && cell_id(3) == EC_P_INS2_MIX,
           "tap: P2 (K1 = P4 %d, K4 still MIX)", cell_id(0));
-    B(1, 40);
-    CHECK(A->pn.ins_page == 0, "tap again: P1");
+    B(1, 40);                                        /* 0.6.2: past the group's last page: its first */
+    CHECK(A->pn.ins_slot == 0 && A->pn.ins_page == 0, "tap again: INS 1 P1 (%d %d)", A->pn.ins_slot,
+          A->pn.ins_page);
 
     /* K4 = MIX on several types */
     {
@@ -117,7 +120,8 @@ static void test_insert(void)
             CHECK(cell_id(3) == want && v[want] == x0 - 1, "INS 1 %s: K4 = %s (%g -> %g)", ec_fx_name(M[i]),
                   EC_PARAMS[want].name, x0, v[want]);
         }
-        turn(FM1P_E_SELECT, 1);
+        for (i = 0; i < 4 && A->pn.ins_slot != 1; i++)   /* SEL on through INS 1's pages to INS 2 */
+            turn(FM1P_E_SELECT, 1);
         {
             const float x0 = v[EC_P_INS2_MIX];
             run(300);

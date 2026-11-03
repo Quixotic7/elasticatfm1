@@ -101,8 +101,8 @@ typedef struct {
     uint32_t bk_ms[EC_NBKEY];
     int src_key;               /* the source key held (B6..B10, MODULATION's B2..B5): its index 1..11, 0 none */
     int slot_key;              /* FX's slot key held (B1, B3..B5) / FILTER, AMP's B1: 1..5, 0 none */
-    int ins_slot;              /* 0.6.1: FX's INSERT page: the slot SEL picked, 0 INS 1, 1 INS 2 */
-    int ins_page;              /*   its knob page (P1..): a tap on the insert key turns it */
+    int ins_slot;              /* 0.6.1: FX's INSERT page: the slot shown, 0 INS 1, 1 INS 2 (0.6.2: an ec_nav entry) */
+    int ins_page;              /*   its knob page (P1..) */
     /* MIX: the track keys W1..W9 held (tap select, hold mute) */
     uint16_t trk_down, trk_used;
     uint32_t trk_ms[9];
@@ -200,7 +200,29 @@ int ec_src_ins_pages(void);                   /* the selected slot's knob pages 
 int ec_src_ins_param(int slot, int i);        /* the id knob K(i%3+1) of page i/3 edits (INS 2: EC_P_INS2_Pn), -1 */
 int ec_src_ins_mix(int slot);                 /* the slot's K4 MIX param (INS 1: fx_mix / fx_wet, INS 2: its MIX) */
 void ec_src_ins_items(void *out);             /* (ec_page_t *) the INSERT page's four cells */
-void ec_src_select(int d);                    /* SEL on the INSERT page: INS 1 / INS 2 */
+int ec_src_ins_pages_of(int slot);            /* slot 0 / 1's knob pages, >= 1 */
+/* ---- ec_nav.c (0.6.2): one page list per mode; SEL walks it (no wrap), a page key jumps into its group, tapped
+ * again steps through the group (docs/UX-V2.md §11 "0.6.2 navigation") ---- */
+#define EC_NAV_MAX 48
+enum { EC_NAV_ROWS = 1,        /* a list (BROWSE, POOL): SEL scrolls its rows; SEL stops on it, keys leave it */
+       EC_NAV_ROWS_THRU };     /* the MATRIX: SEL its rows, then on past either end */
+typedef struct {
+    int8_t page;               /* the mode's page (FX on a bus: 0) */
+    int8_t sub;                /* the lane; FX INSERT: the knob page (P1 = 0); PATTERN LAUNCH: the bank */
+    int8_t slot;               /* FX INSERT: 0 INS 1, 1 INS 2 */
+    int8_t bus;                /* FX: 1..3 the bus page S1 / S2 / MST, 0 the track's */
+    int8_t key;                /* the black key of its group (1..11), 0 none */
+    int8_t rows;               /* EC_NAV_ROWS* */
+} ec_nav_t;
+int ec_nav_list(int mode, ec_nav_t *out, int max);   /* the mode's pages in order (for the state now): the count */
+int ec_nav_at(int mode, ec_nav_t *out, int max, int *n);   /* the list, and the entry shown (-1 none) */
+void ec_nav_go(int mode, const ec_nav_t *e, int dir);   /* show entry e (dir < 0: arrived backwards) */
+int ec_nav_sel(int d);                        /* SEL in the mode shown: d entries, stops at the ends: 1 = moved */
+int ec_nav_key_down(int mode, int key);       /* a page key down: 1 jumped to its group, 2 already in it, 0 none */
+int ec_nav_key_tap(int mode, int key);        /* the key tapped inside its group: the next entry of it (wraps) */
+int ec_nav_key(int mode, int key);            /* down + tap at once (keys without a hold) */
+int ec_nav_next_group(int mode);              /* the mode button tapped again: the next group's first (wraps) */
+int ec_nav_place(int *k, int *count);         /* the entry's place among its page's entries (P1 = 0), how many */
 float ec_src_load(void);                      /* the load meter's reading 0..1 (the counted engine load) */
 /* ---- ec_clip.c ---- */
 void ec_clip_reset(void);

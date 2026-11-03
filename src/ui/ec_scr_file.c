@@ -134,7 +134,7 @@ void ec_scr_file_editor(const ec_app_t *a, const ec_page_t *pg)
     char t[32], r[16], buf[64];
     int i;
     snprintf(t, sizeof t, "%s/EDIT", ec_cat_tag(EC_CAT_FILE));
-    ec_scr_header(a, t, ec_cat_page_key(EC_CAT_FILE, a->page[EC_CAT_FILE]), a->pn.ed_point ? "END" : "START");
+    ec_scr_header_page(a, t, ec_cat_page_key(EC_CAT_FILE, a->page[EC_CAT_FILE]), a->pn.ed_point ? "END" : "START");
     fit(buf, sizeof buf, x ? x->name : sl->path[0] ? (strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1 : sl->path)
                                                  : "EMPTY", 16);
     T(x ? EC_C_L15 : EC_C_L5, buf, 2, 13, EC_AL_LEFT);

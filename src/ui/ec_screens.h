@@ -15,6 +15,9 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg);
 void ec_scr_neighbor(const ec_app_t *a, int top, int bot);
 void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, const char *right);   /* page as text */
+/* 0.6.2: a mode page's header: its place among the page's entries (P1, P2 ..: lanes, FX INSERT's knob pages) when
+ * it has several, else the number given */
+void ec_scr_header_page(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
 /* 0.6.1: MIX's pan tracks: track t's pan now (-1..1: the resolved value incl. a playing lock, plus the modulation),
  * and the marker's x (2 wide) on the track of the strip at x (strip i: x = 2 + 13 i) */

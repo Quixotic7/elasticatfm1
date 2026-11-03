@@ -857,7 +857,7 @@ void ec_file_black(int key, int down)
         return;
     }
     if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B4 EDITOR, B5 RAZOR, B6 POOL (the layout's keys) */
-        ec_app_set_page(EC_CAT_FILE, ec_file_key_page(key));
+        ec_nav_key(EC_CAT_FILE, key);              /* 0.6.2: its page; tapped again there, its next lane */
         P->pool_carry = -1;
         A->redraw = 1;
         return;

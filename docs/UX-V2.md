@@ -689,3 +689,5 @@ them:
   SEND 1 and SEND 2 (the two bus effects with their settings, and every track's send levels and locks swap with them,
   so the sound is unchanged). The header names the swap; undoable. On every other FX page, holding a black key still
   opens the type menu.
+- **FX settings (hold FX / SHIFT + FX) list every slot**: INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER (each row picks
+  that slot's effect type), then SEND MODE.

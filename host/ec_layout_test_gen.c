@@ -782,53 +782,65 @@ static const ec_lay_var_t ec_layout_test_var[139] = {
     {0x0u, 0x0u, 0x0, 0x0, 0x0, 0x0, NULL, 630, 4},   /* F3 */
 };
 static const ec_lay_page_t ec_layout_test_page[43] = {
-    {"TRIG", 0, 0, 0, 1},   /* TRIG/TRIG */
-    {"COND", 0, 0, 1, 1},   /* TRIG/COND */
-    {"MTRIG", 0, 0, 2, 2},   /* TRIG/MTRIG */
-    {"SETUP", 0, 0, 4, 1},   /* TRIG/SETUP */
-    {"SOURCE", 1, 0, 5, 3},   /* SRC/SOURCE */
-    {"MACHINE", 2, 0, 8, 3},   /* SRC/MACHINE */
-    {"WARP", 3, 0, 11, 15},   /* SRC/WARP */
-    {"RANGE", 4, 0, 26, 2},   /* SRC/RANGE */
-    {"SETUP", 0, 0, 28, 1},   /* SRC/SETUP */
-    {"FILTER", 5, 0, 29, 7},   /* FILT/FILTER */
-    {"F.ENV", 6, 0, 36, 2},   /* FILT/F.ENV */
-    {"F.MIX", 0, 0, 38, 1},   /* FILT/F.MIX */
-    {"SETUP", 0, 0, 39, 1},   /* FILT/SETUP */
-    {"AMP", 7, 0, 40, 2},   /* AMP/AMP */
-    {"SETUP", 0, 0, 42, 1},   /* AMP/SETUP */
-    {"FX", 8, 0, 43, 18},   /* FX/FX */
-    {"SENDS", 9, 0, 61, 1},   /* FX/SENDS */
-    {"SETUP", 0, 0, 62, 1},   /* FX/SETUP */
-    {"LFO 1", 10, 0, 63, 1},   /* MOD/LFO 1 */
-    {"LFO 2", 11, 0, 64, 1},   /* MOD/LFO 2 */
-    {"MOD ENV", 12, 0, 65, 1},   /* MOD/MOD ENV */
-    {"VELOCITY", 13, 0, 66, 1},   /* MOD/VELOCITY */
-    {"MACROS", 14, 0, 67, 1},   /* MOD/MACROS */
-    {"MACRO 1", 15, 0, 68, 1},   /* MOD/MACRO 1 */
-    {"MACRO 2", 15, 1, 69, 1},   /* MOD/MACRO 2 */
-    {"MACRO 3", 15, 2, 70, 1},   /* MOD/MACRO 3 */
-    {"MACRO 4", 15, 3, 71, 1},   /* MOD/MACRO 4 */
-    {"MIX", 16, 0, 72, 1},   /* MST/MIX */
-    {"MASTER", 0, 0, 73, 1},   /* MST/MASTER */
-    {"SCENE", 17, 0, 74, 1},   /* MST/SCENE */
-    {"SETUP", 0, 0, 75, 1},   /* MST/SETUP */
-    {"SAMPLE", 18, 0, 76, 1},   /* FILE/SAMPLE */
-    {"RAZOR", 19, 0, 77, 1},   /* FILE/RAZOR */
-    {"PATTERN", 20, 0, 78, 1},   /* PAT/PATTERN */
-    {"SETUP", 0, 0, 79, 1},   /* PAT/SETUP */
-    {"SEND 1", 8, 0, 80, 18},   /* bus S1 */
-    {"SETUP", 0, 0, 98, 1},   /* bus S1/SETUP */
-    {"SEND 2", 8, 0, 99, 18},   /* bus S2 */
-    {"SETUP", 0, 0, 117, 1},   /* bus S2/SETUP */
-    {"MASTER", 8, 0, 118, 18},   /* bus MST */
-    {"SETUP", 0, 0, 136, 1},   /* bus MST/SETUP */
-    {"MIX", 16, 0, 137, 1},   /* bus MST/SRC */
-    {"F3", 0, 0, 138, 1},   /* F3 */
+    {"TRIG", 0, 0, 1, 0, 1},   /* TRIG/TRIG B1 */
+    {"COND", 0, 0, 2, 1, 1},   /* TRIG/COND B2 */
+    {"MTRIG", 0, 0, 3, 2, 2},   /* TRIG/MTRIG B3 */
+    {"SETUP", 0, 0, 0, 4, 1},   /* TRIG/SETUP */
+    {"SOURCE", 1, 0, 1, 5, 3},   /* SRC/SOURCE B1 */
+    {"MACHINE", 2, 0, 2, 8, 3},   /* SRC/MACHINE B2 */
+    {"WARP", 3, 0, 3, 11, 15},   /* SRC/WARP B3 */
+    {"RANGE", 4, 0, 4, 26, 2},   /* SRC/RANGE B4 */
+    {"SETUP", 0, 0, 0, 28, 1},   /* SRC/SETUP */
+    {"FILTER", 5, 0, 1, 29, 7},   /* FILT/FILTER B1 */
+    {"F.ENV", 6, 0, 2, 36, 2},   /* FILT/F.ENV B2 */
+    {"F.MIX", 0, 0, 3, 38, 1},   /* FILT/F.MIX B3 */
+    {"SETUP", 0, 0, 0, 39, 1},   /* FILT/SETUP */
+    {"AMP", 7, 0, 1, 40, 2},   /* AMP/AMP B1 */
+    {"SETUP", 0, 0, 0, 42, 1},   /* AMP/SETUP */
+    {"FX", 8, 0, 1, 43, 18},   /* FX/FX B1 */
+    {"SENDS", 9, 0, 2, 61, 1},   /* FX/SENDS B2 */
+    {"SETUP", 0, 0, 0, 62, 1},   /* FX/SETUP */
+    {"LFO 1", 10, 0, 0, 63, 1},   /* MOD/LFO 1 */
+    {"LFO 2", 11, 0, 0, 64, 1},   /* MOD/LFO 2 */
+    {"MOD ENV", 12, 0, 0, 65, 1},   /* MOD/MOD ENV */
+    {"VELOCITY", 13, 0, 0, 66, 1},   /* MOD/VELOCITY */
+    {"MACROS", 14, 0, 11, 67, 1},   /* MOD/MACROS B11 */
+    {"MACRO 1", 15, 0, 2, 68, 1},   /* MOD/MACRO 1 B2 */
+    {"MACRO 2", 15, 1, 3, 69, 1},   /* MOD/MACRO 2 B3 */
+    {"MACRO 3", 15, 2, 4, 70, 1},   /* MOD/MACRO 3 B4 */
+    {"MACRO 4", 15, 3, 5, 71, 1},   /* MOD/MACRO 4 B5 */
+    {"MIX", 16, 0, 0, 72, 1},   /* MST/MIX */
+    {"MASTER", 0, 0, 0, 73, 1},   /* MST/MASTER */
+    {"SCENE", 17, 0, 0, 74, 1},   /* MST/SCENE */
+    {"SETUP", 0, 0, 0, 75, 1},   /* MST/SETUP */
+    {"SAMPLE", 18, 0, 0, 76, 1},   /* FILE/SAMPLE */
+    {"RAZOR", 19, 0, 0, 77, 1},   /* FILE/RAZOR */
+    {"PATTERN", 20, 0, 0, 78, 1},   /* PAT/PATTERN */
+    {"SETUP", 0, 0, 0, 79, 1},   /* PAT/SETUP */
+    {"SEND 1", 8, 0, 0, 80, 18},   /* bus S1 */
+    {"SETUP", 0, 0, 0, 98, 1},   /* bus S1/SETUP */
+    {"SEND 2", 8, 0, 0, 99, 18},   /* bus S2 */
+    {"SETUP", 0, 0, 0, 117, 1},   /* bus S2/SETUP */
+    {"MASTER", 8, 0, 0, 118, 18},   /* bus MST */
+    {"SETUP", 0, 0, 0, 136, 1},   /* bus MST/SETUP */
+    {"MIX", 16, 0, 0, 137, 1},   /* bus MST/SRC */
+    {"F3", 0, 0, 0, 138, 1},   /* F3 */
 };
 const ec_layout_t EC_LAYOUT_TEST = {
     "elasticat-0.4.0",
-    {{0, 3, 3}, {4, 4, 8}, {9, 3, 12}, {13, 1, 14}, {15, 2, 17}, {18, 9, -1}, {27, 3, 30}, {31, 2, -1}, {33, 1, 34}},
-    {35, 37, 39}, {36, 38, 40}, 41, 42,
+    {
+        {0, 3, 3, "TRIG", "TRIG", 6, 2},   /* TRIG */
+        {4, 4, 8, "LOOP ENGINE", "LOOP", 6, 1},   /* SRC */
+        {9, 3, 12, "FILTER", "FILTER", 2, 1},   /* FILT */
+        {13, 1, 14, "AMP", "AMP", 3, 1},   /* AMP */
+        {15, 2, 17, "FX", "FX", 1, 1},   /* FX */
+        {18, 9, -1, "MODULATION", "MOD", 4, 1},   /* MOD */
+        {27, 3, 30, "MIX", "MIX", 5, 1},   /* MST */
+        {31, 2, -1, "FILE", "FILE", 7, 1},   /* FILE */
+        {33, 1, 34, "PATTERN LAUNCH", "PATTERNS", 9, 1},   /* PAT */
+        {29, 1, -1, "CROSSFADER", "CROSSFADER", 8, 1},   /* XFD */
+    },
+    {35, 37, 39}, {36, 38, 40}, 41, 42, {3, 4, 5},
+    {{"KEYBOARD", 6, 3}, {"PAGES", 5, 2}, {"SAMPLER", 7, 2}},
     ec_layout_test_page, ec_layout_test_var, ec_layout_test_item, 43, 139, 634,
 };

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The layout: which items each page shows, in which lane, on which knob; the pages' titles, order and pictures; the
- * setup lists, the bus pages, F3. It is data: design/layout/elasticat.json, compiled into src/app/ec_layout_gen.c by
+ * setup lists, the bus pages, F3; 0.6.0: each category's mode (name, button, order), each page's black key, the
+ * fixed screens' modes. It is data: design/layout/elasticat.json, compiled into src/app/ec_layout_gen.c by
  * tools/layout/gen_layout.py (CMake re-runs it when the JSON changes). ec_pages.c reads it; nothing else should.
  *
  * A page is a list of variants, checked in order; the first whose conditions all hold gives the page's items (and
@@ -24,6 +25,7 @@ typedef struct {
 typedef struct {
     const char *title;
     uint8_t pic, arg;
+    uint8_t key;                /* 0.6.0: the black key (1..11) that opens it in its mode, 0 none */
     uint16_t var0;
     uint8_t nvar;
 } ec_lay_page_t;
@@ -32,7 +34,15 @@ typedef struct {
     uint16_t page0;
     uint8_t npages;
     int16_t setup;              /* the setup list (a page), -1: none */
+    const char *name;           /* 0.6.0: the mode's name ("LOOP ENGINE") */
+    const char *tag;            /*   the header's short form ("LOOP") */
+    uint8_t button, order;      /*   EC_MB_*, its place among the button's modes (1..) */
 } ec_lay_cat_t;
+
+typedef struct {                /* 0.6.0: a fixed screen's mode (KEYBOARD, PAGES, SAMPLER) */
+    const char *name;
+    uint8_t button, order;
+} ec_lay_screen_t;
 
 typedef struct {
     const char *name;
@@ -41,6 +51,8 @@ typedef struct {
     int16_t bus_setup[3];       /* .. its setup (the bus's machine) */
     int16_t mst_src;            /* the master bus's SRC (the mix) */
     int16_t f3;                 /* F3's lane */
+    uint8_t bus_key[3];         /* 0.6.0: the black key that targets S1, S2, MST in FX (0 none) */
+    ec_lay_screen_t screen[EC_NSCREEN];   /* EC_MODE_KEYBOARD .. in order */
     const ec_lay_page_t *page;
     const ec_lay_var_t *var;
     const ec_item_t *item;

@@ -1,16 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Categories, pages and cells (ec_pages.h) from the layout (ec_layout.h): the page's variant for the track's (or the
- * bus's) params, its items. What stays code: on a bus every category but MST / FILE / PAT shows the bus's page (the
- * master bus's SRC: the mix), and the setup / F3 titles. */
+/* Categories (0.6.0: the modes), pages and cells (ec_pages.h) from the layout (ec_layout.h): the page's variant for
+ * the track's (or the bus's) params, its items; the modes' names, buttons and black keys. What stays code: on a bus
+ * every mode but MIX / FILE / PATTERN LAUNCH / CROSSFADER shows the bus's page (the master bus's LOOP ENGINE: the
+ * mix), and the setup / F3 titles. */
 #include <string.h>
 
 #include "ec_dsp.h"
 #include "ec_layout.h"
 #include "ec_pages.h"
 #include "ec_params.h"
-
-static const char *const CAT[EC_NCAT] = {"TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT"};
-const char *ec_cat_name(int cat) { return cat >= 0 && cat < EC_NCAT ? CAT[cat] : "?"; }
 
 static const ec_layout_t *L = &EC_LAYOUT_SHIPPED;
 const ec_layout_t *ec_layout(void) { return L; }
@@ -19,7 +17,98 @@ void ec_layout_use(const ec_layout_t *l) { L = l ? l : &EC_LAYOUT_SHIPPED; }
 static int iv(const float *v, int id) { return (int)(v[id] + 0.5f); }
 static int has(uint32_t mask, int value) { return !mask || (value >= 1 && value <= 32 && (mask >> (value - 1) & 1u)); }
 
-static int bus_cat(int cat) { return cat != EC_CAT_MASTER && cat != EC_CAT_FILE && cat != EC_CAT_PAT; }
+/* on a bus every mode but MIX, FILE, PATTERN LAUNCH and CROSSFADER shows the bus's page */
+static int bus_cat(int cat)
+{
+    return cat != EC_CAT_MASTER && cat != EC_CAT_FILE && cat != EC_CAT_PAT && cat != EC_CAT_XFD;
+}
+
+/* ------------------------------------------------------------------------------------------- the modes --- */
+static int is_cat(int cat) { return cat >= 0 && cat < EC_NCAT; }
+
+const char *ec_cat_name(int cat) { return is_cat(cat) && L->cat[cat].name ? L->cat[cat].name : "?"; }
+const char *ec_cat_tag(int cat) { return is_cat(cat) && L->cat[cat].tag ? L->cat[cat].tag : ec_cat_name(cat); }
+
+const char *ec_mode_name(int mode)
+{
+    if (mode >= EC_NCAT && mode < EC_NMODE)
+        return L->screen[mode - EC_NCAT].name ? L->screen[mode - EC_NCAT].name : "?";
+    return ec_cat_name(mode);
+}
+
+int ec_mode_button(int mode)
+{
+    if (mode >= EC_NCAT && mode < EC_NMODE)
+        return L->screen[mode - EC_NCAT].button;
+    return is_cat(mode) ? L->cat[mode].button : EC_MB_NONE;
+}
+
+int ec_mode_order(int mode)
+{
+    if (mode >= EC_NCAT && mode < EC_NMODE)
+        return L->screen[mode - EC_NCAT].order;
+    return is_cat(mode) ? L->cat[mode].order : 0;
+}
+
+int ec_button_modes(int button, int *modes, int max)
+{
+    int n = 0, o, m;
+    if (button <= EC_MB_NONE || button >= EC_NMB)
+        return 0;
+    for (o = 1; o <= EC_NMODE && n < max; o++)          /* (the generator checks: orders 1..n, each once) */
+        for (m = 0; m < EC_NMODE && n < max; m++)
+            if (ec_mode_button(m) == button && ec_mode_order(m) == o)
+                modes[n++] = m;
+    return n;
+}
+
+int ec_cat_page_key(int cat, int page)
+{
+    if (!is_cat(cat) || page < 0 || page >= L->cat[cat].npages)
+        return 0;
+    return L->page[L->cat[cat].page0 + page].key;
+}
+
+int ec_cat_key_page(int cat, int bkey)
+{
+    int p;
+    if (!is_cat(cat) || bkey < 1 || bkey > EC_NBKEY)
+        return -1;
+    for (p = 0; p < L->cat[cat].npages; p++)
+        if (L->page[L->cat[cat].page0 + p].key == bkey)
+            return p;
+    return -1;
+}
+
+int ec_cat_key_bus(int cat, int bkey)
+{
+    int b;
+    if (cat != EC_CAT_FX || bkey < 1 || bkey > EC_NBKEY)
+        return 0;
+    for (b = 0; b < 3; b++)
+        if (L->bus_key[b] == bkey)
+            return b + 1;
+    return 0;
+}
+
+int ec_bus_key(int bus) { return bus >= 1 && bus <= 3 ? L->bus_key[bus - 1] : 0; }
+
+int ec_page_find(int pic, int arg, int *cat, int *page)
+{
+    int c, p;
+    for (c = 0; c < EC_NCAT; c++)
+        for (p = 0; p < L->cat[c].npages; p++) {
+            const ec_lay_page_t *pg = &L->page[L->cat[c].page0 + p];
+            if (pg->pic == pic && (arg < 0 || pg->arg == arg)) {
+                if (cat)
+                    *cat = c;
+                if (page)
+                    *page = p;
+                return 1;
+            }
+        }
+    return 0;
+}
 
 int ec_cat_pages(int cat, const float *v)
 {

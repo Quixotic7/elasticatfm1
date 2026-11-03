@@ -4,8 +4,11 @@
  * each FX machine), through the public ec_pages API. Prints a hash over all of them, and with --list the distinct
  * pages with the first context that shows each. Used to prove that a layout reproduces another (the 0.4.0 pages:
  * host/fixtures/pages-0.4.0.txt), whatever code builds them.
- *   ec_dump_pages [--list] [--layout test|shipped] */
+ * --ncat N hashes the first N categories only: 0.4.0 had nine (0.6.0 added XFD, CROSSFADER, which on the 0.4.0 layout
+ * shows MST's SCENE page again), so `--layout test --ncat 9` still gives 0.4.0's hash.
+ *   ec_dump_pages [--list] [--layout test|shipped] [--ncat N] */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef OLD_PAGES
@@ -13,6 +16,11 @@
 #endif
 #include "ec_pages.h"
 #include "ec_params.h"
+
+/* the categories by their ids (not ec_cat_name: 0.6.0 named them after the modes, and the hash must not depend on
+ * the names the layout gives them) */
+static const char *const CID[] = {"TRIG", "SRC", "FILT", "AMP", "FX", "MOD", "MST", "FILE", "PAT", "XFD"};
+#define cid(c) ((c) < (int)(sizeof CID / sizeof CID[0]) ? CID[c] : "?")
 
 static unsigned long long H = 1469598103934665603ULL;
 static void hs(const char *s)
@@ -82,6 +90,7 @@ static void fmt(const ec_page_t *o, char *b, size_t cap)
 static char seen[MAXD][320];
 static int nseen;
 static int list;
+static int ncat = EC_NCAT;
 
 static void out(const char *where, const char *ctx, const ec_page_t *o)
 {
@@ -111,6 +120,11 @@ int main(int argc, char **argv)
     for (a = 1; a < argc; a++) {
         if (!strcmp(argv[a], "--list"))
             list = 1;
+        else if (!strcmp(argv[a], "--ncat") && a + 1 < argc) {
+            ncat = atoi(argv[++a]);
+            if (ncat < 1 || ncat > EC_NCAT)
+                ncat = EC_NCAT;
+        }
 #ifndef OLD_PAGES
         else if (!strcmp(argv[a], "--layout") && a + 1 < argc) {
             a++;
@@ -132,18 +146,18 @@ int main(int argc, char **argv)
                             v[EC_P_MACHINE] = (float)m, v[EC_P_MODE] = (float)w, v[EC_P_FILTER_MACHINE] = (float)f;
                             v[EC_P_FENV_MODE] = (float)fe, v[EC_P_ENV_MODE] = (float)e, v[EC_P_FX_MACHINE] = (float)x;
                             snprintf(ctx, sizeof ctx, "mach %d warp %d filt %d fenv %d env %d fx %d", m, w, f, fe, e, x);
-                            for (c = 0; c < EC_NCAT; c++) {
+                            for (c = 0; c < ncat; c++) {
                                 const int np = ec_cat_pages(c, v);
-                                snprintf(where, sizeof where, "%s pages %d", ec_cat_name(c), np);
+                                snprintf(where, sizeof where, "%s pages %d", cid(c), np);
                                 hs(where);
                                 for (p = 0; p < np; p++) {
                                     SETCUR(c, p, 0);
                                     ec_page_items_bus(c, p, v, 0, 0, &o);
-                                    snprintf(where, sizeof where, "%s/%d", ec_cat_name(c), p);
+                                    snprintf(where, sizeof where, "%s/%d", cid(c), p);
                                     out(where, ctx, &o);
                                 }
                                 if (ec_settings_items(c, v, &o)) {
-                                    snprintf(where, sizeof where, "%s/SETUP", ec_cat_name(c));
+                                    snprintf(where, sizeof where, "%s/SETUP", cid(c));
                                     out(where, ctx, &o);
                                 }
                             }
@@ -154,16 +168,16 @@ int main(int argc, char **argv)
         for (x = 1; x <= 18; x++) {
             bv[EC_P_FX_MACHINE] = (float)x;
             snprintf(ctx, sizeof ctx, "bus %d fx %d", b, x);
-            for (c = 0; c < EC_NCAT; c++) {
+            for (c = 0; c < ncat; c++) {
                 const int np = ec_cat_pages(c, v);
                 for (p = 0; p < np; p++) {
                     SETCUR(c, p, b);
                     ec_page_items_bus(c, p, v, b, bv, &o);
-                    snprintf(where, sizeof where, "B%d %s/%d", b, ec_cat_name(c), p);
+                    snprintf(where, sizeof where, "B%d %s/%d", b, cid(c), p);
                     out(where, ctx, &o);
                 }
                 if (ec_settings_items_bus(c, b, &o)) {
-                    snprintf(where, sizeof where, "B%d %s/SETUP", b, ec_cat_name(c));
+                    snprintf(where, sizeof where, "B%d %s/SETUP", b, cid(c));
                     out(where, ctx, &o);
                 }
             }

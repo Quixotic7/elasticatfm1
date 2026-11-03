@@ -44,6 +44,22 @@ static int same_pages(const ec_layout_t *x, const ec_layout_t *y)
                 }
             }
         }
+    for (c = 0; c < EC_NMODE; c++) {                     /* 0.6.0: the modes and their black keys, by the API */
+        char a1[96], b1[96];
+        int k;
+        ec_layout_use(x);
+        snprintf(a1, sizeof a1, "%s|%s|%d|%d", ec_mode_name(c), c < EC_NCAT ? ec_cat_tag(c) : "", ec_mode_button(c),
+                 ec_mode_order(c));
+        for (k = 1; k <= EC_NBKEY; k++)
+            snprintf(a1 + strlen(a1), sizeof a1 - strlen(a1), "%d,%d;", ec_cat_key_page(c, k), ec_cat_key_bus(c, k));
+        ec_layout_use(y);
+        snprintf(b1, sizeof b1, "%s|%s|%d|%d", ec_mode_name(c), c < EC_NCAT ? ec_cat_tag(c) : "", ec_mode_button(c),
+                 ec_mode_order(c));
+        for (k = 1; k <= EC_NBKEY; k++)
+            snprintf(b1 + strlen(b1), sizeof b1 - strlen(b1), "%d,%d;", ec_cat_key_page(c, k), ec_cat_key_bus(c, k));
+        if (strcmp(a1, b1) && bad++ < 5)
+            printf("differs: mode %d (%s / %s)\n", c, a1, b1);
+    }
     ec_layout_use(NULL);
     return bad;
 }
@@ -80,8 +96,8 @@ int main(int argc, char **argv)
         printf("FAIL the loaded layout's pages differ from the compiled one's\n");
         fails++;
     } else
-        printf("ok   the loaded layout's pages = the compiled one's\n");
-    if (ec_layout_unpack("ECL1\tx\nC\t0\t9\t-1\n")) {
+        printf("ok   the loaded layout's pages, modes and black keys = the compiled one's\n");
+    if (ec_layout_unpack("ECL2\tx\nC\t0\t9\t-1\t6\t1\tLOOP\tLOOP ENGINE\n")) {
         printf("FAIL a truncated pack loaded\n");
         fails++;
     } else

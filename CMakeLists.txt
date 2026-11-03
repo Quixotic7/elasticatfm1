@@ -109,7 +109,7 @@ target_compile_options(ec_dump_pages PRIVATE -Wall -Wextra)
 enable_testing()
 # The layout: the tests' fixed layout gives exactly 0.4.0's pages (the hash of every page in every context, recorded from
 # 0.4.0's hand-written ec_pages.c), and the designs pass the generator's checks
-add_test(NAME layout_040 COMMAND sh -c "$<TARGET_FILE:ec_dump_pages> --layout test | tail -1 | diff - ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/pages-0.4.0.hash")
+add_test(NAME layout_040 COMMAND sh -c "$<TARGET_FILE:ec_dump_pages> --layout test --ncat 9 | tail -1 | diff - ${CMAKE_CURRENT_SOURCE_DIR}/host/fixtures/pages-0.4.0.hash")
 if(Python3_FOUND)
     add_test(NAME layout_walk COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/layout_folder >/dev/null && $<TARGET_FILE:ec_test_layout> ${CMAKE_BINARY_DIR}/layout_folder")
     add_test(NAME layout_check COMMAND ${Python3_EXECUTABLE} ${_lay_gen} ${CMAKE_CURRENT_SOURCE_DIR}/design/layout/elasticat.json --check)

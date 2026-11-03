@@ -139,7 +139,8 @@ It goes away on its own, or on any knob or key, and that knob or key still does 
 - **White keys W1..W9 = the tracks** (T1-T6, S1, S2, MST).
   - A tap selects the track. **A hold toggles mute.** SHIFT + a track key toggles solo.
   - FILL held + a track key clears every mute and solo.
-- **Black keys = the selected track's rate:** B1..B9 for the rate list, B10 / B11 for slower / faster.
+- **B11 = the CAT** (owner, 2026-11-03). The norns Visualizer page: `images/dancingcat.png`, 12 frames, looping, at a speed that follows the tempo (120 BPM = 1x). It fills the screen, converted to the palette on the 120x120 grid. B11 or any mode button leaves it, and the white track keys keep working while it shows.
+- **Black keys B1..B10 = the selected track's rate:** B1..B9 for the rate list, B10 / B11 for slower / faster.
 
 ### PAGES (EDIT, second)
 - **Black keys = the pattern's step pages**, FIZZ style.
@@ -149,6 +150,13 @@ It goes away on its own, or on any knob or key, and that knob or key still does 
 ### LOOP ENGINE (HOME, first)
 - Black keys follow the template: B1..B5 are LOOP, MACHINE, WARP, RANGE and the next page from the layout.
 - **B11 cycles the zoom:** 16 → 32 (first half) → 32 (second half).
+- **Live grains with the GRAIN warp** (owner, 2026-11-03). Whenever the waveform is shown (LOOP ENGINE's pages, and the WARP page above all), each active grain is drawn over the waveform:
+  - a block at its read position, as wide as the grain's length
+  - its envelope level shown in steps of the grey ramp, plus the accent for the newest grain
+  - spray and pitch visible as the scatter
+  - The engine publishes a small grain snapshot once per screen frame: position, length, level, at most about 16 grains per track.
+  - It follows the 120x120 / 16-colour rules.
+  - The other warps keep the playhead.
 - **White keys play the loop** (0.4's loop keys). On the RANGE page they play the range.
 
 ### TRIG (HOME, second)
@@ -261,6 +269,9 @@ It goes away on its own, or on any knob or key, and that knob or key still does 
     - Screens draw 4-bit palette indices into a 120x120 buffer.
     - One 16-entry table turns the indices into RGB565 at 2x, so a theme is just a different table.
     - Every colour has a named slot (ground, the grey ramp, accent, role colours). Nothing is drawn outside the palette, and a test checks it.
+  - **A step-locked cell fills its whole box** with the LOCK colour: label, K-tag, value and bar are all drawn dark on it (owner, 2026-11-03). Before, only the value was highlighted.
+  - **Filter and envelope pictures are the norns script's bars** (owner, 2026-11-03), from Elasticat `lib/ui/page_render.lua`: `draw_filter_bars`, `env_bars` / `draw_envelope_bars`. They keep the same stage proportions, a 0-length stage drawn as a cliff, and the selected stage highlighted. This applies to FILTER, FILTER ENV, AMP ENV and MOD ENV.
+  - **The intro is the norns logo sprite**, `images/q7logoanim.png`: 55 frames, 10 fps, about 5.5 s at power-on. It is converted to the palette on the 120x120 grid, and any key or knob skips it.
   - This applies to the existing screens too.
   - A test checks that every 2x2 block of the LCD is one colour.
 

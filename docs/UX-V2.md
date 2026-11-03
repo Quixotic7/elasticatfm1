@@ -287,7 +287,7 @@ Where the spec was silent, or a point could not be built as written, the build c
 with the spec, FIZZ and ChoralRoot:
 
 **Modes and keys**
-- FX: there is one insert per track (a second would eat the thin CPU headroom), so **B2 is the track's SENDS page**;
+- FX (0.6.1 adds a second insert, section 9): there is one insert per track, so **B2 is the track's SENDS page**;
   B3 / B4 / B5 select the S1 / S2 / MST bus pages, B11 the FX MIX page (FX MIX, DRIVE, SEND 1, SEND 2).
 - AMP gained an AMP page (LEVEL, PAN, VELOCITY, VEL DEPTH / SEND 1, SEND 2); AMP ENV keeps the envelope; MOD ENV
   moved here from MODULATION. AMP and TRIG have no B11; LOOP ENGINE has four pages (no B5).
@@ -348,3 +348,30 @@ with the spec, FIZZ and ChoralRoot:
   old orange frame is gone); "locked on some step" is a LOCK outline. FX's INSERT page is the mock's slot list (the
   per-engine visuals of E4 were dropped). The envelope pictures light the stage of the knob turned last.
 - Rate labels keep norns' names ("1", "2", "4", not "1X").
+
+## 9. Planned for 0.6.1 (owner, 2026-11-03)
+
+A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6.0's choices in section 8 change:
+
+**Projects are files, with no size limit**
+- A project is saved as a file in the cart's own folder, `/data/projects/` (the manifest already has `data=rw`), so
+  its size is limited only by the disk. "FULL: NOT SAVED" goes away.
+- The flash image keeps only the APP SETTINGS record and the name of the last project, which loads at power-on.
+- SHIFT + SAVE saves over the current project's file. A new project gets the next free name (PROJ-001, ...).
+- The FILE browser shows `/data/projects/` beside `/audio/`; LOAD on a project file opens it (FILE is already gated
+  while playing).
+- fs1 never blocks: the project is packed in memory, then written in chunks; the header shows SAVING until it lands.
+  A failed write keeps the old file and shows the error.
+- A 0.6.0 (or older) project in the flash still loads once; the next save writes it as a file.
+
+**Two inserts per track**
+- Each track has INS 1 and INS 2 in series. An empty slot costs nothing.
+- FX's INSERT page lists both slots (close to the original mockup's slot list); SEL picks the slot, hold B1 picks the
+  selected slot's engine. The SENDS / bus / FX MIX pages stay as built.
+
+**Load meter, on the FX page only**
+- A chunky bar on FX's INSERT page. It shows the cart's load: active voices, grains and effects, each weighted by its
+  measured cost in wasm3. Full scale is the hosts' budget (2x real time on an M-series Mac).
+- It is counted, not timed, so every host draws the same screen (RFM1-FORMAT: the screen must not depend on the host
+  clock).
+- No warning or pop-up anywhere; the host's own "too heavy for this device" stays.

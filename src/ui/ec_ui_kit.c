@@ -139,31 +139,71 @@ void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
     }
 }
 
-/* ------------------------------------------------------------------------------------------- settings --- */
-void ec_kit_settings(const ec_kit_row_t *r, int n, int lane, int active)
+/* ------------------------------------------------------------------------------------------- the list --- */
+#define LIST_X 4                                    /* the label's x (the accent edge is x 0..1) */
+#define LIST_R (W - 6)                              /* the value's right edge (the scroll mark is x W-2..W-1) */
+
+static int list_two(const ec_kit_row_t *r)          /* label and value don't fit on one line (or forced) */
 {
-    const int focus = active >= 0 ? active : lane * 4;
-    int first = 0, i;
-    if (n > 8) {
-        first = (focus / 4) * 4 - 4;
-        first = first > n - 8 ? n - 8 : first;
-        first = first < 0 ? 0 : first;
+    const char *l = r->label ? r->label : "", *v = r->value ? r->value : "";
+    int lw = TW(l, 1);
+    if (r->note)
+        lw += 3 + TW(r->note, 1);
+    return r->two || LIST_X + lw + 6 + TW(v, 2) > LIST_R;
+}
+
+int ec_kit_list_row_h(const ec_kit_row_t *r) { return list_two(r) ? EC_KIT_LIST_H2 : EC_KIT_LIST_H1; }
+
+void ec_kit_list(const ec_kit_row_t *r, int n, int sel, int y0, int y1, int *ys)
+{
+    const int room = y1 - y0;
+    int first = 0, i, y, total = 0, sum;
+    if (sel >= n)
+        sel = n - 1;
+    if (sel < 0)
+        sel = 0;
+    for (i = 0; i < n; i++)
+        total += ec_kit_list_row_h(&r[i]) + EC_KIT_LIST_GAP;
+    /* the window: from the top, scrolled just far enough that the selected row (and the next, when there is one) fits */
+    for (;;) {
+        sum = 0;
+        for (i = first; i <= sel + 1 && i < n; i++)
+            sum += ec_kit_list_row_h(&r[i]) + EC_KIT_LIST_GAP;
+        if (sum - EC_KIT_LIST_GAP <= room || first >= sel)
+            break;
+        first++;
     }
-    for (i = first; i < n && i < first + 8; i++) {
-        const int y = 14 + (i - first) * 13, act = i / 4 == lane;
-        char tag[4];
-        snprintf(tag, sizeof tag, "K%d", i % 4 + 1);
-        if (i == active) {
-            R(EC_C_L3, 0, y - 1, W, 12);
-            R(EC_C_ACC, 0, y - 1, 1, 12);
+    if (ys)
+        for (i = 0; i < n; i++)
+            ys[i] = -1;
+    for (i = first, y = y0; i < n; i++) {
+        const ec_kit_row_t *q = &r[i];
+        const int two = list_two(q), h = two ? EC_KIT_LIST_H2 : EC_KIT_LIST_H1, on = i == sel;
+        const char *l = q->label ? q->label : "", *v = q->value ? q->value : "";
+        const int vsc = TW(v, 2) <= LIST_R - LIST_X ? 2 : 1;
+        int lx;
+        if (y + h > y1)
+            break;
+        if (ys)
+            ys[i] = y;
+        if (on) {                                    /* the selected row: an L3 band with a 2-unit accent edge */
+            R(EC_C_L3, 0, y, W - 4, h);
+            R(EC_C_ACC, 0, y, 2, h);
         }
-        T(i == active ? EC_C_L15 : act ? EC_C_L8 : EC_C_L5, r[i].label ? r[i].label : "", 3, y + 3, 1, EC_AL_LEFT);
-        T(r[i].dim ? EC_C_L5 : act ? EC_C_L15 : EC_C_L8, r[i].value ? r[i].value : "", W - 22, y, 2, EC_AL_RIGHT);
-        if (r[i].note)
-            T(EC_C_ALERT, r[i].note, W - 2, y + 3, 1, EC_AL_RIGHT);
+        /* (2 units of band at least around every glyph: no 1-unit strip of it) */
+        lx = T(on ? EC_C_L15 : EC_C_L8, l, LIST_X, two ? y + 3 : y + 5, 1, EC_AL_LEFT);
+        if (q->note)
+            T(EC_C_ALERT, q->note, lx + 3, two ? y + 3 : y + 5, 1, EC_AL_LEFT);
+        if (two)                                     /* the value on its own line under the label */
+            T(q->dim ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, v, LIST_R, vsc == 2 ? y + 12 : y + 15, vsc, EC_AL_RIGHT);
         else
-            T(act ? EC_C_L5 : EC_C_L3, tag, W - 2, y + 3, 1, EC_AL_RIGHT);
-        ec_gfx_dots_h(2, W - 2, y + 12, 2, EC_C_L3);
+            T(q->dim ? EC_C_L5 : on ? EC_C_L15 : EC_C_L12, v, LIST_R, y + 2, 2, EC_AL_RIGHT);
+        y += h + EC_KIT_LIST_GAP;
+    }
+    if (total - EC_KIT_LIST_GAP > room && n > 1) {   /* more rows than fit: where the selection is, at the right */
+        const int th = room * room / total < 4 ? 4 : room * room / total;
+        const int ty = y0 + (room - th) * sel / (n - 1);
+        R(EC_C_L5, W - 2, ty & ~1, 2, th & ~1);
     }
 }
 

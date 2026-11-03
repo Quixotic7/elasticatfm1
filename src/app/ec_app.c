@@ -841,8 +841,38 @@ static int item_steps(const ec_item_t *it)
 int ec_app_lane(const ec_app_t *a, const ec_page_t *pg)
 {
     const int n = ec_ux_lanes(pg->n);
-    const int l = a->settings ? a->ux.set_lane : a->scr ? 0 : a->ux.lane[a->cat];
+    const int l = a->settings ? 0 : a->scr ? 0 : a->ux.lane[a->cat];   /* (a setup list: rows, ec_app_set_item) */
     return clampi(l, 0, n - 1);
+}
+
+/* 0.6.1, the list menus: the setup list's rows are its items without the blanks */
+int ec_app_set_rows(const ec_page_t *pg, int *idx)
+{
+    int i, n = 0;
+    for (i = 0; i < pg->n; i++)
+        if (pg->it[i].kind != EC_IT_BLANK) {
+            if (idx)
+                idx[n] = i;
+            n++;
+        }
+    return n;
+}
+
+int ec_app_set_item(const ec_app_t *a, const ec_page_t *pg)
+{
+    int idx[EC_PAGE_ITEMS];
+    const int n = ec_app_set_rows(pg, idx);
+    return n ? idx[clampi(a->ux.set_row, 0, n - 1)] : -1;
+}
+
+int ec_app_list_knob(int role, int det, int *row, int n)
+{
+    if (role == EC_E_SELECT) {
+        *row = clampi(*row + det, 0, n > 0 ? n - 1 : 0);
+        A->redraw = 1;
+        return 0;
+    }
+    return role == EC_E_K1 && n > 0;                /* K2..K4: nothing in a list */
 }
 
 int ec_app_cells_visible(const ec_app_t *a)
@@ -934,6 +964,12 @@ void ec_app_knob_cell(int k, int det)
         return;
     }
     ec_app_page(A, &pg);
+    if (A->settings) {                               /* 0.6.1: a list: K1 the selected row, K2..K4 nothing */
+        const int it = ec_app_set_item(A, &pg);
+        if (k == 0 && it >= 0)
+            turn_cell(&pg, it, EC_E_K1, det);
+        return;
+    }
     turn_cell(&pg, ec_app_lane(A, &pg) * 4 + k, EC_E_K1 + k, det);
 }
 

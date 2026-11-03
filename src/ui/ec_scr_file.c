@@ -244,13 +244,13 @@ void ec_scr_record(const ec_app_t *a)
     static char val[EC_RS_NROW][16];
     ec_kit_row_t rows[EC_RS_NROW];
     int i;
+    memset(rows, 0, sizeof rows);
     for (i = 0; i < EC_RS_NROW; i++) {
         ec_rs_row_value(i, val[i], sizeof val[i]);
         rows[i].label = ec_rs_row_label(i);
         rows[i].value = val[i];
         rows[i].dim = (uint8_t)ec_rs_row_dim(i);
-        rows[i].note = 0;
     }
     ec_scr_header(a, "REC/SETUP", 0, "");
-    ec_kit_settings(rows, EC_RS_NROW, a->pn.rs_row / 4, a->pn.rs_row);
+    ec_kit_list(rows, EC_RS_NROW, a->pn.rs_row, 12, EC_GH, 0);   /* 0.6.1: a list menu */
 }

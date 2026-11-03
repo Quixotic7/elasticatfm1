@@ -57,9 +57,10 @@ press PLAY@15400
 png 16600:Main_screen.png
 press PLAY@16800
 press HOME@17200+600
-turn K2@18000:1
-turn K2@18100:1
-turn K2@18200:1
+turn SELECT@17980:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
+turn K1@18000:1
+turn K1@18100:1
+turn K1@18200:1
 press HOME@18600
 upper 7@19000+1200
 turn K3@19300:-1
@@ -351,3 +352,14 @@ press HOME@135600
 upper 2@136200+1000
 turn K1@136700:2
 png 137000:Loop_menu.png
+
+# ======== 0.6.1 (v61b-panel): the list menus. APP SETTINGS (SHIFT + HOME) with THEME selected: two lines, the
+# theme's name on the second; the record settings (REC held), SEL twice: COUNT-IN selected, K1 is that row
+press GLO@137600+400
+press HOME@137800
+png 138600:AppSettings_theme.png
+press OCT-@138800
+press REC@139400+700
+turn SELECT@140300:2
+png 140800:Record_settings.png
+press OCT-@141000

@@ -39,11 +39,12 @@ lower 2@4800+150:110
 lower 6@5000+150:70
 png 4850:05_src_slices.png
 
-# ---- T3: the granular warp (changes only while stopped: the settings' K2), LOOP ENGINE's WARP page (B3)
+# ---- T3: the granular warp (changes only while stopped: the settings' WARP MODE row, SEL + K1), LOOP ENGINE's WARP page (B3)
 press GLO@5400+150
 lower 2@5450+60
 press HOME@5600+450
-turn K2@6100:3
+turn SELECT@6050:1
+turn K1@6100:3
 press OCT-@6200
 upper 2@6300+60
 turn K1@6400:8

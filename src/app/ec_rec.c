@@ -439,6 +439,7 @@ void ec_rec_frame(void)
 void ec_rec_open(void)
 {
     R->open = 1;
+    R->row = 0;
     if (!R->slot_set && R->state == EC_RS_IDLE)
         R->slot = ec_app_track_slot(A, A->track);
     A->redraw = 1;
@@ -483,33 +484,70 @@ int ec_rec_button(int b)
     return 0;
 }
 
+const char *ec_rec_row_label(int row)
+{
+    static const char *const L[EC_REC_NROW] = {"SOURCE", "LENGTH", "THRESHOLD", "SYNC", "SLOT"};
+    return row >= 0 && row < EC_REC_NROW ? L[row] : "";
+}
+
+void ec_rec_row_value(int row, char *out, int cap)
+{
+    static const char *const SRC[] = {"IN", "MASTER"}, *const SYNC[] = {"PLAY", "BAR", "FREE"};
+    static const char *const LEN[] = {"FREE", "1 BAR", "2 BARS", "4 BARS", "8 BARS", "16 BARS"};
+    switch (row) {
+    case EC_REC_ROW_SLOT:
+        snprintf(out, (size_t)cap, "POOL %02d", (R->state == EC_RS_IDLE ? target_slot() : R->slot) + 1);
+        break;
+    case EC_REC_ROW_SRC: snprintf(out, (size_t)cap, "%s", SRC[clampi(R->src, 0, EC_NRSRC - 1)]); break;
+    case EC_REC_ROW_LEN: snprintf(out, (size_t)cap, "%s", LEN[clampi(R->len, 0, EC_REC_NLEN - 1)]); break;
+    case EC_REC_ROW_THR:
+        if (R->thr)
+            snprintf(out, (size_t)cap, "%dDB", ec_rec_thr_db(R->thr));
+        else
+            snprintf(out, (size_t)cap, "OFF");
+        break;
+    case EC_REC_ROW_SYNC: snprintf(out, (size_t)cap, "%s", SYNC[clampi(R->sync, 0, EC_NRSYNC - 1)]); break;
+    default: out[0] = 0; break;
+    }
+}
+
+int ec_rec_row_dim(int row)
+{
+    if (row == EC_REC_ROW_THR)
+        return R->sync != EC_RSYNC_FREE;
+    return R->state != EC_RS_IDLE;
+}
+
 int ec_rec_knob(int role, int det)
 {
     const int idle = R->state == EC_RS_IDLE;
     if (!R->open)
         return 0;
-    switch (role) {
-    case EC_E_SELECT:                              /* the target slot (not while a take is armed or running) */
-        if (idle) {
-            R->slot = clampi(R->slot + det, 0, EC_NSLOT - 1);
-            R->slot_set = 1;
+    if (role != EC_E_SELECT && role < EC_E_K1)
+        return 0;
+    if (ec_app_list_knob(role, det, &R->row, EC_REC_NROW))   /* 0.6.1: a list menu: SEL the row, K1 its value */
+        switch (R->row) {
+        case EC_REC_ROW_SLOT:                      /* the target slot (not while a take is armed or running) */
+            if (idle) {
+                R->slot = clampi(target_slot() + det, 0, EC_NSLOT - 1);
+                R->slot_set = 1;
+            }
+            break;
+        case EC_REC_ROW_SRC:
+            if (idle)
+                R->src = clampi(R->src + det, 0, EC_NRSRC - 1);
+            break;
+        case EC_REC_ROW_LEN:
+            if (idle)
+                R->len = clampi(R->len + det, 0, EC_REC_NLEN - 1);
+            break;
+        case EC_REC_ROW_THR: R->thr = clampi(R->thr + det, 0, EC_REC_NTHR - 1); break;
+        case EC_REC_ROW_SYNC:
+            if (idle)
+                R->sync = clampi(R->sync + det, 0, EC_NRSYNC - 1);
+            break;
+        default: break;
         }
-        break;
-    case EC_E_K1:
-        if (idle)
-            R->src = clampi(R->src + det, 0, EC_NRSRC - 1);
-        break;
-    case EC_E_K2:
-        if (idle)
-            R->len = clampi(R->len + det, 0, EC_REC_NLEN - 1);
-        break;
-    case EC_E_K3: R->thr = clampi(R->thr + det, 0, EC_REC_NTHR - 1); break;
-    case EC_E_K4:
-        if (idle)
-            R->sync = clampi(R->sync + det, 0, EC_NRSYNC - 1);
-        break;
-    default: return 0;
-    }
     A->redraw = 1;
     return 1;
 }
@@ -519,11 +557,11 @@ void ec_rec_labels(void)
     static const char *const REC[] = {"ARM", "REC NOW", "STOP", ""};
     static const char *const BACK[] = {"CLOSE", "DISARM", "DISCARD", ""};
     const int st = clampi(R->state, 0, 3);
-    ec_plat_label(EC_LBL_KNOB0 + EC_E_SELECT, "SLOT");
-    ec_plat_label(EC_LBL_KNOB0 + EC_E_K1, "SOURCE");
-    ec_plat_label(EC_LBL_KNOB0 + EC_E_K2, "LENGTH");
-    ec_plat_label(EC_LBL_KNOB0 + EC_E_K3, R->sync == EC_RSYNC_FREE ? "THRESHOLD" : "");
-    ec_plat_label(EC_LBL_KNOB0 + EC_E_K4, "SYNC");
+    ec_plat_label(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");   /* 0.6.1: a list menu: K1 the selected row */
+    ec_plat_label(EC_LBL_KNOB0 + EC_E_K1, ec_rec_row_label(clampi(R->row, 0, EC_REC_NROW - 1)));
+    ec_plat_label(EC_LBL_KNOB0 + EC_E_K2, "");
+    ec_plat_label(EC_LBL_KNOB0 + EC_E_K3, "");
+    ec_plat_label(EC_LBL_KNOB0 + EC_E_K4, "");
     ec_plat_label(EC_LBL_BTN0 + EC_B_REC, REC[st]);
     ec_plat_label(EC_LBL_BTN0 + EC_B_OCTUP, REC[st]);
     ec_plat_label(EC_LBL_BTN0 + EC_B_OCTDN, BACK[st]);

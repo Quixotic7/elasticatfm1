@@ -255,12 +255,13 @@ static void k_grains(int seed)
 }
 static void k_settings(int i)
 {
-    static const ec_kit_row_t r[11] = {{"THEME", "CREAM", 0, 0}, {"MODE POP-UP", "ON", 0, 0}, {"KNOB SPEED", "MED", 0, 0},
-                                       {"AUTO-PREVIEW", "ON", 0, 0}, {"AFTERTOUCH", "ON", 1, 0}, {"METRO", "WOOD", 0, "STOP"},
-                                       {"MIDI CC", "1+11", 0, 0}, {"A", "1", 0, 0}, {"B", "2", 0, 0}, {"C", "3", 0, 0},
-                                       {"D", "4", 0, 0}};
+    static const ec_kit_row_t r[11] = {{"THEME", "PHOSPHOR", 0, 0, 1}, {"MODE POP-UP", "ON", 0, 0, 0},
+                                       {"KNOB SPEED", "MED", 0, 0, 0}, {"AUTO-PREVIEW", "ON", 0, 0, 0},
+                                       {"AFTERTOUCH", "ON", 1, 0, 0}, {"METRO", "WOOD", 0, "STOP", 0},
+                                       {"METRO SOUND", "WOODBLOCK LONG", 0, 0, 0}, {"A", "1", 0, 0, 0},
+                                       {"B", "2", 0, 0, 0}, {"C", "3", 0, 0, 0}, {"D", "4", 0, 0, 0}};
     ec_kit_header("T1", "APP/SETTINGS", "", "", 0, 1);
-    ec_kit_settings(r, 11, i / 4, i);
+    ec_kit_list(r, 11, i, 12, EC_GH, 0);     /* 0.6.1: the list menu */
 }
 static void k_intro(int f) { ec_scr_intro(f); }
 static void k_cat(int f)
@@ -517,6 +518,8 @@ static void test_modes(void)
     A->pn.as_open = 1;                                     /* APP SETTINGS, the cursor on row 6 */
     A->pn.as_row = 6;
     shot("app_settings");
+    A->pn.as_row = 0;                                      /* 0.6.1: THEME selected (two lines) */
+    shot("app_settings_theme");
     A->pn.as_open = 0;
     A->cat = EC_CAT_FILE;                                  /* 0.6.0 part 2: FILE's browser (previewing), the editor */
     A->page[EC_CAT_FILE] = 0;
@@ -580,7 +583,12 @@ static void test_app(void)
         A->settings = ec_settings_items(cat, v, &pg) != 0;
         if (A->settings) {
             snprintf(name, sizeof name, "setup_%s", ec_cat_name(cat));
+            A->ux.set_row = 0;
             shot(name);
+            A->ux.set_row = 99;                               /* 0.6.1: the last row selected (scrolled) */
+            snprintf(name, sizeof name, "setup_%s_last", ec_cat_name(cat));
+            shot(name);
+            A->ux.set_row = 0;
         }
     }
     reset_state();
@@ -640,6 +648,9 @@ static void test_app(void)
     A->e5.naming = 0;
     A->rec.open = 1;
     shot("rec");
+    A->rec.row = EC_REC_ROW_SYNC;                          /* 0.6.1: the setup's list scrolled to its last row */
+    shot("rec_sync");
+    A->rec.row = 0;
     A->rec.open = 0;
     test_modes();
     test_mod_lock();

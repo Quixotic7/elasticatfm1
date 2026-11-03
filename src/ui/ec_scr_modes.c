@@ -247,18 +247,21 @@ static void appset_screen(const ec_app_t *a)
 {
     static char val[EC_AS_NROW][16];
     ec_kit_row_t rows[EC_AS_NROW];
+    int ys[EC_AS_NROW];
     int i;
+    memset(rows, 0, sizeof rows);
     for (i = 0; i < EC_AS_NROW; i++) {
         ec_as_row_value(i, val[i], sizeof val[i]);
         rows[i].label = ec_as_row_label(i);
         rows[i].value = val[i];
-        rows[i].dim = 0;
-        rows[i].note = 0;
     }
+    rows[EC_AS_THEME].two = 1;                      /* 0.6.1: the theme's name on its own line (long names fit) */
     ec_scr_header(a, "APP/SETTINGS", 0, "");
-    ec_kit_settings(rows, EC_AS_NROW, a->pn.as_row / 4, a->pn.as_row);
-    for (i = 0; i < ec_gfx_themes(); i++)          /* THEME: the six, the current one marked */
-        R(i == a->pn.as.theme ? EC_C_L15 : EC_C_L5, 26 + i * 4, 21, 3, i == a->pn.as.theme ? 3 : 2);
+    ec_kit_list(rows, EC_AS_NROW, a->pn.as_row, 12, H, ys);
+    if (ys[EC_AS_THEME] >= 0)                       /* THEME: the six after its label, the current one marked */
+        for (i = 0; i < ec_gfx_themes(); i++)
+            R(i == a->pn.as.theme ? EC_C_L15 : EC_C_L5, 32 + i * 6, ys[EC_AS_THEME] + 3, 4,
+              i == a->pn.as.theme ? 6 : 4);
 }
 
 /* ------------------------------------------------------------------------------------------- dispatch --- */

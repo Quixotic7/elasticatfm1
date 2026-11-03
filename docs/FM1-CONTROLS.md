@@ -36,9 +36,7 @@ Words used here:
 - **Settings stay open** when you let go. F1 or F2 closes them, back to the mode they were opened over. The mode's
   own button (or SHIFT + it again) goes back too. Another mode button closes them and opens its mode.
 - **Power-on and project load: LOOP ENGINE.** There is no separate "main view" any more.
-- **Entering a mode** shows its **pop-up** for 0.8 s: the mode's name big, its page, and a strip of the 11 black
-  keys in their roles (page / source / special / unused). Any knob, key or button closes it early, and still does
-  its job. Turning to the next page in a mode shows no pop-up. APP SETTINGS > MODE POP-UP turns it off.
+- **Entering a mode shows nothing extra** (0.6.1: the mode pop-up is gone): the mode's screen, its header.
 - **The intro** (the logo animation) plays at power-on. Any key or knob skips it. APP SETTINGS > INTRO turns it off.
 
 The other controls:
@@ -154,6 +152,40 @@ The timing menu. It stays open; F1, F2, HOME or SEQ close it. PLAY still plays a
 | White key tapped | edit that step page |
 | White key held | that page in / out of the playing loop |
 
+### The header
+
+0.6.1: there are **no message boxes**. Every message (STOP FIRST, COPY STEP 1, MEMORIZED, T1 MUTED, SAVING ...)
+shows in the header's title line for its time (1.2 s); alerts (STOP FIRST, FULL, BUSY ...) fill the line with the
+ALERT colour.
+
+**While a key that does something when held is held, the header says what it does**, and goes back to the screen's
+title when it is let go. The text shows 0.15 s into the hold, so a quick tap shows nothing; sticky SHIFT / F1 / F2
+show at once. A message newer than the last key press wins over it; an older one gives way.
+
+| Held | Mode | Header |
+|---|---|---|
+| B6-B10 (the sources) | FX, FILTER, AMP, MODULATION, LOOP ENGINE, TRIG | LFO 1 / LFO 2 / MOD ENV / VEL / AT, on the **SRC** (blue) bar |
+| B2-B5 (the macros) | MODULATION | M1 / M2 / M3 / M4, on the SRC bar |
+| a mode button (before its settings open at 0.4 s) | any | FX SETUP, FILTER SETUP, AMP SETUP, PROJECT SETUP (EDIT), LOOP SETUP (HOME), RECORDER SETUP (FILE), F3 (SEQ) |
+| REC | any but FILE | REC SETUP |
+| B11 | CROSSFADER | CAPTURE |
+| B1 / B2 | CROSSFADER | SCENE A / SCENE B |
+| W1-W12 | CROSSFADER | GLIDE TO n (0..127) |
+| SHIFT + B11 | any | FILL |
+| B1 (the quick setting) | FILTER / AMP / LOOP ENGINE / FX | FILTER TYPE / ENV MODE / MACHINE / FX TYPE |
+| B3-B5 (the buses) | FX | S1 FX TYPE / S2 FX TYPE / MST FX TYPE |
+| a key | KEYBOARD | NOTE C4 (the note), SLICE n (a slice key on slice tracks) |
+| steps (white keys) | the step modes | STEP 5, or 3 STEPS, on the **LOCK** bar |
+| a white key | LOOP ENGINE | LOOP KEY n (slice tracks: PAD n) |
+| a black key | PAGES | LOOP PAGE n |
+| a white key | F3 | LOOP PAGE n |
+| W1-W6 | MIX | MUTE Tn (UNMUTE Tn when muted) |
+| F1 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | COPY / CLR LOCK; COPY PAGE; COPY PATTERN (PASTE ... once the buffer holds something) |
+| F2 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | CUT / CLR MOD; CUT PAGE; CUT PATTERN (PASTE ...) |
+| SHIFT (GLO, held or sticky) | any | SHIFT |
+
+FX's insert key and LOOP ENGINE's B1-B5 open hold menus (their own text in the header).
+
 ### Pop-ups
 
 F3, a settings list, APP SETTINGS, the record settings, the recorder's setup, naming and questions are pop-ups.
@@ -175,8 +207,8 @@ patterns (PATTERN LAUNCH's white keys).
 - **Cut (F2)** is the same, but taking a step into the buffer empties it. So cut a step, tap another: it **moves**.
   Cut a step and tap it again: it goes back. Further taps on empty steps paste copies.
 - **The buffer empties when F1 / F2 turns off.**
-- The source step (or page) blinks while it is in the buffer. A toast says what happened (COPY STEP 1, PASTE STEP
-  3 ...).
+- The source step (or page) blinks while it is in the buffer. The header says what happened (COPY STEP 1, PASTE
+  STEP 3 ...).
 - Each paste and cut of steps or pages is one undo.
 
 ## The source template (FX, FILTER, AMP, MODULATION, LOOP ENGINE, TRIG)
@@ -193,10 +225,13 @@ patterns (PATTERN LAUNCH's white keys).
     the next detents set its DEPTH. The cell shows SOURCE > PARAM and the depth.
   - **F2 on while turning = remove that route.**
   - **Steps held as well = depth locks** on those steps.
-  - Not a destination: **NO MOD**. All eight slots taken: **FULL**.
+  - Not a destination: **NOT MODDABLE** in the header (F2 + a knob on it says the same). All eight slots taken:
+    **MATRIX FULL** (an alert).
   - Let go: a route this hold made and left at 0 is freed.
-- **A tap on a source** opens its page: LFO 1, LFO 2 and VEL their MODULATION pages, MOD ENV AMP's MOD ENV page, AT
-  the MATRIX.
+  - While held, the header shows the source's name on the SRC (blue) bar.
+- **A source key never changes the mode**, tapped or held (0.6.1). A tap opens the source's page only when that page
+  is in the mode shown: in MODULATION LFO 1, LFO 2 and VEL their pages and AT the MATRIX; in AMP, MOD ENV its MOD ENV
+  page. Elsewhere a tap does nothing.
 - B11 is the mode's special key (in AMP and TRIG it is unused).
 - LEDs: the current page's key bright, the other page keys dim, the sources dim, the special key mid, a held key
   bright.
@@ -849,8 +884,8 @@ click).
 | Key | Does |
 |---|---|
 | B1 | the **MATRIX** |
-| B2-B5 | **M1-M4**, the macros. A tap opens that macro's page. Hold + turn a knob routes that macro, like the other sources |
-| B6-B10 | the sources (LFO 1, LFO 2 and VEL taps open their pages here) |
+| B2-B5 | **M1-M4**, the macros. A tap opens that macro's page (MODULATION stays). Hold + turn a knob routes that macro, like the other sources (header M1..M4 on SRC) |
+| B6-B10 | the sources (LFO 1, LFO 2 and VEL taps open their pages here, AT the MATRIX) |
 | B11 | the **MACROS** overview (M1-M4 on K1-K4) |
 
 - The macro values are params: they lock on steps and live REC records them.
@@ -918,8 +953,12 @@ click).
 - **F1 = octave down, F2 = octave up** (-3..+3). There is no copy / cut here.
 - **On slice tracks** (SLICE, S.POLY, RAZOR, R.POLY): **B1-B10 pick the slice** (ten at a time) and play it, **B11
   steps the slice bank** (1-10, 11-20 ...). The white keys play the selected slice at a pitch.
-- **ALGO = the target step.** Below step 1 is **LIVE** (no entry). With a target step, a key writes a trig with
-  that note (pitch and velocity locked; on slice tracks the slice) on the step, then moves on to the next step.
+- **Stopped, a key plays the sound while it is held**: the loop from its start (on slice tracks the selected
+  slice) at that key's pitch; letting go stops it. Playing, a key sets the track's pitch as before.
+- **The key lit is the note sounding**: the key held plus the track's PITCH, so a positive PITCH lights a key higher
+  up the keyboard, a negative one lower (and turning PITCH while holding a key moves it).
+- **ALGO = the target step** (no pop-up, no message: the step strip shows it). Below step 1 is **LIVE** (no
+  entry). With a target step, a key writes a trig with that note (pitch and velocity locked; on slice tracks the slice) on the step, then moves on to the next step.
   - **ADVANCE** (in HOME's settings, default on) says whether it moves on. **SHIFT + the key** does the other.
   - One note per step: a new note replaces the step's.
 - Live (no target), REC records what you play.
@@ -999,7 +1038,7 @@ input (the recorder's setup, FILE held, can pick the master out). FULL when the 
 | Control | Does |
 |---|---|
 | B1 / B2 | **scene A / scene B**. **Hold one + turn a knob** = put that param's value (the selected track) into that scene. The knobs show the page of the mode you came from |
-| B11 held + B1 / B2 | **capture**: every morphable param of every track and bus into that scene |
+| B11 held + B1 / B2 | **capture**: every morphable param of every track and bus into that scene. The header says CAPTURE while B11 is held |
 | SHIFT + B1 / B2 | **clear** that scene |
 | W1-W12 | **the fader**, W1 = 0 .. W12 = 127. **Hold a key** and the fader glides there. **More pressure = faster.** Let go and it stays where it got to |
 | SHIFT + W1-W12 | **jump** there at once |
@@ -1079,7 +1118,6 @@ survive project loads and new projects.
 | Row | Choices |
 |---|---|
 | THEME | CREAM (default), AMBER, PHOSPHOR, DMG, ICE, PAPER. The theme changes as you scroll |
-| MODE POP-UP | ON / OFF |
 | KNOB SPEED | SLOW / MED / FAST |
 | AUTO-PREVIEW | ON / OFF (FILE's browser) |
 | AFTERTOUCH | ON / OFF |
@@ -1090,6 +1128,7 @@ survive project loads and new projects.
 - SEL the row; K1-K4 change the four rows of the cursor's group.
 - **F1 = back** (every change undone), **F2 = OK**, HOME closes and keeps.
 - The same record holds KEYBOARD's ADVANCE (HOME's settings) and CROSSFADER's glide time (W13-W16).
+- 0.6.1 dropped the MODE POP-UP row; a 0.6.0 record still loads with all its other values.
 
 
 ## Machines, warp modes and FX
@@ -1170,7 +1209,10 @@ What the code does where the spec says otherwise (or says nothing):
 
 - **FX's black keys:** B1 INSERT, **B2 SENDS** (there is one insert per track, no INSERT 2), B3 / B4 / B5 the S1 / S2 /
   MST bus pages (they select the bus).
-- **MOD ENV's tap** (B8) opens AMP's MOD ENV page, not a MODULATION page. AT's tap opens the MATRIX.
+- **A source key's tap** (0.6.1) opens its page only inside the mode that has it (MODULATION: LFO 1, LFO 2, VEL, AT
+  = the MATRIX, M1-M4 = the macro's page; AMP: MOD ENV). Elsewhere a tap does nothing: no key changes the mode.
+- **The header's held-key text** shows 0.15 s into a hold (a tap shows none); a message newer than the last key
+  press wins over it, an older one gives way.
 - **AMP and TRIG have no B11** (unused). LOOP ENGINE has no B5 page; hold B1 there is the machine.
 - **LOOP ENGINE's zoom** (B11) changes the track's LOOP DIV param (16 ↔ 32), so it is saved and heard.
 - **MIX's rates:** B1-B8 are eight rates (1/8 .. 4X), **B9 slower, B10 faster**, B11 the CAT (the spec had B1-B9 the

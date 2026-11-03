@@ -435,3 +435,11 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
   knobs in groups of four.
 - A row whose label and value don't fit on one line uses two: the label, then the value on the second line (THEME
   first: the theme's name goes on the second line, so longer names fit).
+
+**FILE / EDIT trim with the white keys** (owner, 2026-11-03)
+- The white keys are 16 places across the visible waveform (so the zoom sets how fine they are).
+- **F1 = place START, F2 = place END**: it picks which point a white key places. The header shows which.
+- A tap on a white key places the chosen point there.
+- **Two keys set both points**: hold a white key to place the chosen point, then press a second white key to place
+  the other one. In START, the held key is the start and the second the end; in END, the reverse.
+- F1 / F2 have only this job in the EDITOR (no copy / cut there).

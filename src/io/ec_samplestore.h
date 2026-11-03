@@ -9,17 +9,17 @@
 /* 0.6.0: the arena for MEMORY_MIB 256 (wasm32 linear memory; sizes measured on the native and the wasm32 build):
  *   engine (EC_DSP_MEM_MAX)                        18.0 MiB
  *   ec_app_t (holds the 64-pattern ec_project_t)    9.4
- *   the app's memorize copy (src/app/ec_e5.c g_memo, a whole ec_project_t)   9.1
+ *   the app's memorize record (src/app/ec_e5.c g_memo: ec_e5_memo_save into EC_PLAT_RECORD_MAX)   1.0
  *   the flash image (ec_core.c g_flash; 0.6.0 stages into it: no second copy)   1.0
  *   the loader's read buffer (ec_loader.c, one FS request)   1.0
  *   every other static + read-only data (screens, tables, lists; 0.45 measured)   <= 1.0
  *   the stack                                       1.0
  *   free above the stack top for the host shim's heap (its flash staging copy, audio blocks) and a margin   >= 4.0
- *   = 44.5 MiB, so the arena gets 256 - 44.5 = 211 MiB (~20.9 min of stereo at 44.1 kHz).
- * With the memorize copy kept as a record instead (ec_e5_memo_save into a 1 MiB buffer: 8.1 MiB less) the arena can
- * be 219 MiB. (0.5.0, MEMORY_MIB 128: 96 MiB.) Hosts that build smaller (the designer) set their own. */
+ *   = 36.4 MiB, so the arena gets 256 - 36.4 = 219 MiB (~21.7 min of stereo at 44.1 kHz). (Before memorize became
+ * a record, a whole 9.1 MiB ec_project_t copy: 44.5 MiB and 211. 0.5.0, MEMORY_MIB 128: 96 MiB.) Hosts that build
+ * smaller (the designer) set their own. */
 #ifndef EC_SS_ARENA_MIB
-#define EC_SS_ARENA_MIB 211         /* ~20.9 minutes of stereo at 44.1 kHz */
+#define EC_SS_ARENA_MIB 219         /* ~21.7 minutes of stereo at 44.1 kHz */
 #endif
 #define EC_SS_MAX 136               /* sample handles: the 128 pool slots, a take, a preview and some slack */
 #define EC_SS_NAME 64               /* a sample's display name (the file name) */

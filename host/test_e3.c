@@ -208,7 +208,7 @@ static void test_chunk(void)
 
 static void test_seq_events(void)
 {
-    ec_seq_sink_t k = {0, on_event, on_params, on_process, 0};
+    ec_seq_sink_t k = {0, on_event, on_params, on_process, 0, 0};
     ec_ptrack_t *tr;
     int i, seen3 = 0, seen4 = 0, seen5 = 0;
     printf("seq: razor slice events carry the slice's own range + per-slice choke / pitch / play mode; mute skips\n");

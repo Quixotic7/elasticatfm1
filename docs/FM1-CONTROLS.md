@@ -226,7 +226,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| TRIG | B1 | 1 | NOTE | LEN | VEL | - |
+| TRIG | B1 | 1 | NOTE | LEN | VEL | MICRO |
 |  |  | 2 | - | ENV RESET | LFO RESET | FILT RESET |
 | COND | B2 | 1 | CHANCE | COND | RATCHET |  |
 | PLAYHEAD (as SLICE) · SLICE/RAZOR | B3 | 1 | SLIC | PLAY | RTCH | SREV |
@@ -303,6 +303,7 @@ TRIG (HOME, second): the step's own settings (note, length, velocity, resets), t
 | `filter_reset` | FRST | Filter reset | No effect of its own (a placeholder, as in the original), but with ERST and LRST also off the step becomes a ghost trig. P-lockable. |
 | `default_length` | LEN | Note length | How long a step's note lasts, 1/4 to 16 steps: the envelope gate, and how long its region and p-locks hold. P-lockable. |
 | `default_velocity` | VEL | Velocity | Trig velocity, 0 to 100%. Sets a slice's level and feeds the VELOCITY mod source (slice trigs only). P-lockable. |
+| `micro_timing` | MICRO | Micro timing | A trig early or late by n/24 of a step (-12..+12). Live REC writes it from each hit's offset (unless QUANTIZE is HARD). P-lockable. |
 | `global.bpm` | BPM | Tempo | The project tempo, 20 to 300 BPM (SHIFT snaps to common tempos). Saved per pattern unless GBPM is on. |
 | `global.swing` | SWNG | Swing | Global swing, 50% (straight) to 75% (heavy): odd steps get longer, even ones shorter. |
 
@@ -559,7 +560,7 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 
 | Item | Label | Name | What it does |
 |---|---|---|---|
-| `pattern_rate` | RATE | Pattern rate | The track's step speed against the tempo, 1/16 to 2 (1 = sixteenth notes; 2 = twice as fast). |
+| `pattern_rate` | RATE | Pattern rate | The track's step speed against the tempo, 1/16 to 2 and 4 (1 = sixteenth notes; 2 = twice as fast). |
 
 ### Machines and modes (what a page variant is for)
 

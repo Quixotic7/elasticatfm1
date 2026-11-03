@@ -342,7 +342,7 @@ static void on_params(void *ctx, int t, const ec_track_params_t *p)
 }
 static void setup(float bpm)
 {
-    ec_seq_sink_t k = {0, on_event, on_params, 0, 0};
+    ec_seq_sink_t k = {0, on_event, on_params, 0, 0, 0};
     ec_project_init(&P);
     P.bpm = bpm;
     ec_seq_init(&S, &P, &k, FS);

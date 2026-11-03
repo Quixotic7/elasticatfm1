@@ -87,7 +87,7 @@ static void push_buses(rig_t *r)
 
 static void rig_boot(rig_t *r, int mem)
 {
-    ec_seq_sink_t k = {r, sk_event, sk_params, sk_process, 0};
+    ec_seq_sink_t k = {r, sk_event, sk_params, sk_process, 0, 0};
     ec_sample_t loop = {g_loop, g_loop_n, (float)FS, 2, 120.f}, saw = {g_saw, g_saw_n, (float)FS, 2, 0.f};
     int t;
     r->d = ec_dsp_init(g_mem[mem], (float)FS);

@@ -95,7 +95,8 @@ enum {
     EC_PF_PCT100, EC_PF_X, EC_PF_PITCH, EC_PF_OPT, EC_PF_BIN, EC_PF_RATE, EC_PF_STEPS, EC_PF_SEC,
     EC_PF_UNIT,           /* E4: real units by id (dB, ms, :1, bits, Hz; ec_param_format_unit) */
     EC_PF_MDST,           /* 0.5.0: a matrix slot's DST (0 OFF, else param id + 1) */
-    EC_PF_MDEP            /* 0.5.0: a matrix slot's DEPTH, -100..100 % (fine steps near 0) */
+    EC_PF_MDEP,           /* 0.5.0: a matrix slot's DEPTH, -100..100 % (fine steps near 0) */
+    EC_PF_MICRO           /* 0.6.0: micro timing in 1/EC_MICRO_DIV of a step: "0", "+3/24", "-12/24" */
 };
 /* flags */
 #define EC_PF_LOCKABLE 1u      /* p-lockable per step */

@@ -487,7 +487,11 @@
     },
     "pattern_rate": {
       "name": "Pattern rate",
-      "desc": "The track's step speed against the tempo, 1/16 to 2 (1 = sixteenth notes; 2 = twice as fast)."
+      "desc": "The track's step speed against the tempo, 1/16 to 2 and 4 (1 = sixteenth notes; 2 = twice as fast)."
+    },
+    "micro_timing": {
+      "name": "Micro timing",
+      "desc": "A trig early or late by n/24 of a step (-12..+12). Live REC writes it from each hit's offset (unless QUANTIZE is HARD). P-lockable."
     },
     "harm_interval": {
       "name": "Harmony 1 interval",

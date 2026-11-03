@@ -280,7 +280,7 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MTX8_DST] = MDST("mtx8_dst", "DST"),
     [EC_P_MTX8_DEPTH] = NUM("mtx8_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
     /* 0.6.0: micro timing (sequencer domain: never sent to the engine, never morphed or modulated) */
-    [EC_P_MICRO] = NUM("micro_timing", "MICRO", -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2, 1, 0, EC_PF_INT, L | EC_PF_SEQ),
+    [EC_P_MICRO] = NUM("micro_timing", "MICRO", -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2, 1, 0, EC_PF_MICRO, L | EC_PF_SEQ),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
@@ -519,6 +519,13 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
         snprintf(out, (size_t)cap, "%s", b);
         break;
     case EC_PF_RATE: snprintf(out, (size_t)cap, "%s", ec_rate_label((int)(x + 0.5f))); break;
+    case EC_PF_MICRO: {                                                 /* 0.6.0 */
+        const int n = (int)floorf(x + 0.5f);
+        if (n)
+            snprintf(out, (size_t)cap, "%+d/%d", n, EC_MICRO_DIV);
+        else
+            snprintf(out, (size_t)cap, "0");
+    } break;
     case EC_PF_UNIT: ec_param_format_unit(id, x, out, cap); break;   /* E4 */
     case EC_PF_MDST: {                                                  /* 0.5.0 */
         const int t = (int)floorf(x + 0.5f) - 1;

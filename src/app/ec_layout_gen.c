@@ -8,7 +8,7 @@ static const ec_item_t ec_layout_shipped_item[624] = {
     {EC_IT_PARAM, EC_P_PITCH, 0, "NOTE"},
     {EC_IT_PARAM, EC_P_LENGTH, 0, NULL},
     {EC_IT_PARAM, EC_P_VELOCITY, 0, NULL},
-    {EC_IT_BLANK, 0, 0, NULL},
+    {EC_IT_PARAM, EC_P_MICRO, 0, "MICRO"},
     {EC_IT_BLANK, 0, 0, NULL},
     {EC_IT_PARAM, EC_P_ENV_RESET, 0, "ENV RESET"},
     {EC_IT_PARAM, EC_P_LFO_RESET, 0, "LFO RESET"},

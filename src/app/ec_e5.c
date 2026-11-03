@@ -121,6 +121,14 @@ void ec_e5_edit_param(int track, int id, int plock)
     }
 }
 
+void ec_e5_edit_params(int track, const uint8_t *ids, int n, const char *label)
+{
+    int i;
+    ec_undo_params(&E->undo, &A->proj, track, ids, n, label, A->ms);
+    for (i = 0; i < n; i++)
+        ec_scene_knob(&A->proj, track, ids[i]);
+}
+
 void ec_e5_edit_global(int id, float old)
 {
     static const char *const L[] = {"BPM", "SWING", "GLEN", "QUANT", "RTN"};

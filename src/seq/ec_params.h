@@ -82,8 +82,18 @@ enum {
     EC_P_MICRO = EC_P_MTX_END,  /* micro timing: a trig early / late by n / EC_MICRO_DIV of a step (-12..12); a step
                                  * lock in practice (the track value shifts every trig of the track) */
     EC_P_V6_END,
-    EC_NP = EC_P_V6_END
+    /* 0.6.1: the second insert (docs/UX-V2.md §9). INS 2 runs after INS 1. Its machine and MIX are its own; its
+     * params are P1..P8, mapped by index onto the machine's FX params (ec_ins2_param: the layout's FX/INSERT order),
+     * held in that param's SPEC units and reset to its defaults when the machine changes (ec_ins2_reset).
+     * EC_P_FX_WET is the K4 MIX of the machines without a blend of their own (DESTROY, DJ EQ, DUCK, MOTION, LIMIT;
+     * default 127 = fully wet, as before 0.6.1), INS 1's and a bus's */
+    EC_P_FX_WET = EC_P_V6_END,
+    EC_P_INS2_MACHINE, EC_P_INS2_MIX,
+    EC_P_INS2_P1, EC_P_INS2_P2, EC_P_INS2_P3, EC_P_INS2_P4, EC_P_INS2_P5, EC_P_INS2_P6, EC_P_INS2_P7, EC_P_INS2_P8,
+    EC_P_V61_END,
+    EC_NP = EC_P_V61_END
 };
+#define EC_INS2_NP 8            /* INS 2's generic params (the most any machine has: DESTROY's eight) */
 #define EC_MICRO_DIV 24         /* micro timing units per step (as Elektron's 1/384 note on a 16th): +-12 = half a step */
 _Static_assert(EC_NP <= 255, "param ids are u8 in saves and step locks");
 
@@ -164,6 +174,21 @@ void ec_param_format_unit(int id, float x, char *out, int cap);
 void ec_params_fx(const float *v, ec_fx_params_t *fx);
 /* the MOD params of v -> ec_mod_params_t (env_range for the mod env times) */
 void ec_params_mod(const float *v, ec_mod_params_t *mod);
+
+/* 0.6.1: the second insert. The FX param ids machine m's P(k+1) stands for (k 0..EC_INS2_NP-1), -1 past its last;
+ * how many it has; the k of fx param id on machine m, -1 */
+int ec_ins2_param(int machine, int k);
+int ec_ins2_count(int machine);
+int ec_ins2_index(int machine, int id);
+/* the param whose definition (range, format, label, options) id borrows: INS 2's P1..P8 their mapped FX param on
+ * v's INS 2 machine (-1: none on that machine), INS 2's MIX the machine's MIX (ec_fx_mix_id); else id itself */
+int ec_param_def_id(const float *v, int id);
+/* the K4 MIX of machine m: EC_P_FX_MIX, or EC_P_FX_WET for the machines without a blend of their own */
+int ec_fx_mix_id(int machine);
+/* INS 2's MIX and P1..P8 to the defaults of v's INS 2 machine (the machine just changed) */
+void ec_ins2_reset(float *v);
+/* INS 2's params of v -> ec_fx_params_t (the FX params it does not map keep their defaults) */
+void ec_params_fx2(const float *v, ec_fx_params_t *fx);
 
 /* SPEC values -> engine params (the Lua xforms). playhead_return: the global option 1..3 */
 void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_return, ec_track_params_t *out);

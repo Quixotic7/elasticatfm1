@@ -124,12 +124,14 @@ void ec_mtx_apply(float *v, const float *live)
         ec_mtx_sources(v, live, src);
         for (k = 0; k < EC_MTX_SLOTS; k++)        /* (every offset from the same values, then added) */
             if (dst[k] >= 0 && is_macro(dst[k]) == !pass) {
-                const ec_param_def_t *d = &EC_PARAMS[dst[k]];
+                const int di = ec_param_def_id(v, dst[k]);   /* 0.6.1: INS 2's params: the mapped param's range */
+                const ec_param_def_t *d = &EC_PARAMS[di >= 0 ? di : dst[k]];
                 add[k] = src[ec_mtx_src(v, k)] * ec_mtx_depth(v, k) * (d->max - d->min);
             }
         for (k = 0; k < EC_MTX_SLOTS; k++)
             if (dst[k] >= 0 && is_macro(dst[k]) == !pass && add[k] != 0.0f) {
-                const ec_param_def_t *d = &EC_PARAMS[dst[k]];
+                const int di = ec_param_def_id(v, dst[k]);
+                const ec_param_def_t *d = &EC_PARAMS[di >= 0 ? di : dst[k]];
                 const float x = v[dst[k]] + add[k];
                 v[dst[k]] = x < d->min ? d->min : x > d->max ? d->max : x;
             }

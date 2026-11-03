@@ -77,12 +77,15 @@ void ec_clip_paste_slice(const ec_clip_slice_t *c, ec_slicemap_t *m, int slice);
 void ec_e5_random_name(char *out, int cap, uint32_t *rng);   /* namesizer: "descriptor thing" (<= 16) */
 
 /* ---- quick undo (lib/undo.lua): gesture-coalesced, 16 deep ---- */
-enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS };
+enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1: several params at once */ };
+#define EC_U_NV 10              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8) */
 typedef struct {
     uint8_t kind;
     int8_t track, pat;
     uint8_t id;
     float val;
+    uint8_t nv, ids[EC_U_NV];      /* EC_U_PARAMS: the params and their values */
+    float vals[EC_U_NV];
     uint16_t mask;                 /* EC_U_STEPS: the steps of page `id` saved in st[] */
     ec_step_t st[16];
     uint32_t key, ms;
@@ -105,6 +108,9 @@ ec_undo_entry_t *ec_undo_record(ec_undo_t *u, uint32_t key, uint32_t ms);
 void ec_undo_param(ec_undo_t *u, const ec_project_t *p, int track, int id, uint32_t ms);
 void ec_undo_global(ec_undo_t *u, int id, float old, const char *label, uint32_t ms);
 void ec_undo_xfade(ec_undo_t *u, const ec_project_t *p, uint32_t ms);
+/* 0.6.1: n (<= EC_U_NV) params of a track as one entry (one UNDO puts them all back) */
+void ec_undo_params(ec_undo_t *u, const ec_project_t *p, int track, const uint8_t *ids, int n, const char *label,
+                    uint32_t ms);
 void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int track, int page, uint16_t mask, const char *label,
                    uint32_t key, uint32_t ms);
 /* pop the last entry into the project; returns its kind (0: nothing to undo). EC_U_GLOBAL: *gid / *gval are the

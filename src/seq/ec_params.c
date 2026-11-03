@@ -281,6 +281,19 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MTX8_DEPTH] = NUM("mtx8_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
     /* 0.6.0: micro timing (sequencer domain: never sent to the engine, never morphed or modulated) */
     [EC_P_MICRO] = NUM("micro_timing", "MICRO", -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2, 1, 0, EC_PF_MICRO, L | EC_PF_SEQ),
+    /* 0.6.1: the K4 MIX of the machines without a blend (INS 1 / a bus), the second insert (ec_params.h). INS 2's
+     * P1..P8 hold the mapped FX param's SPEC units: their own range here only bounds what any FX param can be */
+    [EC_P_FX_WET] = NUM("fx_wet", "MIX", 0, 127, 1, 127, EC_PF_INT, L | EC_PF_FX),
+    [EC_P_INS2_MACHINE] = OPT("fx_insert2_machine", "MACH", 1, 0, O_FX),
+    [EC_P_INS2_MIX] = NUM("fx2_mix", "MIX", 0, 127, 1, 64, EC_PF_INT, L),
+    [EC_P_INS2_P1] = NUM("fx2_p1", "P1", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P2] = NUM("fx2_p2", "P2", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P3] = NUM("fx2_p3", "P3", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P4] = NUM("fx2_p4", "P4", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P5] = NUM("fx2_p5", "P5", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P6] = NUM("fx2_p6", "P6", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P7] = NUM("fx2_p7", "P7", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_INS2_P8] = NUM("fx2_p8", "P8", 0, 128, 1, 0, EC_PF_INT, L),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
@@ -633,5 +646,6 @@ void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_re
     p->spectral_blur = v[EC_P_SPECTRAL_BLUR];
     p->formant_shift = v[EC_P_FORMANT_SHIFT];
     ec_params_fx(v, &p->fx);     /* E4 (ec_params_e4.c) */
+    ec_params_fx2(v, &p->fx2);   /* 0.6.1 */
     ec_params_mod(v, &p->mod);
 }

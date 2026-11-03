@@ -13,6 +13,7 @@
 #include "ec_scr_e5.h"
 #include "ec_screens.h"
 #include "ec_scr_e4.h"
+#include "ec_scr_modes.h"
 #include "ec_scr_ux.h"
 #include "ec_ui_kit.h"
 
@@ -80,7 +81,7 @@ static void right_info(const ec_app_t *a, char *out, size_t cap)
 
 static void title_of(const ec_app_t *a, const ec_page_t *pg, char *out, size_t cap)
 {
-    snprintf(out, cap, "%s/%s", ec_cat_name(a->cat), a->settings ? "SETUP" : pg->title);
+    snprintf(out, cap, "%s/%s", ec_cat_tag(a->cat), a->settings ? "SETUP" : pg->title);   /* 0.6.0: the tag */
 }
 
 /* ------------------------------------------------------------------------------------------- cells --- */
@@ -420,10 +421,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     sample_area(a, 22, 58);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
-        if (a->keymode == EC_KM_STEPS && !a->sel_held)
-            step_strip(a, 63, 68, 0);
-        else
-            key_ruler(a, 66);
+        key_ruler(a, 66);                          /* 0.6.0: LOOP ENGINE's white keys play the loop */
     }
     cells(a, pg);
 }
@@ -559,17 +557,12 @@ static void mix_screen(const ec_app_t *a, const ec_page_t *pg)
     const int sel = a->bus ? EC_NTRACK - 1 + a->bus : a->track;
     char t[32], r[16];
     int i;
-    snprintf(t, sizeof t, "MST/MIX");
-    if (a->bus) {
+    snprintf(t, sizeof t, "%s", ec_cat_tag(EC_CAT_MASTER));   /* 0.6.0: MIX, the track's rate (the mock) */
+    if (a->bus)
         right_info(a, r, sizeof r);
-    } else {
-        char vol[8], pan[8];
-        const float *v = tv(a);
-        ec_param_format(EC_P_AMP, v[EC_P_AMP], 3, vol, sizeof vol);
-        ec_param_format(EC_P_PAN, v[EC_P_PAN], 3, pan, sizeof pan);
-        snprintf(r, sizeof r, "%s %s", vol, pan);
-    }
-    header(a, t, a->page[EC_CAT_MASTER] + 1, r);
+    else
+        snprintf(r, sizeof r, "%s", ec_rate_label(iv(tv(a), EC_P_RATE)));
+    header(a, t, 0, r);
     for (i = 0; i < 9; i++) {
         const int x = 2 + i * 13, cx = x + 6, x0 = cx - 5;
         const int muted = i < EC_NTRACK && a->proj.pat[a->proj.current].tr[i].v[EC_P_MUTE] > 0.5f;
@@ -682,7 +675,7 @@ static void pat_screen(const ec_app_t *a, const ec_page_t *pg)
     const int bank = a->proj.current / 16;
     char t[32], r[16];
     int i;
-    snprintf(t, sizeof t, "PAT/%s", a->patn_open ? "LOAD" : pg->title);
+    snprintf(t, sizeof t, "%s/%s", ec_cat_tag(EC_CAT_PAT), pg->title);
     right_info(a, r, sizeof r);
     header(a, t, 1, r);
     for (i = 0; i < 16 && bank * 16 + i < EC_NPAT; i++) {
@@ -726,12 +719,6 @@ static void draw_main(const ec_app_t *a)
         return;
     }
     ec_app_page(a, &pg);
-    if (a->patn_open) {
-        ec_page_t pp;
-        ec_page_items(EC_CAT_PAT, 0, tv(a), 0, &pp);
-        pat_screen(a, &pp);
-        return;
-    }
     if (a->settings) {
         settings_screen(a, &pg);
         return;
@@ -760,9 +747,17 @@ void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg) { cells(a, pg); }
 void ec_screens_draw(const ec_app_t *a)
 {
     ec_gfx_fill(EC_C_BG);
-    if (!ec_scr_ux_full(a) && !ec_scr_e5_full(a))   /* 0.3.0: F3; E5: naming, the SCENE page */
+    if (a->pn.intro) {                            /* 0.6.0: the intro (any key or knob skips it) */
+        ec_scr_intro(a->pn.intro_frame);
+        ec_gfx_present();
+        return;
+    }
+    if (a->e5.naming)                             /* E5: naming */
+        ec_scr_e5_full(a);
+    else if (!ec_scr_ux_full(a) && !ec_scr_modes_full(a) && !ec_scr_e5_full(a))   /* F3; 0.6.0: the mode screens */
         draw_main(a);
-    ec_scr_e5_overlay(a);                         /* E5: the scene strip, toasts */
-    ec_scr_ux_overlay(a);                         /* 0.3.0: the takeover, SHIFT's map */
+    ec_scr_e5_overlay(a);                         /* E5: toasts */
+    ec_scr_ux_overlay(a);                         /* 0.3.0: the takeover, SHIFT's screen */
+    ec_scr_modes_overlay(a);                      /* 0.6.0: the mode pop-up */
     ec_gfx_present();                             /* the canvas through the theme to the LCD at 2x */
 }

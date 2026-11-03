@@ -21,7 +21,7 @@ static const char *const TN[EC_NTRACK] = {"T1", "T2", "T3", "T4", "T5", "T6"};
 
 static int scene_page(const ec_app_t *a)
 {
-    return !a->settings && ec_page_pic(a->cat, a->page[a->cat], a->bus) == EC_PIC_SCENE && !a->patn_open;
+    return !a->settings && ec_page_pic(a->cat, a->page[a->cat], a->bus) == EC_PIC_SCENE;
 }
 
 /* ------------------------------------------------------------------------------------------- the fader --- */
@@ -229,7 +229,7 @@ void ec_scr_e5_overlay(const ec_app_t *a)
         fader(a, 12);
         R(EC_C_L3, 0, 40, W, 1);
     }
-    if (!full && (a->patn_open || a->cat == EC_CAT_PAT) && !a->settings) {   /* the pattern's name */
+    if (!full && (a->cat == EC_CAT_PAT && !a->scr) && !a->settings) {   /* the pattern's name */
         const char *n = ec_e5_pattern_name(a->proj.current);
         if (n[0]) {
             char b[24];

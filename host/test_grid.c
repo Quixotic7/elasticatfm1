@@ -115,13 +115,17 @@ static void reset_state(void)
     A->e5.confirm = 0;
     A->e5.toast_ms = 0;
     A->e5.toast_keep = 0;
-    A->patn_open = 0;
     A->rec.open = 0;
     A->ux.to_ms = 0;
     A->fn = 0;
     A->msg_ms = 0;
-    A->keymode = EC_KM_STEPS;
-    A->sel_held = 0;
+    A->scr = 0;                                    /* 0.6.0: the modes */
+    A->pn.pop = 0;
+    A->pn.intro = 0;
+    A->pn.cat = 0;
+    A->pn.as_open = 0;
+    A->pn.shift_held = A->pn.shift_sticky = 0;
+    A->pn.target = 0;
 }
 
 /* ------------------------------------------------------------------------------------------- the kit --- */
@@ -234,6 +238,78 @@ static void every_page(const char *tag)
     }
 }
 
+/* 0.6.0: the mode screens (src/ui/ec_scr_modes.c) and the mode pop-up, by setting the panel's state */
+static void test_modes(void)
+{
+    float *v = ec_app_params(A);
+    const float mach0 = v[EC_P_MACHINE];
+    char name[48];
+    int m, f;
+    reset_state();
+    for (m = 0; m < EC_NMODE; m++) {                       /* every mode's pop-up over its screen */
+        if (m < EC_NCAT) {
+            A->scr = 0;
+            A->cat = m;
+        } else
+            A->scr = m;
+        A->pn.pop = m + 1;
+        A->pn.pop_ms = A->ms ? A->ms : 1;
+        snprintf(name, sizeof name, "popup_%d", m);
+        shot(name);
+        A->pn.pop = 0;
+        snprintf(name, sizeof name, "mode_%d", m);
+        shot(name);
+    }
+    A->scr = EC_MODE_KEYBOARD;                             /* KEYBOARD: keys, then a slice track with a target */
+    A->pn.oct = -1;
+    shot("keyboard_keys");
+    v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;
+    A->pn.target = 5;
+    A->pn.kb_bank = 1;
+    shot("keyboard_slices");
+    v[EC_P_MACHINE] = mach0;
+    A->pn.target = 0;
+    A->pn.oct = 0;
+    A->scr = EC_MODE_PAGES;                                /* PAGES: a 64-step pattern, page 3 */
+    v[EC_P_PATTERN_STEPS] = 64;
+    A->step_page = 2;
+    shot("pages_64");
+    v[EC_P_PATTERN_STEPS] = 16;
+    A->step_page = 0;
+    A->scr = 0;
+    A->cat = EC_CAT_XFD;                                   /* CROSSFADER gliding */
+    A->e5.gliding = 1;
+    A->e5.glide_target = 0.8f;
+    A->pn.xf_key = 9;
+    shot("xfd_glide");
+    A->e5.gliding = 0;
+    A->pn.xf_key = -1;
+    A->cat = EC_CAT_PAT;                                   /* PATTERN LAUNCH, bank C */
+    A->pn.bank = 2;
+    shot("patterns_c");
+    A->pn.bank = 0;
+    A->cat = EC_CAT_MASTER;                                /* MIX's CAT, a few frames */
+    A->pn.cat = 1;
+    for (f = 0; f < 12; f += 5) {
+        A->ms += 100;
+        snprintf(name, sizeof name, "cat_%d", f);
+        shot(name);
+    }
+    A->pn.cat = 0;
+    A->pn.as_open = 1;                                     /* APP SETTINGS, the cursor on row 6 */
+    A->pn.as_row = 6;
+    shot("app_settings");
+    A->pn.as_open = 0;
+    A->pn.intro = 1;                                       /* the intro */
+    for (f = 0; f < ec_scr_intro_frames(); f += 9) {
+        A->pn.intro_frame = f;
+        snprintf(name, sizeof name, "intro_%d", f);
+        shot(name);
+    }
+    reset_state();
+    A->cat = EC_CAT_SRC;
+}
+
 static void test_app(void)
 {
     float *v = ec_app_params(A);
@@ -282,10 +358,8 @@ static void test_app(void)
             snprintf(name, sizeof name, "machine%d_src_%d", m, A->page[EC_CAT_SRC] + 1);
             shot(name);
         }
-        A->keymode = EC_KM_LOOP;
         A->page[EC_CAT_SRC] = 0;
         shot("loop_keys");
-        A->keymode = EC_KM_STEPS;
         v[EC_P_MACHINE] = mach0;
         A->track = 0;
         v = ec_app_params(A);
@@ -311,9 +385,7 @@ static void test_app(void)
     A->rec.open = 1;
     shot("rec");
     A->rec.open = 0;
-    A->patn_open = 1;
-    shot("patn");
-    A->patn_open = 0;
+    test_modes();
     A->ux.to_ms = A->ms ? A->ms : 1;
     A->ux.to_kind = EC_TO_SAMPLE;
     snprintf(A->ux.to_label, sizeof A->ux.to_label, "SAMPLE");
@@ -326,10 +398,15 @@ static void test_app(void)
     shot("takeover_value");
     A->ux.to_ms = 0;
     A->fn = 1;
+    A->pn.shift_held = 1;
     A->ux.shift_used = 0;
     A->ux.shift_ms = 0;
     A->ms += 5000;
     shot("shift_map");
+    A->pn.shift_held = 0;
+    A->pn.shift_sticky = 1;
+    shot("shift_sticky");
+    A->pn.shift_sticky = 0;
     A->fn = 0;
     snprintf(A->e5.toast, sizeof A->e5.toast, "COPIED 4 STEPS");
     A->e5.toast_ms = A->ms;

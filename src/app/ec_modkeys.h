@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* 0.5.0: the mod matrix on the panel (docs/MOD-MATRIX.md): the MATRIX page (SELECT the row, K1 SRC, K2 DST,
- * K3 DEPTH), MOD KEYS (hold MOD or SHIFT + MOD: the 11 black keys are the sources; hold one + turn a value knob =
- * that source onto that param, its depth; a tap = the source's page; SCN A / B held + a knob = that scene's value),
- * the cells' marks, the live controls (aftertouch, CC 1, CC 11). The state lives in ec_app_t.mk; ec_app.c's input
+ * K3 DEPTH), the source keys (0.6.0: the source template's B6..B10 and MODULATION's M1..M4, ec_srckeys.c: hold one +
+ * turn a value knob = that source onto that param, its depth; F2 while turning removes it), the cells' marks, the
+ * live controls (aftertouch, CC 1, CC 11). The state lives in ec_app_t.mk; ec_app.c's input
  * dispatch calls the functions below. */
 #ifndef EC_MODKEYS_H
 #define EC_MODKEYS_H
@@ -15,7 +15,6 @@ enum { EC_MK_LFO1, EC_MK_LFO2, EC_MK_ENV, EC_MK_VEL, EC_MK_AT, EC_MK_M1, EC_MK_M
        EC_MK_SCNB, EC_MK_N };
 
 typedef struct {
-    int on;                      /* MOD KEYS is on (the black keys are the sources) */
     int held;                    /* the black key held (EC_MK_*), -1 none */
     int used;                    /* a knob turned during the hold (no tap) */
     uint16_t created;            /* slots this hold created (bit k) */
@@ -29,9 +28,9 @@ typedef struct {
 int ec_mk_src_of_key(int i);                 /* EC_MK_* -> ec_mtx.h EC_MS_*, 0 for the scene keys */
 const char *ec_mk_key_name(int i);           /* "LFO 1" .. "SCN B" */
 
-void ec_mk_toggle(void);                     /* hold MOD / SHIFT + MOD */
-void ec_mk_off(void);                        /* HOME */
-int ec_mk_upper(int i, int down);            /* 1: the black key is MOD KEYS' */
+void ec_mk_hold(int i);                      /* a source key (EC_MK_*) went down */
+int ec_mk_release(void);                     /* it came up: 1 = a tap (no knob turned during the hold) */
+void ec_mk_off(void);                        /* (a mode change: the hold ends, no tap) */
 /* a cell turned while a source key is held: 1 = taken (mapped / refused / cleared) */
 int ec_mk_turn(const ec_item_t *it, int role, int det);
 /* SELECT on the MATRIX page: 1 = taken (the row; past the ends the caller steps the page) */
@@ -52,7 +51,6 @@ uint32_t ec_mk_marks(int id);
 int ec_mk_hot_slot(int id);
 
 void ec_mk_tick(void);                       /* the live controls -> the engine, the release of a hold */
-void ec_mk_leds(void);
-void ec_mk_labels(void);
+void ec_mk_labels(void);                     /* a source held: the knobs' labels */
 
 #endif

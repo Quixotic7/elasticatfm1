@@ -16,15 +16,11 @@ enum { EC_NM_NONE, EC_NM_PATTERN, EC_NM_PROJECT };           /* what the naming 
 
 typedef struct {
     /* scenes */
-    int anchor;                  /* the scene anchor held: 0 none, 1 A, 2 B */
-    uint8_t glide_held;          /* glide keys held (bit 0..5) */
-    int gliding;
+    int anchor;                  /* the scene anchor held: 0 none, 1 A, 2 B (0.6.0: CROSSFADER's B1 / B2) */
+    uint8_t glide_held;          /* (0.6.0: CROSSFADER's W key held: bit 0) */
+    int gliding;                 /* 0.6.0: CROSSFADER's pressure glide (src/app/ec_xfd.c) */
     float glide_target;
     uint32_t glide_ms;
-    /* the PAGE scope: an OCT key held (ec_app.c sets it) */
-    int page_down;
-    /* PATN held (pattern scope) */
-    int patn_down;
     int confirm;                 /* the pattern clear's question is open (0.3.0: OCT+ yes, OCT- no) */
     uint32_t confirm_ms;
     /* clipboards: each scope its own */
@@ -55,14 +51,12 @@ typedef struct {
 /* the hooks (ec_app.c) */
 void ec_e5_init(void);
 void ec_e5_tick(void);
-int ec_e5_scope_op(int b);                              /* REC / PLAY (SHIFT + PLAY) with a scope held: 1 = done */
-int ec_e5_scope_held(void);
-void ec_e5_answer(int yes);                              /* 0.3.0: the open question (CLEAR P01?) */
-void ec_e5_undo(int redo);                               /* 0.3.0: SHIFT + OCT- / OCT+ */
-void ec_e5_memorize(void);                               /* 0.3.0: SHIFT + T1 */
-void ec_e5_recall_memo(void);                            /* 0.3.0: SHIFT + T2 */
-void ec_e5_pattern_copy(int paste);                      /* 0.3.0: SHIFT + S1 / S2 */
-void ec_e5_name_pattern(void);                           /* 0.3.0: SHIFT + PATN */
+void ec_e5_answer(int yes);                              /* 0.3.0: the open question */
+void ec_e5_undo(int redo);                               /* 0.6.0: SHIFT + F1 / F2 */
+void ec_e5_memorize(void);                               /* 0.6.0: SHIFT + B3 */
+void ec_e5_recall_memo(void);                            /* 0.6.0: SHIFT + B4 */
+void ec_e5_name_pattern(void);                           /* 0.6.0: F3 + PRESETS */
+void ec_e5_xf_apply(float pos);                          /* 0.6.0: the crossfader to pos (CROSSFADER's glide) */
 void ec_e5_name_close(int accept);                       /* 0.3.0: naming: OCT+ keeps, OCT- / HOME cancel */
 void ec_e5_page_key(int i, int mode);                    /* 0.3.0: F3's lower keys (EC_PM_SELECT / EC_PM_LOOP) */
 int ec_e5_lower_down(int k, int i, int vel);
@@ -81,8 +75,8 @@ float ec_e5_item_frac(const ec_item_t *it, float x);
 int ec_e5_leds_lower(void);
 void ec_e5_leds(void);
 void ec_e5_ui_info(char *buf, uint32_t n);
-int ec_e5_loop_key(int k, int i, int down);             /* the loop key / pad number 1..32 of lower key i */
-int ec_e5_scene_layer(void);                             /* the lower keys are the scene row now */
+int ec_e5_loop_key(int k, int i, int down);             /* the loop key / pad 1..32 of white key i (the zoom) */
+int ec_e5_scene_layer(void);                             /* (0.6.0: always 0, the scene row is gone) */
 int ec_e5_page_visible(void);
 const char *ec_e5_pattern_name(int idx);                 /* "" when unnamed */
 float ec_e5_rate_of_key(int i);                          /* PAGE > RATE: key i -> the rate index */

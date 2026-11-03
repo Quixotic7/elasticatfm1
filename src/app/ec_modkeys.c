@@ -143,59 +143,10 @@ static void bad(const char *why, const char *label)
     MK->bad_ms = A->ms ? A->ms : 1;
 }
 
-/* ------------------------------------------------------------------------------------------- MOD KEYS --- */
-void ec_mk_toggle(void)
-{
-    MK->on = !MK->on;
-    MK->held = -1;
-    ec_app_message(MK->on ? "MOD KEYS" : "MOD KEYS OFF");
-    A->redraw = 1;
-}
-
-static void release(void);
-void ec_mk_off(void)
-{
-    if (MK->held >= 0)
-        release();
-    MK->on = 0;
-    MK->held = -1;
-}
-
-/* the page a source key's tap opens */
-static void goto_source(int i)
-{
-    int c = EC_CAT_MOD, pic = EC_PIC_MATRIX, arg = -1, p;
-    switch (i) {
-    case EC_MK_LFO1: pic = EC_PIC_LFO1; break;
-    case EC_MK_LFO2: pic = EC_PIC_LFO2; break;
-    case EC_MK_ENV: pic = EC_PIC_MENV; break;
-    case EC_MK_VEL: pic = EC_PIC_VEL; break;
-    case EC_MK_SCNA:
-    case EC_MK_SCNB: c = EC_CAT_MASTER, pic = EC_PIC_SCENE; break;
-    case EC_MK_AT: break;
-    default: pic = EC_PIC_MACRO, arg = i - EC_MK_M1; break;
-    }
-    for (p = 0; p < ec_cat_pages(c, tv()); p++) {
-        ec_page_t pg;
-        ec_page_items(c, p, tv(), 0, &pg);
-        if (pg.pic == pic && (arg < 0 || pg.arg == arg)) {
-            ec_app_goto(c, p);
-            return;
-        }
-    }
-    if (pic == EC_PIC_MACRO)                              /* (a layout without MACRO n: the macros' page) */
-        for (p = 0; p < ec_cat_pages(c, tv()); p++)
-            if (ec_page_pic(c, p, 0) == EC_PIC_MACROS) {
-                ec_app_goto(c, p);
-                return;
-            }
-    ec_app_goto(c, 0);
-}
-
-/* the key comes up: free the slots this hold made and left at 0 (no locks on their depth), a tap's page */
+/* ------------------------------------------------------------------------------------------- the source keys --- */
+/* a hold ends: free the slots it made and left at 0 (no locks on their depth) */
 static void release(void)
 {
-    const int i = MK->held;
     float *v = tv();
     int k;
     for (k = 0; k < EC_MTX_SLOTS; k++)
@@ -205,35 +156,35 @@ static void release(void)
         ec_seq_touch(&A->seq, A->track);
         ec_app_mark_dirty();
     }
-    if (i == EC_MK_SCNA || i == EC_MK_SCNB) {
-        if (A->e5.anchor == i - EC_MK_SCNA + 1)
-            A->e5.anchor = 0;
-    }
     MK->held = -1;
     MK->created = 0;
     MK->hot_id = -1;
-    if (!MK->used)
-        goto_source(i);
     A->redraw = 1;
 }
 
-int ec_mk_upper(int i, int down)
+void ec_mk_hold(int i)
 {
-    if (!MK->on || i < 0 || i >= EC_MK_N)
-        return 0;
-    if (down) {
-        if (MK->held >= 0)
-            return 1;                                     /* (one source at a time) */
-        MK->held = i;
-        MK->used = 0;
-        MK->created = 0;
-        MK->hot_id = -1;
-        if (i == EC_MK_SCNA || i == EC_MK_SCNB)
-            A->e5.anchor = i - EC_MK_SCNA + 1;            /* the scene anchor path (ec_e5_knob_cell) */
-    } else if (MK->held == i)
+    if (MK->held >= 0)
         release();
+    MK->held = i;
+    MK->used = 0;
+    MK->created = 0;
+    MK->hot_id = -1;
     A->redraw = 1;
-    return 1;
+}
+
+int ec_mk_release(void)
+{
+    const int tap = MK->held >= 0 && !MK->used;
+    if (MK->held >= 0)
+        release();
+    return tap;
+}
+
+void ec_mk_off(void)
+{
+    if (MK->held >= 0)
+        release();
 }
 
 int ec_mk_turn(const ec_item_t *it, int role, int det)
@@ -242,11 +193,9 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
     int src, id, k;
     float *v;
     char lb[24], val[16];
-    if (!MK->on || i < 0)
+    if (i < 0 || !KEY_SRC[i])
         return 0;
     MK->used = 1;
-    if (i == EC_MK_SCNA || i == EC_MK_SCNB)
-        return 0;                                         /* ec_e5_knob_cell writes the scene */
     src = KEY_SRC[i];
     if (it->kind != EC_IT_PARAM || A->bus || A->settings || !ec_param_mod_dest(it->id)) {
         bad("NO MOD", ec_mk_key_name(i));
@@ -256,8 +205,8 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
     v = tv();
     k = ec_mtx_find(v, src, id);
     MK->hot_id = id;
-    if (A->ux.oct_held & 2) {                             /* OCT+ held: clear that source's slot on this param */
-        A->ux.oct_used |= 2;
+    if (ec_pn_f(2)) {                                     /* 0.6.0, F2 while turning: remove that route */
+        A->pn.f_used = 3;
         if (k >= 0) {
             slot_clear(v, k);
             ec_seq_touch(&A->seq, A->track);
@@ -297,7 +246,7 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
 int ec_mk_hot_slot(int id)
 {
     const int i = MK->held;
-    if (!MK->on || i < 0 || !KEY_SRC[i] || A->bus)
+    if (i < 0 || !KEY_SRC[i] || A->bus)
         return -1;
     return ec_mtx_find(tv(), KEY_SRC[i], id);
 }
@@ -347,22 +296,12 @@ void ec_mk_tick(void)
         ec_dsp_mod_live(A->dsp, t, t == A->track ? MK->at : 0.0f, MK->mw, MK->expr);
 }
 
-void ec_mk_leds(void)
-{
-    int i;
-    if (!MK->on)
-        return;
-    for (i = 0; i < EC_NUPPER && i < EC_MK_N; i++)
-        ec_plat_led_upper(i, MK->held == i ? EC_LED_LIT : EC_LED_DIM);
-    ec_plat_led_button(EC_B_LFO, EC_LED_LIT);
-}
-
 void ec_mk_labels(void)
 {
     int i;
-    if (!MK->on || A->fn || A->e5.naming)
+    if (MK->held < 0 || !KEY_SRC[MK->held] || A->fn || A->e5.naming || A->ux.f3)
         return;
-    if (MK->held >= 0 && KEY_SRC[MK->held] && !A->ux.f3) {   /* a source held: the knobs map it */
+    {
         ec_page_t pg;
         int lane;
         ec_app_page(A, &pg);
@@ -378,7 +317,4 @@ void ec_mk_labels(void)
             ec_plat_label(EC_LBL_KNOB0 + EC_E_K1 + i, b);
         }
     }
-    for (i = 0; i < EC_NUPPER && i < EC_MK_N; i++)
-        ec_plat_label(EC_LBL_BLACK0 + i, ec_mk_key_name(i));
-    ec_plat_label(EC_LBL_BTN0 + EC_B_LFO, "MOD KEYS");
 }

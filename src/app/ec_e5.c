@@ -1,14 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* E5 on the panel (ec_e5app.h). The gestures, as docs/FM1-CONTROLS.md "E5" lists them:
- *   scene row (OCT to SCENE, or the MST > SCENE page): lower keys 1 / 9 = scene A, 8 / 16 = scene B, 2-7 / 10-15 =
- *     the six glide positions A..B. Hold an anchor + turn a knob = that param into the scene; FN + anchor = capture
- *     everything; hold an anchor + PLAY = clear that scene.
- *   REC / PLAY / FN+PLAY (= STOP) = COPY / CLEAR / PASTE with a scope held: step(s), slice pad(s), PAGE (an OCT key
- *     held), PATN (held; clear asks for a second PLAY).
- *   in the loop layer, FN + key = loop keys / slice pads 17-32 (when LDIV > 16 / more than 16 slices).
- *   hold OCT- or OCT+ = PAGE: the lower keys are the pages (SELECT knob: page select / page loop / pattern rate).
- *   FN + OCT+ = memorize, FN + OCT- = recall. FN + SAVE = undo. PATN overlay + SAVE = name the pattern; MST setup
- *   NAME = name the project. Hold slice pad(s) + turn = slice lock; CHOK / SMUT cells = choke group / mute. */
+/* E5 on the panel (ec_e5app.h), as 0.6.0 keeps it (docs/UX-V2.md): the scene anchors' knob path (CROSSFADER's
+ * B1 / B2 held + a knob, src/app/ec_xfd.c), undo / redo (SHIFT + F1 / F2), memorize / recall (SHIFT + B3 / B4, the
+ * project as a record), pattern and project naming, F3's page keys, the slice pads' locks in LOOP ENGINE (hold pad(s)
+ * + turn = slice lock; CHOK / SMUT cells = choke group / mute), step preview, toasts. 0.6.0 took out the scene row,
+ * the copy / clear / paste scopes (now §2's one-step buffer, src/app/ec_clip.c) and the PAGE overlay. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,10 +14,11 @@
 #define A (&ec_app)
 #define E (&ec_app.e5)
 
-static ec_project_t g_memo;            /* memorize: the whole project in RAM */
+/* memorize: the project as a record (0.6.0: a second ec_project_t would be 9 MiB with 64 patterns) */
+static uint8_t g_memo[EC_PLAT_RECORD_MAX];
+static uint32_t g_memo_n;
 
-enum { R5_SWALLOW = 100, R5_ANCHOR_A, R5_ANCHOR_B, R5_GLIDE = 110 /* + 0..5 */ };
-enum { OP_COPY, OP_CLEAR, OP_PASTE };
+enum { R5_SWALLOW = 100 };
 
 static void preview_stop(void);
 static float global_get(int id);
@@ -59,12 +55,12 @@ static void dirty(void)
 }
 
 static int pages_of(int t) { return (ec_seq_pattern_steps(&A->seq, t) + 15) / 16; }
-static int loop_layer(void) { return A->sel_held || A->keymode == EC_KM_LOOP; }
+static int loop_layer(void) { return ec_app_mode() == EC_CAT_SRC && !A->settings; }   /* 0.6.0: LOOP ENGINE */
 
 /* the slice pads held now (slice machines, the loop layer, no step held): bit s-1 */
 static uint32_t pads_held(void)
 {
-    if (A->bus || A->step_held || !loop_layer() || !is_slice_m(iv(tv(), EC_P_MACHINE)))
+    if (A->bus || !loop_layer() || !is_slice_m(iv(tv(), EC_P_MACHINE)))
         return 0;
     return A->seq.tr[A->track].pads;
 }
@@ -87,13 +83,8 @@ static void xf_apply(float pos)
     A->redraw = 1;
 }
 
-int ec_e5_scene_layer(void)
-{
-    if (E->naming || A->patn_open || A->sel_held || A->ux.f3)
-        return 0;
-    return A->keymode == EC_KM_SCENE ||
-           (!A->settings && ec_page_pic(A->cat, A->page[A->cat], A->bus) == EC_PIC_SCENE);   /* the SCENE page */
-}
+int ec_e5_scene_layer(void) { return 0; }
+void ec_e5_xf_apply(float pos) { xf_apply(pos); }   /* 0.6.0: the scene row is gone (CROSSFADER) */
 
 int ec_e5_page_visible(void) { return A->ux.f3; }   /* 0.3.0: the pages are F3's */
 
@@ -111,15 +102,6 @@ void ec_e5_init(void)
 
 void ec_e5_tick(void)
 {
-    if (E->gliding && A->ms - E->glide_ms >= 1000 / EC_GLIDE_HZ) {
-        const float cur = A->proj.e5.sc.pos;
-        const float next = ec_scene_glide_step(cur, E->glide_target, A->fn);
-        E->glide_ms = A->ms;
-        if (next != cur) {
-            xf_apply(next);
-            dirty();
-        }
-    }
     if (E->preview && A->seq.playing)
         preview_stop();                          /* the transport owns playback now */
     if (E->toast_ms && !E->toast_keep && A->ms - E->toast_ms > 900) {
@@ -202,7 +184,12 @@ void ec_e5_undo(int redo)
 /* ------------------------------------------------------------------------------------------- memorize --- */
 void ec_e5_memorize(void)
 {
-    g_memo = A->proj;
+    const int32_t n = ec_e5_memo_save(&A->proj, g_memo, sizeof g_memo);
+    if (n <= 0) {
+        toast("MEMO FULL");
+        return;
+    }
+    g_memo_n = (uint32_t)n;
     E->memo_ok = 1;
     toast("MEMORIZED");
 }
@@ -214,18 +201,26 @@ void ec_e5_recall_memo(void)
         toast("NOTHING MEMORIZED");
         return;
     }
-    /* the pool: only a slot whose path differs reloads (ram_recalling: same paths, no buffer reloads) */
-    for (s = 0; s < EC_NSLOT; s++)
-        if (strcmp(A->proj.slot[s].path, g_memo.slot[s].path)) {
-            ec_slotrt_t *r = &A->slot[s];
-            r->old_handle = r->state == EC_SL_READY ? r->handle : -1;
-            r->state = g_memo.slot[s].path[0] ? EC_SL_QUEUED : EC_SL_EMPTY;
-            if (!g_memo.slot[s].path[0])
-                r->handle = -1;
-            r->newmeta = 0;
-            r->builtin = 0;
+    {
+        /* the pool: only a slot whose path differs reloads (ram_recalling: same paths, no buffer reloads) */
+        static char before[EC_NSLOT][EC_PATH];
+        for (s = 0; s < EC_NSLOT; s++)
+            memcpy(before[s], A->proj.slot[s].path, EC_PATH);
+        if (ec_e5_memo_recall(&A->proj, g_memo, g_memo_n) != 0) {
+            toast("MEMO BAD");
+            return;
         }
-    ec_e5_recall(&A->proj, &g_memo);
+        for (s = 0; s < EC_NSLOT; s++)
+            if (strcmp(before[s], A->proj.slot[s].path)) {
+                ec_slotrt_t *r = &A->slot[s];
+                r->old_handle = r->state == EC_SL_READY ? r->handle : -1;
+                r->state = A->proj.slot[s].path[0] ? EC_SL_QUEUED : EC_SL_EMPTY;
+                if (!A->proj.slot[s].path[0])
+                    r->handle = -1;
+                r->newmeta = 0;
+                r->builtin = 0;
+            }
+    }
     ec_seq_reload(&A->seq);                    /* playing: the pattern restarts at step 1 (a direct start) */
     ec_seq_touch_all(&A->seq);
     toast("RECALLED");
@@ -244,8 +239,7 @@ static void name_open(int kind, int pat)
     n = (int)strlen(src);
     memcpy(E->name, src, (size_t)(n > EC_NAME - 1 ? EC_NAME - 1 : n));
     E->name_cur = clampi(n, 0, EC_NAME - 2);
-    A->patn_open = A->patn_latched = 0;
-    A->patn_ms = 0;
+    A->ux.f3 = 0;                                /* (F3 + PRESETS: the name screen replaces F3) */
     E->rng ^= A->ms * 2654435761u;
     A->redraw = 1;
 }
@@ -326,207 +320,24 @@ static void name_knob(int role, int det)
     A->redraw = 1;
 }
 
-/* ------------------------------------------------------------------------------------------- copy / clear / paste --- */
-static void steps_scope(int op)
-{
-    ec_ptrack_t *t = tr();
-    char b[28];
-    const uint16_t held = A->step_held;
-    int n;
-    switch (op) {
-    case OP_COPY:
-        n = ec_clip_copy_steps(&E->clip_steps, t, A->step_page, held);
-        if (n == 1)
-            snprintf(b, sizeof b, "COPY STEP %02d", A->step_page * 16 + first_bit(held) + 1);
-        else
-            snprintf(b, sizeof b, "COPY %d STEPS", n);
-        toast(b);
-        break;
-    case OP_CLEAR:
-        ec_e5_steps_edit(held, "CLEAR", 0x200u);
-        ec_clip_clear_locks(t, A->step_page, held);
-        toast("LOCKS CLEARED");
-        break;
-    default:
-        if (!E->clip_steps.n) {
-            toast("NOTHING COPIED");
-            break;
-        }
-        ec_e5_steps_edit(ec_clip_paste_mask(&E->clip_steps, held), "PASTE", 0x300u);
-        ec_clip_paste_steps(&E->clip_steps, t, A->step_page, held);
-        toast("PASTED");
-        break;
-    }
-    A->step_edited |= held;
-    ec_seq_touch(&A->seq, A->track);
-    dirty();
-}
-
-static void slice_scope(int op, uint32_t pads)
-{
-    ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
-    char b[28];
-    int s;
-    switch (op) {
-    case OP_COPY:
-        s = first_bit(pads) + 1;
-        ec_clip_copy_slice(&E->clip_slice, m, s);
-        snprintf(b, sizeof b, "COPY SLICE %02d", s);
-        toast(b);
-        break;
-    case OP_CLEAR:
-        for (s = 1; s <= 32; s++)
-            if (pads >> (s - 1) & 1u)
-                ec_slice_clear(m, s);
-        toast("SLICE CLEARED");
-        break;
-    default:
-        if (!E->clip_slice.ok) {
-            toast("NOTHING COPIED");
-            break;
-        }
-        for (s = 1; s <= 32; s++)
-            if (pads >> (s - 1) & 1u)
-                ec_clip_paste_slice(&E->clip_slice, m, s);
-        toast("SLICE PASTED");
-        break;
-    }
-    dirty();
-}
-
-static void page_scope(int op)
-{
-    char b[28];
-    const int pg = A->step_page;
-    switch (op) {
-    case OP_COPY:
-        ec_clip_copy_page(&E->clip_page, tr(), pg);
-        snprintf(b, sizeof b, "PAGE %d COPIED", pg + 1);
-        break;
-    case OP_CLEAR:
-        ec_e5_steps_edit(0xFFFFu, "CLR PAGE", 0x400u);
-        ec_clip_clear_page(tr(), pg);
-        snprintf(b, sizeof b, "PAGE %d CLEARED", pg + 1);
-        break;
-    default:
-        if (!E->clip_page.ok) {
-            snprintf(b, sizeof b, "NOTHING COPIED");
-            break;
-        }
-        ec_e5_steps_edit(0xFFFFu, "PST PAGE", 0x500u);
-        ec_clip_paste_page(&E->clip_page, tr(), pg);
-        snprintf(b, sizeof b, "PASTED TO PAGE %d", pg + 1);
-        break;
-    }
-    toast(b);
-    ec_seq_touch(&A->seq, A->track);
-    dirty();
-}
-
-static void pattern_scope(int op)
-{
-    char b[28];
-    const int cur = A->proj.current;
-    A->patn_used = 1;
-    switch (op) {
-    case OP_COPY:
-        ec_clip_copy_pattern(&E->clip_pat, &A->proj, cur);
-        snprintf(b, sizeof b, "P%02d COPIED", cur + 1);
-        toast(b);
-        break;
-    case OP_CLEAR:
-        if (!E->confirm) {                     /* 0.3.0: a question, it stays: OCT+ yes, OCT- / HOME no */
-            E->confirm = 1;
-            E->confirm_ms = A->ms;
-            snprintf(b, sizeof b, "CLEAR P%02d?", cur + 1);
-            toast(b);
-            E->toast_keep = 1;
-            return;
-        }
-        E->confirm = 0;
-        ec_clip_clear_pattern(&A->proj, cur);
-        ec_seq_touch_all(&A->seq);
-        snprintf(b, sizeof b, "P%02d CLEARED", cur + 1);
-        toast(b);
-        dirty();
-        break;
-    default:
-        if (!E->clip_pat.ok) {
-            toast("NOTHING COPIED");
-            return;
-        }
-        ec_clip_paste_pattern(&E->clip_pat, &A->proj, cur);
-        ec_e5_pattern_loaded(&A->seq);          /* its BPM, the scenes against its values */
-        ec_seq_timing_changed(&A->seq);
-        ec_seq_touch_all(&A->seq);
-        snprintf(b, sizeof b, "PASTED TO P%02d", cur + 1);
-        toast(b);
-        dirty();
-        break;
-    }
-}
-
-/* 0.3.0: the question's answer (OCT+ yes; OCT-, HOME, any other button no) */
+/* 0.3.0: the open question's answer (F2 yes; F1, HOME, any other button no). 0.6.0 asks none: kept for the pop-up */
 void ec_e5_answer(int yes)
 {
+    (void)yes;
     if (!E->confirm)
         return;
-    if (yes)
-        pattern_scope(OP_CLEAR);
-    else {
-        E->confirm = 0;
-        E->toast_ms = 0;
-        E->toast_keep = 0;
-        msg("CANCELLED");
-    }
+    E->confirm = 0;
+    E->toast_ms = 0;
+    E->toast_keep = 0;
+    msg("CANCELLED");
     A->redraw = 1;
 }
 
-/* 0.3.0: SHIFT + S1 / S2: copy / paste the pattern */
-void ec_e5_pattern_copy(int paste) { pattern_scope(paste ? OP_PASTE : OP_COPY); }
-
-int ec_e5_scope_op(int b)
-{
-    const int op = b == EC_B_REC ? OP_COPY : A->fn ? OP_PASTE : OP_CLEAR;
-    const uint32_t pads = pads_held();
-    if (A->step_held && !A->bus) {
-        steps_scope(op);
-        return 1;
-    }
-    if (pads) {
-        slice_scope(op, pads);
-        return 1;
-    }
-    if (E->page_down) {
-        page_scope(op);
-        return 1;
-    }
-    if (E->patn_down) {
-        pattern_scope(op);
-        return 1;
-    }
-    if (E->anchor && op == OP_CLEAR) {
-        ec_scene_clear(&A->proj, E->anchor - 1);
-        xf_apply(A->proj.e5.sc.pos);
-        toast(E->anchor == 1 ? "SCENE A CLEARED" : "SCENE B CLEARED");
-        dirty();
-        return 1;
-    }
-    return 0;
-}
-
-/* ------------------------------------------------------------------------------------------- buttons --- */
-/* 0.3.0: the OCT keys, naming's OK / cancel, undo and memorize moved to ec_app.c (pop-ups, SHIFT's keys); a held OCT
- * key is still the PAGE scope (E->page_down, set by ec_app.c) */
-int ec_e5_scope_held(void) { return (A->step_held && !A->bus) || pads_held() || E->page_down || E->patn_down || E->anchor; }
-
 int ec_e5_upper(int i, int down)
 {
-    if (i == 10)
-        E->patn_down = down;
-    if (E->naming)
-        return 1;
-    return 0;
+    (void)i;
+    (void)down;
+    return E->naming != 0;
 }
 
 /* ------------------------------------------------------------------------------------------- lower keys --- */
@@ -562,40 +373,6 @@ void ec_e5_page_key(int i, int mode)
     }
 }
 
-static void scene_down(int k, int i)
-{
-    const int j = i % 8;
-    if (j == 0 || j == 7) {
-        const int sc = j == 0 ? 0 : 1;
-        if (A->fn) {
-            ec_scene_capture(&A->proj, sc);
-            toast(sc ? "SCENE B STORED" : "SCENE A STORED");
-            A->key_role[k] = R5_SWALLOW;
-            dirty();
-        } else {
-            E->anchor = sc + 1;
-            A->key_role[k] = (uint8_t)(sc ? R5_ANCHOR_B : R5_ANCHOR_A);
-            msg(sc ? "SCENE B" : "SCENE A");
-        }
-        return;
-    }
-    {
-        const int g = j - 1;
-        E->glide_held |= (uint8_t)(1u << g);
-        A->key_role[k] = (uint8_t)(R5_GLIDE + g);
-        ec_undo_xfade(&E->undo, &A->proj, A->ms);
-        xf_apply(A->proj.e5.sc.pos);          /* a param just locked into a scene snaps in at once */
-        E->glide_target = (float)g / 5.0f;
-        E->gliding = 1;
-        E->glide_ms = A->ms;
-        {
-            const float next = ec_scene_glide_step(A->proj.e5.sc.pos, E->glide_target, A->fn);
-            xf_apply(next);                   /* move now: even a fast tap registers */
-        }
-        dirty();
-    }
-}
-
 int ec_e5_lower_down(int k, int i, int vel)
 {
     (void)vel;
@@ -603,29 +380,15 @@ int ec_e5_lower_down(int k, int i, int vel)
         A->key_role[k] = R5_SWALLOW;
         return 1;
     }
-    if (A->patn_open)
-        return 0;
-    if (ec_e5_scene_layer()) {
-        scene_down(k, i);
-        A->redraw = 1;
-        return 1;
-    }
+    (void)i;
     return 0;
 }
 
-/* loop keys / slice pads 17-32: FN + key, when the track has them (LDIV > 16, more than 16 slices) */
-static int bank2(void)
-{
-    const float *v = tv();
-    if (is_slice_m(iv(v, EC_P_MACHINE)))
-        return iv(v, EC_P_SLICE_COUNT) > 16;
-    return iv(v, EC_P_LOOP_DIVISION) > 16;
-}
-
+/* 0.6.0: LOOP ENGINE's zoom: on 32 loop keys the white keys are 1-16 or 17-32 (B11) */
 int ec_e5_loop_key(int k, int i, int down)
 {
     if (down) {
-        if (A->fn && bank2())
+        if (A->pn.zoom_half)
             E->key_hi |= 1u << k;
         else
             E->key_hi &= ~(1u << k);
@@ -637,22 +400,8 @@ int ec_e5_lower_up(int k, int i)
 {
     const int r = A->key_role[k];
     (void)i;
-    if (r < R5_SWALLOW)
+    if (r != R5_SWALLOW)
         return 0;
-    if (r == R5_ANCHOR_A || r == R5_ANCHOR_B) {
-        if (E->anchor == r - R5_ANCHOR_A + 1)
-            E->anchor = 0;
-    } else if (r >= R5_GLIDE && r < R5_GLIDE + 6) {
-        E->glide_held &= (uint8_t)~(1u << (r - R5_GLIDE));
-        if (E->glide_held) {                    /* another glide key still held: retarget to it */
-            int g;
-            for (g = 5; g >= 0; g--)
-                if (E->glide_held >> g & 1u)
-                    break;
-            E->glide_target = (float)g / 5.0f;
-        } else
-            E->gliding = 0;                      /* release freezes wherever it got to */
-    }
     A->key_role[k] = 0;
     A->redraw = 1;
     return 1;
@@ -821,8 +570,6 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
                     if (ec_slice_lock_set(m, s, id, ec_app_move_param(id, x, det, mult)) < 0)
                         msg("LOCKS FULL");
                 }
-            if (A->sel_held)
-                A->sel_used = 1;
             dirty();
             return 1;
         }
@@ -925,48 +672,12 @@ int ec_e5_leds_lower(void)
         }
         return 1;
     }
-    if (loop_layer() && !A->patn_open && !A->bus && A->fn && bank2()) {   /* FN: keys / pads 17-32 */
-        const float *v = tv();
-        if (is_slice_m(iv(v, EC_P_MACHINE))) {
-            const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
-            const ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
-            for (i = 0; i < EC_NLOWER; i++) {
-                const int s = i + 16;
-                ec_plat_led_lower(i, s >= cnt ? EC_LED_OFF : A->seq.tr[A->track].pads >> s & 1u ? EC_LED_LIT
-                                     : m->mute >> s & 1u                                         ? EC_LED_FAINT
-                                                                                                 : EC_LED_DIM);
-            }
-        } else {
-            const int div = clampi((iv(v, EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);
-            for (i = 0; i < EC_NLOWER; i++)
-                ec_plat_led_lower(i, i + 16 >= div ? EC_LED_OFF
-                                     : A->seq.tr[A->track].live_keys >> (i + 16) & 1u ? EC_LED_LIT : EC_LED_DIM);
-        }
-        return 1;
-    }
-    if (ec_e5_scene_layer()) {
-        const ec_scenes_t *sc = &A->proj.e5.sc;
-        for (i = 0; i < EC_NLOWER; i++) {
-            const int j = i % 8;
-            uint8_t l;
-            if (j == 0 || j == 7) {
-                const int s = j == 0 ? 0 : 1;
-                l = E->anchor == s + 1 ? EC_LED_LIT : ec_scene_count(sc, s) ? EC_LED_MID : EC_LED_DIM;
-            } else {
-                const float d = fabsf(sc->pos - (float)(j - 1) / 5.0f);
-                l = E->glide_held >> (j - 1) & 1u ? EC_LED_LIT : d < 0.1f ? EC_LED_MID : d < 0.2f ? EC_LED_DIM
-                                                                                               : EC_LED_FAINT;
-            }
-            ec_plat_led_lower(i, l);
-        }
-        return 1;
-    }
     return 0;
 }
 
 void ec_e5_leds(void)
 {
-    if (loop_layer() && !A->patn_open && !A->bus && !A->fn && !ec_e5_page_visible() && !E->naming &&
+    if (loop_layer() && !A->bus && !A->fn && !ec_e5_page_visible() && !E->naming &&
         is_slice_m(iv(tv(), EC_P_MACHINE))) {     /* a muted pad shows faint */
         const uint32_t mute = ec_e5_slices(&A->proj, A->track)->mute;
         const uint32_t held = A->seq.tr[A->track].pads;
@@ -975,8 +686,6 @@ void ec_e5_leds(void)
             if ((mute >> i & 1u) && !(held >> i & 1u) && i < iv(tv(), EC_P_SLICE_COUNT))
                 ec_plat_led_lower(i, EC_LED_FAINT);
     }
-    if (!A->fn && (A->step_held || pads_held() || E->page_down || E->patn_down))
-        ec_plat_led_button(EC_B_REC, EC_LED_MID);      /* a scope is held: REC copies */
 }
 
 /* ------------------------------------------------------------------------------------------- ui_info --- */

@@ -443,3 +443,8 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
 - **Two keys set both points**: hold a white key to place the chosen point, then press a second white key to place
   the other one. In START, the held key is the start and the second the end; in END, the reverse.
 - F1 / F2 have only this job in the EDITOR (no copy / cut there).
+
+**FILE pages and RAZOR** (owner, 2026-11-03)
+- In FILE, **SEL always turns the page** (BROWSE, EDITOR, RAZOR, both ways), RAZOR included, so there is always a
+  way back.
+- In RAZOR, **ALGO selects the slice** (it was SEL).

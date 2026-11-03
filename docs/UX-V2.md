@@ -375,3 +375,47 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
 - It is counted, not timed, so every host draws the same screen (RFM1-FORMAT: the screen must not depend on the host
   clock).
 - No warning or pop-up anywhere; the host's own "too heavy for this device" stays.
+
+## 10. Owner's play-test of 0.6.0 (2026-11-03): fixes for 0.6.1
+
+**Rules for every screen**
+- **No mode pop-up.** Entering a mode shows nothing extra; the APP SETTINGS row MODE POP-UP goes away.
+- **No pop-ups for messages.** Messages go in the header (NOT MODDABLE, STOP FIRST, SAVING, a moved step, ...). The
+  one exception is the FX type menu below, shown only while its key is held.
+- **The header always says what a held key does**, for every key that does something while held: mod keys, steps,
+  F1 / F2, SHIFT, CROSSFADER's A / B and B11 (capture), hold-for-settings buttons, the insert key. It returns when
+  the key is let go.
+- **No 1-pixel details**, including the modulation depth bar on the param cells. It is drawn at least 2 units of
+  the 120 grid. The `grid` test must cover the frames that showed the 1-px bar: params with modulation, a held mod
+  key, a held step with locks.
+
+**Modulation keys**
+- A tap or hold on a source key (B6-B10) **never changes the mode**. In FX you stay in FX.
+- While a mod key is held, the header shows the source's name (LFO 1, LFO 2, MOD ENV, VEL, AT, M1-M4) on a **blue**
+  header. Every depth bar from that source is drawn blue, and turning a knob sets its depth.
+- Blue is the SRC role: SRC becomes each theme's blue (it was the accent orange). Every theme keeps it distinct
+  from ACC, LOCK and ALERT.
+- A param that can't be modulated shows **NOT MODDABLE** in the header: no message box.
+
+**FX**
+- Holding the insert key opens **a menu of the effect types** while it is held: SEL or K1 moves through it, letting
+  go picks the type.
+- **K4 is always the effect's MIX**, on every effect type.
+- An effect with more than three other params gets more knob pages: a tap on the insert key again turns the page
+  (header P1 / P2), so every param is reachable.
+
+**Step locks: three states on every param cell**
+- **Holding a step, param locked on it:** the **whole cell** (label and value, the full box) fills with LOCK, and
+  the value is the lock's.
+- **Not holding a step:** the cell shows the track's value.
+- **Not holding a step, and some step of the pattern locks this param:** a 2-unit LOCK outline around the whole
+  cell.
+
+**CROSSFADER**
+- Holding B11 says CAPTURE in the header (then A or B captures the scene).
+
+**KEYBOARD**
+- **While stopped, a key plays the sound**: the loop (or slice) at that key's pitch, for as long as it is held.
+- **Pitch direction:** a positive PITCH moves the highlighted key up the keyboard, a negative one down (it was
+  reversed).
+- Moving the target step (ALGO) shows no pop-up: the highlighted step is enough.

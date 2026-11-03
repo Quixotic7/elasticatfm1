@@ -126,6 +126,8 @@ static void reset_state(void)
     A->pn.as_open = 0;
     A->pn.shift_held = A->pn.shift_sticky = 0;
     A->pn.target = 0;
+    A->pn.rs_open = 0;                             /* 0.6.0 part 2 */
+    A->msg_alert = 0;
 }
 
 /* ------------------------------------------------------------------------------------------- the kit --- */
@@ -300,6 +302,44 @@ static void test_modes(void)
     A->pn.as_row = 6;
     shot("app_settings");
     A->pn.as_open = 0;
+    A->cat = EC_CAT_FILE;                                  /* 0.6.0 part 2: FILE's browser (previewing), the editor */
+    A->page[EC_CAT_FILE] = 0;
+    A->pn.pv_play = 1;
+    shot("file_browser");
+    A->pn.pv_play = 0;
+    for (f = 0; f < ec_cat_pages(EC_CAT_FILE, v); f++)
+        if (ec_page_pic(EC_CAT_FILE, f, 0) == EC_PIC_EDITOR)
+            A->page[EC_CAT_FILE] = f;
+    A->pn.ed_zoom = 3;
+    A->pn.ed_view = 0.3f;
+    A->pn.ed_tap = 1;
+    shot("file_editor_8x");
+    A->pn.ed_zoom = 0;
+    A->pn.ed_view = 0;
+    A->pn.ed_tap = 0;
+    shot("file_editor_1x");
+    A->page[EC_CAT_FILE] = 0;
+    A->scr = EC_MODE_SAMPLER;                              /* the SAMPLER: idle, armed, taking */
+    A->rec.in_meter[0] = 0.5f;
+    A->rec.in_meter[1] = 0.95f;
+    shot("sampler_idle");
+    A->rec.state = EC_RS_ARMED;
+    shot("sampler_armed");
+    A->rec.state = EC_RS_RUN;
+    A->rec.n = 100000;
+    shot("sampler_taking");
+    A->rec.state = EC_RS_IDLE;
+    A->rec.n = 0;
+    A->rec.in_meter[0] = A->rec.in_meter[1] = 0;
+    A->scr = 0;
+    A->cat = EC_CAT_FILT;
+    A->pn.rs_open = 1;                                     /* the record settings, the cursor on AUTOMATION */
+    A->pn.rs_row = 5;
+    shot("rec_settings");
+    A->pn.rs_open = 0;
+    ec_app_alert("STOP FIRST");                            /* an alert in the header */
+    shot("alert");
+    A->msg_ms = 0;
     A->pn.intro = 1;                                       /* the intro */
     for (f = 0; f < ec_scr_intro_frames(); f += 9) {
         A->pn.intro_frame = f;

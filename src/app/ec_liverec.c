@@ -355,12 +355,14 @@ static void edit(int row, int d)
 
 void ec_rs_knob(int role, int det)
 {
+    int n = det < 0 ? -det : det;
     if (role == EC_E_SELECT)
-        P->rs_row = clampi(P->rs_row + (det > 0 ? 1 : -1), 0, EC_RS_NROW - 1);
+        P->rs_row = clampi(P->rs_row + det, 0, EC_RS_NROW - 1);
     else if (role >= EC_E_K1) {
         const int row = P->rs_row / 4 * 4 + (role - EC_E_K1);
         if (row < EC_RS_NROW) {
-            edit(row, det);
+            for (; n > 0; n--)                     /* (a detent a step) */
+                edit(row, det);
             P->rs_row = row;
         }
     }

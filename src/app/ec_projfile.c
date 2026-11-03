@@ -302,7 +302,7 @@ static void save_tick(void)
         g.req.state = EC_FSR_IDLE;
         if (g.req.result <= 0) {                    /* (0 bytes written: the disk took nothing) */
             if (!g.hidden[g.copy] && g.ncopies == 2)
-                g.tmp_good = 1;                     /* NAME.ecp is broken now; the hidden copy (just written) is whole */
+                g.tmp_good = 1;                     /* NAME.ecp broken now; the hidden copy (just written) is whole */
             save_done(0, "NOT SAVED", g.req.result ? g.req.result : FS_ENOSPC);
             return;
         }

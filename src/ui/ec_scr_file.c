@@ -55,7 +55,8 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
     else
         r[0] = 0;
     ec_scr_header(a, t, 1, r);
-    snprintf(buf, sizeof buf, "%s/", a->pn.fdir[0] && strcmp(a->pn.fdir, "/") ? a->pn.fdir : a->pn.fdir[0] ? "" : "/audio");
+    snprintf(buf, sizeof buf, "%s/",
+             !a->pn.fdir[0] ? "/audio" : strcmp(a->pn.fdir, "/") ? a->pn.fdir : "");   /* (0.6.1: "/" the top) */
     {
         char f[32];
         const int l = (int)strlen(buf);
@@ -81,8 +82,8 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
             int isd, f;
             const char *name = ec_file_entry(idx, &isd, &f);
             const char *path = !isd && f >= 0 ? ec_browse_path(f) : 0;
-            const int pooled = path ? ec_file_pooled(path) >= 0
-                                    : !isd && !strcmp(a->pn.fdir, EC_PF_DIR) && !strcmp(name, ec_pf_name());   /* (the open project) */
+            const int pooled = path ? ec_file_pooled(path) >= 0      /* (0.6.1: in PROJECTS/, the open project) */
+                                    : !isd && !strcmp(a->pn.fdir, EC_PF_DIR) && !strcmp(name, ec_pf_name());
             const float sec = path ? known_len(a, path) : 0;
             fit(buf, sizeof buf, name, sec > 0 ? 20 : 26);
             if (cur)

@@ -125,23 +125,30 @@ static void cells(const cell_t c[4], int lanes, int lane)
             TR(PX_L3, tag, x + 54, y);
             continue;
         }
-        TL(PX_L8, c[i].l, x, y);
+        if (lock) {                                  /* a step lock on the held step: the whole cell in LOCK */
+            const int fx = i % 2 ? 61 : 0, fy = i < 2 ? 77 : 99;
+            R(PX_LOCK, fx, fy, i % 2 ? W - 61 : 60, 21);
+        }
+        TL(lock ? PX_BG : PX_L8, c[i].l, x, y);
         if (c[i].mark) {
-            TR(PX_L12, c[i].mark, x + 54, y);
-            R(PX_ACC, x + 54 - TW(c[i].mark, 1) - 3, y + 1, 2, 2);
+            TR(lock ? PX_BG : PX_L12, c[i].mark, x + 54, y);
+            R(lock ? PX_BG : PX_ACC, x + 54 - TW(c[i].mark, 1) - 3, y + 1, 2, 2);
         } else
-            TR(PX_L5, tag, x + 54, y);
+            TR(lock ? PX_BG : PX_L5, tag, x + 54, y);
         big = TW(c[i].v, 2) <= 54;
-        if (lock)
-            R(PX_LOCK, x - 1, y + (big ? 6 : 8), (big ? TW(c[i].v, 2) : TW(c[i].v, 1)) + 3, big ? 12 : 7);
         T(lock ? PX_BG : acc ? PX_ACC : PX_L15, c[i].v, x, big ? y + 7 : y + 9, big ? 2 : 1, EC_AL_LEFT);
-        R(PX_L3, x, y + 18, 54, 1);
+        if (lock) {                                  /* the bar: a dotted track, the value solid, both dark */
+            int k;
+            for (k = 0; k < 54; k += 2)
+                R(PX_BG, x + k, y + 18, 1, 1);
+        } else
+            R(PX_L3, x, y + 18, 54, 1);
         if (dep) {
             const int w = (int)(fabsf(c[i].f) * 27.0f + 0.5f);
-            R(lock ? PX_LOCK : PX_L8, c[i].f >= 0 ? x + 27 : x + 27 - w, y + 18, w, 1);
-            R(PX_L12, x + 27, y + 17, 1, 3);
+            R(lock ? PX_BG : PX_L8, c[i].f >= 0 ? x + 27 : x + 27 - w, y + 18, w, 1);
+            R(lock ? PX_BG : PX_L12, x + 27, y + 17, 1, 3);
         } else
-            R(lock ? PX_LOCK : PX_L8, x, y + 18, (int)(c[i].f * 54.0f + 0.5f), 1);
+            R(lock ? PX_BG : PX_L8, x, y + 18, (int)(c[i].f * 54.0f + 0.5f), 1);
     }
 }
 

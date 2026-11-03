@@ -78,8 +78,13 @@ enum {
     EC_P_MTX7_SRC, EC_P_MTX7_DST, EC_P_MTX7_DEPTH,
     EC_P_MTX8_SRC, EC_P_MTX8_DST, EC_P_MTX8_DEPTH,
     EC_P_MTX_END,
-    EC_NP = EC_P_MTX_END
+    /* 0.6.0: live recording */
+    EC_P_MICRO = EC_P_MTX_END,  /* micro timing: a trig early / late by n / EC_MICRO_DIV of a step (-12..12); a step
+                                 * lock in practice (the track value shifts every trig of the track) */
+    EC_P_V6_END,
+    EC_NP = EC_P_V6_END
 };
+#define EC_MICRO_DIV 24         /* micro timing units per step (as Elektron's 1/384 note on a 16th): +-12 = half a step */
 _Static_assert(EC_NP <= 255, "param ids are u8 in saves and step locks");
 
 /* kinds */

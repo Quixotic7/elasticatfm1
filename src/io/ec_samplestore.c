@@ -71,6 +71,44 @@ uint32_t ec_ss_used_bytes(void) { return g_top * 2u; }
 uint32_t ec_ss_capacity_bytes(void) { return ARENA_SAMPLES * 2u; }
 uint32_t ec_ss_free_frames(void) { return (ARENA_SAMPLES - g_top) / 2u; }
 
+uint32_t ec_ss_live_bytes(void)
+{
+    uint32_t n = 0;
+    int h;
+    for (h = 0; h < EC_SS_MAX; h++)
+        if (g_used[h])
+            n += g_s[h].frames * 4u;
+    return n;
+}
+uint32_t ec_ss_hole_bytes(void) { return ec_ss_used_bytes() - ec_ss_live_bytes(); }
+int ec_ss_count(void)
+{
+    int h, n = 0;
+    for (h = 0; h < EC_SS_MAX; h++)
+        n += g_used[h];
+    return n;
+}
+
+uint32_t ec_ss_compact(void)
+{
+    const uint32_t before = g_top;
+    int16_t *dst = g_arena;
+    for (;;) {                             /* the live sample lowest in the arena at or above dst, next */
+        int h, low = -1;
+        for (h = 0; h < EC_SS_MAX; h++)
+            if (g_used[h] && g_s[h].data >= dst && (low < 0 || g_s[h].data < g_s[low].data))
+                low = h;
+        if (low < 0)
+            break;
+        if (g_s[low].data != dst)
+            memmove(dst, g_s[low].data, (size_t)g_s[low].frames * 4u);
+        g_s[low].data = dst;
+        dst += (size_t)g_s[low].frames * 2u;
+    }
+    g_top = (uint32_t)(dst - g_arena);
+    return (before - g_top) * 2u;
+}
+
 /* digits [. digits] at s; returns the length (0: not a number) */
 static int number_at(const char *s, float *v)
 {

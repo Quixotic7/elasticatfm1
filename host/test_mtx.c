@@ -344,7 +344,7 @@ static void test_migration(void)
     v[EC_P_MACRO_DEPTH + 19] = 100;
     v[EC_P_MACRO2] = 64;
     ec_scene_set(pr, 0, 1, EC_P_MACRO_DEPTH + 1, 0);         /* scene A: M1 -> CUT -1 */
-    n = ec_project_save(pr, g_rec, sizeof g_rec);
+    n = ec_project_save_v1(pr, g_rec, sizeof g_rec);   /* (to_04 reads version 1) */
     CHECK(n > 0, "saved %d", n);
     m = to_04(g_rec, (uint32_t)n);
     CHECK(ec_project_load(pr, g_old, m) == 0, "the 0.4 record loads");

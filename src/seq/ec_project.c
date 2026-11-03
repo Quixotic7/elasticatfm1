@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The project model and its record (ec_project.h) */
+#include <math.h>
 #include <string.h>
 
 #include "ec_e5.h"
@@ -37,6 +38,7 @@ void ec_project_init(ec_project_t *p)
     for (i = 0; i < 3; i++)                /* E4 */
         ec_bus_default(p->bus[i]);
     ec_e5_project_init(p);                 /* E5 */
+    ec_recset_default(&p->rec);            /* 0.6.0 */
 }
 
 void ec_bus_default(float *v)
@@ -211,7 +213,7 @@ void ec_pattern_prepare(ec_project_t *p, int idx)
 }
 
 /* ------------------------------------------------------------------------------------------- the record --- */
-/* little-endian writer / reader with bounds */
+/* little-endian writer / reader with bounds; a writer with b == NULL only measures */
 typedef struct {
     uint8_t *b;
     const uint8_t *r;
@@ -225,7 +227,9 @@ static void w8(io_t *o, uint32_t v)
         o->bad = 1;
         return;
     }
-    o->b[o->n++] = (uint8_t)v;
+    if (o->b)
+        o->b[o->n] = (uint8_t)v;
+    o->n++;
 }
 static void w16(io_t *o, uint32_t v) { w8(o, v & 0xFF), w8(o, (v >> 8) & 0xFF); }
 static void w32(io_t *o, uint32_t v) { w16(o, v & 0xFFFF), w16(o, v >> 16); }
@@ -261,6 +265,30 @@ static float rf(io_t *o)
     return f != f ? 0.0f : f;
 }
 
+/* version 2's values: an integer -64..190 is one byte (value + 64), anything else 0xFF + f32. Most params and locks
+ * are whole numbers (0..127 amounts, options, semitones), so a lock is 2 bytes instead of 5 */
+#define V_INT_MIN (-64)
+#define V_INT_MAX 190
+#define V_F32 0xFFu
+static void wv(io_t *o, int ver, float f)
+{
+    if (ver >= 2 && f == floorf(f) && f >= V_INT_MIN && f <= V_INT_MAX)
+        w8(o, (uint32_t)((int)f - V_INT_MIN));
+    else {
+        if (ver >= 2)
+            w8(o, V_F32);
+        wf(o, f);
+    }
+}
+static float rv(io_t *o, int ver)
+{
+    uint32_t b;
+    if (ver < 2)
+        return rf(o);
+    b = r8(o);
+    return b == V_F32 ? rf(o) : (float)((int)b + V_INT_MIN);
+}
+
 static uint32_t fnv1a(const uint8_t *b, uint32_t n)
 {
     uint32_t h = 2166136261u, i;
@@ -270,15 +298,69 @@ static uint32_t fnv1a(const uint8_t *b, uint32_t n)
 }
 
 #define HDR 16u   /* magic, version, flags, payload length, checksum */
+#define TAG_BUS 0x42344345u   /* "EC4B" */
+#define REC_CHUNK_VERSION 1
 
-int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
+void ec_recset_default(ec_recset_t *r)
+{
+    memset(r, 0, sizeof *r);
+    r->mode = EC_REC_CAPTURE;
+    r->bars = 1;
+    r->countin = 0;
+    r->metro = EC_METRO_REC;
+    r->metro_level = 0.5f;
+    r->automation = 1;
+    r->hard = 0;
+}
+
+/* a pattern track: version 1 every param (id, f32) and steps (u16 index, trig, u32 slices, locks (id, f32));
+ * version 2 the params that differ from the defaults and steps (u8 index, flags: 1 trig 2 slices, [u32 slices],
+ * locks (id, value)) */
+static void save_track(io_t *o, const ec_ptrack_t *tr, int ver)
+{
+    int k, s, nsteps = 0, np = 0;
+    for (k = 0; k < EC_NP; k++)
+        np += ver < 2 || tr->v[k] != EC_PARAMS[k].def;
+    w8(o, (uint32_t)np);
+    for (k = 0; k < EC_NP; k++)
+        if (ver < 2 || tr->v[k] != EC_PARAMS[k].def) {
+            w8(o, (uint32_t)k);
+            wv(o, ver, tr->v[k]);
+        }
+    for (s = 0; s < EC_MAXSTEPS; s++)
+        nsteps += ec_step_has_content(&tr->steps[s]);
+    w16(o, (uint32_t)nsteps);
+    for (s = 0; s < EC_MAXSTEPS && !o->bad; s++) {
+        const ec_step_t *st = &tr->steps[s];
+        if (!ec_step_has_content(st))
+            continue;
+        if (ver < 2) {
+            w16(o, (uint32_t)s);
+            w8(o, st->trig);
+            w32(o, st->slices);
+        } else {
+            w8(o, (uint32_t)s);
+            w8(o, (st->trig ? 1u : 0u) | (st->slices ? 2u : 0u));
+            if (st->slices)
+                w32(o, st->slices);
+        }
+        w8(o, st->nlock);
+        for (k = 0; k < st->nlock; k++) {
+            w8(o, st->lock_id[k]);
+            wv(o, ver, st->lock_val[k]);
+        }
+    }
+}
+
+/* the whole record into b (NULL: measure only); returns its length or -1 */
+static int32_t emit(const ec_project_t *p, uint8_t *b, uint32_t cap, int ver)
 {
     io_t o;
-    int i, t, k, s;
+    int i, t, k;
     if (cap < HDR)
         return -1;
     memset(&o, 0, sizeof o);
-    o.b = buf;
+    o.b = b;
     o.cap = cap;
     o.n = HDR;
     wf(&o, p->bpm);
@@ -304,53 +386,30 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
     }
     w8(&o, EC_NPAT);
     w8(&o, EC_NTRACK);
-    for (i = 0; i < EC_NPAT; i++) {
+    for (i = 0; i < EC_NPAT && !o.bad; i++) {
         const ec_pattern_t *pt = &p->pat[i];
         w8(&o, pt->used);
         if (!pt->used)
             continue;
-        for (t = 0; t < EC_NTRACK; t++) {
-            const ec_ptrack_t *tr = &pt->tr[t];
-            int nsteps = 0;
-            w8(&o, EC_NP);
-            for (k = 0; k < EC_NP; k++) {
-                w8(&o, (uint32_t)k);
-                wf(&o, tr->v[k]);
-            }
-            for (s = 0; s < EC_MAXSTEPS; s++)
-                nsteps += ec_step_has_content(&tr->steps[s]);
-            w16(&o, (uint32_t)nsteps);
-            for (s = 0; s < EC_MAXSTEPS; s++) {
-                const ec_step_t *st = &tr->steps[s];
-                if (!ec_step_has_content(st))
-                    continue;
-                w16(&o, (uint32_t)s);
-                w8(&o, st->trig);
-                w32(&o, st->slices);
-                w8(&o, st->nlock);
-                for (k = 0; k < st->nlock; k++) {
-                    w8(&o, st->lock_id[k]);
-                    wf(&o, st->lock_val[k]);
-                }
-            }
-        }
+        for (t = 0; t < EC_NTRACK; t++)
+            save_track(&o, &pt->tr[t], ver);
     }
     /* Tagged chunks after the patterns: tag u32, length u32, payload. An old (0.1.0) record ends after the
      * patterns; the loader dispatches every tag it knows and skips the others. */
     if (!o.bad) {   /* E3 "RZR1": the razor tables */
-        const int32_t k = ec_razor_save_chunk(p, buf + o.n, cap > o.n ? cap - o.n : 0);
-        if (k < 0)
+        const int32_t n = ec_razor_save_chunk(p, b ? b + o.n : 0, cap - o.n);
+        if (n < 0)
             o.bad = 1;
         else
-            o.n += (uint32_t)k;
+            o.n += (uint32_t)n;
     }
     {   /* E4 "EC4B": the bus FX chunk: per bus: count, (id, value) pairs */
-        uint32_t at, b;
-        w32(&o, 0x42344345u);
+        uint32_t at, bus;
+        w32(&o, TAG_BUS);
         at = o.n;
         w32(&o, 0);
         w8(&o, 3);
-        for (b = 0; b < 3; b++) {
+        for (bus = 0; bus < 3; bus++) {
             int cnt = 0;
             for (k = 0; k < EC_NP; k++)
                 cnt += (EC_PARAMS[k].flags & EC_PF_FX) != 0;
@@ -358,7 +417,7 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
             for (k = 0; k < EC_NP; k++)
                 if (EC_PARAMS[k].flags & EC_PF_FX) {
                     w8(&o, (uint32_t)k);
-                    wf(&o, p->bus[b][k]);
+                    wf(&o, p->bus[bus][k]);
                 }
         }
         if (!o.bad) {
@@ -371,34 +430,77 @@ int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
     /* E5: the scenes, names, per-pattern BPM, page loops, slice programs */
     if (!o.bad && o.n + 8 <= o.cap) {
         const uint32_t at = o.n;
-        const int32_t k = ec_e5_chunk_save(p, buf + at + 8, o.cap - at - 8);
-        if (k < 0)
+        const int32_t n = ec_e5_chunk_save(p, b ? b + at + 8 : 0, o.cap - at - 8);
+        if (n < 0)
             o.bad = 1;
         else {
             w32(&o, EC_CHUNK_E5);
-            w32(&o, (uint32_t)k);
-            o.n += (uint32_t)k;
+            w32(&o, (uint32_t)n);
+            o.n += (uint32_t)n;
         }
     } else
         o.bad = 1;
+    if (ver >= 2) {   /* 0.6.0 "ECRS": the record settings */
+        const ec_recset_t *r = &p->rec;
+        w32(&o, EC_CHUNK_REC);
+        w32(&o, 11);
+        w8(&o, REC_CHUNK_VERSION);
+        w8(&o, r->mode);
+        w8(&o, r->bars);
+        w8(&o, r->countin);
+        w8(&o, r->metro);
+        wf(&o, r->metro_level);
+        w8(&o, r->automation);
+        w8(&o, r->hard);
+    }
     if (o.bad)
         return -1;
-    {
+    if (b) {
         const uint32_t len = o.n - HDR, n = o.n;
         o.n = 0;
         w32(&o, EC_PROJECT_MAGIC);
-        w16(&o, EC_PROJECT_VERSION);
+        w16(&o, (uint32_t)ver);
         w16(&o, 0);
         w32(&o, len);
-        w32(&o, fnv1a(buf + HDR, len));
-        return (int32_t)n;
+        w32(&o, fnv1a(b + HDR, len));
+        o.n = n;
     }
+    return (int32_t)o.n;
 }
+
+/* measured first: a record that does not fit leaves buf (the flash's old record) untouched */
+static int32_t save_ver(const ec_project_t *p, uint8_t *buf, uint32_t cap, int ver)
+{
+    if (!buf || emit(p, 0, cap, ver) < 0)
+        return -1;
+    return emit(p, buf, cap, ver);
+}
+int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap)
+{
+    return save_ver(p, buf, cap, EC_PROJECT_VERSION);
+}
+int32_t ec_project_save_v1(const ec_project_t *p, uint8_t *buf, uint32_t cap) { return save_ver(p, buf, cap, 1); }
 
 static float clampf(float x, float lo, float hi) { return x < lo ? lo : x > hi ? hi : x; }
 
 static int g_dropped;
 int ec_project_mtx_dropped(void) { return g_dropped; }
+
+static void load_rec_chunk(ec_project_t *p, const uint8_t *b, uint32_t n)
+{
+    ec_recset_t *r = &p->rec;
+    float lv;
+    if (n < 11 || b[0] != REC_CHUNK_VERSION)
+        return;
+    r->mode = b[1] <= EC_REC_OVERDUB ? b[1] : EC_REC_CAPTURE;
+    r->bars = b[2] == 1 || b[2] == 2 || b[2] == 4 || b[2] == 8 ? b[2] : 1;
+    r->countin = b[3] <= 2 ? b[3] : 0;
+    r->metro = b[4] <= EC_METRO_ALWAYS ? b[4] : EC_METRO_REC;
+    memcpy(&lv, b + 5, 4);
+    r->metro_level = lv == lv ? clampf(lv, 0, 1) : 0.5f;
+    r->automation = b[9] ? 1 : 0;
+    r->hard = b[10] ? 1 : 0;
+}
 
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
 {
@@ -406,12 +508,16 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
     io_t o;
     uint32_t len, sum, nslot, npat, ntr;
     uint32_t i, t, k, s;
+    int ver;
     if (!buf || n < HDR)
         return -1;
     memset(&o, 0, sizeof o);
     o.r = buf;
     o.cap = n;
-    if (r32(&o) != EC_PROJECT_MAGIC || r16(&o) != EC_PROJECT_VERSION)
+    if (r32(&o) != EC_PROJECT_MAGIC)
+        return -1;
+    ver = (int)r16(&o);
+    if (ver < 1 || ver > EC_PROJECT_VERSION)
         return -1;
     (void)r16(&o);
     len = r32(&o);
@@ -470,26 +576,40 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
                 ec_params_default(tr->v);
             for (k = 0; k < np; k++) {
                 const uint32_t id = r8(&o);
-                const float v = rf(&o);
+                const float v = rv(&o, ver);
                 if (tr && id < EC_NP)
                     tr->v[id] = ec_param_clamp((int)id, v);
                 has_mtx |= id >= EC_P_MTX1_SRC && id < EC_P_MTX_END;
             }
-            if (tr && !has_mtx && !o.bad) {      /* 0.5.0: a 0.4 track: its fixed mod routes into the matrix */
+            /* 0.5.0: a 0.4 track (a version 1 record without the matrix ids): its fixed mod routes into the
+             * matrix. (Version 2 leaves default params out, so a missing id means nothing there.) */
+            if (ver == 1 && tr && !has_mtx && !o.bad) {
                 g_dropped += ec_mtx_migrate(tr->v);
                 if (i == (uint32_t)p->current)
                     migrated |= 1u << t;
             }
             nsteps = r16(&o);
             for (k = 0; k < nsteps && !o.bad; k++) {
-                const uint32_t idx = r16(&o), trig = r8(&o), slices = r32(&o), nl = r8(&o);
-                ec_step_t tmp, *st = tr && idx < EC_MAXSTEPS ? &tr->steps[idx] : &tmp;
+                uint32_t idx, trig, slices = 0, nl;
+                ec_step_t tmp, *st;
+                if (ver < 2) {
+                    idx = r16(&o);
+                    trig = r8(&o);
+                    slices = r32(&o);
+                } else {
+                    const uint32_t fl = (idx = r8(&o), r8(&o));
+                    trig = fl & 1u;
+                    if (fl & 2u)
+                        slices = r32(&o);
+                }
+                nl = r8(&o);
+                st = tr && idx < EC_MAXSTEPS ? &tr->steps[idx] : &tmp;
                 memset(st, 0, sizeof *st);
                 st->trig = (uint8_t)(trig ? 1 : 0);
                 st->slices = slices;
                 for (s = 0; s < nl; s++) {
                     const uint32_t id = r8(&o);
-                    const float v = rf(&o);
+                    const float v = rv(&o, ver);
                     if (id < EC_NP)
                         ec_step_lock_set(st, (int)id, ec_param_clamp((int)id, v));
                 }
@@ -505,7 +625,7 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
         }
         if (tag == EC_RAZOR_TAG) {          /* E3 "RZR1": the razor tables */
             ec_razor_load_chunk(p, o.r + o.n, clen);
-        } else if (tag == 0x42344345u) {    /* E4 "EC4B": the buses */
+        } else if (tag == TAG_BUS) {        /* E4 "EC4B": the buses */
             const uint32_t cap0 = o.cap, nb = (o.cap = end, r8(&o));
             for (i = 0; i < nb && !o.bad; i++) {
                 const uint32_t cnt = r8(&o);
@@ -519,6 +639,8 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
             o.cap = cap0;
         } else if (tag == EC_CHUNK_E5) {    /* E5: scenes, names, per-pattern BPM, page loops, slice programs */
             ec_e5_chunk_load(p, buf + o.n, clen);
+        } else if (tag == EC_CHUNK_REC) {   /* 0.6.0: the record settings */
+            load_rec_chunk(p, buf + o.n, clen);
         }
         o.n = end;
     }

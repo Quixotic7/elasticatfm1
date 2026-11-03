@@ -58,7 +58,22 @@ typedef struct {
     uint32_t fired_slices;         /* the last step's slices (UI) */
     uint64_t last_fire;            /* sample time of the last fired trig (UI activity) */
     int fired;                     /* trigs fired so far (tests, ui_info) */
+    /* 0.6.0: micro timing (ec_seq.c "micro timing") */
+    int64_t fpos;                  /* the next clock position to fire (-1 none) */
+    int fire_pass;                 /* the firing step's pattern pass (trig conditions) */
+    int fire_reset;                /* the next fire is the first after a (re)start */
+    int64_t skip_pos;              /* ec_seq_rec_consume: this position does not fire (-1 none) */
 } ec_seq_track_t;
+
+/* 0.6.0: a metronome beat in the block ec_seq_render() just rendered (ec_seq_block_beats) */
+typedef struct {
+    uint32_t offset;               /* its frame in the block */
+    int32_t beat;                  /* the clock's beat: 0 = the transport's / the pattern's start (a pattern switch
+                                    * restarts the clock), negative = a count-in beat (-n .. -1) */
+    uint8_t accent;                /* the first beat of a bar (4/4: beat % 4 == 0; the first count-in beat of a bar) */
+    uint8_t countin;               /* 1: a count-in beat (the transport is not running yet) */
+} ec_seq_beat_t;
+#define EC_SEQ_BEATS_MAX 16
 
 typedef struct {
     ec_project_t *proj;
@@ -80,6 +95,14 @@ typedef struct {
     int switches;                  /* pattern switches applied (tests) */
     int stops;                     /* consecutive stops (stop twice = panic) */
     ec_seq_track_t tr[EC_NTRACK];
+    /* 0.6.0: live recording */
+    double song_base;              /* beats played before the last clock restart (ec_seq_song_beats) */
+    uint64_t start_at;             /* an armed start (ec_seq_count_in / ec_seq_start_at): its sample, UINT64_MAX none */
+    uint64_t ci_t0;                /* the count-in's first beat */
+    double ci_spb;                 /* its samples per beat */
+    int ci_n;                      /* its beats */
+    ec_seq_beat_t beat[EC_SEQ_BEATS_MAX];   /* the last block's beats */
+    int nbeat;
 } ec_seq_t;
 
 void ec_seq_init(ec_seq_t *s, ec_project_t *proj, const ec_seq_sink_t *sink, double fs);
@@ -110,6 +133,37 @@ void ec_seq_timing_changed(ec_seq_t *s);
 void ec_seq_loop_key(ec_seq_t *s, int track, int key, int pressed);              /* 1..32 */
 void ec_seq_slice_pad(ec_seq_t *s, int track, int slice, int pressed, float vel);/* 1..32 */
 void ec_seq_keyboard(ec_seq_t *s, int track, float semis, int pressed, float vel);
+
+/* ---- 0.6.0: live recording (docs/UX-V2.md 4). The app owns the modes (CAPTURE / FIXED / OVERDUB), what gets
+ * written and the click (ec_click_*); the sequencer gives it the timing. ---- */
+/* the step a hit "now" belongs to on a track: the nearest step boundary of the track's own clock (its rate, swing,
+ * length and page loop), as the 0-based step index, and the hit's offset from that boundary in steps (-0.5 .. 0.5:
+ * negative = early). Write the offset as an EC_P_MICRO lock (ec_micro_units), or drop it for QUANTIZE hard.
+ * Returns 0, or -1 while the transport is not running (nothing to quantize to) */
+int ec_seq_rec_quantize(const ec_seq_t *s, int track, int *step, float *offset);
+static inline int ec_micro_units(float offset)       /* a step offset -> EC_P_MICRO's units, rounded, clamped */
+{
+    const float u = offset * EC_MICRO_DIV;
+    const int n = (int)(u < 0 ? u - 0.5f : u + 0.5f);
+    return n < -EC_MICRO_DIV / 2 ? -EC_MICRO_DIV / 2 : n > EC_MICRO_DIV / 2 ? EC_MICRO_DIV / 2 : n;
+}
+/* a trig was just recorded on step `step` of the track (heard live already): if that step is the next to fire on
+ * this pass (an early hit quantized forward), it does not fire this time. Locks-only writes need no call */
+void ec_seq_rec_consume(ec_seq_t *s, int track, int step);
+/* the metronome: the beats that fell in the block the last ec_seq_render() call rendered, in order, with their frame
+ * offsets (sample-accurate: a beat lands on the same frame as the step on it). Count-in beats too. Returns n <= max
+ * (at most EC_SEQ_BEATS_MAX per block) */
+int ec_seq_block_beats(const ec_seq_t *s, ec_seq_beat_t *out, int max);
+/* COUNT-IN: start from the top after `beats` beats at the current BPM, counted from the next frame rendered; the
+ * count-in beats come through ec_seq_block_beats (countin = 1). 0 beats: ec_seq_start now. Cancelled by
+ * ec_seq_stop, replaced by ec_seq_start / another arm */
+void ec_seq_count_in(ec_seq_t *s, int beats);
+/* start from the top at frame `frame` of the next ec_seq_render() block (sample accurate; 0 = its first frame) */
+void ec_seq_start_at(ec_seq_t *s, uint32_t frame);
+int ec_seq_counting_in(const ec_seq_t *s);   /* count-in beats still to come (0: none armed / started) */
+/* beats played since the transport started from the top (pattern switches do not reset it; paused time is not
+ * counted; 0 when stopped): FIXED's bar counter = floor(ec_seq_song_beats / 4) */
+double ec_seq_song_beats(const ec_seq_t *s);
 
 /* reads */
 float ec_seq_value(const ec_seq_t *s, int track, int id);   /* the resolved ("actual") value */

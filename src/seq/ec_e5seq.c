@@ -46,7 +46,9 @@ static void w8(io_t *o, uint32_t v)
         o->bad = 1;
         return;
     }
-    o->w[o->n++] = (uint8_t)v;
+    if (o->w)                          /* (NULL: ec_project_save measuring) */
+        o->w[o->n] = (uint8_t)v;
+    o->n++;
 }
 static void w16(io_t *o, uint32_t v) { w8(o, v & 0xFF), w8(o, (v >> 8) & 0xFF); }
 static void w32(io_t *o, uint32_t v) { w16(o, v & 0xFFFF), w16(o, v >> 16); }
@@ -674,4 +676,14 @@ void ec_e5_recall(ec_project_t *dst, const ec_project_t *memo)
 {
     *dst = *memo;
     ec_scene_apply(dst, dst->e5.sc.pos);       /* the scene-locked params land where they were memorized */
+}
+
+int32_t ec_e5_memo_save(const ec_project_t *p, uint8_t *buf, uint32_t cap) { return ec_project_save(p, buf, cap); }
+
+int ec_e5_memo_recall(ec_project_t *dst, const uint8_t *memo, uint32_t n)
+{
+    if (!memo || n < 16 || ec_project_load(dst, memo, n) != 0)   /* (a known record whose checksum holds) */
+        return -1;
+    ec_scene_apply(dst, dst->e5.sc.pos);
+    return 0;
 }

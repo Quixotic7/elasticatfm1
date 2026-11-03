@@ -115,5 +115,11 @@ int ec_undo_redo(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gva
 
 /* ---- memorize / recall: the whole project to RAM and back (sample paths compared by the caller) ---- */
 void ec_e5_recall(ec_project_t *dst, const ec_project_t *memo);
+/* 0.6.0: memorize as a record instead of a second ec_project_t (9.1 MiB with 64 patterns): the project's record
+ * (ec_project_save, at most EC_PLAT_RECORD_MAX = 1 MiB - 4 KiB, ~0.3 MiB for a dense project) in the caller's buffer.
+ * Returns the bytes, -1 when it does not fit (nothing memorized). Recall loads it back and re-applies the scenes:
+ * 0 ok, -1 a bad buffer. The caller keeps what it compares across a recall (the slot paths) */
+int32_t ec_e5_memo_save(const ec_project_t *p, uint8_t *buf, uint32_t cap);
+int ec_e5_memo_recall(ec_project_t *dst, const uint8_t *memo, uint32_t n);
 
 #endif

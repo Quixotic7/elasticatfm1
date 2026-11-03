@@ -105,7 +105,11 @@ void fm1core_audio_in(const int16_t *stereo, uint32_t frames);
 void fm1core_audio_in_info(uint32_t state, uint32_t latency_frames);
 
 /* ---- the flash record: the part of the flash image after the plat's versioned header (project data, later) ---- */
-uint8_t *ec_plat_record(uint32_t *size);   /* the record's bytes and their size */
+/* the flash image: EC_PLAT_FLASH_SIZE bytes (fm1core flash_size; hosts take <= 4 MiB and save a full copy every
+ * time), the header's 4 KiB sector first, then the record (EC_PLAT_RECORD_MAX bytes) */
+#define EC_PLAT_FLASH_SIZE 0x100000u
+#define EC_PLAT_RECORD_MAX (EC_PLAT_FLASH_SIZE - 4096u)
+uint8_t *ec_plat_record(uint32_t *size);   /* the record's bytes and their size (EC_PLAT_RECORD_MAX) */
 void ec_plat_record_changed(void);         /* the record was written: the host persists the image */
 int ec_plat_record_fresh(void);            /* 1: the image had no valid header at power-on (a fresh unit) */
 /* 0.6.0: the APP SETTINGS record (docs/UX-V2.md §3): EC_PLAT_SETTINGS_SIZE bytes in the header's sector, apart from

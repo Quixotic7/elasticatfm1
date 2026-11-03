@@ -12,10 +12,10 @@
 #include "ec_razor.h"   /* E3 */
 
 #define EC_NTRACK 6
-#define EC_NPAT 16
+#define EC_NPAT 64                /* 0.6.0: 4 banks x 16 (pattern index = bank * 16 + n) */
 #define EC_MAXSTEPS 256           /* pattern_steps 1..256 = 16 pages of 16 */
 #define EC_STEP_LOCKS 16          /* p-locks a step holds */
-#define EC_NSLOT 16               /* the sample pool */
+#define EC_NSLOT 128              /* the sample pool (0.6.0: 16 -> 128) */
 #define EC_PATH 192
 
 /* one step record (lib/sequencer/step.lua): the trig, the slices it fires, its p-locks. The trig's pitch, length and
@@ -87,6 +87,25 @@ typedef struct {
     ec_scenes_t sc;
 } ec_proj_e5_t;
 
+/* 0.6.0: live recording's settings, per project (docs/UX-V2.md 4), saved in the record's "ECRS" chunk */
+enum { EC_REC_CAPTURE, EC_REC_FIXED, EC_REC_OVERDUB };       /* MODE */
+enum { EC_METRO_OFF, EC_METRO_REC, EC_METRO_ALWAYS };        /* METRONOME: off / while recording / always */
+typedef struct {
+    uint8_t mode;                 /* EC_REC_* (default CAPTURE) */
+    uint8_t bars;                 /* LENGTH for FIXED: 1 / 2 / 4 / 8 bars (default 1) */
+    uint8_t countin;              /* COUNT-IN: 0 / 1 / 2 bars (default 0) */
+    uint8_t metro;                /* EC_METRO_* (default REC) */
+    float metro_level;            /* the click's own level 0..1 (default 0.5) */
+    uint8_t automation;           /* AUTOMATION: 1 = knob moves are recorded as locks (ghost locks; default on) */
+    uint8_t hard;                 /* QUANTIZE: 0 = the offset kept as an EC_P_MICRO lock (default), 1 = hard */
+} ec_recset_t;
+void ec_recset_default(ec_recset_t *r);
+
+/* 0.6.0: PATTERN LAUNCH's banks */
+#define EC_NBANK 4
+#define EC_BANK_PATS 16
+static inline int ec_pat_index(int bank, int n) { return bank * EC_BANK_PATS + n; }
+
 typedef struct ec_project {
     float bpm;                    /* 20..300 */
     float swing;                  /* 50..75 (%) */
@@ -104,6 +123,8 @@ typedef struct ec_project {
     /* E5 */
     ec_pat_e5_t pe5[EC_NPAT];
     ec_proj_e5_t e5;
+    /* 0.6.0 */
+    ec_recset_t rec;              /* live recording (chunk "ECRS") */
 } ec_project_t;
 
 void ec_project_init(ec_project_t *p);                       /* a new project */
@@ -134,14 +155,23 @@ int ec_track_has_trigs(const ec_ptrack_t *tr);
 void ec_pattern_prepare(ec_project_t *p, int idx);
 void ec_pattern_clear_steps(ec_pattern_t *pt);
 
-/* the record: returns the bytes written (<= cap), or -1 when it does not fit */
+/* the record: returns the bytes written (<= cap), or -1 when it does not fit (the app shows FULL; buf's bytes past
+ * the old record may be overwritten, so a caller that must keep the old record saves into a scratch buffer first).
+ * Version 2 (0.6.0) is sparse: a track's params are the ids that differ from the defaults, steps only when they have
+ * content, values that are small integers in one byte. */
 int32_t ec_project_save(const ec_project_t *p, uint8_t *buf, uint32_t cap);
-/* 0 ok (p replaced), -1 no project / bad / unknown version (p untouched) */
+/* the record as version 1 (0.1 .. 0.5: every param, f32 values): tests that build old records; 64-pattern /
+ * 128-slot projects are written whole (an old firmware reads the first 16 of each) */
+int32_t ec_project_save_v1(const ec_project_t *p, uint8_t *buf, uint32_t cap);
+/* 0 ok (p replaced), -1 no project / bad / unknown version (p untouched, except on a damaged record of a known
+ * version: then p is a fresh project). Versions 1 and 2; a version 1 record's 16 patterns land in bank A (0..15) and
+ * its 16 slots in slots 1..16 */
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n);
 /* 0.5.0: the mod routes the last load dropped converting a 0.4 project (past a track's 8 matrix slots) */
 int ec_project_mtx_dropped(void);
 
 #define EC_PROJECT_MAGIC 0x4A504345u    /* "ECPJ" */
-#define EC_PROJECT_VERSION 1
+#define EC_PROJECT_VERSION 2          /* 0.6.0: sparse params, 64 patterns, 128 slots, "ECRS" */
+#define EC_CHUNK_REC 0x53524345u      /* "ECRS": the record settings */
 
 #endif

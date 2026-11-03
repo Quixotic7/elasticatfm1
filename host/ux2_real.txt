@@ -400,3 +400,18 @@ png 156000:Cat_beat1.png
 png 156500:Cat_beat2.png
 upper 10@157000
 press PLAY@157400
+# ======== 0.6.1 (lead): FX with a held source key, KEYBOARD with a key held while stopped
+# ---- MIX (still shown): W1 = T1 (its INS 1 LOFI, INS 2 BLACKHOLE from above); FX (its INSERT page, INS 2 selected): B6 (LFO 1)
+# held + K1 +10 = a route onto BLACKHOLE's first param: blue header, its bar in SRC
+lower 0@157800
+press FX@158400
+upper 5@159000+2000
+turn K1@159400:1
+turn K1@159600:10
+png 160500:Fx_mod_held.png
+# ---- HOME (LOOP ENGINE, its last) then twice more: KEYBOARD; W8 held while stopped plays the loop at its pitch
+press HOME@161500
+press HOME@162000
+press HOME@162500
+lower 7@163200+1500
+png 164000:Keyboard_held.png

@@ -766,7 +766,7 @@ function renderTray() {
   const cat = S.view.cat;
   const { inCat, all } = placedNow(cat);
   // (never the matrix's own items or slot params, nor the params retired in 0.5.0)
-  const names = [...S.catalog.map((p) => p.name), ...Object.keys(L.SPECIAL)].filter((n) => !L.isMtx(n) && !L.isRetired(n) && L.SPECIAL[n]?.[0] !== L.IT.MTX);
+  const names = [...S.catalog.map((p) => p.name), ...Object.keys(L.SPECIAL)].filter((n) => !L.isMtx(n) && !L.isRetired(n) && !L.isIns2(n) && L.SPECIAL[n]?.[0] !== L.IT.MTX);
   const label = (n) => (L.SPECIAL[n] ? L.SPECIAL[n][2] : S.byName.get(n).label);
   const dtext = (n) => { const d = itemDesc(n); return d ? (d.name + " " + d.desc).toLowerCase() : ""; };
   let shown = names.filter((n) => (q ? n.toLowerCase().includes(q) || label(n).toLowerCase().includes(q) || dtext(n).includes(q) : S.home.get(n) === cat && !inCat.has(n)));

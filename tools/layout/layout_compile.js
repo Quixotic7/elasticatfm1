@@ -51,6 +51,9 @@ export const MATRIX_PAGE = () => ({ title: "MATRIX", picture: "matrix", lanes: J
 // the mod matrix's slot params (reached through the MATRIX page, never placed) and the params retired in 0.5.0 (kept
 // for old saves, read by nothing: never in the tray, never "not on any page"; placing one is a warning)
 export const isMtx = (n) => /^mtx[1-8]_(src|dst|depth)$/.test(n);
+// 0.6.1: INS 2's params (the FX INSERT page shows them by code, never placed) and the INSERT page's K4 (fx_wet)
+export const isIns2 = (n) => /^(fx2_(mix|p[1-8])|fx_insert2_machine)$/.test(n);
+export const notPlaced = (n) => isMtx(n) || isRetired(n) || isIns2(n) || n === "fx_wet";
 export const isRetired = (n) => ["lfo1_dest", "lfo2_dest", "menv_dest", "mvel_dest"].includes(n) ||
   /^macro[1-4]_(pitch|cutoff|res|amp|pan)_depth$/.test(n);
 export const MACHINES = ["LOOP", "TRIG", "SLICE", "RAZOR", "S.POLY", "R.POLY", "NEIGH", "INPUT"];
@@ -160,6 +163,7 @@ export function compile(design, catalog) {
     const p = params.get(name);
     if (!p) { err(where, `unknown item '${name}'`); return BLANK; }
     if (isMtx(name)) err(where, `${name} is a mod matrix slot's: it is reached through the MATRIX page (MOD), not placed`);
+    else if (isIns2(name)) err(where, `${name} is INS 2's: the FX INSERT page shows it (SEL picks the slot), not placed`);
     else if (isRetired(name)) warn(where, `${name} is retired in 0.5.0: reads nothing (the mod matrix replaced it)`);
     if (ctx.cells && label && label.length > CELL_LABEL_WARN) warn(where, `${name}: the label '${label}' is longer than ${CELL_LABEL_WARN} (the panel's knob label is cut)`);
     if (!placed.has(name)) placed.set(name, []);
@@ -440,7 +444,7 @@ export function compile(design, catalog) {
   }
   if (!("f3" in design)) err("f3", "F3's lane is missing");
   const f3 = page("F3", { title: "F3", lanes: design.f3 ?? [] }, "PAT", "f3");
-  const unplaced = catalog.map((p) => p.name).filter((n) => !placed.has(n) && !isMtx(n) && !isRetired(n)).sort();
+  const unplaced = catalog.map((p) => p.name).filter((n) => !placed.has(n) && !notPlaced(n)).sort();
   if (unplaced.length) warn("design", `not on any page: ${unplaced.join(", ")}`);
   if (errors.length) return { errors, warnings, pack: null, placed };
   const s = (x) => (x == null ? "" : x);

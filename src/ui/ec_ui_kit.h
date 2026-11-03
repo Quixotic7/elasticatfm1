@@ -25,9 +25,9 @@ enum {
     EC_KC_ACC = 2u,       /* the value in the accent */
     EC_KC_DEPTH = 4u,     /* a bipolar bar from the centre: frac -1..1 */
     EC_KC_DIM = 8u,       /* the value dim (blocked: changes only while stopped) */
-    EC_KC_SOME = 16u,     /* locked on some step of the pattern: a LOCK outline round the value */
+    EC_KC_SOME = 16u,     /* locked on some step of the pattern (no step held): a 2-unit LOCK outline round the cell */
     EC_KC_ACTUAL = 32u,   /* `actual` (0..1) is the resolved value: an accent mark on the bar */
-    EC_KC_HOT = 64u,      /* a source key held: the label bright, the bar in the accent */
+    EC_KC_HOT = 64u,      /* a source key held, the cell is its depth: the label bright, the bar in SRC (blue) */
 };
 typedef struct {
     const char *label;    /* NULL / "": an empty cell (its K-tag dark) */
@@ -37,8 +37,17 @@ typedef struct {
     const char *mark;     /* a matrix destination's source tag ("LFO1", "2 MOD") beside an accent dot, or NULL */
     float actual;         /* EC_KC_ACTUAL */
 } ec_kit_cell_t;
-/* the rules and the four cells (K1..K4) y 76..119; lanes > 1: the lane marks at y 72, the active one bright */
+/* the rules and the four cells (K1..K4) y 76..119; lanes > 1: the lane marks at y 72, the active one bright.
+ * 0.6.1: no 1-unit detail: the bar is 2 units high at the box's y + 2 + EC_KIT_BAR_DY, on a lattice of
+ * EC_KIT_BAR_CELLS 2-unit cells from the box's x + 3 */
+#define EC_KIT_BAR_DY 17
+#define EC_KIT_BAR_CELLS 27
 void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane);
+/* cell i's box (0..3: K1..K4), 23 rows: top cells y 76..98, bottom 97..119; a step lock fills it, EC_KC_SOME
+ * outlines it (2 units) */
+void ec_kit_cell_box(int i, int *x, int *y, int *w, int *h);
+/* calls of ec_kit_cells so far (host/test_grid.c: the frames with param cells get the bar-area check) */
+extern unsigned ec_kit_cells_drawn;
 
 /* ------------------------------------------------------------------------------------------- settings --- */
 typedef struct {

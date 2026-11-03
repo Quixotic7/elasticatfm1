@@ -104,6 +104,21 @@ static void mark_text(uint32_t m, char *b, size_t cap)
         snprintf(b, cap, "%d MOD", n);
 }
 
+/* 0.6.1: the held source key's EC_MS_* (0 none) */
+static int held_src(const ec_app_t *a) { return a->mk.held >= 0 ? ec_mk_src_of_key(a->mk.held) : 0; }
+
+/* 0.6.1 (docs/UX-V2.md §10): a cell's step-lock state for param id: on a held step that locks it, the whole cell in
+ * LOCK (the value is the lock's: the caller's); no step held and some step of the pattern locks it, the outline */
+static unsigned lock_state(const ec_app_t *a, int id, int locked)
+{
+    if (locked)
+        return EC_KC_LOCK;
+    if (!a->step_held && !a->bus && !a->settings && (EC_PARAMS[id].flags & EC_PF_LOCKABLE) &&
+        ec_ux_locked_somewhere(id))
+        return EC_KC_SOME;
+    return 0;
+}
+
 static void cells(const ec_app_t *a, const ec_page_t *pg)
 {
     const int lane = a->ux.f3 ? 0 : ec_app_lane(a, pg);
@@ -124,14 +139,15 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         ec_mk_item(&pg->it[ci], &mx);                 /* 0.5.0: a MATRIX cell is its row's param */
         it = &mx;
         if (it->kind == EC_IT_PARAM && !a->settings && !a->ux.f3 && ec_mk_hot_slot(it->id) >= 0) {
-            /* 0.5.0: a source key held: the cell shows the source > param and the slot's DEPTH from the centre */
-            const int k = ec_mk_hot_slot(it->id), hs = ec_app_held_step(a);
+            /* 0.5.0: a source key held: the cell shows the source > param and the slot's DEPTH from the centre
+             * (0.6.1: in SRC, and the depth param's three lock states) */
+            const int k = ec_mk_hot_slot(it->id), did = ec_mtx_depth_id(k);
             const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
-            float d = tr->v[ec_mtx_depth_id(k)];
-            if (hs >= 0 && ec_step_lock_get(&tr->steps[hs], ec_mtx_depth_id(k), &d))
-                c[i].flags |= EC_KC_LOCK;
+            float d = tr->v[did];
+            const int lk = !a->bus && ec_app_held_lock(a, did, &d);
+            c[i].flags |= lock_state(a, did, lk);
             snprintf(lab[i], sizeof lab[i], "%s>%s", ec_mtx_src_name(ec_mtx_src(tr->v, k)), ec_app_item_label(it));
-            ec_param_format(ec_mtx_depth_id(k), d, 3, val[i], sizeof val[i]);
+            ec_param_format(did, d, 3, val[i], sizeof val[i]);
             c[i].label = lab[i];
             c[i].value = val[i];
             c[i].frac = d / 100.0f;
@@ -145,9 +161,8 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
         c[i].value = val[i];
         if (locked)
             c[i].flags |= EC_KC_LOCK;
-        else if (it->kind == EC_IT_PARAM && !a->bus && !a->settings && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE) &&
-                 ec_ux_locked_somewhere(it->id))
-            c[i].flags |= EC_KC_SOME;
+        else if (it->kind == EC_IT_PARAM)
+            c[i].flags |= lock_state(a, it->id, 0);
         if ((it->flags & EC_IF_STOPPED) && a->seq.playing)
             c[i].flags |= EC_KC_DIM;
         /* 0.6.0 (the mocks): a live value in the accent: PATTERN LAUNCH's NEXT while one is queued, KEYBOARD's target
@@ -161,8 +176,12 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
             c[i].mark = mk[i];
         }
         if (it->kind == EC_IT_PARAM && EC_PARAMS[it->id].fmt == EC_PF_MDEP) {   /* 0.5.0: DEPTH from the centre */
+            int k;
             c[i].frac = v / 100.0f;
             c[i].flags |= EC_KC_DEPTH;
+            for (k = 0; k < EC_MTX_SLOTS; k++)        /* 0.6.1: a slot of the held source: its bar in SRC */
+                if (ec_mtx_depth_id(k) == it->id && held_src(a) && ec_mtx_src(tv(a), k) == held_src(a))
+                    c[i].flags |= EC_KC_HOT;
         } else
             c[i].frac = ec_app_item_frac(a, it, v);
         /* the actual (resolved) value as a mark when it differs (BASE_VALUE_RESOLVER) */

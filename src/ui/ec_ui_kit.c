@@ -49,28 +49,54 @@ void ec_kit_header(const char *target, const char *title, const char *page, cons
 }
 
 /* ------------------------------------------------------------------------------------------- cells --- */
+/* 0.6.1 (owner, docs/UX-V2.md §10): no 1-unit details in a cell. The bar is 2 units high and lives on a lattice of
+ * 2-unit cells (27 across its 54 units), so every fill, tick, mark and gap in it is a multiple of 2 units wide; a
+ * tiny non-zero depth still draws one lattice cell (2 units). The cell's box (ec_kit_cell_box): a step lock fills
+ * it, "locked on some step" outlines it 2 units thick. Top cells y 76..98 (the rules at 76 and 98 are their outline's
+ * outer rows), bottom cells y 97..119 (they share rows 97..98): from the box's top, 2 rows (outline), the label (5),
+ * a gap, the value (10), a gap, the bar (2), 2 rows (outline). */
+void ec_kit_cell_box(int i, int *x, int *y, int *w, int *h)
+{
+    *x = i % 2 ? 61 : 0;
+    *w = i % 2 ? W - 61 : 60;
+    *y = i < 2 ? 76 : 97;
+    *h = 23;
+}
+
+unsigned ec_kit_cells_drawn;
+
 void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
 {
     int i;
+    ec_kit_cells_drawn++;
     R(EC_C_L3, 0, 76, W, 1);
     R(EC_C_L3, 60, 76, 1, 44);
     R(EC_C_L3, 0, 98, W, 1);
     for (i = 0; i < lanes && lanes > 1; i++)
         R(i == lane ? EC_C_L15 : EC_C_L5, W - 1 - (lanes - i) * 10, 72, 8, 3);
     for (i = 0; i < 4; i++) {
-        const int x = (i % 2) * 61 + 3, y = i < 2 ? 79 : 101;
         const unsigned fl = c[i].flags;
         const int lock = (fl & EC_KC_LOCK) != 0, hot = (fl & EC_KC_HOT) != 0;
         const char *val = c[i].value ? c[i].value : "";
+        int bx, by, bw, bh, x, y, by0, big, k;
         char tag[4];
-        int big, vw;
+        ec_kit_cell_box(i, &bx, &by, &bw, &bh);
+        x = bx + 3;
+        y = by + 2;                                  /* the label row; the value y+6..y+15, the bar y+17..y+18 */
+        by0 = y + EC_KIT_BAR_DY;
         snprintf(tag, sizeof tag, "K%d", i + 1);
         if (!c[i].label || !c[i].label[0]) {
             T(EC_C_L3, tag, x + 54, y, 1, EC_AL_RIGHT);
             continue;
         }
         if (lock)                                    /* a step lock on the held step: the whole cell in LOCK */
-            R(EC_C_LOCK, i % 2 ? 61 : 0, i < 2 ? 77 : 99, i % 2 ? W - 61 : 60, 21);
+            R(EC_C_LOCK, bx, by, bw, bh);
+        else if (fl & EC_KC_SOME) {                  /* locked on some step: a 2-unit outline round the whole cell */
+            R(EC_C_LOCK, bx, by, bw, 2);
+            R(EC_C_LOCK, bx, by + bh - 2, bw, 2);
+            R(EC_C_LOCK, bx, by, 2, bh);
+            R(EC_C_LOCK, bx + bw - 2, by, 2, bh);
+        }
         T(lock ? EC_C_BG : hot ? EC_C_L15 : EC_C_L8, c[i].label, x, y, 1, EC_AL_LEFT);
         if (c[i].mark && c[i].mark[0]) {             /* a matrix destination: its source's tag and a dot */
             const int room = 54 - TW(c[i].label, 1) - 1;
@@ -83,27 +109,32 @@ void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
         } else if (!hot)
             T(lock ? EC_C_BG : EC_C_L5, tag, x + 54, y, 1, EC_AL_RIGHT);
         big = TW(val, 2) <= 54;
-        vw = TW(val, big ? 2 : 1);
-        if ((fl & EC_KC_SOME) && !lock)              /* locked on some other step: an outline */
-            ec_gfx_frame(x - 2, y + (big ? 5 : 7), vw + 4, big ? 14 : 9, EC_C_LOCK);
         T(lock ? EC_C_BG : (fl & EC_KC_DIM) ? EC_C_L5 : (fl & EC_KC_ACC) ? EC_C_ACC : EC_C_L15, val, x,
-          big ? y + 7 : y + 9, big ? 2 : 1, EC_AL_LEFT);
-        if (lock) {                                  /* the bar: a dotted track, the value solid, both dark */
-            ec_gfx_dots_h(x, x + 54, y + 18, 2, EC_C_BG);
-        } else
-            R(EC_C_L3, x, y + 18, 54, 1);
-        if (fl & EC_KC_DEPTH) {
+          big ? y + 6 : y + 8, big ? 2 : 1, EC_AL_LEFT);
+        /* the bar: the track (L3; on LOCK: dark 2-unit dots), the value (L8; a held source's depth: SRC; on LOCK:
+         * dark), on the 2-unit lattice */
+        if (lock)
+            for (k = 0; k < EC_KIT_BAR_CELLS; k += 2)
+                R(EC_C_BG, x + 2 * k, by0, 2, 2);
+        else
+            R(EC_C_L3, x, by0, 2 * EC_KIT_BAR_CELLS, 2);
+        if (fl & EC_KC_DEPTH) {                      /* bipolar: lattice cell 13 is the centre tick */
             const float f = c[i].frac < -1 ? -1 : c[i].frac > 1 ? 1 : c[i].frac;
-            const int w = (int)(fabsf(f) * 27.0f + 0.5f);
-            R(lock ? EC_C_BG : hot ? EC_C_ACC : EC_C_L8, f >= 0 ? x + 27 : x + 27 - w, y + 18, w, 1);
-            R(lock ? EC_C_BG : EC_C_L12, x + 27, y + 17, 1, 3);
+            int n = (int)(fabsf(f) * 13.0f + 0.5f);
+            if (n == 0 && f != 0)
+                n = 1;                               /* a tiny depth: one lattice cell, never less */
+            if (n)
+                R(lock ? EC_C_BG : hot ? EC_C_SRC : EC_C_L8, f >= 0 ? x + 28 : x + 26 - 2 * n, by0, 2 * n, 2);
+            R(lock ? EC_C_BG : EC_C_L12, x + 26, by0, 2, 2);
         } else {
             const float f = c[i].frac < 0 ? 0 : c[i].frac > 1 ? 1 : c[i].frac;
-            R(lock ? EC_C_BG : hot ? EC_C_ACC : EC_C_L8, x, y + 18, (int)(f * 54.0f + 0.5f), 1);
+            const int n = (int)(f * (float)EC_KIT_BAR_CELLS + 0.5f);
+            if (n)
+                R(lock ? EC_C_BG : hot ? EC_C_SRC : EC_C_L8, x, by0, 2 * n, 2);
         }
-        if (fl & EC_KC_ACTUAL) {                     /* the resolved value, where it differs */
+        if (fl & EC_KC_ACTUAL) {                     /* the resolved value, where it differs: one lattice cell */
             const float f = c[i].actual < 0 ? 0 : c[i].actual > 1 ? 1 : c[i].actual;
-            R(lock ? EC_C_BG : EC_C_ACC, x + (int)(f * 53.0f + 0.5f), y + 16, 1, 2);
+            R(lock ? EC_C_BG : EC_C_ACC, x + 2 * (int)(f * (float)(EC_KIT_BAR_CELLS - 1) + 0.5f), by0, 2, 2);
         }
     }
 }

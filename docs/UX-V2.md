@@ -603,3 +603,14 @@ them:
 **Not done**
 - Memorize still holds at most 1 MiB (MEMO FULL on a bigger project).
 - The intro logo's art has 1-unit streaks of its own; the CAT's joystick stroke too. Both are the norns art as drawn.
+
+**One page list per mode: SEL and the page keys agree** (owner, 2026-11-03)
+- Every mode has **one ordered list of its pages**, every knob page included (lanes, P1 / P2, INS 1 / INS 2, the
+  bus pages). In FX: INS 1 P1, INS 1 P2.., INS 2 P1.., SENDS, S1.., S2.., MST.., FX MIX.
+- **SEL walks that whole list, both ways**, from any page; it stops at the ends (no wrap). Turning back always
+  returns the way it came.
+- **A page key jumps into the list**: its first page, and tapping the same key again steps through its group's
+  pages (the same ones SEL passes through). Nothing is reachable only by a key.
+- This replaces "SEL picks the slot" on FX's INSERT page (INS 1 / INS 2 are pages in the list). Lists (BROWSE,
+  POOL, the settings lists, the MATRIX rows) keep SEL for their rows; there the page keys move between pages.
+- The header always shows the page and its place (e.g. INS 2 · P2).

@@ -678,3 +678,14 @@ them:
 - **SENDS page knobs: K1 = INSERT 1, K2 = INSERT 2, K3 = SEND 1, K4 = SEND 2.** The inserts sit in series, so their
   "send" is each insert's MIX (the same param as K4 on its effect page). The picture gains two bars, I1 and I2, above
   S1 and S2, each with its effect's name, and the chain shows both inserts.
+- **SENDS shows the track's full routing**: sample → FILTER → INSERT 1 → INSERT 2 → AMP (level, pan) → MIX, with S1
+  and S2 tapping off it to their effects and on to MASTER. Each block shows its effect's name; the send taps are
+  drawn where the send mode puts them.
+- **ALGO on SENDS = the send mode, PRE / POST** (per track, both sends): PRE taps after the filter, before the
+  inserts (today's routing); POST taps after the inserts and the track level and pan. Saved and p-lockable like any
+  track param, undoable.
+- **Holding a black key on SENDS reorders instead of opening the type menu**: hold B1 or B2 = swap INSERT 1 and
+  INSERT 2 (their order in the chain: machines, params, locks and mod routes move together); hold B3 or B4 = swap
+  SEND 1 and SEND 2 (the two bus effects with their settings, and every track's send levels and locks swap with them,
+  so the sound is unchanged). The header names the swap; undoable. On every other FX page, holding a black key still
+  opens the type menu.

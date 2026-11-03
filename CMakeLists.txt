@@ -164,6 +164,9 @@ add_executable(ec_test_grid host/test_grid.c host/ec_png.c)
 target_link_libraries(ec_test_grid PRIVATE elasticat)
 target_compile_options(ec_test_grid PRIVATE -Wall -Wextra)
 add_test(NAME grid COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/host/make_demo_folder.py ${CMAKE_BINARY_DIR}/grid_folder >/dev/null && mkdir -p ${CMAKE_BINARY_DIR}/grid && $<TARGET_FILE:ec_test_grid> ${CMAKE_BINARY_DIR}/grid_folder ${CMAKE_BINARY_DIR}/grid")
+# 0.6.0: the firmware's real screens, one per mockup, through panel input (host/render_ux2_real.sh -> results/ux-v2-real),
+# with the grid / palette check (tools/mockups/check_png.py)
+add_test(NAME ux2_real COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_ux2_real.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/ux2_real)
 # 0.6.0 (data): the project record version 2 (sizes, old records, 64 patterns / 128 slots), micro timing, lock-only
 # steps, the live-recording timing (quantize, beats, count-in)
 add_executable(ec_test_rec host/test_rec.c)

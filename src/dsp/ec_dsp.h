@@ -429,6 +429,23 @@ void  ec_dsp_track_status(const ec_dsp_t *dsp, int track, ec_track_status_t *st)
  * sources as of the last block (EC_MSRC_N values, the LFOs / ENV / VEL at their levels; 0 while no slot is live) */
 void  ec_dsp_mod_live(ec_dsp_t *dsp, int track, float at, float mw, float expr);
 void  ec_dsp_mod_sources(const ec_dsp_t *dsp, int track, float *src);
+/* 0.6.0: the live grains (docs/UX-V2.md LOOP ENGINE "Live grains"). ec_dsp_grains fills out[] (room for
+ * EC_GRAIN_VIEW_MAX) with the track's sounding grains as the last block left them and returns their count: the GRAIN
+ * warp's cloud, the grain clouds of the track's slice voices in that warp, and random_ola's TGrains grains; 0 for
+ * every other warp, for a track that is not reading (stopped, no sample) and for an idle track. pos = the grain's
+ * read position now, len = the span of the sample it reads over its life (|rate| x duration), both 0..1 of the
+ * whole sample; level = its window (Hann) now, 0..1; newest = 1 on the most recently spawned grain (exactly one when
+ * n > 0). More than EC_GRAIN_VIEW_MAX grains: the newest plus the loudest others. Computed at the call from the
+ * engine's grain state (nothing is added to the audio path); call it between blocks, once per screen frame.
+ * The screen kit (src/ui/ec_ui_kit.h) carries the same guarded fallback of the struct. */
+#ifndef EC_GRAIN_VIEW_MAX
+typedef struct {
+    float pos, len, level;   /* pos / len: 0..1 of the sample; level: the envelope 0..1 */
+    uint8_t newest;
+} ec_grain_view_t;
+#define EC_GRAIN_VIEW_MAX 16
+#endif
+int   ec_dsp_grains(ec_dsp_t *dsp, int track, ec_grain_view_t *out);
 /* E4: bus 0 S1, 1 S2, 2 master insert */
 void  ec_dsp_bus_params(ec_dsp_t *dsp, int bus, const ec_fx_params_t *p);
 void  ec_dsp_bus_status(const ec_dsp_t *dsp, int bus, ec_bus_status_t *st);

@@ -108,6 +108,12 @@ void fm1core_audio_in_info(uint32_t state, uint32_t latency_frames);
 uint8_t *ec_plat_record(uint32_t *size);   /* the record's bytes and their size */
 void ec_plat_record_changed(void);         /* the record was written: the host persists the image */
 int ec_plat_record_fresh(void);            /* 1: the image had no valid header at power-on (a fresh unit) */
+/* 0.6.0: the APP SETTINGS record (docs/UX-V2.md §3): EC_PLAT_SETTINGS_SIZE bytes in the header's sector, apart from
+ * the project record, so it survives project loads and new projects. 0xFF bytes when never written (and in an image
+ * written before 0.6.0). The app owns its layout (put a magic + version in it). */
+#define EC_PLAT_SETTINGS_SIZE 2048u
+uint8_t *ec_plat_settings(uint32_t *size);
+void ec_plat_settings_changed(void);       /* written: the host persists the image */
 
 /* ---- what the app implements (src/app/ec_app.c). Called by ec_core.c ---- */
 void ec_app_init(void);

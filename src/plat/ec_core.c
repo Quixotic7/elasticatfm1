@@ -143,6 +143,15 @@ uint8_t *ec_plat_record(uint32_t *size)
     return g_flash + EC_FLASH_HDR;
 }
 void ec_plat_record_changed(void) { g_flash_dirty++; }
+/* 0.6.0: the APP SETTINGS record: the second half of the header's sector (the header uses its first bytes) */
+#define EC_FLASH_SETTINGS (EC_FLASH_HDR - EC_PLAT_SETTINGS_SIZE)
+uint8_t *ec_plat_settings(uint32_t *size)
+{
+    if (size)
+        *size = EC_PLAT_SETTINGS_SIZE;
+    return g_flash + EC_FLASH_SETTINGS;
+}
+void ec_plat_settings_changed(void) { g_flash_dirty++; }
 int ec_plat_record_fresh(void) { return g_fresh; }
 
 /* ------------------------------------------------------------------------------------------- live labels --- */

@@ -36,11 +36,12 @@ $(OUT)/render_demo: $(ROOT)/tests/dsp/render_demo.c $(SRC) $(HDR) | $(OUT)
 $(OUT)/bench: $(ROOT)/tests/dsp/bench.c $(SRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/bench.c $(SRC) -lm
 
-test: $(OUT)/test_dsp $(OUT)/test_e3 $(OUT)/test_fx $(OUT)/test_e4
+test: $(OUT)/test_dsp $(OUT)/test_e3 $(OUT)/test_fx $(OUT)/test_e4 $(OUT)/test_v6
 	cd $(ROOT) && $(OUT)/test_dsp
 	cd $(ROOT) && $(OUT)/test_e3
 	cd $(ROOT) && $(OUT)/test_fx nobench
 	cd $(ROOT) && $(OUT)/test_e4
+	cd $(ROOT) && $(OUT)/test_v6
 
 render: $(OUT)/render_demo
 	cd $(ROOT) && $(OUT)/render_demo
@@ -62,8 +63,12 @@ $(OUT)/test_fx: $(ROOT)/tests/dsp/test_fx.c $(SRC) $(HDR) | $(OUT)
 $(OUT)/test_e4: $(ROOT)/tests/dsp/test_e4.c $(SRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/test_e4.c $(SRC) -lm
 
+# 0.6.0: the grain snapshot + the metronome click
+$(OUT)/test_v6: $(ROOT)/tests/dsp/test_v6.c $(SRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) -o $@ $(ROOT)/tests/dsp/test_v6.c $(SRC) -lm
+
 testfx: $(OUT)/test_fx
 	cd $(ROOT) && $(OUT)/test_fx
 
 clean:
-	rm -f $(OUT)/test_dsp $(OUT)/render_demo $(OUT)/bench $(OUT)/test_e3 $(OUT)/bench_e3 $(OUT)/test_fx $(OUT)/test_e4
+	rm -f $(OUT)/test_dsp $(OUT)/render_demo $(OUT)/bench $(OUT)/test_e3 $(OUT)/bench_e3 $(OUT)/test_fx $(OUT)/test_e4 $(OUT)/test_v6

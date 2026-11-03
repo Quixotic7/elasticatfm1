@@ -21,6 +21,7 @@ event list are documented at the top of **`ec_dsp.h`**.
 | `ec_env.c` | SC EnvGen segments, ADSR / AHR / gated voice envelopes |
 | `ec_fx.h` / `ec_fx.c` / `ec_fx_state.h` | E4: the 18 FX machines (`\elasticatFx*`), one slot = one insert / send return / master insert |
 | `ec_mod.h` / `ec_mod.c` | E4: `\elasticatMod` -- 2 LFOs, mod envelope, velocity, 4 macros x 5 destinations |
+| `ec_click.h` / `ec_click.c` | 0.6.0: the metronome click (WOOD / BEEP / CLICK / COWBELL, accent, level), mixed into int16 after the master |
 | `ec_internal.h` | internal structs + inline helpers |
 
 Tests, demo renders and the benchmark: `tests/dsp` (`make -C tests/dsp`, `render`, `bench`, `wasm`).
@@ -104,6 +105,20 @@ Tests, demo renders and the benchmark: `tests/dsp` (`make -C tests/dsp`, `render
 20. **The idle saver runs inside the engine** with a 4 s grace on a post-mix peak follower (SC: a 2 s scan of a 2 Hz
     Amplitude feed, never the viewed track). The engine has no "viewed track".
 21. **Velocity as a mod source** latches on slice trigs only (as `trackTriggerSlice`); loop trigs leave it.
+
+## 0.6.0
+
+- **Live grains** (`ec_dsp_grains`, in `ec_grains.c`): the track's sounding grains as the last block left them, at
+  most `EC_GRAIN_VIEW_MAX` (16): pos (read position now) and len (|rate| x duration) as 0..1 of the sample, level =
+  the Hann window now, `newest` on the youngest grain (phase / inc = its age: inc is fixed at spawn, so exact).
+  Sources: the GRAIN warp's cloud, the grain clouds of the track's slice voices, random_ola's TGrains grains; 0 for
+  the other warps, a track that is not reading, an idle track. Over 16: the newest + the 15 loudest. Computed at the
+  call (between blocks) from the engine state: nothing in the audio path (`make -C tests/dsp bench` unchanged).
+- **Metronome click** (`ec_click.[ch]`): fixed-size struct, no heap; up to two damped resonators started at their
+  peak + a high-passed noise burst + an optional soft-square drive, attack / release ramps, <= 120 ms. Accent = the
+  same sound higher (x1.33..2) and louder (-4 dBFS vs -8.4 dBFS peaks at level 1, normalised per sound at init).
+  `ec_click_mix` adds into int16 stereo with saturation; the onset of a pending trigger lands on the given frame,
+  a ringing click plays on up to it. Tests: `tests/dsp/test_v6.c`.
 
 ## Deliberate deviations from the original
 

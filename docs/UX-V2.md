@@ -470,10 +470,11 @@ A Fantasy CFW runs only in hosts, so the device's limits don't apply. Two of 0.6
 
 **CAT stage** (owner, 2026-11-03)
 - The CAT's background is black (the sprite's own background colour becomes BG; the cat's outline stays readable).
-- Animated stage light beams behind the cat: a few chunky beams from the top corners that sweep and change colour
-  in time with the tempo (one sweep per bar, a colour change on the beat), drawn with the theme's colours (ACC,
-  SPECIAL, ACTION, SRC) in 2-unit steps, never over the cat. Stopped: the beams rest, dimmed.
-- **Full screen**: the CAT has no header, track strip or knob cells around it; just the stage, the beams and the
+- ~~Animated stage light beams~~ (replaced, owner 2026-11-03): **a generative fractal behind the cat**, in the
+  theme's grey ramp only (L3, L5, L8, L12, L15 on BG), to match the greyscale cat. It moves with the music: the
+  fractal's shape drifts once per bar and pulses on the beat. Stopped, it drifts slowly. Drawn in 2-unit blocks,
+  never over the cat; computed from the transport position, never the host clock.
+- **Full screen**: the CAT has no header, track strip or knob cells around it; just the stage, the fractal and the
   cat, scaled as large as the 120 grid allows. B11 again (or any mode button) leaves it.
 
 **SHIFT held = SHIFT sticky** (owner bug, 2026-11-03)

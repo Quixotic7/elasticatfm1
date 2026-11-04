@@ -51,10 +51,12 @@ static void pages_screen(const ec_app_t *a)
     const int play = ec_seq_step(&a->seq, a->track);
     const int first = clampi(a->step_page - 1, 0, pages > 4 ? pages - 4 : 0);
     ec_page_t pg;
-    char r[8];
+    char r[8], lp[12], ri[20];
     int p, j;
     pat_name(a->proj.current, r, sizeof r);
-    ec_scr_header(a, ec_mode_name(EC_MODE_PAGES), a->step_page + 1, r);
+    ec_pn_loop_text(lp, sizeof lp);                /* 0.6.14 (owner): the loop is not a knob's: the header, not a cell */
+    snprintf(ri, sizeof ri, "%s LOOP %s", r, lp);
+    ec_scr_header(a, ec_mode_name(EC_MODE_PAGES), a->step_page + 1, ri);
     for (p = first; p < first + 4 && p < pages; p++) {
         const int y = 13 + (p - first) * 15, sel = p == a->step_page;
         const int loop = ec_e5_page_in_loop(&a->proj, a->track, p, pages);

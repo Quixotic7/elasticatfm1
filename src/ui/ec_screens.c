@@ -215,8 +215,6 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
             c[i].flags |= lock_state(a, it->id, 0);
         if ((it->flags & EC_IF_STOPPED) && a->seq.playing)
             c[i].flags |= EC_KC_DIM;
-        if (it->kind == EC_IT_UX && it->id == EC_UX_PLOOP)   /* 0.6.14 (owner): PAGES' LOOP is set by the keys */
-            c[i].flags |= EC_KC_READOUT;
         /* 0.6.0 (the mocks): a live value in the accent: PATTERN LAUNCH's NEXT while one is queued, KEYBOARD's target
          * step, the crossfader while it glides */
         if ((it->kind == EC_IT_UX && it->id == EC_UX_NEXT && a->seq.pending >= 0) ||

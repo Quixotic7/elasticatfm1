@@ -858,7 +858,7 @@ static void test_pages(void)
     {
         ec_page_t pg;
         ec_app_page(A, &pg);
-        CHECK(pg.n == 3 && pg.it[0].id == EC_P_PATTERN_STEPS, "PAGES' cells: LENGTH, RATE, LOOP");
+        CHECK(pg.n == 2 && pg.it[0].id == EC_P_PATTERN_STEPS, "PAGES' cells: LENGTH, RATE (0.6.14: the loop is in the header)");
     }
     v[EC_P_PATTERN_STEPS] = 16;
     A->step_page = 0;

@@ -53,8 +53,8 @@ int ec_pn_page(void *vout)
         if (A->bus)
             return 1;
         add(o, EC_IT_PARAM, EC_P_PATTERN_STEPS, "LENGTH");
-        add(o, EC_IT_PARAM, EC_P_RATE, "RATE");
-        add(o, EC_IT_UX, EC_UX_PLOOP, "LOOP");
+        add(o, EC_IT_PARAM, EC_P_RATE, "RATE");    /* 0.6.14 (owner): only a knob's parameter sits in a cell; the
+                                                    * loop (set by the keys) is in the header (ec_pn_loop_text) */
         return 1;
     case EC_MODE_SAMPLER:
         memset(o, 0, sizeof *o);
@@ -120,7 +120,7 @@ int ec_pn_page(void *vout)
     return 0;
 }
 
-static void loop_pages(char *out, int cap)
+void ec_pn_loop_text(char *out, int cap)
 {
     const int pages = ec_pages_count();
     int i, first = -1, last = -1, n = 0;
@@ -212,7 +212,7 @@ void ec_pn_item_format(int id, float x, char *out, int cap)
             snprintf(out, (size_t)cap, "%d", n);
         break;
     case EC_UX_OCT: snprintf(out, (size_t)cap, "%+d", n); break;
-    case EC_UX_PLOOP: loop_pages(out, cap); break;
+    case EC_UX_PLOOP: ec_pn_loop_text(out, cap); break;
     case EC_UX_GLIDE: snprintf(out, (size_t)cap, "%s", G[clampi(n, 0, 3)]); break;
     case EC_UX_ADVANCE: snprintf(out, (size_t)cap, "%s", n ? "ON" : "OFF"); break;
     case EC_UX_FSLOT:

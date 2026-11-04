@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.7)
+# Elasticat on the FM-1: controls (0.6.8)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -1006,10 +1006,14 @@ An FX machine changes at any time (a short fade, no click).
   **RANGE page** (B4) the keys write the step's **range** instead (the 16 keys over the whole sample). Stopped, the
   keys sound while held. With a target the **knobs lock onto it** (the cells show its locks; F1 + a knob clears its
   lock). The screen swaps the loop-key ruler for the step strip: the target's cap, each step's lock as a small bar
-  where it sits in the loop, and the target's lock on the waveform. B11 tapped twice (or ALGO below 1) is LIVE again.
+  where it sits in the loop; the waveform's brackets show the target's region. B11 tapped twice (or ALGO below 1) is LIVE again.
 - **The loop keys** (the live scrub): hold one key to loop that part of the range, two or more to span them. Let go
   and the playhead returns as RET MODE says (return / boomerang / reset). While stopped they audition.
 - **On slice machines** (SLICE, S.POLY, RAZOR, R.POLY) the white keys are **slice pads**, velocity sensitive.
+- **The waveform shows only the range (0.6.8)**: on LOOP, MACHINE and WARP the view is range start..end (the
+  target step's range lock when it has one), so changing the range trims what you see; the RANGE page shows the
+  whole sample with the range bracketed. **With a target step the brackets are that step's region** (its lock, in
+  the lock colour; else the track's), so scrolling ALGO through the steps moves them.
 - The screen shows the waveform; with the GRAIN warp each live grain is drawn on it (a block at its read position,
   as wide as the grain, shaded by its level). The other warps show the playhead.
 - On a bus the white keys do nothing.

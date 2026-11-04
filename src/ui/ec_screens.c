@@ -295,33 +295,141 @@ static void slice_cols(const ec_app_t *a, int k, int cnt, float lo, float hi, in
     *ex = x0 + (int)((lo + (hi - lo) * e0 / 128.0f) * cols);
 }
 
-/* the live grains (GRAIN warps), when the engine publishes them: the frame, the waveform dim, the grains. 0 = none */
-static int grain_view(const ec_app_t *a, const ec_ss_sample_t *smp, int top, int bot)
+/* 0.6.7 (owner): the LOOP ENGINE waveform is a view window, in whole-file fractions [wa, wb]: the range (the target
+ * step's range lock, else the track's) inside the slot's trim on the LOOP / MACHINE / WARP pages, so they show only
+ * what is between range start and end; the whole file on the RANGE page (where the range is set) */
+typedef struct {
+    float wa, wb;
+    int x0, cols;
+} view_t;
+static int vx(const view_t *w, float f) { return w->x0 + (int)((f - w->wa) / (w->wb - w->wa) * (float)w->cols + 0.5f); }
+static void view_of(const ec_app_t *a, int whole, view_t *w)
+{
+    const float *v = tv(a);
+    const ec_slot_t *sl = &a->proj.slot[ec_app_track_slot(a, a->track)];
+    const int tgt = ec_app_target_step(a);
+    float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END], x;
+    w->x0 = 2;
+    w->cols = W - 4;
+    if (whole) {
+        w->wa = 0;
+        w->wb = 1;
+        return;
+    }
+    if (tgt >= 0) {
+        const ec_step_t *st = &a->proj.pat[a->proj.current].tr[a->track].steps[tgt];
+        if (ec_step_lock_get(st, EC_P_RANGE_START, &x))
+            r0 = x;
+        if (ec_step_lock_get(st, EC_P_RANGE_END, &x))
+            r1 = x;
+    }
+    w->wa = sl->trim_start + (sl->trim_end - sl->trim_start) * r0 / 128.0f;
+    w->wb = sl->trim_start + (sl->trim_end - sl->trim_start) * r1 / 128.0f;
+    if (w->wb < w->wa) {
+        const float t = w->wa;
+        w->wa = w->wb, w->wb = t;
+    }
+    if (w->wb - w->wa < 1e-4f)
+        w->wb = w->wa + 1e-4f;
+}
+
+/* the window's peaks, one per 2-unit column, from the sample's frames (a cache: recomputed only when the window,
+ * the sample or its decoded length changes; at most 64 frames read per column) */
+#define WAVE_N 64
+static const uint8_t *window_peaks(const ec_ss_sample_t *smp, const view_t *w, int n)
+{
+    static uint8_t pk[WAVE_N];
+    static const ec_ss_sample_t *c_smp;
+    static float c_wa = -1, c_wb = -1;
+    static uint32_t c_ready;
+    static int c_n;
+    int c;
+    if (smp == c_smp && w->wa == c_wa && w->wb == c_wb && smp->frames_ready == c_ready && n == c_n)
+        return pk;
+    c_smp = smp, c_wa = w->wa, c_wb = w->wb, c_ready = smp->frames_ready, c_n = n;
+    for (c = 0; c < n && c < WAVE_N; c++) {
+        const double f0 = (w->wa + (w->wb - w->wa) * (double)c / n) * smp->frames;
+        const double f1 = (w->wa + (w->wb - w->wa) * (double)(c + 1) / n) * smp->frames;
+        uint32_t i = (uint32_t)(f0 < 0 ? 0 : f0), e = (uint32_t)(f1 < 0 ? 0 : f1), step;
+        int m = 0;
+        if (e > smp->frames_ready)
+            e = smp->frames_ready;
+        if (e <= i)
+            e = i + 1;
+        step = (e - i) / 64 ? (e - i) / 64 : 1;
+        for (; i < e && i < smp->frames_ready; i += step) {
+            const int l = smp->data[2 * i] < 0 ? -smp->data[2 * i] : smp->data[2 * i];
+            const int r = smp->data[2 * i + 1] < 0 ? -smp->data[2 * i + 1] : smp->data[2 * i + 1];
+            if (l > m)
+                m = l;
+            if (r > m)
+                m = r;
+        }
+        pk[c] = (uint8_t)(m >> 7 > 255 ? 255 : m >> 7);
+    }
+    return pk;
+}
+static void view_wave(const ec_ss_sample_t *smp, const view_t *w, int top, int bot, int c_in, int c_out, int rs, int re)
+{
+    const int n = w->cols / 2;
+    if (!smp->data || !smp->frames_ready) {        /* (still decoding the start: the overview) */
+        ec_kit_wave(smp->overview, EC_SS_OVERVIEW, w->x0, w->x0 + w->cols, top, bot, c_in, c_out, rs, re);
+        return;
+    }
+    ec_kit_wave(window_peaks(smp, w, n), n, w->x0, w->x0 + w->cols, top, bot, c_in, c_out, rs, re);
+}
+
+/* the live grains (GRAIN warps), when the engine publishes them: the frame, the waveform dim, the grains, in the
+ * view window. 0 = none */
+static int grain_view(const ec_app_t *a, const ec_ss_sample_t *smp, const view_t *w, int top, int bot)
 {
 #ifndef EC_KIT_LOCAL_GRAIN_VIEW
     ec_grain_view_t g[EC_GRAIN_VIEW_MAX];
     const int n = ec_dsp_grains(a->dsp, a->track, g);
+    view_t in = *w;
+    int k, m = 0;
     if (n <= 0)
         return 0;
+    for (k = 0; k < n; k++) {                      /* into the window; the ones outside are not drawn */
+        const float p = (g[k].pos - w->wa) / (w->wb - w->wa);
+        if (p < -0.05f || p > 1.05f)
+            continue;
+        g[m] = g[k];
+        g[m].pos = p;
+        g[m].len = g[k].len / (w->wb - w->wa);
+        m++;
+    }
     ec_kit_grain_frame(2, top, W - 4, bot - top, -1);
-    ec_kit_wave(smp->overview, EC_SS_OVERVIEW, 4, W - 4, top + 3, bot - 3, EC_C_L3, EC_C_L3, 0, W);
-    ec_kit_grains(g, n, 4, W - 4, top + 3);
+    in.x0 = 4, in.cols = W - 8;
+    view_wave(smp, &in, top + 3, bot - 3, EC_C_L3, EC_C_L3, 0, W);
+    ec_kit_grains(g, m, 4, W - 4, top + 3);
     return 1;
 #else
-    (void)a, (void)smp, (void)top, (void)bot;
+    (void)a, (void)smp, (void)w, (void)top, (void)bot;
     return 0;
 #endif
 }
 
-/* the track's sample area: waveform with region / slices / playhead, or why there is none */
-static void sample_area(const ec_app_t *a, int top, int bot)
+/* the brackets: a region's start and end, 2 units, the lock colour when they are a step's lock */
+static void brackets(int rs, int re, int top, int bot, int c)
+{
+    R(c, rs - 2, top - 3, 2, bot - top + 6);       /* 0.6.1: 2 units */
+    R(c, rs - 2, top - 3, 5, 2);
+    R(c, re, top - 3, 2, bot - top + 6);
+    R(c, re - 3, top - 3, 5, 2);
+}
+
+/* the track's sample area: waveform with region / slices / playhead, or why there is none. whole: the RANGE page
+ * (the whole file, the range bracketed), else the range's window (the loop region bracketed). 0.6.7: with a target
+ * step the brackets are that step's region (its lock, else the track's; RANGE: its range) */
+static void sample_area(const ec_app_t *a, int top, int bot, int whole)
 {
     const int s = ec_app_track_slot(a, a->track);
     const ec_slotrt_t *rt = &a->slot[s];
     const ec_ss_sample_t *smp = ec_app_track_sample(a, a->track);
     const float *v = tv(a);
-    const int x0 = 2, x1 = W - 2, cols = x1 - x0;
     char buf[64];
+    view_t w;
     if (iv(v, EC_P_MACHINE) == EC_MACH_NEIGHBOR) {   /* E3: the routing, not a sample */
         ec_scr_neighbor(a, top, bot);
         return;
@@ -352,54 +460,77 @@ static void sample_area(const ec_app_t *a, int top, int bot)
     }
     if (rt->state == EC_SL_LOADING)
         return;
+    view_of(a, whole, &w);
     {
         ec_track_status_t st;
-        int rs, re, k;
+        const int tgt = ec_app_target_step(a);
+        const ec_step_t *tst = tgt >= 0 ? &a->proj.pat[a->proj.current].tr[a->track].steps[tgt] : 0;
+        const ec_slot_t *sl = &a->proj.slot[s];
+        int rs, re, k, locked = 0;
         ec_dsp_track_status(a->dsp, a->track, &st);
-        if (is_slice(v)) {
-            /* the slices divide the trim x range window */
-            const ec_slot_t *sl = &a->proj.slot[s];
+        if (is_slice(v)) {                         /* the slices divide the range (the view on LOOP ENGINE's pages) */
             const float span = sl->trim_end - sl->trim_start;
             const float lo = sl->trim_start + span * v[EC_P_RANGE_START] / 128.0f;
             const float hi = sl->trim_start + span * v[EC_P_RANGE_END] / 128.0f;
             const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
+            const int sx0 = vx(&w, lo), sx1 = vx(&w, hi);
             uint32_t on = a->seq.tr[a->track].pads;
-            rs = x0 + (int)(lo * cols);
-            re = x0 + (int)(hi * cols);
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
                 if (st.voice_slice[k] >= 1 && st.voice_slice[k] <= 32)
                     on |= 1u << (st.voice_slice[k] - 1);
             for (k = 0; k < cnt; k++)
                 if (on >> k & 1u) {
                     int sx, ex;
-                    slice_cols(a, k, cnt, lo, hi, x0, cols, &sx, &ex);
+                    slice_cols(a, k, cnt, 0, 1, sx0, sx1 - sx0, &sx, &ex);
                     R(EC_C_L3, sx, top - 2, ex - sx, bot - top + 4);
                 }
-            ec_kit_wave(smp->overview, EC_SS_OVERVIEW, x0, x1, top, bot, EC_C_L15, EC_C_L5, rs, re);
+            view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, sx0, sx1);
             for (k = 0; k < cnt; k++) {
                 int sx, ex;
-                slice_cols(a, k, cnt, lo, hi, x0, cols, &sx, &ex);
+                slice_cols(a, k, cnt, 0, 1, sx0, sx1 - sx0, &sx, &ex);
                 if (k > 0 || ec_razor_is_razor(iv(v, EC_P_MACHINE)))
                     ec_gfx_dots_v(sx, top - 2, bot + 3, 2, EC_C_L8);
             }
-            for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
-                ec_kit_playhead(x0 + (int)(st.voice_pos[k] * (float)cols), top - 1, bot + 1);
+            for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++) {
+                const int px = vx(&w, st.voice_pos[k]);
+                if (px >= w.x0 && px < w.x0 + w.cols)
+                    ec_kit_playhead(px, top - 1, bot + 1);
+            }
             return;
         }
-        if (grain_view(a, smp, top, bot))
+        if (grain_view(a, smp, &w, top, bot))
             return;
-        rs = x0 + (int)(st.region_start * cols + 0.5f);
-        re = x0 + (int)(st.region_end * cols + 0.5f);
+        if (whole) {                               /* RANGE: the range (the target's lock, else the track's) */
+            float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END], x;
+            if (tst && ec_step_lock_get(tst, EC_P_RANGE_START, &x))
+                r0 = x, locked = 1;
+            if (tst && ec_step_lock_get(tst, EC_P_RANGE_END, &x))
+                r1 = x, locked = 1;
+            rs = vx(&w, sl->trim_start + (sl->trim_end - sl->trim_start) * r0 / 128.0f);
+            re = vx(&w, sl->trim_start + (sl->trim_end - sl->trim_start) * r1 / 128.0f);
+        } else if (tst) {                          /* a target: its region (a lock, else the track's) in the range */
+            float l0 = v[EC_P_LOOP_START], l1 = v[EC_P_LOOP_END], x;
+            if (ec_step_lock_get(tst, EC_P_LOOP_START, &x))
+                l0 = x, locked = 1;
+            if (ec_step_lock_get(tst, EC_P_LOOP_END, &x))
+                l1 = x, locked = 1;
+            rs = w.x0 + (int)(l0 / 128.0f * (float)w.cols + 0.5f);
+            re = w.x0 + (int)(l1 / 128.0f * (float)w.cols + 0.5f);
+        } else {                                   /* live: what the engine plays */
+            rs = vx(&w, st.region_start);
+            re = vx(&w, st.region_end);
+        }
+        rs = clampi(rs, w.x0, w.x0 + w.cols);
+        re = clampi(re, w.x0, w.x0 + w.cols);
         if (re <= rs)
-            re = rs + 1;
-        ec_kit_wave(smp->overview, EC_SS_OVERVIEW, x0, x1, top, bot, EC_C_L15, EC_C_L5, rs, re);
-        /* the region brackets */
-        R(EC_C_L12, rs - 2, top - 3, 2, bot - top + 6);   /* 0.6.1: 2 units */
-        R(EC_C_L12, rs - 2, top - 3, 5, 2);
-        R(EC_C_L12, re, top - 3, 2, bot - top + 6);
-        R(EC_C_L12, re - 3, top - 3, 5, 2);
-        if (st.reader_on)
-            ec_kit_playhead(x0 + (int)(st.pos_sample * (float)cols), top - 1, bot + 1);
+            re = rs + 2;
+        view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, rs, re);
+        brackets(rs, re, top, bot, locked ? EC_C_LOCK : EC_C_L12);
+        if (st.reader_on) {
+            const int px = vx(&w, st.pos_sample);
+            if (px >= w.x0 && px < w.x0 + w.cols)
+                ec_kit_playhead(px, top - 1, bot + 1);
+        }
     }
 }
 
@@ -433,7 +564,8 @@ static void key_ruler(const ec_app_t *a, int ky)
 /* 0.6.6: LOOP ENGINE with a target step (docs/UX-V2.md "LOOP ENGINE step entry"), in place of the loop-key ruler:
  * the step page's 16 steps (y 64..69: a trig a bright block, else a floor), the target (a bright cap) and the
  * playhead (an accent cap) at y 61..62, and under each step its region lock (RANGE page: its range lock) as a LOCK bar
- * placed in its cell like the region in the loop (y 71..72). On the waveform the target's lock is a LOCK bar (y 59) */
+ * placed in its cell like the region in the loop (y 71..72). The waveform's brackets show the target's region
+ * (sample_area) */
 static int lock_pair(const ec_step_t *st, int range, float *lo, float *hi)
 {
     const int a = range ? EC_P_RANGE_START : EC_P_LOOP_START, b = range ? EC_P_RANGE_END : EC_P_LOOP_END;
@@ -476,38 +608,6 @@ static void loop_steps(const ec_app_t *a, int range)
         }
     }
 }
-/* the target step's lock on the waveform (whole-sample x, through the slot's trim and the range) */
-static void target_on_wave(const ec_app_t *a, int range, int y)
-{
-    const int tgt = ec_app_target_step(a);
-    const float *v = tv(a);
-    const ec_slot_t *sl = &a->proj.slot[ec_app_track_slot(a, a->track)];
-    const ec_step_t *st;
-    float lo, hi, rs, re;
-    int x0, x1;
-    if (tgt < 0)
-        return;
-    st = &a->proj.pat[a->proj.current].tr[a->track].steps[tgt];
-    if (!lock_pair(st, range, &lo, &hi))
-        return;
-    if (range) {
-        rs = lo / 128.0f;
-        re = hi / 128.0f;
-    } else {                                         /* the region lives inside the range (the step's, else the track's) */
-        float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END];
-        lock_pair(st, 1, &r0, &r1);
-        rs = (r0 + (r1 - r0) * lo / 128.0f) / 128.0f;
-        re = (r0 + (r1 - r0) * hi / 128.0f) / 128.0f;
-    }
-    rs = sl->trim_start + (sl->trim_end - sl->trim_start) * rs;
-    re = sl->trim_start + (sl->trim_end - sl->trim_start) * re;
-    x0 = 2 + 2 * (int)floorf(rs * (float)(W - 4) * 0.5f);
-    x1 = 2 + 2 * (int)ceilf(re * (float)(W - 4) * 0.5f);
-    if (x1 < x0 + 2)
-        x1 = x0 + 2;
-    R(EC_C_LOCK, x0, y, x1 - x0, 2);
-}
-
 /* the step strip: this step page's trigs, ghosts, locks, the held step, the playhead; the pages under it */
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
 {
@@ -590,10 +690,9 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
         snprintf(r, sizeof r, "%d", (int)floorf(sl->bpm + 0.5f));
         T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     }
-    sample_area(a, 22, 58);
+    sample_area(a, 22, 58, pg->pic == EC_PIC_WAVE_RANGE);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
         if (ec_app_target_step(a) >= 0) {          /* 0.6.6: a target step: the keys write it */
-            target_on_wave(a, pg->pic == EC_PIC_WAVE_RANGE, 59);
             loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE);
         } else
             key_ruler(a, 66);                      /* 0.6.0: LOOP ENGINE's white keys play the loop */

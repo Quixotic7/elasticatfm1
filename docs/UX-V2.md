@@ -824,3 +824,10 @@ them:
   tap toggle**: a tap turns pick mode on (B11 blinks, the header says PICK STEP, the white keys STEP n), a white key
   picks the target and ends it, a second B11 tap is LIVE. Held + a key still works; held + K1 is still the zoom, no
   longer named in the header.
+
+**LOOP ENGINE waveform: the range, and the target's brackets** (owner, 2026-11-03; 0.6.8, by hand)
+- LOOP / MACHINE / WARP show only range start..end (the target's range lock, else the track's, inside the trim),
+  peaks computed from the sample for that window (cached); RANGE shows the whole sample with the range bracketed.
+  Grains, slices and playheads are mapped into the window.
+- With a target step the brackets are its region (its lock in the LOCK colour, else the track's), as norns did when
+  a step was held; the orange bar under the waveform is gone.

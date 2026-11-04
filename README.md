@@ -5,6 +5,9 @@ GPL-3.0), rewritten in C for the M-VAVE FM-1 as a **Fantasy CFW**: a host-only `
 (the remotefm1.com web player first), with the FM-1 as its panel and samples from the shared RemoteFM1 folder
 (`RemoteFM1/audio/`). The plan, panel mapping and milestones are in [PLAN.md](PLAN.md).
 
+**User guide: [quixotic7.github.io/elasticatfm1](https://quixotic7.github.io/elasticatfm1/)** (source in
+[docs/guide/](docs/guide/index.html), published by GitHub Pages on every push to `main`).
+
 **Status: 0.6.1, the panel by modes** ([docs/UX-V2.md](docs/UX-V2.md); 0.6.1: projects are files in `/data/projects/`, two inserts per track, a counted load meter on FX's INSERT page, no pop-ups, messages and held keys in the header, the owner's play-test fixes, UX-V2 sections 9-11): each button opens a mode (FX, FILTER, AMP,
 MODULATION, MIX / PAGES, LOOP ENGINE / TRIG / KEYBOARD, FILE / SAMPLER, CROSSFADER, PATTERN LAUNCH) with its pages,
 the white keys are steps, the black keys the mode's pages and the modulation sources, SHIFT a layer, F1 / F2 copy /

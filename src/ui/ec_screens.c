@@ -721,11 +721,11 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     }
     sample_area(a, 22, 58, pg->pic == EC_PIC_WAVE_RANGE);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
-        if (a == &ec_app && ec_lp_step_layer())    /* 0.6.9: the STEP layer: the step strip, white */
-            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE, -1);
-        else if (a == &ec_app)                     /* 0.6.12: the LOOP layer: the same strip, red with steps selected
-                                                    * (the loop keys write into them), blue LIVE */
-            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE, ec_lp_first() >= 0 ? EC_C_ALERT : EC_C_SRC);
+        if (a == &ec_app && ec_lp_step_layer())    /* 0.6.9: the STEP layer: the step strip; 0.6.14 (owner): red */
+            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE, EC_C_ALERT);
+        else if (a == &ec_app)                     /* 0.6.12: the LOOP layer: the same strip, white with steps
+                                                    * selected (the loop keys write into them), blue LIVE */
+            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE, ec_lp_first() >= 0 ? -1 : EC_C_SRC);
         else
             key_ruler(a, 66);                      /* (the mocks: the loop-key ruler) */
     }

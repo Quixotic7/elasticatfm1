@@ -913,3 +913,4 @@ the B11 pick mode above)
   box any more: the live region bright, the brackets and the playhead over the grains as on the other pages.
 - Held-key texts (owner: "SELECT STEPS flashes on a quick B11 click"): a held key's header text shows only past the
   quick-click time, 300 ms (EC_HDR_MS, was 150), everywhere; B11's SELECT STEPS too (latched: at once).
+- Colours (owner): the STEP layer's strip is red; the LOOP layer's is white with steps selected, blue LIVE.

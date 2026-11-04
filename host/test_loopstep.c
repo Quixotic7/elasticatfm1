@@ -255,6 +255,25 @@ static void test_pages_b11(void)
     CHECK(m == 0x3 && !strcmp(A->msg, "LOOP PAGES 1-2"), "B1 + B2 held: loop pages 1-2 (mask %x, %s)", m, A->msg);
     hold_b11(0);
     CHECK(!ec_lp_step_layer(), "B11 let go after page keys: no layer latch");
+    /* 0.6.14: ALGO stays on the page; PRESETS turns it; B11 + OCT+ = LIVE */
+    A->step_page = 1;
+    turn(FM1P_E_ALGO, 3);
+    CHECK(A->pn.target == 19 && ec_lp_is_sel(18), "ALGO +3 on page 2: step 19 (target %d)", A->pn.target);
+    turn(FM1P_E_ALGO, 20);
+    CHECK(A->pn.target == 32 && A->step_page == 1, "ALGO past the page's end: step 32, the page stays (%d)",
+          A->pn.target);
+    turn(FM1P_E_ALGO, -20);
+    CHECK(A->pn.target == 0 && ec_lp_first() < 0, "ALGO full left: LIVE");
+    turn(FM1P_E_PRESETS, 1);
+    CHECK(A->step_page == 2 && !strcmp(A->msg, "PAGE 3/4"), "PRESETS: page 3 (%d %s)", A->step_page, A->msg);
+    turn(FM1P_E_PRESETS, -5);
+    CHECK(A->step_page == 0, "PRESETS left: page 1 (stops there)");
+    turn(FM1P_E_ALGO, 2);
+    hold_b11(1);
+    press(FM1P_B_OCTUP, 40);
+    hold_b11(0);
+    CHECK(A->pn.target == 0 && ec_lp_first() < 0 && !strcmp(A->msg, "LIVE") && !ec_lp_step_layer(),
+          "B11 + OCT+: LIVE, no latch (%s)", A->msg);
     ec_e5_set_page_loop(&A->proj, A->track, 0, 4);
     v[EC_P_PATTERN_STEPS] = 16;
     ec_seq_timing_changed(&A->seq);

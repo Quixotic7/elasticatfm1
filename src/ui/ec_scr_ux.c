@@ -136,10 +136,7 @@ static void f3_screen(const ec_app_t *a)
     int i;
     ec_screens_header(a, "F3", 1, "");
     /* tempo (SELECT) and swing (ALGORITHM) */
-    if (fabsf(a->proj.bpm - floorf(a->proj.bpm + 0.5f)) < 0.05f)
-        snprintf(b, sizeof b, "%d", (int)floorf(a->proj.bpm + 0.5f));
-    else
-        snprintf(b, sizeof b, "%.1f", (double)a->proj.bpm);
+    snprintf(b, sizeof b, "%.1f", (double)a->proj.bpm);   /* 0.6.14 (owner): always one decimal */
     T(EC_C_L8, "BPM", 3, 13, EC_AL_LEFT);
     ec_gfx_text_al(3, 20, b, 3, EC_C_L15, EC_AL_LEFT);
     T(EC_C_L8, "SWNG", 64, 13, EC_AL_LEFT);

@@ -281,6 +281,7 @@ void ec_lp_b11(int down);                     /* B11: held = the other layer, a 
 int ec_lp_b11_held(void);                     /* B11 physically held */
 void ec_lp_b11_used(void);                    /* something done while B11 was down: not a quick click */
 void ec_lp_clear(void);                       /* B11 + OCT-: the selected steps cleared */
+void ec_lp_live(void);                        /* 0.6.14: B11 + OCT+: LIVE */
 int ec_lp_white(int k, int i, int down, int vel);   /* STEP layer: 1 = taken */
 void ec_lp_loop_note(int i, int down);        /* LOOP layer: a loop key (writes into the selection) */
 uint32_t ec_lp_keys(void);                    /* the entry's keys held now */

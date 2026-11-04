@@ -265,10 +265,7 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
     if (it->kind == EC_IT_GLOBAL) {
         switch (it->id) {
         case EC_G_BPM:
-            if (fabsf(x - floorf(x + 0.5f)) < 0.05f)
-                snprintf(out, (size_t)cap, "%d", (int)floorf(x + 0.5f));
-            else
-                snprintf(out, (size_t)cap, "%.1f", (double)x);
+            snprintf(out, (size_t)cap, "%.1f", (double)x);   /* 0.6.14 (owner): always one decimal (120.0) */
             return;
         case EC_G_SWING: snprintf(out, (size_t)cap, "%d%%", (int)floorf(x + 0.5f)); return;
         case EC_G_GLEN: snprintf(out, (size_t)cap, "%d", (int)x); return;
@@ -820,7 +817,7 @@ void ec_app_edit_global_f(int id, int det, int mult, int snap)
         ec_seq_timing_changed(&A->seq);
         break;
     case EC_G_GLEN:
-        p->glen = snap ? (int)ec_global_snap(EC_SNAP_GLEN, (float)p->glen, det) : clampi(p->glen + det * mult, 1, 256);
+        p->glen = snap ? (int)ec_global_snap(EC_SNAP_GLEN, (float)p->glen, det) : clampi(p->glen + det * mult, 1, 128);   /* 0.6.14: 8 pages */
         ec_seq_timing_changed(&A->seq);
         break;
     case EC_G_QUANT: p->quant = clampi(p->quant + det, 1, 4); break;

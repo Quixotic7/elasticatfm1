@@ -119,15 +119,28 @@ int ec_lp_b11_held(void) { return g.b11 && ec_lp_active(); }
 void ec_lp_b11_used(void) { g.b11_used = 1; }
 uint32_t ec_lp_keys(void) { return g.keys; }
 
-/* ALGO in LOOP ENGINE: one step selected (KEYBOARD's target), below step 1 = LIVE */
+/* ALGO in LOOP ENGINE: one step selected (KEYBOARD's target), below step 1 = LIVE. 0.6.14 (owner): only the shown
+ * page's steps (1..16 of it); full left is LIVE; it never turns the page (PRESETS does) */
 void ec_lp_algo(int det)
 {
-    int f = ec_lp_first();
-    P->target = f >= 0 ? f + 1 : 0;
-    ec_kb_target(det);
+    const int f = ec_lp_first(), base = A->step_page * 16;
+    const int on_page = f >= base && f < base + 16 ? f - base + 1 : 0;   /* 0 = none on this page (LIVE) */
+    const int max = clampi(len_now() - base, 0, 16);
+    const int to = clampi(on_page + det, 0, max);
     memset(SEL, 0, sizeof SEL);
-    if (P->target)
-        sel_set(P->target - 1, 1);
+    P->target = to ? base + to : 0;
+    if (to)
+        sel_set(base + to - 1, 1);
+    A->redraw = 1;
+}
+
+/* 0.6.14 (owner): B11 held + OCT+ = LIVE (nothing selected) */
+void ec_lp_live(void)
+{
+    g.b11_used = 1;
+    memset(SEL, 0, sizeof SEL);
+    P->target = 0;
+    ec_app_message("LIVE");
     A->redraw = 1;
 }
 

@@ -49,8 +49,8 @@ The other controls:
 | Black keys | per mode |
 | MASTER | master volume |
 | SEL | the mode's page list, both ways, stopping at its ends (lists, the browser, the MATRIX row: see the modes) |
-| ALGO | the step page (1-16, 17-32 ...); KEYBOARD: the target step |
-| PRESETS | the track's pool slot |
+| ALGO | the step page (1-16, 17-32 ...); LOOP ENGINE (0.6.14): the step on the shown page, full left = LIVE; KEYBOARD: the target step |
+| PRESETS | the track's pool slot; LOOP ENGINE and TRIG (0.6.14): the step page (the slot is the SLOT param) |
 | K1-K4 | the page's four values |
 | F1 / F2 | copy / cut and clear (below); in a pop-up: back / OK |
 | GLO | SHIFT |
@@ -106,7 +106,7 @@ These hold in every mode unless the mode says otherwise.
   APP SETTINGS > KNOB SPEED sets how fast.
 - **SHIFT + a value knob snaps** to useful values: the norns script's own snap lists where it has them (P/T -24 -12
   -7 0 7 12 24; STRT / END 0 8 16 32 64 96 120 128; CUT / RES / DRIV / MIX 0 32 64 96 127; VOL 0 32 64 100 127; LEN
-  4 8 16 32 48 64 96 128 256; RATE 1/2 1 2; BPM 60 80 90 100 110 120 128 136 140 160 180 ...), else ChoralRoot's
+  4 8 16 32 48 64 96 128; RATE 1/2 1 2; BPM 60 80 90 100 110 120 128 136 140 160 180 ...), else ChoralRoot's
   rules (0..127 to 0 16 32 .. 112 127, bipolar values to steps of 8, semitones to octaves). Lists don't snap.
 - **PRESETS** walks the pool's **used** slots (empty ones are skipped), and you hear the change at once. The takeover
   shows the slot, the file's name, "3/12" (its place among the used slots) and how full the pool is. An empty pool
@@ -747,7 +747,7 @@ MIX (EDIT, first): the mixer - every track's level, pan and sends, and the maste
 | Item | Label | Name | What it does |
 |---|---|---|---|
 | `mute` | MUTE | Mute | Silences the track (its sends still feed S1 / S2). Saved with the pattern; also a held track key. |
-| `global.glen` | GLEN | Global length | The global pattern length, 1 to 256 steps: the boundary that SEQ pattern changes (and TEMP returns) wait for. |
+| `global.glen` | GLEN | Global length | The global pattern length, 1 to 128 steps: the boundary that SEQ pattern changes (and TEMP returns) wait for. |
 | `global.rtn` | RTN | Playhead return | What the playhead does when loop keys are let go: RETURN (back in sync), BOOMR (plays back out in reverse) or RESET (restart). |
 | `e5.gbpm` | GBPM | Global BPM | ON: one tempo for every pattern. OFF: each pattern keeps its own BPM. |
 | `e5.name` | NAME | Project name | Turn to name the project (OCT+ keeps it, OCT- cancels). |

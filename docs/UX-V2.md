@@ -894,3 +894,11 @@ the B11 pick mode above)
   F1 / F2 + a page key is still the clip (copy / cut / paste a page). B11's quick-click latch is not triggered by a
   page key. F3's white keys still work as before.
 - Tests: test_loopstep test_pages_b11.
+
+**0.6.14: ALGO on the page, PRESETS the page, 8 pages, B11 + OCT+ = LIVE** (owner, 2026-11-03)
+- LOOP ENGINE's ALGO selects only the shown page's steps (1..16 of it) and never turns the page; full left is LIVE.
+- PRESETS turns the step page in LOOP ENGINE and TRIG (no step held); the pool slot is the SLOT param (a held step +
+  PRESETS still locks a slot).
+- LEN tops out at 128 steps = 8 pages, so every page is on B11 + B1..B8.
+- B11 held + OCT+ = LIVE (nothing selected); OCT- still clears the selected steps.
+- The tempo always shows one decimal (120.0) in the SHIFT layer's cell and on F3 (owner). GLO LENGTH tops out at 128 too.

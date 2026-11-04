@@ -418,6 +418,8 @@ static void button_down(int b)
                 ec_file_pool_f1();
         } else if (b == EC_B_OCTDN && !A->fn && ec_lp_b11_held()) {   /* 0.6.9: LOOP ENGINE: B11 held + F1 clears */
             ec_lp_clear();                         /* the selected steps */
+        } else if (b == EC_B_OCTUP && !A->fn && ec_lp_b11_held()) {   /* 0.6.14: B11 held + F2 = LIVE */
+            ec_lp_live();
         } else if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
@@ -833,14 +835,33 @@ static int next_used_slot(int from, int d)
     return from;
 }
 
+static void step_page_turn(int d)
+{
+    const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
+    const int p = clampi(A->step_page + d, 0, pages - 1);
+    char b[16];
+    if (p != A->step_page) {
+        A->step_page = p;
+        A->step_held = 0;
+        snprintf(b, sizeof b, "PAGE %d/%d", p + 1, pages);
+        ec_app_message(b);
+    }
+    A->redraw = 1;
+}
+
 static void presets(int d)
 {
     float *v = ec_app_params(A);
     int s, used = 0, pos = 0, i, steps = d < 0 ? -d : d;
     char lb[16], sub[16];
     const ec_ss_sample_t *x;
+    const int mode = ec_app_mode();
     if (A->bus)
         return;
+    if ((mode == EC_CAT_SRC || mode == EC_CAT_TRIG) && !A->step_held && !A->settings) {
+        step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
+        return;
+    }
     {   /* the slot the knob starts from: the held step's lock, else the track's */
         const int hs = ec_app_held_step(A);
         float lk;

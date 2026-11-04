@@ -641,6 +641,11 @@ static void white_down(int k, int i, int vel, int lean)
             ec_pn_select_target(i);                /* W1..W9: T1..T6 S1 S2 MST */
         return;
     }
+    if (!A->settings && ec_lp_active() && ec_lp_white(k, i, 1, vel)) {   /* 0.6.9 / 0.6.14: B11's STEP layer selects
+                                                    * steps in LOOP ENGINE, TRIG and KEYBOARD */
+        A->key_role[k] = R_LP;
+        return;
+    }
     if (!A->settings)
         switch (mode) {
         case EC_CAT_MASTER:
@@ -651,10 +656,6 @@ static void white_down(int k, int i, int vel, int lean)
             }
             return;
         case EC_CAT_SRC:
-            if (ec_lp_white(k, i, 1, vel)) {       /* 0.6.9: the STEP layer selects steps */
-                A->key_role[k] = R_LP;
-                return;
-            }
             loop_down(k, i, vel);                  /* the LOOP layer: live, always */
             if (A->key_role[k] == R_LOOP_LIVE || A->key_role[k] == R_PAD)
                 ec_lp_loop_note(i, 1);             /* (and written into the selected steps) */
@@ -764,7 +765,7 @@ static void black_down(int k, int key, int vel)
     }
     if (A->settings)
         return;
-    if (mode == EC_CAT_SRC && ec_lp_b11_held() && key <= 10 && !A->bus) {   /* 0.6.13: B11 held: B1..B10 the pages */
+    if (ec_lp_b11_held() && key <= 10 && !A->bus) {   /* 0.6.13 / 0.6.14: B11 held: B1..B10 the pages (the step modes) */
         ec_lp_b11_used();
         ec_pages_black_down(key);
         A->key_role[k] = R_PAGEB;
@@ -777,6 +778,11 @@ static void black_down(int k, int key, int vel)
         A->key_role[k] = R_PAGEB;
         break;
     case EC_MODE_KEYBOARD:
+        if (key == 11) {                           /* 0.6.14: B11 = the layers / pages (a quick click: the bank) */
+            ec_lp_b11(1);
+            A->key_role[k] = R_SRCB;
+            break;
+        }
         ec_kb_key(k, 1, vel);
         A->key_role[k] = R_KB;
         break;
@@ -858,7 +864,7 @@ static void presets(int d)
     const int mode = ec_app_mode();
     if (A->bus)
         return;
-    if ((mode == EC_CAT_SRC || mode == EC_CAT_TRIG) && !A->step_held && !A->settings) {
+    if ((mode == EC_CAT_SRC || mode == EC_CAT_TRIG || mode == EC_MODE_KEYBOARD) && !A->step_held && !A->settings) {
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
     }
@@ -995,10 +1001,8 @@ static void knob(int r, int d)
             ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
         else if (ec_fx_on_sends())
             ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
-        else if (mode == EC_CAT_SRC && !A->bus)
-            ec_lp_algo(d);                         /* 0.6.9: LOOP ENGINE: one step selected, below 1 = LIVE */
-        else if (mode == EC_MODE_KEYBOARD)
-            ec_kb_target(d);                       /* KEYBOARD: the target step */
+        else if (ec_lp_active())
+            ec_lp_algo(d);                         /* 0.6.9 / 0.6.14: the step modes: the page's step, below 1 LIVE */
         else {                                     /* the step page */
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
             const int p = clampi(A->step_page + (d > 0 ? 1 : -1), 0, pages - 1);

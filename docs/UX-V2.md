@@ -921,3 +921,10 @@ the B11 pick mode above)
 - B11 held (owner): the cells area is the **pages panel** (8 tiles: the shown page filled, in the loop outlined,
   muted dim, past the length a dot; LEN and RATE under them); **K1 = LEN, K2 = RATE** (the zoom moves to K3); two
   page keys held past the end grow the track to that page. Page LEDs: a muted page dark, the shown page muted blinks.
+- The step model in all three step modes (owner): LOOP ENGINE, TRIG and KEYBOARD share B11 (held = the STEP
+  layer / the pages on B1..B8 / K1 LEN, K2 RATE, K3 zoom; a quick click latches the layer, on a KEYBOARD slice track
+  it is the bank), ALGO = the page's step (full left LIVE), PRESETS = the page, B11 + OCT+ = LIVE, B11 + OCT- = clear.
+  The knobs lock onto the selected steps in TRIG too. TRIG's strip: the selected steps' white caps, a VELOCITY lock
+  as the trig's height, a PITCH lock as a blue mark (above the middle: up). KEYBOARD: whole keys filled in the mode's
+  colour (blue LIVE, red with steps selected, yellow on the STEP layer), the selected steps' notes white, its strip
+  as LOOP ENGINE's, the pages panel while B11 is held.

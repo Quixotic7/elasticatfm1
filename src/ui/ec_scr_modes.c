@@ -97,6 +97,8 @@ static void keyboard_screen(const ec_app_t *a)
     const int len = ec_seq_pattern_steps(&a->seq, a->track);
     const ec_ss_sample_t *smp = a->bus ? 0 : ec_app_track_sample(a, a->track);
     const int tpage = a->pn.target ? (a->pn.target - 1) / 16 : a->step_page;
+    const int tint = a == &ec_app && ec_lp_step_layer() ? EC_C_SPECIAL
+                     : a == &ec_app && ec_lp_first() >= 0 ? EC_C_ALERT : EC_C_SRC;   /* 0.6.14: as LOOP ENGINE's */
     ec_page_t pg;
     char b[24], pgs[8];
     int i;
@@ -117,45 +119,61 @@ static void keyboard_screen(const ec_app_t *a)
             if (edge || cnt <= 112 / 6)
                 R(edge ? EC_C_ACC : EC_C_L5, x > 112 ? 112 : x, 18, 2, 34);
         }
-    } else {                                       /* a keyboard: the notes held lit */
-        const uint32_t held = 0;
+    } else {                                       /* a keyboard (0.6.14, owner: whole keys filled, in the mode's
+                                                    * colour: blue LIVE, red with steps selected, yellow on the STEP
+                                                    * layer; the selected steps' notes white) */
+        static const int GAP[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
+        const int lit = ec_kb_lit_key();
+        int k;
         T(EC_C_L15, a->bus ? "TRACKS ONLY" : "KEYS", 2, 13, EC_AL_LEFT);
         for (i = 0; i < 16; i++) {
             const int x = 3 + i * 7;
             R(EC_C_L12, x, 20, 5, 30);              /* 0.6.1: 2-unit gaps */
-            if (((ec_kb_semis(ec_key_of_lower(i)) % 12) + 12) % 12 == 0)
-                R(EC_C_L5, x + 1, 46, 3, 2);       /* the Cs */
         }
-        for (i = 0; i < 11; i++) {                 /* the sharps between the naturals (F# G# A# C# D#) */
-            static const int GAP[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
+        for (i = 0; i < 11; i++)                   /* the sharps between the naturals (F# G# A# C# D#) */
             R(EC_C_BLACK, 3 + GAP[i] * 7 + 4, 20, 4, 18);
-        }
-        (void)held;
-        if (ec_kb_lit_key() >= 0) {                /* the note sounding (0.6.1: the key + PITCH, up for a positive one) */
-            const int k = ec_kb_lit_key();
-            const int lo = k >= 0 && k < EC_NKEY ? ec_key_lower(k) : -1, up = k >= 0 && k < EC_NKEY ? ec_key_upper(k) : -1;
+        for (k = 0; k < EC_NKEY; k++) {            /* each key: sounding = the mode's colour; a selected step's note =
+                                                    * white (its PITCH lock) */
+            const int lo = ec_key_lower(k), up = ec_key_upper(k);
+            int c = -1, j;
+            if (a == &ec_app && ec_lp_active() && ec_lp_first() >= 0)
+                for (j = 0; j < len && c < 0; j++)
+                    if (ec_lp_is_sel(j)) {
+                        float x1;
+                        if (ec_step_lock_get(&tr->steps[j], EC_P_PITCH, &x1) && (int)floorf(x1 + 0.5f) == ec_kb_semis(k))
+                            c = EC_C_L15;
+                    }
+            if (k == lit && c < 0)
+                c = tint;
+            if (c < 0)
+                continue;
             if (lo >= 0)
-                R(EC_C_ACC, 3 + lo * 7 + 1, 40, 3, 8);
-            else if (up >= 0) {
-                static const int GAP[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
-                R(EC_C_ACC, 3 + GAP[up] * 7 + 4, 30, 4, 7);
-            }
+                R(c, 3 + lo * 7, 20, 5, 30);
+            else if (up >= 0 && up < 11)
+                R(c, 3 + GAP[up] * 7 + 4, 20, 4, 18);
+        }
+        for (i = 0; i < 16; i++) {                 /* the Cs */
+            const int x = 3 + i * 7;
+            if (((ec_kb_semis(ec_key_of_lower(i)) % 12) + 12) % 12 == 0)
+                R(EC_C_L5, x + 1, 46, 3, 2);
         }
     }
-    for (i = 0; i < 16; i++) {                     /* step entry: the target's page, the target */
+    for (i = 0; i < 16; i++) {                     /* the step strip: as LOOP ENGINE's, in the mode's colour; the
+                                                    * selected steps white */
         const int idx = tpage * 16 + i, x = 3 + i * 7;
         const int done = idx < len && (tr->steps[idx].trig || tr->steps[idx].slices);
-        const int tgt = a->pn.target && idx == a->pn.target - 1;
+        const int sel = a == &ec_app && ec_lp_is_sel(idx);
         if (idx >= len)
             continue;
-        R(tgt ? EC_C_ACC : done ? EC_C_L12 : EC_C_L3, x, tgt || done ? 58 : 64, 5, tgt || done ? 8 : 2);
-        if (tgt && i < 15)
-            T(EC_C_ACC, ">", x + 6, 59, EC_AL_LEFT);
+        R(sel ? EC_C_L15 : tint, x, sel || done ? 58 : 64, 5, sel || done ? 8 : 2);
     }
     if (!a->pn.target)
         T(EC_C_L8, "LIVE", W - 2, 59, EC_AL_RIGHT);
     ec_app_page(a, &pg);
-    ec_scr_cells(a, &pg);
+    if (a == &ec_app && ec_lp_b11_held() && !a->bus)   /* 0.6.14: B11 held: the pages panel */
+        ec_scr_pages_panel(a);
+    else
+        ec_scr_cells(a, &pg);
 }
 
 /* ------------------------------------------------------------------------------------------- CROSSFADER --- */

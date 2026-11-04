@@ -267,6 +267,7 @@ int ec_pages_count(void);                     /* the selected track's pattern pa
 void ec_kb_key(int k, int down, int vel);     /* any of the 27 keys (k: the note key) */
 void ec_kb_oct(int d);
 void ec_kb_target(int det);                   /* ALGO */
+void ec_kb_bank_next(void);                   /* 0.6.14: B11's quick click on a slice track: the next bank */
 /* 0.6.6 / 0.6.9: LOOP ENGINE step entry (ec_loopstep.c): B11 switches the white keys between LOOP and STEP layers;
  * the selected steps get the loop keys' regions / ranges and the knobs' locks */
 int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */

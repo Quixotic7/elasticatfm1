@@ -132,7 +132,7 @@ static void pages_set(uint16_t mask, const char *fmt, int n)
     A->redraw = 1;
 }
 
-int ec_pages_keys_live(void) { return ec_app_mode() == EC_MODE_PAGES || (ec_app_mode() == EC_CAT_SRC && ec_lp_b11_held()); }
+int ec_pages_keys_live(void) { return ec_app_mode() == EC_MODE_PAGES || ec_lp_b11_held(); }
 
 void ec_pages_black_down(int key)
 {

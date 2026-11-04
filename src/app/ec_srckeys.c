@@ -330,7 +330,7 @@ static void arm_menu(int mode, int key)
 
 static int special(int mode)
 {
-    return mode == EC_CAT_FILT || mode == EC_CAT_SRC || ec_cat_key_page(mode, 11) >= 0;
+    return mode == EC_CAT_FILT || mode == EC_CAT_SRC || mode == EC_CAT_TRIG || ec_cat_key_page(mode, 11) >= 0;
 }
 
 char ec_src_role(int mode, int key)
@@ -358,8 +358,8 @@ const char *ec_src_label(int mode, int key)
     if (key >= 6 && key <= 10)
         return SRC[key - 6];
     if (key == 11) {
-        if (mode == EC_CAT_SRC)
-            return "STEP";                         /* 0.6.6: the target step (held + K1: the zoom) */
+        if (mode == EC_CAT_SRC || mode == EC_CAT_TRIG)
+            return "STEP";                         /* 0.6.6: the step layer (held: the pages) */
         if (mode == EC_CAT_FILT)
             return iv(ec_app_params(A), EC_P_FENV_MODE) == 2 ? "ENV AHR" : "ENV ADSR";
     }
@@ -429,7 +429,7 @@ void ec_src_down(int key)
         P->src_key = key;
         return;
     }
-    if (key == 11 && mode == EC_CAT_SRC) {         /* 0.6.6: B11 picks the target step (held + K1: the zoom) */
+    if (key == 11 && ec_lp_active()) {             /* 0.6.6 / 0.6.14: B11: the layers, the pages (the step modes) */
         ec_lp_b11(1);
         return;
     }

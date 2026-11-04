@@ -35,6 +35,16 @@ void ec_kb_oct(int d)
     ec_app_message(b);
 }
 
+void ec_kb_bank_next(void)
+{
+    const int cnt = clampi(iv(ec_app_params(A), EC_P_SLICE_COUNT), 1, 32);
+    const int banks = (cnt + 9) / 10;
+    char b[16];
+    P->kb_bank = (P->kb_bank + 1) % (banks > 0 ? banks : 1);
+    snprintf(b, sizeof b, "SLICES %d-%d", P->kb_bank * 10 + 1, P->kb_bank * 10 + 10);
+    ec_app_message(b);
+}
+
 void ec_kb_target(int det)
 {
     const int len = ec_seq_pattern_steps(&A->seq, A->track);
@@ -93,12 +103,8 @@ void ec_kb_key(int k, int down, int vel)
         ec_liverec_capture();                      /* live REC: CAPTURE's first note starts playback */
     if (slice && up >= 0) {                        /* slice tracks: the black keys pick the slice */
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
-        if (up == 10) {                            /* B11: the bank */
-            const int banks = (cnt + 9) / 10;
-            char b[16];
-            P->kb_bank = (P->kb_bank + 1) % (banks > 0 ? banks : 1);
-            snprintf(b, sizeof b, "SLICES %d-%d", P->kb_bank * 10 + 1, P->kb_bank * 10 + 10);
-            ec_app_message(b);
+        if (up == 10) {                            /* B11: the bank (0.6.14: a quick click; held = the pages) */
+            ec_kb_bank_next();
             P->kb_semis[k] = 0;
             return;
         }

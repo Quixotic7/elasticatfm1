@@ -33,6 +33,23 @@ static int shown_mode(void) { return A->settings && P->set_scr ? P->set_scr - 1 
 static int sel_target(void) { return A->bus ? EC_NTRACK - 1 + A->bus : A->track; }
 
 /* ------------------------------------------------------------------------------------------- white keys --- */
+/* 0.6.14: B11's STEP layer in any step mode: the selected steps blink, trigs mid, empty steps off */
+static int leds_step_layer(void)
+{
+    const ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+    const int len = ec_seq_pattern_steps(&A->seq, A->track);
+    int i;
+    if (!ec_lp_step_layer())
+        return 0;
+    for (i = 0; i < EC_NLOWER; i++) {
+        const int idx = A->step_page * 16 + i;
+        ec_plat_led_lower(i, idx >= len ? EC_LED_OFF : ec_lp_is_sel(idx) ? (blink(200) ? EC_LED_LIT : EC_LED_DIM)
+                             : tr->steps[idx].trig || tr->steps[idx].slices ? EC_LED_MID
+                                                                           : EC_LED_OFF);
+    }
+    return 1;
+}
+
 static void leds_steps(void)
 {
     const ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
@@ -40,6 +57,8 @@ static void leds_steps(void)
     const int len = ec_seq_pattern_steps(&A->seq, A->track);
     const int play = ec_seq_step(&A->seq, A->track);
     int i;
+    if (leds_step_layer())
+        return;
     for (i = 0; i < EC_NLOWER; i++) {
         const int idx = A->step_page * 16 + i;
         const ec_step_t *s = &tr->steps[idx];
@@ -158,6 +177,8 @@ static void leds_loop(void)
 static void leds_keyboard(void)
 {
     int i;
+    if (leds_step_layer())
+        return;
     for (i = 0; i < EC_NLOWER; i++) {
         const int k = ec_key_of_lower(i);
         const int c = ((ec_kb_semis(k) % 12) + 12) % 12 == 0;
@@ -350,7 +371,7 @@ static void leds_black(void)
                     : A->rec.state != EC_RS_IDLE ? EC_LED_LIT : EC_LED_MID;
         } break;
         default:
-            if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus) {   /* 0.6.13: B11 held: the pages on B1..B10 */
+            if (ec_lp_b11_held() && !A->bus) {     /* 0.6.13 / 0.6.14: B11 held: the pages on B1..B10 */
                 const int pages = ec_pages_count();
                 const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
                 for (i = 0; i < 10; i++) {         /* 0.6.14 (owner): a muted page dark; the shown one muted blinks */
@@ -454,7 +475,7 @@ static void knob_labels(void)
             L(EC_LBL_KNOB0 + EC_E_K1 + k, NK[k]);
         return;
     }
-    if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus && !A->settings) {   /* 0.6.14: B11 held: the pages panel */
+    if (ec_lp_b11_held() && !A->bus && !A->settings) {   /* 0.6.14: B11 held: the pages panel (the step modes) */
         static const char *const BK[4] = {"LEN", "RATE", "ZOOM", ""};
         L(EC_LBL_KNOB0 + EC_E_SELECT, "");
         L(EC_LBL_KNOB0 + EC_E_ALGO, "STEP");
@@ -699,7 +720,7 @@ static void black_labels(void)
             s = SH[i];
         else if (A->settings)
             ;
-        else if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus && i < 10) {   /* 0.6.13: the pages */
+        else if (ec_lp_b11_held() && !A->bus && i < 10) {   /* 0.6.13 / 0.6.14: the pages (the step modes) */
             if (i < ec_pages_count())
                 snprintf(b, sizeof b, "PAGE%d", i + 1), s = b;
         } else

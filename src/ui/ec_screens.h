@@ -19,6 +19,7 @@ void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, con
  * it has several, else the number given */
 void ec_scr_header_page(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
+void ec_scr_pages_panel(const ec_app_t *a);   /* 0.6.14: B11 held: the pages, LEN, RATE in the cells area */
 /* 0.6.1: MIX's pan tracks: track t's pan now (-1..1: the resolved value incl. a playing lock, plus the modulation),
  * and the marker's x (2 wide) on the track of the strip at x (strip i: x = 2 + 13 i) */
 float ec_scr_mix_pan_now(const ec_app_t *a, int t);

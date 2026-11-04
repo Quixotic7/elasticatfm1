@@ -641,7 +641,7 @@ static void loop_steps(const ec_app_t *a, int range, int tint)
 /* 0.6.14 (owner): while B11 is held the cells area shows the pattern's pages instead of the knobs' params: up to 8
  * tiles (the shown page filled, a page in the loop outlined bright, a muted one dim, beyond the length a dot; the
  * playing page's number in the accent), and under them LEN (K1) and RATE (K2) */
-static void pages_panel(const ec_app_t *a)
+void ec_scr_pages_panel(const ec_app_t *a)
 {
     const float *v = tv(a);
     const int len = ec_seq_pattern_steps(&a->seq, a->track), pages = (len + 15) / 16;
@@ -709,6 +709,31 @@ static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
             held = i;
     }
     ec_kit_steps(top, bot, trigs, ghosts, locks, beyond, held, pl);
+    if (a == &ec_app && ec_lp_active())            /* 0.6.14 (owner): the selected steps (white caps), each trig's
+                                                    * VELOCITY lock as its block's height, a PITCH lock as a blue
+                                                    * mark (above the middle: up, below: down) */
+        for (i = 0; i < 16; i++) {
+            const int idx = a->step_page * 16 + i, x = 3 + i * 7;
+            const ec_step_t *s = &tr->steps[idx];
+            float x1;
+            if (idx >= len)
+                continue;
+            if ((trigs | ghosts) >> i & 1u) {
+                if (ec_step_lock_get(s, EC_P_VELOCITY, &x1)) {
+                    const float vv = x1 < 0 ? 0 : x1 > 1 ? 1 : x1;
+                    const int h = (int)((1.0f - vv) * (float)(bot - top - 2) + 0.5f) / 2 * 2;
+                    if (h > 0)
+                        R(EC_C_BG, x, top, 5, h);
+                }
+                if (ec_step_lock_get(s, EC_P_PITCH, &x1))
+                    R(EC_C_SRC, x + 1, x1 >= tr->v[EC_P_PITCH] ? top + 2 : bot - 4, 3, 2);
+            }
+            if (ec_lp_is_sel(idx)) {
+                R(EC_C_L15, x, top - 4, 5, 2);
+                if (!((trigs | ghosts) >> i & 1u))
+                    R(EC_C_L15, x, bot - 2, 5, 2);
+            }
+        }
     for (i = 0; i < pages && pages > 1 && pages_y > 0; i++)
         R(i == a->step_page ? EC_C_L15 : EC_C_L5, W / 2 - pages * 2 + i * 4, pages_y, 2, 2);
 }
@@ -772,7 +797,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
             key_ruler(a, 66);                      /* (the mocks: the loop-key ruler) */
     }
     if (a == &ec_app && ec_lp_b11_held() && !A_IS_BUS(a))   /* 0.6.14 (owner): B11 held: the pages, LEN and RATE */
-        pages_panel(a);
+        ec_scr_pages_panel(a);
     else
         cells(a, pg);
 }
@@ -876,7 +901,10 @@ static void generic_screen(const ec_app_t *a, const ec_page_t *pg)
         env_bars(a, pg, pg->pic, 20, 75);
     else
         step_strip(a, 26, 62, 70);
-    cells(a, pg);
+    if (a == &ec_app && ec_lp_b11_held() && !A_IS_BUS(a))   /* 0.6.14: B11 held: the pages panel (TRIG) */
+        ec_scr_pages_panel(a);
+    else
+        cells(a, pg);
 }
 
 /* ------------------------------------------------------------------------------------------- settings --- */

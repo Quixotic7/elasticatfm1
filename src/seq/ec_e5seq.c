@@ -238,6 +238,17 @@ int ec_e5_page_in_loop(const ec_project_t *p, int t, int page, int pages)
     return page >= 0 && page < pages && (loop_mask(p, t, pages) >> page & 1u);
 }
 
+uint16_t ec_e5_page_loop_mask(const ec_project_t *p, int t, int pages) { return loop_mask(p, t, pages); }
+
+void ec_e5_set_page_loop(ec_project_t *p, int t, uint16_t mask, int pages)
+{
+    const uint16_t all = (uint16_t)(pages >= 16 ? 0xFFFFu : (1u << pages) - 1u);
+    mask &= all;
+    if (!mask)
+        mask = all;
+    p->pe5[p->current].page_loop[t] = mask == all ? 0 : mask;
+}
+
 void ec_e5_toggle_page_loop(ec_project_t *p, int t, int page, int pages)
 {
     const uint16_t all = (uint16_t)(pages >= 16 ? 0xFFFFu : (1u << pages) - 1u);

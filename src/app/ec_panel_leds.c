@@ -341,7 +341,13 @@ static void leds_black(void)
                     : A->rec.state != EC_RS_IDLE ? EC_LED_LIT : EC_LED_MID;
         } break;
         default:
-            if (ec_src_mode(mode)) {
+            if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus) {   /* 0.6.13: B11 held: the pages on B1..B10 */
+                const int pages = ec_pages_count();
+                const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
+                for (i = 0; i < 10; i++)
+                    l[i] = i >= pages ? EC_LED_OFF : i == A->step_page ? EC_LED_LIT : (m >> i & 1u) ? EC_LED_DIM
+                                                                                                   : EC_LED_FAINT;
+            } else if (ec_src_mode(mode)) {
                 int cur = -1;
                 ec_pn_roles(mode, &cur);
                 for (i = 0; i < EC_NBKEY; i++) {
@@ -673,7 +679,10 @@ static void black_labels(void)
             s = SH[i];
         else if (A->settings)
             ;
-        else
+        else if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus && i < 10) {   /* 0.6.13: the pages */
+            if (i < ec_pages_count())
+                snprintf(b, sizeof b, "PAGE%d", i + 1), s = b;
+        } else
             switch (mode) {
             case EC_CAT_MASTER: s = i < 8 && !ec_mix_rate_index(i + 1) ? "" : MIX[i]; break;
             case EC_MODE_PAGES:

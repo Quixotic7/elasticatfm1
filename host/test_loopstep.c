@@ -211,6 +211,56 @@ static void test_tracks(void)
     ec_pn_select_target(0);
 }
 
+/* 0.6.13 (owner): B11 held, B1..B10 are the pages as FIZZ: tap select, hold mute, double-tap solo, two held = loop */
+static void test_pages_b11(void)
+{
+    float *v;
+    uint16_t m;
+    to(EC_CAT_SRC);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_PATTERN_STEPS] = 64;
+    ec_seq_timing_changed(&A->seq);
+    ec_e5_set_page_loop(&A->proj, A->track, 0, 4);
+    hold_b11(1);
+    key(1, 1, 1);
+    run(40);
+    key(1, 1, 0);
+    run(20);
+    CHECK(A->step_page == 1 && ec_lp_b11_held(), "B11 + B2 tap: page 2 (%d)", A->step_page);
+    key(1, 2, 1);
+    run(450);
+    key(1, 2, 0);
+    run(20);
+    m = ec_e5_page_loop_mask(&A->proj, A->track, 4);
+    CHECK(m == 0xB && !strcmp(A->msg, "PAGE 3 MUTED"), "B3 held: page 3 muted (mask %x, %s)", m, A->msg);
+    key(1, 3, 1);
+    run(40);
+    key(1, 3, 0);
+    run(60);
+    key(1, 3, 1);
+    run(40);
+    key(1, 3, 0);
+    run(20);
+    m = ec_e5_page_loop_mask(&A->proj, A->track, 4);
+    CHECK(m == 0x8 && A->step_page == 3, "B4 double-tap: page 4 solo (mask %x)", m);
+    key(1, 0, 1);
+    run(40);
+    key(1, 1, 1);
+    run(40);
+    key(1, 0, 0);
+    key(1, 1, 0);
+    run(20);
+    m = ec_e5_page_loop_mask(&A->proj, A->track, 4);
+    CHECK(m == 0x3 && !strcmp(A->msg, "LOOP PAGES 1-2"), "B1 + B2 held: loop pages 1-2 (mask %x, %s)", m, A->msg);
+    hold_b11(0);
+    CHECK(!ec_lp_step_layer(), "B11 let go after page keys: no layer latch");
+    ec_e5_set_page_loop(&A->proj, A->track, 0, 4);
+    v[EC_P_PATTERN_STEPS] = 16;
+    ec_seq_timing_changed(&A->seq);
+    A->step_page = 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -223,6 +273,7 @@ int main(int argc, char **argv)
     test_knobs();
     test_range();
     test_tracks();
+    test_pages_b11();
     C->shutdown();
     printf("test_loopstep: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

@@ -762,6 +762,12 @@ static void black_down(int k, int key, int vel)
     }
     if (A->settings)
         return;
+    if (mode == EC_CAT_SRC && ec_lp_b11_held() && key <= 10 && !A->bus) {   /* 0.6.13: B11 held: B1..B10 the pages */
+        ec_lp_b11_used();
+        ec_pages_black_down(key);
+        A->key_role[k] = R_PAGEB;
+        return;
+    }
     switch (mode) {
     case EC_CAT_MASTER: ec_mix_black(key); break;
     case EC_MODE_PAGES:

@@ -883,3 +883,14 @@ the B11 pick mode above)
   (ALERT) with steps selected, blue (the theme's SRC blue) LIVE, a rule under it in that colour; the loop-key ruler
   is gone from the firmware's screen (the brackets and the key LEDs show the keys' region). The 0.6.11 caps are gone.
 - Tests: test_loopstep (the LIVE write), test_v61ux's strings.
+
+**0.6.13: the pages on B11 + the black keys, as FIZZ** (owner, 2026-11-03: "changing pages is a chore through F3")
+- LOOP ENGINE, **B11 held: B1..B10 are the pattern's pages** (the LEDs: the shown page lit, pages in the loop dim,
+  muted faint; the labels PAGE n). The same gestures on PAGES' black keys (ec_mix.c, one page-key model):
+  - tap = select the page (the step page shown);
+  - hold (400 ms) = **mute** the page (out of the loop; hold again: back in; "PAGE 3 MUTED" / "PAGE 3 ON");
+  - double-tap = **solo** (the loop is that page; double-tap again: ALL PAGES);
+  - two keys held together = **loop between them** ("LOOP PAGES 1-2").
+  F1 / F2 + a page key is still the clip (copy / cut / paste a page). B11's quick-click latch is not triggered by a
+  page key. F3's white keys still work as before.
+- Tests: test_loopstep test_pages_b11.

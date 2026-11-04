@@ -110,44 +110,129 @@ void ec_mix_black(int key)
 /* ------------------------------------------------------------------------------------------- PAGES --- */
 int ec_pages_count(void) { return (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16; }
 
+/* 0.6.13 (owner): the page keys as FIZZ's, on PAGES' black keys and on LOOP ENGINE's black keys B1..B10 while B11 is
+ * held: a tap selects the page; a hold (400 ms) mutes it (out of the loop; again: back in); a double-tap solos it
+ * (the loop is that page; again: every page); two keys held together loop between them. F1 / F2 + a key: the clip. */
+static struct {
+    uint16_t held, used;
+    uint32_t ms[EC_NBKEY];
+    int last_pg;              /* the last tap's page, for the double-tap */
+    uint32_t last_ms;
+} pg;
+
+static void pages_set(uint16_t mask, const char *fmt, int n)
+{
+    char b[24];
+    const int pages = ec_pages_count();
+    ec_e5_set_page_loop(&A->proj, A->track, mask, pages);
+    ec_seq_timing_changed(&A->seq);
+    ec_app_mark_dirty();
+    snprintf(b, sizeof b, fmt, n);
+    ec_app_message(b);
+    A->redraw = 1;
+}
+
+int ec_pages_keys_live(void) { return ec_app_mode() == EC_MODE_PAGES || (ec_app_mode() == EC_CAT_SRC && ec_lp_b11_held()); }
+
 void ec_pages_black_down(int key)
 {
-    const int pg = key - 1;
+    const int i = key - 1, pages = ec_pages_count();
+    const uint16_t bit = (uint16_t)(1u << i), others = pg.held;
+    if (i < 0 || i >= EC_NBKEY)
+        return;
     if (ec_pn_f(1) || ec_pn_f(2)) {                /* §2: whole pages */
         P->f_used = 3;
-        P->bk_used |= (uint16_t)(1u << pg);
-        if (pg < ec_pages_count())
-            ec_clip_tap(EC_CK_PAGE, pg);
+        pg.used |= bit;
+        if (i < pages)
+            ec_clip_tap(EC_CK_PAGE, i);
+        return;
+    }
+    pg.held |= bit;
+    pg.used &= (uint16_t)~bit;
+    pg.ms[i] = A->ms;
+    if (others && i < pages) {                     /* two keys held: the loop between them */
+        int lo = i, hi = i, k;
+        uint16_t m = 0;
+        for (k = 0; k < EC_NBKEY; k++)
+            if (others >> k & 1u) {
+                if (k < lo)
+                    lo = k;
+                if (k > hi)
+                    hi = k;
+            }
+        if (hi >= pages)
+            hi = pages - 1;
+        for (k = lo; k <= hi; k++)
+            m |= (uint16_t)(1u << k);
+        pg.used |= pg.held;                        /* (no tap, hold or double-tap from these keys) */
+        pg.last_pg = -1;
+        pages_set(m, lo == hi ? "LOOP PAGE %d" : "LOOP PAGES %d-", lo + 1);
+        if (lo != hi) {
+            char b[24];
+            snprintf(b, sizeof b, "LOOP PAGES %d-%d", lo + 1, hi + 1);
+            ec_app_message(b);
+        }
     }
 }
 
 void ec_pages_black_up(int key)
 {
-    const int pg = key - 1;
-    if (P->bk_used >> pg & 1u)
+    const int i = key - 1, pages = ec_pages_count();
+    const uint16_t bit = (uint16_t)(1u << i);
+    if (i < 0 || i >= EC_NBKEY)
         return;
-    if (pg < ec_pages_count()) {                   /* a tap: edit that page */
+    pg.held &= (uint16_t)~bit;
+    if (pg.used & bit) {
+        pg.used &= (uint16_t)~bit;
+        return;
+    }
+    if (i >= pages)
+        return;
+    if (pg.last_pg == i && A->ms - pg.last_ms < EC_DTAP_MS) {   /* a double-tap: solo (again: every page) */
+        const uint16_t all = (uint16_t)(pages >= 16 ? 0xFFFFu : (1u << pages) - 1u);
+        const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
+        pg.last_pg = -1;
+        if (m == bit)
+            pages_set(all, "ALL PAGES", 0);
+        else
+            pages_set(bit, "SOLO PAGE %d", i + 1);
+        A->step_page = i;
+        return;
+    }
+    {                                              /* a tap: edit that page */
         char b[16];
-        A->step_page = pg;
+        A->step_page = i;
         A->step_held = 0;
-        snprintf(b, sizeof b, "PAGE %d", pg + 1);
+        snprintf(b, sizeof b, "PAGE %d", i + 1);
         ec_app_message(b);
+        pg.last_pg = i;
+        pg.last_ms = A->ms;
+        A->redraw = 1;
     }
 }
 
 void ec_pages_hold_tick(void)
 {
     int i;
-    if (ec_app_mode() != EC_MODE_PAGES || A->settings)
+    if (!pg.held || A->settings)
         return;
-    for (i = 0; i < EC_NBKEY; i++)                 /* a hold: the page in / out of the loop */
-        if ((P->bk_held >> i & 1u) && !(P->bk_used >> i & 1u) && A->ms - P->bk_ms[i] >= EC_HOLD_MS) {
+    for (i = 0; i < EC_NBKEY; i++)                 /* a hold: the page muted (out of the loop) / back in */
+        if ((pg.held >> i & 1u) && !(pg.used >> i & 1u) && A->ms - pg.ms[i] >= EC_HOLD_MS) {
             const int pages = ec_pages_count();
-            P->bk_used |= (uint16_t)(1u << i);
+            pg.used |= (uint16_t)(1u << i);
+            pg.last_pg = -1;
             if (i < pages) {
+                const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
+                const int in = (m >> i) & 1u;
                 ec_e5_toggle_page_loop(&A->proj, A->track, i, pages);
                 ec_seq_timing_changed(&A->seq);
                 ec_app_mark_dirty();
+                {
+                    char b[20];
+                    snprintf(b, sizeof b, in ? "PAGE %d MUTED" : "PAGE %d ON", i + 1);
+                    ec_app_message(b);
+                }
+                A->redraw = 1;
             }
         }
 }

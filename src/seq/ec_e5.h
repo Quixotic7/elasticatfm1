@@ -23,6 +23,8 @@ int ec_e5_chunk_load(ec_project_t *p, const uint8_t *buf, uint32_t n);         /
 int ec_e5_play_index(const ec_project_t *p, int t, int steps, int64_t pos, int *pass);
 /* PAGE > LOOP tap: toggle page (0-based) in the loop; never leaves it empty (a full set is stored as 0) */
 void ec_e5_toggle_page_loop(ec_project_t *p, int t, int page, int pages);
+uint16_t ec_e5_page_loop_mask(const ec_project_t *p, int t, int pages);   /* 0.6.13: the pages that play (bits) */
+void ec_e5_set_page_loop(ec_project_t *p, int t, uint16_t mask, int pages);   /* 0.6.13: all / a solo / a span */
 int ec_e5_page_in_loop(const ec_project_t *p, int t, int page, int pages);
 
 /* ---- slice programs ---- */

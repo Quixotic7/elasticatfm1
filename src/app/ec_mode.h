@@ -260,6 +260,7 @@ int ec_mix_rate_index(int key);               /* B1..B8 -> the rate index (0: no
 void ec_pages_black_down(int key);
 void ec_pages_black_up(int key);
 void ec_pages_hold_tick(void);
+int ec_pages_keys_live(void);                 /* 0.6.13: the page keys are live (PAGES, or LOOP ENGINE + B11 held) */
 int ec_pages_count(void);                     /* the selected track's pattern pages */
 /* ---- ec_keyboard.c ---- */
 void ec_kb_key(int k, int down, int vel);     /* any of the 27 keys (k: the note key) */

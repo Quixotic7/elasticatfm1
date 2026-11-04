@@ -132,15 +132,17 @@ static void leds_loop(void)
                 ph = (int)((st.pos_sample - lo) / (hi2 - lo) * 128.0f / units);
         }
         for (i = 0; i < EC_NLOWER; i++) {
-            const int key = i + hi;
+            const int key = i + hi, idx = A->step_page * 16 + i;
             const float ks = (float)key * units, ke = ks + units;
-            uint8_t l = EC_LED_OFF;                /* 0.6.12 (owner): only the active range lights */
+            uint8_t l = EC_LED_OFF;                /* 0.6.14 (owner): only the active range lights, fully */
             if (key < div && ke > ls + 0.001f && ks < le - 0.001f)
-                l = EC_LED_DIM;
-            if (key == ph)
-                l = EC_LED_MID;
+                l = EC_LED_LIT;
+            if (key == ph && l == EC_LED_OFF)
+                l = EC_LED_DIM;                    /* (the playhead outside the range: a trace) */
             if (st.keys_held >> key & 1u)
                 l = EC_LED_LIT;
+            if (ec_lp_is_sel(idx))                 /* the selected steps blink on their keys */
+                l = blink(200) ? EC_LED_LIT : EC_LED_OFF;
             ec_plat_led_lower(i, l);
         }
     }

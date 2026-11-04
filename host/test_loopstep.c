@@ -125,7 +125,7 @@ static void test_layers(void)
         run(60);
         for (i = 0; i < 16; i++) {
             sel[i] = led_key(0, i);
-            same &= sel[i] == live[i];
+            same &= i == 2 || sel[i] == live[i];   /* (0.6.14: the selected step's own key blinks) */
         }
         wkey(6, 0);
         CHECK(same && ec_lp_count() == 1, "L7 held: the same key LEDs with a step selected as live");

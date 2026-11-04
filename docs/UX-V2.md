@@ -905,3 +905,5 @@ the B11 pick mode above)
 - The BPM knob's acceleration is capped: 0.1 a slow detent, at most 1.0 BPM a detent flat out (it reached 17.5).
 - The LOOP layer's strip is all in its tint (owner): trigs, empty floors, the selection (a full column) and the
   playhead; the rule under it is gone (it meant nothing). The STEP layer stays white with the accent playhead.
+- LOOP layer LEDs (owner, again): the active range's keys fully lit, the rest off (the playhead a dim trace outside
+  the range), the selected steps blinking on their keys.

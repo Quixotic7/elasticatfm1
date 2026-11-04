@@ -508,7 +508,8 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                 r1 = x, locked = 1;
             rs = vx(&w, sl->trim_start + (sl->trim_end - sl->trim_start) * r0 / 128.0f);
             re = vx(&w, sl->trim_start + (sl->trim_end - sl->trim_start) * r1 / 128.0f);
-        } else if (tst) {                          /* a target: its region (a lock, else the track's) in the range */
+        } else if (tst && !a->seq.tr[a->track].live_keys) {   /* a selected step, no loop key held: its region (a
+                                                    * lock, else the track's); a loop key held: live's, the same */
             float l0 = v[EC_P_LOOP_START], l1 = v[EC_P_LOOP_END], x;
             if (ec_step_lock_get(tst, EC_P_LOOP_START, &x))
                 l0 = x, locked = 1;
@@ -693,7 +694,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     }
     sample_area(a, 22, 58, pg->pic == EC_PIC_WAVE_RANGE);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
-        if (ec_app_target_step(a) >= 0 || (a == &ec_app && ec_lp_step_layer())) {   /* steps selected / STEP layer */
+        if (a == &ec_app && ec_lp_step_layer()) {  /* 0.6.9: the STEP layer: the step strip; the LOOP layer is live's */
             loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE);
         } else
             key_ruler(a, 66);                      /* 0.6.0: LOOP ENGINE's white keys play the loop */

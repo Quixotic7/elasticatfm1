@@ -88,6 +88,17 @@ static void leds_loop(void)
             ec_plat_led_lower(i, EC_LED_OFF);
         return;
     }
+    if (ec_lp_step_layer()) {                      /* 0.6.9: the STEP layer: the selected steps lit, trigs mid */
+        const ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+        const int len = ec_seq_pattern_steps(&A->seq, A->track);
+        for (i = 0; i < EC_NLOWER; i++) {
+            const int idx = A->step_page * 16 + i;
+            ec_plat_led_lower(i, idx >= len ? EC_LED_OFF : ec_lp_is_sel(idx) ? EC_LED_LIT
+                                 : tr->steps[idx].trig || tr->steps[idx].slices ? EC_LED_MID
+                                                                               : EC_LED_FAINT);
+        }
+        return;
+    }
     ec_dsp_track_status(A->dsp, A->track, &st);
     if (is_slice_m(m)) {
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);

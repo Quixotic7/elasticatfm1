@@ -102,6 +102,28 @@ static void test_layers(void)
     CHECK(step(0)->trig && lockv(0, EC_P_LOOP_START) == 8, "SHIFT + F1: step 1 back");
     if (A->pn.shift_sticky)
         press(FM1P_B_GLO, 40);
+    {   /* 0.6.9: a loop key held with steps selected lights the keys exactly as live does */
+        int live[16], sel[16], i, same = 1;
+        turn(FM1P_E_ALGO, -20);                      /* LIVE */
+        wkey(6, 1);
+        run(60);
+        for (i = 0; i < 16; i++)
+            live[i] = led_key(0, i);
+        wkey(6, 0);
+        turn(FM1P_E_ALGO, 3);                        /* step 3 selected */
+        wkey(6, 1);
+        run(60);
+        for (i = 0; i < 16; i++) {
+            sel[i] = led_key(0, i);
+            same &= sel[i] == live[i];
+        }
+        wkey(6, 0);
+        CHECK(same && ec_lp_count() == 1, "L7 held: the same key LEDs with a step selected as live");
+        clear_steps(A->track);
+        turn(FM1P_E_ALGO, -20);
+        turn(FM1P_E_ALGO, 1);                        /* back on step 1 for the next checks */
+        wtap(1);
+    }
     /* ALGO: one step; below 1 = LIVE */
     turn(FM1P_E_ALGO, 2);
     CHECK(ec_lp_count() == 1 && ec_lp_is_sel(2), "ALGO +2 from step 1: step 3 alone");

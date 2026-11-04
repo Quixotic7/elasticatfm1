@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.9)
+# Elasticat on the FM-1: controls (0.6.10)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -1009,9 +1009,10 @@ An FX machine changes at any time (a short fade, no click).
   is LIVE (nothing selected). **A quick click on B11 latches the STEP layer** (tap steps to select them; hold B11
   for the loop keys, the reverse order); another quick click goes back to loop keys. **B11 + OCT-** clears the
   selected steps (trig and locks; SHIFT + F1 undoes). With steps selected **the knobs lock onto all of them** (the
-  cells show the first one's; F1 + a knob clears their lock). The screen swaps the loop-key ruler for the step strip
-  (the selected steps capped, each step's lock as a small bar), the waveform's brackets show the first selected
-  step's region, and the header says SELECT STEPS on the STEP layer.
+  cells show the first one's; F1 + a knob clears their lock). **On the loop keys everything is as live** (0.6.10):
+  the ruler, the key LEDs, and the brackets while a loop key is held; with no key held the brackets show the first
+  selected step's region. The STEP layer shows the step strip (the selected steps capped, each step's lock as a
+  small bar), its keys light the selected steps (trigs mid), and the header says SELECT STEPS.
 - **The loop keys** (the live scrub): hold one key to loop that part of the range, two or more to span them. Let go
   and the playhead returns as RET MODE says (return / boomerang / reset). While stopped they audition.
 - **On slice machines** (SLICE, S.POLY, RAZOR, R.POLY) the white keys are **slice pads**, velocity sensitive.

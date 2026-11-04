@@ -1427,6 +1427,9 @@ void ec_app_ui_info(char *buf, uint32_t n)
                          A->settings ? ec_app_set_rows(&spg, sidx) : 0, A->fn);
                 l = (uint32_t)strlen(buf);
             }
+            l = (uint32_t)strlen(buf);
+            snprintf(buf + l, n - l, " pvlo:%d pvhi:%d pvhold:%d pvkeys:%x pvpos:%d", (int)A->pn.pv_lo, (int)A->pn.pv_hi, A->pn.pv_hold, (unsigned)A->pn.pv_keys, (int)A->pn.pv_pos);
+            l = (uint32_t)strlen(buf);
             snprintf(buf + l, n - l, " ppos:%d warp:%d gspd:%d grains:%d gmean:%d gmin:%d gmax:%d",
                      (int)(st.pos_sample * 1000.0f + 0.5f), iv(ec_app_params(A), EC_P_MODE),
                      (int)(ec_app_params(A)[EC_P_GRAIN_SPEED] * 100.0f + 0.5f), ng,

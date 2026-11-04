@@ -332,7 +332,8 @@ void ec_rzui_preview(ec_app_t *a, int slice)
     if (slice < 1 || slice > count)
         return;
     ec_rzui_window(a, a->track, &lo, &hi);
-    ec_file_preview_region((float)(lo + (hi - lo) * rz->start[slice - 1]), (float)(lo + (hi - lo) * rz->end[slice - 1]));
+    ec_file_preview_region((float)(lo + (hi - lo) * rz->start[slice - 1] / 128.0),   /* (the edges: 0..128 of the window) */
+                           (float)(lo + (hi - lo) * rz->end[slice - 1] / 128.0));
 }
 
 void ec_rzui_oct(ec_app_t *a, int up)

@@ -100,15 +100,39 @@ static void takeover(const ec_app_t *a)
     R(EC_C_BG, 0, 10, W, H - 10);
     if (u->to_label[0])
         T2(EC_C_L8, u->to_label, W / 2, 14, EC_AL_CENTER);   /* above the value, never under it */
-    if (u->to_kind == EC_TO_SAMPLE) {              /* a file name: no extension, on two lines when it must */
-        char b[40], *dot;
-        snprintf(b, sizeof b, "%s", v);
-        dot = strrchr(b, '.');
-        if (dot && dot != b)
-            *dot = 0;
-        big_text(b, 42, 22);
-    } else
-        big_text(v, 42, 22);
+    if (u->to_kind == EC_TO_SAMPLE) {              /* 0.6.15 (owner): the pool round the slot, as POOL lists it */
+        const int cur = ec_app_track_slot(a, a->track);
+        int first = cur - 3, k;
+        char b[40], num[8];
+        if (first > EC_NSLOT - 7)
+            first = EC_NSLOT - 7;
+        if (first < 0)
+            first = 0;
+        for (k = 0; k < 7; k++) {
+            const int s = first + k, y = 30 + k * 11, on = s == cur;
+            const ec_slot_t *sl = &a->proj.slot[s];
+            const ec_ss_sample_t *x = a->slot[s].handle >= 0 ? ec_ss_ready(a->slot[s].handle) : 0;
+            const char *n = x ? x->name : sl->path[0] ? (strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1 : sl->path) : 0;
+            if (on)
+                R(EC_C_L15, 0, y - 2, W, 11);
+            snprintf(num, sizeof num, "%d", s + 1);
+            T(on ? EC_C_BG : EC_C_L8, num, 14, y, EC_AL_RIGHT);
+            if (n) {
+                char *dot;
+                snprintf(b, sizeof b, "%s", n);
+                dot = strrchr(b, '.');
+                if (dot && dot != b)
+                    *dot = 0;
+                if (strlen(b) > 22)
+                    b[22] = 0;
+                T(on ? EC_C_BG : EC_C_L15, b, 18, y, EC_AL_LEFT);
+            } else
+                R(on ? EC_C_BG : EC_C_L5, 18, y + 2, 6, 2);
+        }
+        (void)v;
+        return;
+    }
+    big_text(v, 42, 22);
     for (i = 0; i < 24; i++) {                     /* the stripes */
         const int on = (float)i < u->to_frac * 24.0f + 0.01f || (i == 0 && u->to_frac > 0);
         R(on ? EC_C_L15 : EC_C_L3, 4 + i * 4 + 4, 74, 2, 12);   /* 0.6.1: 2-unit gaps */

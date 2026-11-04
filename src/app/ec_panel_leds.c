@@ -243,10 +243,24 @@ static void leds_white(void)
     if (mode == EC_CAT_FILE && !A->fn && !A->settings && ec_file_page() != EC_PIC_RAZOR) {
         const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
         const float vw = 1.0f / ec_file_zoom();
-        for (i = 0; i < EC_NLOWER; i++) {          /* the editor: the keys at the trim lit; the browser: dark */
+        if (ec_file_page() != EC_PIC_EDITOR) {     /* 0.6.15: BROWSE / POOL: the preview's loop keys: the span lit, the
+                                                    * playhead's key flashing in it; else dark */
+            const ec_ss_sample_t *x = P->pv_state == EC_PV_READY ? ec_ss_ready(P->pv_handle) : 0;
+            const int ph = x && x->frames && P->pv_play ? (int)(P->pv_pos / (double)x->frames * 16.0) : -1;
+            for (i = 0; i < EC_NLOWER; i++) {
+                const int in = (P->pv_keys >> i) & 1u || (P->pv_keys && i > __builtin_ctz(P->pv_keys) &&
+                                                          i < 31 - __builtin_clz(P->pv_keys));
+                uint8_t l = in ? EC_LED_MID : EC_LED_OFF;
+                if (i == ph)
+                    l = blink(80) ? EC_LED_LIT : (in ? EC_LED_MID : EC_LED_DIM);
+                ec_plat_led_lower(i, l);
+            }
+            return;
+        }
+        for (i = 0; i < EC_NLOWER; i++) {          /* the editor: the keys at the trim lit */
             const float pos = P->ed_view + (float)i / 15.0f * vw;
             const int set = fabsf(pos - sl->trim_start) < vw / 30.0f || fabsf(pos - sl->trim_end) < vw / 30.0f;
-            ec_plat_led_lower(i, ec_file_page() != EC_PIC_EDITOR ? EC_LED_OFF : set ? EC_LED_LIT : EC_LED_FAINT);
+            ec_plat_led_lower(i, set ? EC_LED_LIT : EC_LED_FAINT);
         }
         return;
     }
@@ -383,7 +397,8 @@ static void leds_black(void)
             if (pic == EC_PIC_EDITOR) {            /* 0.6.15: B1 / B2 the pages (the shown one lit), B9 AUTO BPM */
                 l[0] = A->ux.lane[EC_CAT_FILE] == 0 ? EC_LED_LIT : EC_LED_DIM;
                 l[1] = A->ux.lane[EC_CAT_FILE] == 1 ? EC_LED_LIT : EC_LED_DIM;
-                l[8] = EC_LED_MID;
+                l[8] = l[9] = EC_LED_MID;
+                l[10] = P->ed_zoom ? EC_LED_MID : EC_LED_FAINT;
                 break;
             }
             for (i = 1; i <= EC_NBKEY; i++)
@@ -554,9 +569,10 @@ static void knob_labels(void)
         ec_app_page(A, &pg);
         lane = ec_app_lane(A, &pg);
         L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : ec_rzui_active(A) ? "SLICE" : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE ? "+/- POOL"
+                                                    : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR ? "MARKER"
                                                     : mode == EC_CAT_FILE ? "" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET"
                                                     : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : mode == EC_CAT_FILE ? "PREVIEW" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : mode == EC_CAT_FILE && (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) ? "PREVIEW" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
         else if (A->settings)
@@ -810,7 +826,7 @@ static void black_labels(void)
             case EC_CAT_FILE: {
                 static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "REMOVE", "ADD", "PREVIEW"};
                 static const char *const PO[EC_NBKEY] = {"", "", "", "", "", "", "", "", "FREE", "ASSIGN", "MOVE"};
-                static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "", ""};
+                static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "RECALC", "1X"};
                 const int pic = ec_file_page();
                 if (pic == EC_PIC_POOL && (i == 8 || i == 9 || i == 10))
                     s = PO[i];

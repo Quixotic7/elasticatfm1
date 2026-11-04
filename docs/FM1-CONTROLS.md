@@ -473,7 +473,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 |---|---|---|---|---|---|---|
 | BROWSE | B7 | - | | | | |
 | EDITOR |  | 1 | START | END | - | ZOOM |
-|  |  | 2 | BPM | STEPS | GAIN |  |
+|  |  | 2 | BPM | STEPS | GAIN | ZOOM |
 | SLICE |  | 1 | PLAY | ZOOM | SLCE START | SLCE END |
 |  |  | 2 | SNAP MODE | CHOKE | PITCH | TRANS SENS |
 | POOL | B6 | - | | | | |

@@ -731,15 +731,25 @@ static void auto_bpm(void)
     ec_slot_t *sl = &A->proj.slot[s];
     const ec_ss_sample_t *x = A->slot[s].handle >= 0 ? ec_ss_ready(A->slot[s].handle) : 0;
     const float dur = x && x->rate ? (float)x->frames / (float)x->rate * (sl->trim_end - sl->trim_start) : 0;
-    float best = 0, bars = 0, b;
+    const float tag = sl->path[0] ? ec_bpm_from_name(strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1 : sl->path) : 0;
+    float best = 0;
+    int bars = 0, b;
     char m[24];
+    if (tag > 0) {                                 /* the file's own tag ("..._bpm136.wav") wins */
+        sl->bpm = tag;
+        ec_seq_touch_all(&A->seq);
+        ec_app_mark_dirty();
+        snprintf(m, sizeof m, "BPM %.1f (NAME)", (double)sl->bpm);
+        ec_app_message(m);
+        return;
+    }
     if (dur <= 0.01f) {
         ec_app_message("NO SAMPLE");
         return;
     }
-    for (b = 0.25f; b <= 64.0f; b *= 2.0f) {
-        const float bpm = 240.0f * b / dur;
-        if (bpm < 40.0f || bpm > 300.0f)
+    for (b = 1; b <= 64; b++) {                    /* a whole number of bars: the tempo nearest the project's */
+        const float bpm = 240.0f * (float)b / dur;
+        if (bpm < 50.0f || bpm > 240.0f)
             continue;
         if (!best || fabsf(bpm - A->proj.bpm) < fabsf(best - A->proj.bpm))
             best = bpm, bars = b;
@@ -749,13 +759,9 @@ static void auto_bpm(void)
         return;
     }
     sl->bpm = floorf(best * 10.0f + 0.5f) / 10.0f;
-    steps_recalc(sl, s);
     ec_seq_touch_all(&A->seq);
     ec_app_mark_dirty();
-    if (bars >= 1.0f)
-        snprintf(m, sizeof m, "BPM %.1f = %d BAR%s", (double)sl->bpm, (int)bars, bars > 1 ? "S" : "");
-    else
-        snprintf(m, sizeof m, "BPM %.1f = 1/%d BAR", (double)sl->bpm, (int)(1.0f / bars));
+    snprintf(m, sizeof m, "BPM %.1f = %d BAR%s", (double)sl->bpm, bars, bars > 1 ? "S" : "");
     ec_app_message(m);
 }
 
@@ -822,8 +828,7 @@ void ec_file_white(int i, int down)
     }
     place(sl, end, pos);
     ec_app_message(end ? "TRIM END" : "TRIM START");
-    steps_recalc(sl, s);
-    ec_seq_touch_all(&A->seq);
+    ec_seq_touch_all(&A->seq);                     /* (0.6.15: the steps stay; B10 RECALC) */
     ec_app_mark_dirty();
 }
 
@@ -1058,12 +1063,22 @@ void ec_file_black(int key, int down)
     if (!down || mode != EC_CAT_FILE)
         return;
     pic = ec_file_page();
-    if (pic == EC_PIC_EDITOR) {                    /* 0.6.15: B1 / B2 its pages, B9 AUTO BPM (the zoom is K4) */
+    if (pic == EC_PIC_EDITOR) {                    /* 0.6.15: B1 / B2 its pages, B9 AUTO BPM, B10 RECALC, B11 1X */
         if (key == 1 || key == 2) {
             A->ux.lane[EC_CAT_FILE] = key - 1;
             A->redraw = 1;
         } else if (key == 9)
             auto_bpm();
+        else if (key == 10) {
+            const int s = ec_app_track_slot(A, A->track);
+            char m[20];
+            steps_recalc(&A->proj.slot[s], s);
+            ec_seq_touch_all(&A->seq);
+            ec_app_mark_dirty();
+            snprintf(m, sizeof m, "STEPS %d", (int)A->proj.slot[s].steps);
+            ec_app_message(m);
+        } else if (key == 11)
+            zoom(0);
         return;
     }
     if (pic == EC_PIC_RAZOR)                       /* 0.6.15 (owner): the slice editor's keys are its own: no page keys */

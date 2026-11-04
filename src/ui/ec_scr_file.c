@@ -232,8 +232,12 @@ void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg)
         first = 0;
     for (i = 0; i < rows; i++) {
         const int s = first + i, y = 21 + i * 8, on = s == cur;
-        const ec_slot_t *sl = &a->proj.slot[s];
-        const ec_ss_sample_t *x = a->slot[s].handle >= 0 ? ec_ss_ready(a->slot[s].handle) : 0;
+        /* 0.6.15 (owner): a slot in hand: the list shows the result (the swap applied), the moving rows nudged */
+        const int vs = carry >= 0 ? (s == cur ? carry : s == carry ? cur : s) : s;
+        const int moving = carry >= 0 && (s == cur || s == carry);
+        const int dx = moving && ((a->ms / 90) % 4 == 1 || (a->ms / 90) % 4 == 2) ? 2 : 0;
+        const ec_slot_t *sl = &a->proj.slot[vs];
+        const ec_ss_sample_t *x = a->slot[vs].handle >= 0 ? ec_ss_ready(a->slot[vs].handle) : 0;
         const int used = sl->path[0] || x || a->slot[s].state != EC_SL_EMPTY;
         const int fg = on ? EC_C_BG : used ? EC_C_L15 : EC_C_L5;
         if (on)
@@ -242,20 +246,11 @@ void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg)
         T(on ? EC_C_BG : s == carry ? EC_C_ACC : EC_C_L8, r, 14, y, EC_AL_RIGHT);
         if (s == carry && !on)
             R(EC_C_ACC, 0, y - 2, 2, 9);           /* the slot in hand: where it came from */
-        if (on && carry >= 0 && carry != s) {      /* 0.6.15: the slot in hand rides on the cursor (animated) */
-            const ec_slot_t *cs = &a->proj.slot[carry];
-            const ec_ss_sample_t *cx = a->slot[carry].handle >= 0 ? ec_ss_ready(a->slot[carry].handle) : 0;
-            const char *n = cx ? cx->name : cs->path[0] ? (strrchr(cs->path, '/') ? strrchr(cs->path, '/') + 1 : cs->path) : "...";
-            fit(buf, sizeof buf, n, 13);
-            T(EC_C_BG, buf, 18, y, EC_AL_LEFT);
-            T(EC_C_BG, ((a->ms / 150) & 1u) ? ">" : " ", 96, y, EC_AL_LEFT);
-            continue;
-        }
         if (used) {
             const char *n = x ? x->name : sl->path[0] ? (strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1
                                                                                   : sl->path) : "...";
             fit(buf, sizeof buf, n, 13);
-            T(fg, buf, 18, y, EC_AL_LEFT);
+            T(fg, buf, 18 + dx, y, EC_AL_LEFT);
             if (x && x->rate) {
                 const float sec = (float)x->frames / (float)x->rate;
                 snprintf(r, sizeof r, sec < 10.0f ? "%.1fS" : "%.0fS", (double)sec);
@@ -263,11 +258,11 @@ void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg)
             }
         } else
             R(fg, 18, y + 2, 6, 2);                /* (empty: a dash) */
-        if (tracks[s]) {
+        if (tracks[vs]) {
             for (k = 0; k < EC_NTRACK; k++)        /* T1..T6 */
-                R(tracks[s] >> k & 1u ? (on ? EC_C_BG : k == a->track && !a->bus ? EC_C_ACC : EC_C_L15)
-                                      : on ? EC_C_L12 : EC_C_L3, 98 + k * 4, y, 2, 5);   /* (the selected: ACC) */
-        } else if (locks[s])
+                R(tracks[vs] >> k & 1u ? (on ? EC_C_BG : k == a->track && !a->bus ? EC_C_ACC : EC_C_L15)
+                                       : on ? EC_C_L12 : EC_C_L3, 98 + k * 4, y, 2, 5);   /* (the selected: ACC) */
+        } else if (locks[vs])
             R(EC_C_LOCK, 98, y, 22, 5);            /* only a step lock plays it */
     }
 }

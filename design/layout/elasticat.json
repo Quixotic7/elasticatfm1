@@ -646,7 +646,8 @@
             [
               {"item": "slot.bpm", "label": "BPM"},
               {"item": "slot.steps", "label": "STEPS"},
-              {"item": "slot.gain", "label": "GAIN"}
+              {"item": "slot.gain", "label": "GAIN"},
+              {"item": "slot.zoom", "label": "ZOOM"}
             ]
           ]
         },

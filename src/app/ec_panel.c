@@ -977,8 +977,9 @@ static void presets(int d)
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
     }
-    if (mode == EC_CAT_FILE && !A->settings) {     /* 0.6.15 (owner): FILE: PRESETS = the audible preview on / off */
-        ec_file_preview_toggle();
+    if (mode == EC_CAT_FILE && !A->settings && (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL)) {
+        ec_file_preview_toggle();                  /* 0.6.15 (owner): BROWSE / POOL: PRESETS = the preview on / off;
+                                                    * the editors: the track's slot (below, the pool list pop-up) */
         return;
     }
     if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track, no pop-up (the
@@ -1128,6 +1129,8 @@ static void knob(int r, int d)
             ec_lp_algo(d);                         /* 0.6.9 / 0.6.14: the step modes: the page's step, below 1 LIVE */
         else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE)
             ec_file_algo(d);                       /* 0.6.15: the browser: CW adds to the pool, CCW removes */
+        else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR)   /* 0.6.15: the EDITOR: the selected marker */
+            ec_app_edit_slot(P->ed_point ? EC_S_TRIM_END : EC_S_TRIM_START, d, ec_ux_accel(r, 200, d));
         else if (mode == EC_CAT_FILE)
             ;                                      /* (the other FILE pages: no step page) */
         else {                                     /* the step page */

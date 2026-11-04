@@ -866,6 +866,9 @@ void ec_app_edit_global_f(int id, int det, int mult, int snap)
 
 void ec_app_edit_global(int id, int det, int mult) { ec_app_edit_global_f(id, det, mult, A->fn); }
 
+static void edit_slot(int id, int det, int mult);
+void ec_app_edit_slot(int id, int det, int mult) { edit_slot(id, det, mult); }   /* 0.6.15: the editor's ALGO */
+
 static void edit_slot(int id, int det, int mult)
 {
     const int s = ec_app_track_slot(A, A->track);
@@ -876,10 +879,7 @@ static void edit_slot(int id, int det, int mult)
         float st;
         sl->bpm = A->fn ? ec_global_snap(EC_SNAP_BPM, sl->bpm, det) : floorf(sl->bpm + 0.5f) + (float)(det * mult);
         sl->bpm = sl->bpm < 20 ? 20 : sl->bpm > 300 ? 300 : sl->bpm;
-        if (dur > 0) {                          /* (RECALC: the trim's steps at this BPM) */
-            st = floorf(dur * (sl->trim_end - sl->trim_start) * sl->bpm / 60.0f * 4.0f + 0.5f);
-            sl->steps = st < 1 ? 1 : st > 512 ? 512 : st;
-        }
+        (void)st, (void)dur;                    /* 0.6.15 (owner): the steps stay; B10 RECALC does them */
     } break;
     case EC_S_STEPS:
         sl->steps = A->fn ? ec_global_snap(EC_SNAP_STEPS, sl->steps, det)

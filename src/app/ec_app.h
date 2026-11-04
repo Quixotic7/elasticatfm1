@@ -93,6 +93,7 @@ int ec_app_held_step(const ec_app_t *a);                      /* the first held 
 int ec_app_target_step(const ec_app_t *a);                    /* 0.6.6: LOOP ENGINE's target step as a held one, -1 */
 int ec_app_held_lock(const ec_app_t *a, int id, float *x);   /* 0.6.1: id locked on a held step: its value */
 int ec_app_lock_held_set(int id, float value);   /* 0.6.14: the lock set on the held / selected steps: how many */
+void ec_app_edit_slot(int id, int det, int mult);   /* 0.6.15: a slot field by det clicks (the EDITOR's ALGO) */
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int track);
 int ec_app_track_slot(const ec_app_t *a, int track);         /* 0-based pool slot */
 int ec_app_stopped(const ec_app_t *a);

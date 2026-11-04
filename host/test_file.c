@@ -322,7 +322,8 @@ static void test_editor(void)
     W(16, 40);                                     /* END: the view's right edge */
     CHECK(fabsf(sl->trim_end - 1.0f) < 1e-4f && fabsf(sl->trim_start - 0.75f) < 1e-4f,
           "END: W16 places the end (%g)", sl->trim_end);
-    CHECK(sl->steps == 8, "the steps follow the trim (%g)", sl->steps);
+    B(10, 40);                                     /* 0.6.15: B10 RECALC: the steps from the trim and the BPM */
+    CHECK(sl->steps == 8 && !strcmp(A->msg, "STEPS 8"), "B10: the steps from the trim (%g)", sl->steps);
     CHECK(led_key(0, 0) == FM1P_LED_LIT && led_key(0, 15) == FM1P_LED_LIT && led_key(0, 7) == FM1P_LED_FAINT,
           "the white keys at the trim lit");
     turn(FM1P_E_K4, -1);

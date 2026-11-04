@@ -116,8 +116,8 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
                 const int px = x0 + (int)((e[j] - v0) / (v1 - v0) * (float)(x1 - x0));
                 if (j == 1 && k + 1 < count && fabsf(rz->start[k + 1] - e[1]) < 0.02f)
                     continue;
-                if (px >= x0 && px <= x1)      /* 0.6.15: the other slices' edges quiet (L5) */
-                    ec_gfx_dots_v(px, top - 2, bot + 3, 2, k == sel - 1 ? EC_C_L15 : EC_C_L5);
+                if (px >= x0 && px <= x1)      /* 0.6.15: solid 2-unit edges on the lattice, the others' quiet */
+                    R(k == sel - 1 ? EC_C_L15 : EC_C_L5, px & ~1, top - 2, 2, bot - top + 6);
             }
         }
         /* the transients at the chop sensitivity: ticks over the waveform, only while SENS is being turned (0.6.15:

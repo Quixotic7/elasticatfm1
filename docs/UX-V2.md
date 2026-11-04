@@ -978,3 +978,9 @@ the B11 pick mode above)
   B9 REMOVE, B7 BROWSE, B6 POOL, B11 preview (BROWSE). POOL: B11 held takes the slot in hand; SEL or K1 move it, the
   list shows it riding on the cursor; letting go drops it (one undo); F1 no longer moves. The browser's SLOT /
   LENGTH / BPM / FREE are plain rows now, not cell boxes (no knob edits them: the design rule).
+- EDITOR, second round (owner): K4 ZOOM on both pages; ALGO moves the selected marker; PRESETS changes the track's
+  slot with the pop-up drawn as the POOL list (seven rows round the slot, no big text or bar); B11 = ZOOM 1X; B9
+  AUTO BPM takes the file name's tag first ("bpm136") and otherwise fits a whole number of bars nearest the project's
+  tempo; BPM and the trim no longer recalculate STEPS, B10 RECALC does. SLICE: solid 2-unit edges on the lattice.
+  POOL: a slot in hand shows the result (the swap applied) with the two moving rows nudging. BROWSE / POOL preview
+  keys: the span's LEDs lit, the playhead's key flashing inside it.

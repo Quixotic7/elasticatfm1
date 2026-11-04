@@ -249,7 +249,7 @@ class Gen:
             for k, slot in enumerate(lane[:4]):
                 w = "%s lane %d KNOB %d" % (where, li + 1, k + 1)
                 it = self.item(w, slot, ctx)
-                if it[4]:
+                if it[4] and it[4] != "slot.zoom":      # (0.6.15: the EDITOR's ZOOM sits on K4 of both pages)
                     key = (it[0], it[1])
                     if key in seen:
                         self.err(where, "%s twice (%s and lane %d KNOB %d)" % (it[4], seen[key], li + 1, k + 1))

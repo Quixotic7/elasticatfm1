@@ -1068,8 +1068,8 @@ static void test_patterns(void)
 static void test_labels(void)
 {
     to(EC_CAT_SRC);
-    CHECK(lbl(FM1CORE_LBL_BLACK0 + 10, "ZOOM") && lbl(FM1CORE_LBL_WHITE0, "L1") &&
-              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "SLOT") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "STEP PG"),
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 10, "STEP") && lbl(FM1CORE_LBL_WHITE0, "L1") &&   /* 0.6.6: B11 / ALGO the target */
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "SLOT") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "TARGET"),
           "LOOP ENGINE: B11 %s W1 %s PRESETS %s ALGO %s", L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_WHITE0),
           L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS), L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "COPY") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "CUT"),

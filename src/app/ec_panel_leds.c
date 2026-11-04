@@ -448,7 +448,7 @@ static void knob_labels(void)
     } else {
         ec_app_page(A, &pg);
         lane = ec_app_lane(A, &pg);
-        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD ? "TARGET" : ec_rzui_active(A) ? "SLICE"
+        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET" : ec_rzui_active(A) ? "SLICE"
                                                     : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)

@@ -14,7 +14,7 @@
 //      the EDITOR shows it), steps on T2, a knob turned (LOOP ENGINE's K1), both tracks play
 //   5. the worklet's load reports while it plays (render share, busiest 21 ms, late ms)
 //   6. the live panel labels (the player's "labels" message): F1 / F2 COPY / CUT, SHIFT held: UNDO / REDO, the black
-//      keys TAP LATCH MEMO RECALL .. FILL, FILE = SAVE (src/app/ec_panel_leds.c)
+//      keys TAP LATCH - RECALL MEMO .. FILL (0.6.6), FILE = SAVE (src/app/ec_panel_leds.c)
 //   7. stop (PLAY), SHIFT + FILE saves (0.6.1: SAVING, then SAVED: the file /data/projects/PROJ-001.ecp, the flash
 //      keeps its name), a reload: the project comes back from the file (T1's file, T2's file) and plays
 //   8. (E6, a site with ain1) live input from a fake microphone (Chromium's --use-file-for-fake-audio-capture: the
@@ -317,7 +317,7 @@ try {
   const q = (x) => JSON.stringify(x);
   ok(off.f1 === "COPY" && off.f2 === "CUT" && off.glo === "SHIFT" && off.home === "LOOP" && off.file === "FILE" && off.play === "STOP"
     && on.f1 === "UNDO" && on.f2 === "REDO" && on.file === "SAVE" && on.home === "SETTINGS"
-    && q(on.b) === q(["TAP", "LATCH", "MEMO", "RECALL", "", "FILL"]) && back.f1 === off.f1 && back.f2 === off.f2 && q(back.b) === q(off.b),
+    && q(on.b) === q(["TAP", "LATCH", "", "RECALL", "MEMO", "FILL"]) && back.f1 === off.f1 && back.f2 === off.f2 && q(back.b) === q(off.b),
     `live labels: F1 "${off.f1}", F2 "${off.f2}", GLO "${off.glo}", HOME "${off.home}", FILE "${off.file}", PLAY "${off.play}", B1-B5/B11 ${q(off.b)}; SHIFT held: F1 "${on.f1}", F2 "${on.f2}", FILE "${on.file}", HOME "${on.home}", B1-B5/B11 ${q(on.b)}; released: F1 "${back.f1}", B ${q(back.b)} (${await js("window.__w.nlabels")} labels messages)`);
 
   // 7. stop (PLAY), SHIFT + FILE saves, a reload

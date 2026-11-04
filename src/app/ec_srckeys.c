@@ -359,7 +359,7 @@ const char *ec_src_label(int mode, int key)
         return SRC[key - 6];
     if (key == 11) {
         if (mode == EC_CAT_SRC)
-            return "ZOOM";
+            return "STEP";                         /* 0.6.6: the target step (held + K1: the zoom) */
         if (mode == EC_CAT_FILT)
             return iv(ec_app_params(A), EC_P_FENV_MODE) == 2 ? "ENV AHR" : "ENV ADSR";
     }

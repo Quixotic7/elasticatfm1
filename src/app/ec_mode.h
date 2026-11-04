@@ -158,6 +158,7 @@ typedef struct {
     int pool_cur;              /* 0.6.1: POOL's cursor (slot 0..127) */
     int pool_b11;              /* 0.6.15: B11 held in POOL: the slot in hand moves with SEL / K1, drops on release */
     uint32_t pv_keys;          /* 0.6.15: the white keys held: the preview loops over their span (16ths of the file) */
+    int pv_hold;               /* 0.6.15: B11 held in an editor: the region loops until it is let go */
     double pv_lo, pv_hi;       /* the preview's loop (frames) while keys are held, else 0 / the end */
     int pool_carry;            /*   MOVE: the slot picked up, -1 none */
     /* SAMPLER (ec_sampler.c) */

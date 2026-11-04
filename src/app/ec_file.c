@@ -390,6 +390,7 @@ void ec_file_leave(void)
     P->ed_hold = P->pool_carry = -1;               /* (a MOVE in hand is put down) */
     P->pool_b11 = 0;
     P->pv_keys = 0;
+    P->pv_hold = 0;
 }
 
 static void pool_preview(int s, int play);
@@ -491,8 +492,8 @@ void ec_file_preview_mix(int16_t *out, uint32_t n)
     for (k = 0; k < n; k++) {
         uint32_t i;
         int c;
-        if (P->pv_hi > P->pv_lo && P->pv_pos >= P->pv_hi) {   /* 0.6.15: a span: keys held loop it, else it ends */
-            if (P->pv_keys)
+        if (P->pv_hi > P->pv_lo && P->pv_pos >= P->pv_hi) {   /* 0.6.15: a span: keys / B11 held loop it, else it ends */
+            if (P->pv_keys || P->pv_hold)
                 P->pv_pos = P->pv_lo;
             else {
                 P->pv_play = 0;
@@ -1090,6 +1091,13 @@ void ec_file_black(int key, int down)
         ec_file_pool_carry(down);                  /* 0.6.15: POOL's B11: the slot in hand while held */
         return;
     }
+    if (mode == EC_CAT_FILE && key == 11 && !down && P->pv_hold) {   /* 0.6.15 (owner): an editor's B11 let go: silence */
+        P->pv_hold = 0;
+        P->pv_play = 0;
+        P->pv_lo = P->pv_hi = 0;
+        A->redraw = 1;
+        return;
+    }
     if (!down || mode != EC_CAT_FILE)
         return;
     pic = ec_file_page();
@@ -1107,8 +1115,9 @@ void ec_file_black(int key, int down)
             ec_app_mark_dirty();
             snprintf(m, sizeof m, "STEPS %d", (int)A->proj.slot[s].steps);
             ec_app_message(m);
-        } else if (key == 11) {                    /* 0.6.15 (owner): B11 = the trim heard (the zoom reset is gone) */
+        } else if (key == 11) {                    /* 0.6.15 (owner): B11 held = the trim looping, let go = silence */
             const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
+            P->pv_hold = 1;
             ec_file_preview_region(sl->trim_start, sl->trim_end);
         }
         return;
@@ -1122,8 +1131,10 @@ void ec_file_black(int key, int down)
             ec_rzui_even(A);
         else if (key == 10)
             ec_rzui_autochop(A);
-        else if (key == 11)
+        else if (key == 11) {                      /* held: the slice loops; let go: silence */
+            P->pv_hold = 1;
             ec_rzui_preview(A, ec_rzui.sel);
+        }
         return;
     }
     if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B6 POOL (the layout's keys; the editors have none) */

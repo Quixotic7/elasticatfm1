@@ -990,3 +990,4 @@ the B11 pick mode above)
   functions' settings); B1..B3 the pages, B9 EVEN (COUNT even slices), B10 CHOP (at the transients), B11 the
   selected slice heard; a white key fires the slice on any machine (a slice machine: the pad, else the preview
   player). Both editors: B11 previews (the trim / the slice); the zoom reset is gone; B6 / B7 do nothing there.
+- Both editors' B11 (owner): the trim / the slice loops while B11 is held and stops the moment it is let go.

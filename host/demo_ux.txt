@@ -17,7 +17,8 @@ turn SELECT@2000:1
 png 2100:03_lanes_next_page.png
 
 # ---- a setup by a hold: FX held 0.4 s (it stays open on release; the arrows: F1 back, F2 OK)
-press FX@2400+500
+press GLO@2400+500
+press FX@2500+60   # (0.6.15: SHIFT + FX = the settings; a hold picks a mode)
 png 3000:04_setup_by_hold.png
 press OCT-@3100+60
 

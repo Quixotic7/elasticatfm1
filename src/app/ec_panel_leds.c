@@ -279,9 +279,44 @@ static void leds_white(void)
 }
 
 /* ------------------------------------------------------------------------------------------- black keys --- */
+static const char *pick_name(int mode, int page)
+{
+    if (mode == EC_CAT_FILE)
+        return page >= 0 && ec_page_pic(EC_CAT_FILE, page, 0) == EC_PIC_EDITOR ? "EDITOR"
+             : page >= 0 && ec_page_pic(EC_CAT_FILE, page, 0) == EC_PIC_RAZOR ? "RAZOR" : "BROWSE";
+    switch (mode) {
+    case EC_CAT_SRC: return "LOOP";
+    case EC_CAT_TRIG: return "TRIG";
+    case EC_MODE_KEYBOARD: return "KEYS";
+    case EC_CAT_MASTER: return "MIX";
+    case EC_MODE_PAGES: return "PAGES";
+    case EC_MODE_SAMPLER: return "SAMPLER";
+    default: return ec_mode_name(mode);
+    }
+}
+
+/* 0.6.15: a mode button held: only the black keys of its modes light (the shown one bright) */
+static int leds_pick(void)
+{
+    int modes[8], pages[8], n, i;
+    const int cur = ec_app_mode();
+    if (!ec_pn_picking())
+        return 0;
+    n = ec_pn_pick_list(P->btn, modes, pages, 8);
+    for (i = 0; i < EC_NBKEY; i++) {
+        uint8_t l = EC_LED_OFF;
+        if (i < n)
+            l = modes[i] == cur && (pages[i] < 0 || pages[i] == A->page[EC_CAT_FILE]) ? EC_LED_LIT : EC_LED_DIM;
+        ec_plat_led_upper(i, l);
+    }
+    return 1;
+}
+
 static void leds_black(void)
 {
     const int mode = ec_app_mode();
+    if (leds_pick())
+        return;
     int i;
     uint8_t l[EC_NBKEY];
     memset(l, EC_LED_OFF, sizeof l);
@@ -600,7 +635,8 @@ static void button_labels(void)
     for (mb = 1; mb < EC_NMB; mb++) {
         const char *s = button_name(mb);
         if (A->fn && !popup)
-            s = mb == EC_MB_HOME ? "SETTINGS" : mb == EC_MB_FILE ? "SAVE" : mb == EC_MB_SEQ ? "F3" : s;
+            s = mb == EC_MB_HOME ? "LOOP SETUP" : mb == EC_MB_FILE ? "SAVE" : mb == EC_MB_SEQ ? "F3"
+                : mb == EC_MB_ARP ? "APP SETTINGS" : s;
         L(EC_LBL_BTN0 + mb_button(mb), s);
     }
     L(EC_LBL_BTN0 + EC_B_GLO, "SHIFT");
@@ -719,6 +755,13 @@ static void black_labels(void)
     const int mode = ec_app_mode();
     int i;
     char b[12];
+    if (ec_pn_picking()) {                         /* 0.6.15: the held button's modes */
+        int modes[8], pages[8];
+        const int n = ec_pn_pick_list(P->btn, modes, pages, 8);
+        for (i = 0; i < EC_NBKEY; i++)
+            L(EC_LBL_BLACK0 + i, i < n ? pick_name(modes[i], pages[i]) : "");
+        return;
+    }
     for (i = 0; i < EC_NBKEY; i++) {
         const char *s = "";
         b[0] = 0;

@@ -35,6 +35,9 @@ Words used here:
 - **Each mode remembers its page.** EDIT comes back to the sub-mode it was on (MIX / PAGES). 0.6.11: **HOME from
   another mode is always LOOP ENGINE** (tap again: TRIG, KEYBOARD) and **FILE is always BROWSE** (again: the SAMPLER),
   so a blind press lands in one place.
+- 0.6.15: **settings open only on SHIFT + the button** (SHIFT + HOME = LOOP SETUP, SHIFT + ARP = APP SETTINGS; the
+  recorder's setup = REC held in the SAMPLER). **A held button is a mode picker**: its modes on the black keys, PICK A
+  MODE in the header; let go without a key = nothing. **MODE LOCK** (APP SETTINGS) stops clicks from cycling.
 - **Settings stay open** when you let go. F1 or F2 closes them, back to the mode they were opened over. The mode's
   own button (or SHIFT + it again) goes back too. Another mode button closes them and opens its mode.
 - **Power-on and project load: LOOP ENGINE.** There is no separate "main view" any more.

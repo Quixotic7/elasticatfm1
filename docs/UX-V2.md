@@ -955,3 +955,12 @@ the B11 pick mode above)
   on the SAVE button"): the FILE button cycles BROWSE / POOL > EDITOR > RAZOR > SAMPLER > BROWSE (the button's label
   says which; playing, the editors are skipped). EDITOR and RAZOR have no page keys any more (B4 / B5 are free in
   the browser); SEL still walks BROWSE < EDITOR < RAZOR < POOL. The layout (design/layout/elasticat.json) carries it.
+- **Settings only on SHIFT + the button** (owner): a hold never opens them. SHIFT + HOME = LOOP SETUP (it was APP
+  SETTINGS), SHIFT + ARP = APP SETTINGS, SHIFT + FILE = SAVE, SHIFT + SEQ = F3; the recorder's setup is REC held in the
+  SAMPLER.
+- **A held mode button is a mode picker**: past the quick click (300 ms) only its modes' black keys light (B1.. in
+  order: HOME = LOOP, TRIG, KEYS; EDIT = MIX, PAGES; FILE = BROWSE, EDITOR, RAZOR, SAMPLER; the others their one),
+  the labels name them, the header says PICK A MODE; a black key opens that mode and makes it the button's own;
+  letting go without a key changes nothing. A quick click still cycles the modes.
+- **MODE LOCK** (APP SETTINGS, off by default, saved in the settings record): a click opens the button's own mode
+  and never cycles; the only way to change a button's mode is the hold + a black key.

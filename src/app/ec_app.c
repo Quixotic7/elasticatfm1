@@ -1410,6 +1410,14 @@ void ec_app_ui_info(char *buf, uint32_t n)
                 gmin = g[k].pos < gmin ? g[k].pos : gmin;
                 gmax = g[k].pos > gmax ? g[k].pos : gmax;
             }
+            {
+                ec_page_t spg;
+                int sidx[EC_PAGE_ITEMS];
+                ec_app_page(A, &spg);
+                snprintf(buf + l, n - l, " set:%d setrows:%d fn:%d", A->settings,
+                         A->settings ? ec_app_set_rows(&spg, sidx) : 0, A->fn);
+                l = (uint32_t)strlen(buf);
+            }
             snprintf(buf + l, n - l, " ppos:%d warp:%d gspd:%d grains:%d gmean:%d gmin:%d gmax:%d",
                      (int)(st.pos_sample * 1000.0f + 0.5f), iv(ec_app_params(A), EC_P_MODE),
                      (int)(ec_app_params(A)[EC_P_GRAIN_SPEED] * 100.0f + 0.5f), ng,

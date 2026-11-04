@@ -107,7 +107,7 @@ static void open_rec(void)
         press(FM1P_B_SAVE, 40);
     run(900);
     if (!A->rec.open)
-        press(FM1P_B_SAVE, 500);
+        press(FM1P_B_REC, 500);                    /* 0.6.15: REC held in the SAMPLER: the recorder's setup */
 }
 static void turn(int role, int n)
 {
@@ -182,8 +182,11 @@ static void test_input_machine(void)
     inbuf[2 * at] = inbuf[2 * at + 1] = 20000;
     /* T1 on INPUT through the panel: LOOP ENGINE's settings (HOME held), K1 = MACHINE, LOOP -> .. -> INPUT (T1 skips
      * NEIGH) */
-    press(FM1P_B_HOME, 500);
-    CHECK(A->settings && A->cat == EC_CAT_SRC, "LOOP ENGINE's settings");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_HOME, 40);
+    btn(FM1P_B_GLO, 0);
+    CHECK(A->settings && A->cat == EC_CAT_SRC, "SHIFT + HOME: LOOP ENGINE's settings");
     turn(FM1P_E_K1, 5);
     CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_RAZOR_POLY, "K1 +5: R.POLY (%g)", tvp(0)[EC_P_MACHINE]);
     turn(FM1P_E_K1, 1);
@@ -259,8 +262,8 @@ static void test_popup(void)
     }
     press(FM1P_B_OCTDN, 40);
     CHECK(!A->rec.open, "OCT- idle: closed");
-    press(FM1P_B_SAVE, 500);
-    CHECK(A->rec.open, "FILE held in the SAMPLER: open again");
+    press(FM1P_B_REC, 500);
+    CHECK(A->rec.open, "REC held in the SAMPLER: open again");
     press(FM1P_B_HOME, 40);
     CHECK(!A->rec.open && ec_app_mode() != EC_MODE_SAMPLER, "HOME closes it (leaves the SAMPLER)");
 }

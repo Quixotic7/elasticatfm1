@@ -48,7 +48,7 @@ void ec_as_load(void)
     if (s.magic != EC_AS_MAGIC || s.version != EC_AS_VERSION || s.size != sizeof s)
         return;                                    /* never written (0xFF), or another layout: the defaults */
     s.theme = (uint8_t)clampi(s.theme, 0, ec_gfx_themes() - 1);
-    s.unused0 = 0;                                 /* (0.6.0's MODE POP-UP: ignored) */
+    s.mode_lock = s.mode_lock == 1;              /* (0.6.0 wrote 0 here: MODE LOCK off) */
     s.knob = (uint8_t)clampi(s.knob, 0, 2);
     s.preview = s.preview != 0;
     s.at = s.at != 0;
@@ -99,7 +99,7 @@ void ec_as_close(int keep)
 const char *ec_as_row_label(int row)
 {
     static const char *const L[EC_AS_NROW] = {"THEME", "KNOB SPEED", "AUTO-PREVIEW", "AFTERTOUCH", "METRO SOUND",
-                                              "MIDI CC", "INTRO"};
+                                              "MIDI CC", "INTRO", "MODE LOCK"};
     return row >= 0 && row < EC_AS_NROW ? L[row] : "";
 }
 
@@ -116,6 +116,7 @@ void ec_as_row_value(int row, char *out, int cap)
     case EC_AS_METRO: snprintf(out, (size_t)cap, "%s", ec_click_names[clampi(s->metro, 0, EC_CLICK_N - 1)]); break;
     case EC_AS_CC: snprintf(out, (size_t)cap, "%s", CC[s->cc & 3]); break;
     case EC_AS_INTRO: snprintf(out, (size_t)cap, "%s", s->intro ? "ON" : "OFF"); break;
+    case EC_AS_LOCK: snprintf(out, (size_t)cap, "%s", s->mode_lock ? "ON" : "OFF"); break;
     default: out[0] = 0; break;
     }
 }
@@ -135,6 +136,7 @@ static void edit(int row, int d)
     case EC_AS_METRO: s->metro = (uint8_t)clampi(s->metro + (d > 0 ? 1 : -1), 0, EC_CLICK_N - 1); break;
     case EC_AS_CC: s->cc = (uint8_t)clampi(s->cc + (d > 0 ? 1 : -1), 0, 3); break;
     case EC_AS_INTRO: s->intro = d > 0; break;
+    case EC_AS_LOCK: s->mode_lock = d > 0; break;
     default: break;
     }
 }

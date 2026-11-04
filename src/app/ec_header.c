@@ -110,8 +110,8 @@ static int builtin(char *out, int cap)
     int i;
     if (late && A->mk.held >= 0 && A->mk.held <= EC_MK_M4 && ec_mk_src_of_key(A->mk.held))   /* a source key */
         return say(out, cap, EC_C_SRC, SRC[A->mk.held], 0);
-    if (late && P->btn >= 0 && !P->btn_used && button_text(P->btn))   /* a mode button: its settings at 400 ms */
-        return say(out, cap, EC_C_L12, button_text(P->btn), 0);
+    if (ec_pn_picking())                           /* 0.6.15: a mode button held: pick its mode on the black keys */
+        return say(out, cap, EC_C_L12, "PICK A MODE", 0);
     if (late && P->rec_down && !P->rec_used)
         return say(out, cap, EC_C_L12, "REC SETUP", 0);
     if (late && plain && mode == EC_CAT_XFD) {     /* CROSSFADER: capture, the scenes, the glide */

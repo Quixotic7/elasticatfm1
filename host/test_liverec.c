@@ -369,8 +369,8 @@ static void test_click(void)
     A->proj.rec.metro = EC_METRO_ALWAYS;
     to(EC_MODE_SAMPLER);
     CHECK(mode() == EC_MODE_SAMPLER, "playing: FILE = the SAMPLER");
-    press(FM1P_B_SAVE, 500);
-    CHECK(A->rec.open, "FILE held: the recorder's setup");
+    press(FM1P_B_REC, 500);                        /* 0.6.15: REC held in the SAMPLER = the recorder's setup */
+    CHECK(A->rec.open, "REC held: the recorder's setup");
     turn(FM1P_E_K1, 1);
     CHECK(A->rec.src == EC_RSRC_MST, "K1: the master out");
     press(FM1P_B_OCTDN, 40);

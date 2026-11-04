@@ -26,7 +26,8 @@ png 2300:02_t1_send_s1.png
 # dismisses the mode pop-up before a shot
 press GLO@2500+150
 lower 1@2520+60
-press HOME@2700+450
+press GLO@2700+450
+press HOME@2800+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@3250:6
 press OCT-@3350+60
 press SEL@3400+60
@@ -41,7 +42,8 @@ lower 2@4020+60
 press SAVE@4200+60
 turn SELECT@4300:1
 upper 9@4400+60
-press HOME@4700+450
+press GLO@4700+450
+press HOME@4800+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn SELECT@5230:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
 turn K1@5250:6
 press OCT-@5350+60
@@ -64,7 +66,8 @@ lower 3@6620+60
 press SAVE@6800+60
 turn SELECT@6900:2
 upper 9@7000+60
-press HOME@7300+450
+press GLO@7300+450
+press HOME@7400+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@7850:5
 press OCT-@7950+60
 press HOME@8050+60

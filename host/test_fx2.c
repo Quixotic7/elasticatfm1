@@ -374,10 +374,13 @@ static void test_fx_setup(void)
     int i, ok = 1;
     to(EC_CAT_FX);
     A->bus = 0;
-    press(FM1P_B_FX, 500);
+    btn(FM1P_B_GLO, 1);                            /* 0.6.15: SHIFT + FX = the settings */
+    run(20);
+    press(FM1P_B_FX, 40);
+    btn(FM1P_B_GLO, 0);
     run(40);
     ec_app_page(A, &pg);
-    CHECK(A->settings && pg.n == 6, "FX held: its settings, six rows (%d)", pg.n);
+    CHECK(A->settings && pg.n == 6, "SHIFT + FX: its settings, six rows (%d)", pg.n);
     for (i = 0; i < 6 && i < pg.n; i++)
         ok &= !strcmp(ec_app_item_label(&pg.it[i]), ROW[i]);
     CHECK(ok, "the rows: INSERT 1, INSERT 2, SEND 1, SEND 2, MASTER, SEND MODE");

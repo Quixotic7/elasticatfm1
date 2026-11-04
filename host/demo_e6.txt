@@ -29,7 +29,8 @@ png 5900:05_src_take.png
 #      INPUT); HOME tapped closes them
 press GLO@6050+200
 lower 1@6100+60
-press HOME@6300+500
+press GLO@6300+500
+press HOME@6400+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@6850:7
 press HOME@6950
 png 7100:06_input_src.png
@@ -41,7 +42,7 @@ png 7700:07_input_none.png
 press SAVE@7900
 press SAVE@8050
 png 8200:08_rec_no_input.png
-press SAVE@8300+500
+press REC@8300+500   # (0.6.15: REC held in the SAMPLER = the recorder's setup)
 turn K1@8900:1
 png 9000:09_rec_resample.png
 press OCT-@9100

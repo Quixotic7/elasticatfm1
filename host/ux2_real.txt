@@ -57,7 +57,8 @@ press HOME@15000
 press PLAY@15400
 png 16600:Main_screen.png
 press PLAY@16800
-press HOME@17200+600
+press GLO@17200+600
+press HOME@17300+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn SELECT@17980:1   # 0.6.1: a list menu: SEL to WARP MODE, K1
 turn K1@18000:1
 turn K1@18100:1
@@ -86,7 +87,8 @@ press GLO@24400+300
 lower 1@24500
 turn PRESETS@25000:1
 press HOME@25400
-press HOME@25800+600
+press GLO@25800+600
+press HOME@25900+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@26600:1
 turn K1@26700:1
 press HOME@27100
@@ -449,6 +451,7 @@ upper 4@171400
 upper 4@171900+900
 turn K1@172300:4
 png 174500:Fx_master.png
-press FX@175000+800
+press GLO@175000+800
+press FX@175100+60   # (0.6.15: SHIFT + FX = the settings; a hold picks a mode)
 png 176300:Fx_setup.png
 press OCT-@176600

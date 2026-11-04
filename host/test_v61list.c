@@ -42,10 +42,11 @@ static void test_appset(void)
     int k;
     to(EC_CAT_FILT);
     shift_down(1);
-    press(FM1P_B_HOME, 40);
+    run(20);
+    press(FM1P_B_ARP, 40);                         /* 0.6.15: SHIFT + ARP = APP SETTINGS */
     shift_down(0);
     run(40);
-    CHECK(A->pn.as_open && A->pn.as_row == 0, "SHIFT + HOME: APP SETTINGS, THEME selected");
+    CHECK(A->pn.as_open && A->pn.as_row == 0, "SHIFT + ARP: APP SETTINGS, THEME selected");
     CHECK(knob_lbl(0, "THEME") && k234_blank(), "labels: K1 %s, K2..K4 '%s' '%s' '%s'", knob_L(0), knob_L(1),
           knob_L(2), knob_L(3));
     /* THEME: two lines (the band y 12..35, the name under the label), the accent edge 2 units */
@@ -114,9 +115,12 @@ static void test_mode_settings(void)
     float *v;
     int k, i, diff;
     to(EC_CAT_AMP);
-    press(BTN_OF_MB[ec_mode_button(EC_CAT_AMP)], 500);
+    shift_down(1);                                 /* 0.6.15: SHIFT + ENV = AMP's settings */
+    run(20);
+    press(BTN_OF_MB[ec_mode_button(EC_CAT_AMP)], 40);
+    shift_down(0);
     run(40);
-    CHECK(A->settings && A->cat == EC_CAT_AMP && A->ux.set_row == 0, "AMP held: its settings, row 1");
+    CHECK(A->settings && A->cat == EC_CAT_AMP && A->ux.set_row == 0, "SHIFT + ENV: its settings, row 1");
     CHECK(knob_lbl(0, "ENV MODE") && k234_blank() && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "ROW"),
           "labels: SEL ROW, K1 %s, K2 '%s'", knob_L(0), knob_L(1));
     v = ec_app_params(A);
@@ -141,7 +145,10 @@ static void test_mode_settings(void)
     CHECK(!A->settings, "F1: closed");
     /* FX's settings (0.6.3): every slot's type, then SEND MODE */
     to(EC_CAT_FX);
-    press(BTN_OF_MB[ec_mode_button(EC_CAT_FX)], 500);
+    shift_down(1);                                 /* 0.6.15: SHIFT + FX = its settings */
+    run(20);
+    press(BTN_OF_MB[ec_mode_button(EC_CAT_FX)], 40);
+    shift_down(0);
     run(40);
     turn(FM1P_E_SELECT, 1);
     run(40);
@@ -157,7 +164,7 @@ static void test_recorder(void)
 {
     int src, len, thr, sync, k;
     to(EC_MODE_SAMPLER);
-    press(FM1P_B_SAVE, 500);
+    press(FM1P_B_REC, 500);                        /* 0.6.15: REC held in the SAMPLER = the recorder's setup */
     run(40);
     CHECK(A->rec.open && A->rec.row == EC_REC_ROW_SRC && knob_lbl(0, "SOURCE") && k234_blank() &&
               lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "ROW"),

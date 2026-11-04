@@ -20,14 +20,16 @@ turn K1@3100:-50
 # T2: the granular warp, droning (no trigs): HOME held = LOOP ENGINE's settings, K2 = WARP MODE; F1 back
 press GLO@3600+150
 lower 1@3650+60
-press HOME@3800+450
+press GLO@3800+450
+press HOME@3900+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K2@4300:3
 press OCT-@4400
 # T3: slice poly (the settings' K1 = MACHINE), slices on every other step (TRIG), steps 3 and 11 play slices 6 and 10
 #     (KEYBOARD: ALGO = the target step, a black key = the slice)
 press GLO@4800+150
 lower 2@4850+60
-press HOME@5000+450
+press GLO@5000+450
+press HOME@5100+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@5500:4
 press OCT-@5600
 press HOME@5700
@@ -74,7 +76,8 @@ turn K4@7600:-40
 #     COND = B2, hold the step + K3)
 press GLO@8000+150
 lower 3@8050+60
-press HOME@8200+450
+press GLO@8200+450
+press HOME@8300+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K2@8700:12
 press OCT-@8800
 press HOME@8900

@@ -209,7 +209,7 @@ static void test_appset_v1(void)
     for (r = 0; r < EC_AS_NROW; r++)
         if (strstr(ec_as_row_label(r), "POP"))
             popup_row = 1;
-    CHECK(EC_AS_NROW == 7 && !popup_row && !strcmp(ec_as_row_label(1), "KNOB SPEED"), "no MODE POP-UP row (%d rows)",
+    CHECK(EC_AS_NROW == 8 && !popup_row && !strcmp(ec_as_row_label(1), "KNOB SPEED"), "no MODE POP-UP row, MODE LOCK last (%d rows)",
           EC_AS_NROW);
     A->pn.as = keep;
     ec_as_store();
@@ -327,13 +327,13 @@ static void test_held(void)
         {EC_CAT_SRC, K_BK, 1, 300, "LOOP MODE", EC_C_L12},
         {EC_CAT_FX, K_BK, 1, 300, "INSERT 1 TYPE", EC_C_L12},
         {EC_CAT_FX, K_BK, 3, 300, "SEND 1 TYPE", EC_C_L12},
-        {EC_CAT_FILT, K_BTN, FM1P_B_FX, 450, "FX SETUP", EC_C_L12},
-        {EC_CAT_FX, K_BTN, FM1P_B_SEL, 450, "FILTER SETUP", EC_C_L12},
-        {EC_CAT_FILT, K_BTN, FM1P_B_ENV, 450, "AMP SETUP", EC_C_L12},
-        {EC_CAT_FILT, K_BTN, FM1P_B_EDIT, 450, "PROJECT SETUP", EC_C_L12},
-        {EC_CAT_FILT, K_BTN, FM1P_B_HOME, 450, "LOOP SETUP", EC_C_L12},
-        {EC_CAT_FILE, K_BTN, FM1P_B_SAVE, 450, "RECORDER SETUP", EC_C_L12},
-        {EC_CAT_FILT, K_BTN, FM1P_B_SEQ, 450, "F3", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_FX, 450, "PICK A MODE", EC_C_L12},
+        {EC_CAT_FX, K_BTN, FM1P_B_SEL, 450, "PICK A MODE", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_ENV, 450, "PICK A MODE", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_EDIT, 450, "PICK A MODE", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_HOME, 450, "PICK A MODE", EC_C_L12},
+        {EC_CAT_FILE, K_BTN, FM1P_B_SAVE, 450, "PICK A MODE", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_SEQ, 450, "PICK A MODE", EC_C_L12},
         {EC_CAT_FILT, K_BTN, FM1P_B_REC, 450, "REC SETUP", EC_C_L12},
         {EC_CAT_MASTER, K_WK, 2, 300, "MUTE T2", EC_C_L12},
         {EC_MODE_PAGES, K_BK, 1, 300, "LOOP PAGE 1", EC_C_L12},

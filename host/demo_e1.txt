@@ -29,7 +29,8 @@ upper 9@3250+60
 png 3262:03_file_loading.png
 
 # ---- T4: the SLICE machine (HOME held = LOOP ENGINE's settings; F1 back)
-press HOME@3700+450
+press GLO@3700+450
+press HOME@3800+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@4200:2
 png 4250:04_src_setup.png
 press OCT-@4400
@@ -42,7 +43,8 @@ png 4850:05_src_slices.png
 # ---- T3: the granular warp (changes only while stopped: the settings' WARP MODE row, SEL + K1), LOOP ENGINE's WARP page (B3)
 press GLO@5400+150
 lower 2@5450+60
-press HOME@5600+450
+press GLO@5600+450
+press HOME@5700+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn SELECT@6050:1
 turn K1@6100:3
 press OCT-@6200

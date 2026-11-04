@@ -222,13 +222,22 @@ static void test_modes(void)
 static void test_settings(void)
 {
     to(EC_CAT_FX);
-    btn(FM1P_B_FX, 1);                                        /* hold FX: its settings at 400 ms */
-    run(300);
-    CHECK(!A->settings, "FX held 300 ms: not yet");
-    run(150);
-    CHECK(A->settings && A->cat == EC_CAT_FX, "FX held 450 ms: the FX settings");
+    btn(FM1P_B_FX, 1);                                        /* 0.6.15: a hold never opens settings: the mode picker */
+    run(450);
+    {
+        char h[40];
+        ec_hdr_title("", h, sizeof h);
+        CHECK(!A->settings && ec_pn_picking() && !strcmp(h, "PICK A MODE"), "FX held 450 ms: no settings, PICK A MODE (%s)", h);
+    }
     btn(FM1P_B_FX, 0);
     run(30);
+    CHECK(!A->settings && mode() == EC_CAT_FX, "let go without a key: nothing changed");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_FX, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(A->settings && A->cat == EC_CAT_FX, "SHIFT + FX: the FX settings");
     CHECK(A->settings, "they stay open on release");
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "BACK") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "OK"),
           "settings: F1 BACK, F2 OK");
@@ -243,19 +252,28 @@ static void test_settings(void)
     press(FM1P_B_OCTUP, 40);
     CHECK(!A->settings && mode() == EC_CAT_FX, "F2 closes them: back to the mode it was opened over");
     to(EC_MODE_KEYBOARD);
-    press(FM1P_B_HOME, 500);                                  /* HOME held: LOOP ENGINE's settings + ADVANCE */
+    ec_pn_select_target(0);                                   /* (a track: a bus target would show its own setup) */
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_HOME, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);                             /* 0.6.15: SHIFT + HOME: LOOP ENGINE's settings + ADVANCE */
     {
         ec_page_t pg;
         int i, adv = 0;
         ec_app_page(A, &pg);
         for (i = 0; i < pg.n; i++)
             adv |= pg.it[i].kind == EC_IT_UX && pg.it[i].id == EC_UX_ADVANCE;
-        CHECK(A->settings && A->cat == EC_CAT_SRC && adv, "HOME held: the loop / machine settings with ADVANCE");
+        CHECK(A->settings && A->cat == EC_CAT_SRC && adv, "SHIFT + HOME: the loop / machine settings with ADVANCE (set %d cat %d scr %d setscr %d fn %d adv %d)", A->settings, A->cat, A->scr, A->pn.set_scr, A->fn, adv);
     }
     press(FM1P_B_HOME, 40);
     CHECK(!A->settings && mode() == EC_MODE_KEYBOARD, "HOME tapped in them: back to KEYBOARD");
-    press(FM1P_B_SEQ, 500);
-    CHECK(A->ux.f3, "SEQ held: F3");
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_SEQ, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(A->ux.f3, "SHIFT + SEQ: F3");
     turn(FM1P_E_PRESETS, 1);
     run(20);
     CHECK(A->e5.naming == EC_NM_PATTERN && !A->ux.f3, "F3 + PRESETS: the pattern's name");
@@ -291,10 +309,10 @@ static void test_app_settings(void)
     to(EC_CAT_SRC);
     btn(FM1P_B_GLO, 1);
     run(20);
-    press(FM1P_B_HOME, 40);
+    press(FM1P_B_ARP, 40);                                    /* 0.6.15: SHIFT + ARP = APP SETTINGS */
     btn(FM1P_B_GLO, 0);
     run(20);
-    CHECK(A->pn.as_open && ec_app_popup(A), "SHIFT + HOME: APP SETTINGS");
+    CHECK(A->pn.as_open && ec_app_popup(A), "SHIFT + ARP: APP SETTINGS");
     CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "THEME") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "ROW"),
           "its knobs: K1 %s", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
     turn(FM1P_E_K1, 1);
@@ -304,7 +322,7 @@ static void test_app_settings(void)
     CHECK(!A->pn.as_open && ec_gfx_theme() == 0, "F1: back, the theme as it was");
     btn(FM1P_B_GLO, 1);
     run(20);
-    press(FM1P_B_HOME, 40);
+    press(FM1P_B_ARP, 40);                                    /* 0.6.15: SHIFT + ARP = APP SETTINGS */
     btn(FM1P_B_GLO, 0);
     run(20);
     turn(FM1P_E_K1, 2);
@@ -321,7 +339,7 @@ static void test_app_settings(void)
     CHECK(A->pn.as.theme == 1 && A->pn.as.knob == 2, "loaded back from the record");
     btn(FM1P_B_GLO, 1);
     run(20);
-    press(FM1P_B_HOME, 40);
+    press(FM1P_B_ARP, 40);                                    /* 0.6.15: SHIFT + ARP = APP SETTINGS */
     btn(FM1P_B_GLO, 0);
     run(20);
     turn(FM1P_E_K1, -2);
@@ -1088,7 +1106,7 @@ static void test_labels(void)
           "F1 COPY, F2 CUT");
     btn(FM1P_B_GLO, 1);
     run(20);
-    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "BPM") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "SETTINGS") &&
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "BPM") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "LOOP SETUP") &&
               lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "UNDO") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_SAVE, "SAVE"),
           "SHIFT: SEL %s HOME %s F1 %s", L(FM1CORE_LBL_KNOB0), L(FM1CORE_LBL_BTN0 + FM1P_B_HOME),
           L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN));

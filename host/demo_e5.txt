@@ -78,7 +78,8 @@ turn K2@10350:4
 press OCT-@10400+60
 
 # ---- name the pattern: SEQ held = F3, PRESETS = the name; KN3 = a random name, KN1 / KN2 edit; F2 keeps it
-press SEQ@10450+500
+press GLO@10450+500
+press SEQ@10550+60   # (0.6.15: SHIFT + SEQ = the settings; a hold picks a mode)
 turn PRESETS@11000:1
 turn K3@11200:1
 png 11300:14_name_random.png
@@ -128,7 +129,8 @@ press PLAY@15550
 press SAVE@15600
 turn SELECT@15700:1
 upper 9@15800+60
-press HOME@16300+500
+press GLO@16300+500
+press HOME@16400+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@16850:2
 press HOME@16950
 press PLAY@17220

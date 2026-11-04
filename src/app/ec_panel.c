@@ -66,12 +66,15 @@ int ec_app_popup(const ec_app_t *a)
 }
 
 /* ------------------------------------------------------------------------------------------- init --- */
+int ec_pn_picking(void) { return P->btn >= 0 && !P->btn_used && !A->fn && A->ms - P->btn_ms >= EC_HDR_MS; }
+
 void ec_pn_init(void)
 {
     int i;
     for (i = 0; i < EC_NMB; i++)
         P->last[i] = -1;
     P->btn = -1;
+    P->last_fpage = -1;
     P->xf_key = -1;
     UX->pre_idx = -1;
     A->mk.held = A->mk.hot_id = -1;
@@ -217,6 +220,16 @@ static void mode_tap(int b)
             return;
     }
     cur = ec_app_mode();
+    if (ec_as->mode_lock) {                        /* 0.6.15: MODE LOCK: a click opens the button's mode, never cycles */
+        if (ec_mode_button(cur) == mb)
+            return;
+        if (mb == EC_MB_FILE && P->last[mb] == EC_CAT_FILE && P->last_fpage >= 0) {
+            ec_pn_goto(EC_CAT_FILE, P->last_fpage);
+            return;
+        }
+        ec_pn_enter(P->last[mb] >= 0 ? P->last[mb] : modes[0]);
+        return;
+    }
     if (mb == EC_MB_FILE && cur == EC_CAT_FILE && !A->bus) {   /* 0.6.15 (owner): FILE's sub-modes on its button:
                                                     * BROWSE / POOL -> the EDITOR -> RAZOR -> the SAMPLER -> BROWSE;
                                                     * playing, the editors are skipped (they need a stop) */
@@ -255,7 +268,55 @@ static void mode_tap(int b)
     }
 }
 
-/* a hold or SHIFT + the button: that mode's settings (SEQ: F3; HOME: LOOP ENGINE's, with KEYBOARD's ADVANCE) */
+/* 0.6.15 (owner): a mode button held: the black keys are its modes (FILE: BROWSE, EDITOR, RAZOR, SAMPLER); the one
+ * pressed opens, and becomes the button's own (MODE LOCK: what a click opens). Letting go without a key: nothing */
+int ec_pn_pick_list(int b, int *modes, int *pages, int max)
+{
+    const int mb = mb_of(b);
+    int n, i;
+    if (mb == EC_MB_FILE) {
+        static const int PICS[3] = {EC_PIC_FILE, EC_PIC_EDITOR, EC_PIC_RAZOR};
+        int p, k;
+        n = 0;
+        for (k = 0; k < 3 && n < max; k++)
+            for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)
+                if (ec_page_pic(EC_CAT_FILE, p, 0) == PICS[k]) {
+                    modes[n] = EC_CAT_FILE;
+                    pages[n++] = p;
+                    break;
+                }
+        if (n < max) {
+            modes[n] = EC_MODE_SAMPLER;
+            pages[n++] = -1;
+        }
+        return n;
+    }
+    n = ec_button_modes(mb, modes, max);
+    for (i = 0; i < n; i++)
+        pages[i] = -1;
+    return n;
+}
+
+void ec_pn_pick(int b, int key)
+{
+    int modes[8], pages[8];
+    const int n = ec_pn_pick_list(b, modes, pages, 8), mb = mb_of(b);
+    if (key < 1 || key > n)
+        return;
+    if (pages[key - 1] >= 0) {
+        if (modes[key - 1] == EC_CAT_FILE && ec_page_pic(EC_CAT_FILE, pages[key - 1], 0) != EC_PIC_FILE &&
+            (A->seq.playing || ec_seq_counting_in(&A->seq))) {
+            ec_app_alert("STOP FIRST");            /* (the editors need a stop) */
+            return;
+        }
+        ec_pn_goto(modes[key - 1], pages[key - 1]);
+    } else
+        ec_pn_enter(modes[key - 1]);
+    P->last[mb] = modes[key - 1];
+    P->last_fpage = (int8_t)pages[key - 1];
+}
+
+/* SHIFT + the button: that mode's settings (SEQ: F3; HOME: LOOP ENGINE's, with KEYBOARD's ADVANCE) */
 static void mode_settings(int b)
 {
     const int mb = mb_of(b);
@@ -492,10 +553,10 @@ static void button_down(int b)
     default:
         if (mb_of(b) == EC_MB_NONE)
             break;
-        if (A->fn) {                               /* SHIFT + a mode button */
-            if (b == EC_B_HOME) {
+        if (A->fn) {                               /* SHIFT + a mode button: its settings (0.6.15: the only way) */
+            if (b == EC_B_ARP) {                   /* 0.6.15: SHIFT + ARP = APP SETTINGS (SHIFT + HOME is LOOP SETUP) */
                 overlays_close();
-                ec_as_open();                      /* APP SETTINGS */
+                ec_as_open();
             } else if (b == EC_B_SAVE)
                 ec_app_save(0);
             else
@@ -765,6 +826,11 @@ static void black_down(int k, int key, int vel)
     P->bk_used &= (uint16_t)~bit;
     P->bk_ms[key - 1] = A->ms;
     A->key_role[k] = R_SWALLOW;
+    if (P->btn >= 0 && !A->fn) {                   /* 0.6.15: a mode button held: the black keys pick its mode */
+        P->btn_used = 1;
+        ec_pn_pick(P->btn, key);
+        return;
+    }
     if (ec_e5_upper(key - 1, 1) || P->as_open || UX->f3)
         return;
     if (A->fn) {                                   /* SHIFT + a black key */
@@ -1068,13 +1134,12 @@ static void knob(int r, int d)
 static void holds_tick(void)
 {
     int i;
-    if (P->btn >= 0 && !P->btn_used && A->ms - P->btn_ms >= EC_HOLD_MS) {
-        P->btn_used = 1;                           /* a mode button held 400 ms: its settings (they stay open) */
-        mode_settings(P->btn);
-    }
     if (P->rec_down && !P->rec_used && A->ms - P->rec_ms >= EC_HOLD_MS) {
         P->rec_used = 1;
-        ec_liverec_settings();
+        if (ec_app_mode() == EC_MODE_SAMPLER)
+            ec_file_settings();                    /* 0.6.15: REC held in the SAMPLER: the recorder's setup */
+        else
+            ec_liverec_settings();
     }
     ec_mix_hold_tick();
     ec_pages_hold_tick();

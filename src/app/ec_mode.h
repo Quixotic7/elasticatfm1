@@ -55,12 +55,13 @@ enum { EC_UX_TARGET,   /* KEYBOARD: the target step (0 = live) */
 #define EC_AS_MAGIC 0x53414345u   /* "ECAS" */
 #define EC_AS_VERSION 1
 /* 0.6.1: the MODE POP-UP row is gone; the record keeps its layout (and version 1), so older records load as they are */
-enum { EC_AS_THEME, EC_AS_KNOB, EC_AS_PREVIEW, EC_AS_AT, EC_AS_METRO, EC_AS_CC, EC_AS_INTRO, EC_AS_NROW };
+enum { EC_AS_THEME, EC_AS_KNOB, EC_AS_PREVIEW, EC_AS_AT, EC_AS_METRO, EC_AS_CC, EC_AS_INTRO, EC_AS_LOCK, EC_AS_NROW };
 typedef struct {
     uint32_t magic;
     uint16_t version, size;
     uint8_t theme;     /* ec_gfx theme 0..EC_NTHEME-1 */
-    uint8_t unused0;   /* 0.6.0's mode pop-up on / off (gone in 0.6.1; kept for the layout, written 0) */
+    uint8_t mode_lock; /* 0.6.15: MODE LOCK: a quick click never cycles a button's modes (hold + a black key does);
+                        * (0.6.0's mode pop-up slot, written 0 until now) */
     uint8_t knob;      /* knob speed: 0 slow, 1 medium, 2 fast */
     uint8_t preview;   /* FILE's auto-preview */
     uint8_t at;        /* aftertouch on */
@@ -79,6 +80,7 @@ enum { EC_CK_STEP, EC_CK_PAGE, EC_CK_PATTERN };
 typedef struct {
     /* the mode model */
     int last[EC_NMB];          /* each button's last mode (EC_CAT_* / EC_MODE_*), -1 none yet */
+    int8_t last_fpage;         /* 0.6.15: FILE's picked page (MODE LOCK), -1 none */
     int btn;                   /* the mode button held (EC_B_*), -1 none */
     uint32_t btn_ms;
     int btn_used;
@@ -181,6 +183,9 @@ void ec_pn_enter(int mode);                   /* that mode, the settings closed 
 void ec_pn_goto(int cat, int page);           /* a page of a category: the mode, that page */
 int ec_pn_f(int which);                       /* F1 (1) / F2 (2) on: held or sticky */
 void ec_pn_select_target(int i);              /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
+int ec_pn_pick_list(int b, int *modes, int *pages, int max);   /* 0.6.15: a held button's modes on the black keys */
+void ec_pn_pick(int b, int key);              /* 0.6.15: black key 1.. picks one */
+int ec_pn_picking(void);                      /* 0.6.15: a mode button held past the quick click: the picker shows */
 const char *ec_pn_roles(int mode, int *cur);  /* the 11 black-key roles (the LEDs), the current page's key - 1 */
 /* ---- ec_header.c (0.6.1): the header's title line. Priority: a message (ec_app_message / ec_app_alert, for its time;
  * one older than the last key press gives way while a held key has text) > a held key's text > the screen's title.

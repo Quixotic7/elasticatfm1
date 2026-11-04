@@ -916,3 +916,5 @@ the B11 pick mode above)
 - Colours (owner): the STEP layer's strip is red; the LOOP layer's is white with steps selected, blue LIVE.
 - LOOP layer LEDs with a step selected (owner): the lit range is that step's region (its lock, else the track's), so
   stepping with ALGO shows each step's loop on the keys; a held loop key shows live.
+- Colours again (owner): blue = LIVE, red = loop keys (steps selected), yellow (SPECIAL) = the STEP layer; the
+  selected steps are white on every layer. The bars under the steps are their region (RANGE page: range) locks.

@@ -216,8 +216,8 @@ show at once. A message newer than the last key press wins over it; an older one
 | a white key | FILE / EDITOR | START + KEY = END (F1), END + KEY = START (F2): what a second key places |
 | a white key | F3 | LOOP PAGE n |
 | W1-W6 | MIX | MUTE Tn (UNMUTE Tn when muted) |
-| F1 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | COPY / CLR LOCK; COPY PAGE; COPY PATTERN (PASTE ... once the buffer holds something) |
-| F2 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | CUT / CLR MOD; CUT PAGE; CUT PATTERN (PASTE ...) |
+| F1 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | F1 COPY/CLR LOCK; F1 COPY PAGE; F1 COPY PATTERN (PASTE ... once the buffer holds something); 0.6.12: shown at once, and sticky F1 fills the header's right box on the accent |
+| F2 (held or sticky) | the step modes / PAGES / PATTERN LAUNCH | F2 CUT/CLR MOD; F2 CUT PAGE; F2 CUT PATTERN (PASTE ...); sticky F2 in the box |
 | SHIFT (GLO, held or sticky) | any | SHIFT |
 
 FX's insert key and LOOP ENGINE's B1-B5 open hold menus (their own text in the header).

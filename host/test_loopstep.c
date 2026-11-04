@@ -33,7 +33,11 @@ static void test_layers(void)
     wkey(2, 1);
     CHECK(live_keys() != 0, "LIVE: the key plays the loop live");
     wkey(2, 0);
-    CHECK(lockv(0, EC_P_LOOP_START) < 0 && !step(0)->trig, "LIVE: nothing written");
+    CHECK(lockv(0, EC_P_LOOP_START) < 0 && !step(0)->trig, "LIVE: no step written");
+    CHECK(v[EC_P_LOOP_START] == 16 && v[EC_P_LOOP_END] == 24, "0.6.12 LIVE: the entry set the track's region (%g %g)",
+          v[EC_P_LOOP_START], v[EC_P_LOOP_END]);
+    v[EC_P_LOOP_START] = 0, v[EC_P_LOOP_END] = 128;
+    ec_seq_touch(&A->seq, A->track);
     /* hold B11: the STEP layer; W3 + W5 select steps 3 and 5 */
     hold_b11(1);
     CHECK(ec_lp_step_layer(), "B11 held: the STEP layer");
@@ -114,6 +118,8 @@ static void test_layers(void)
         for (i = 0; i < 16; i++)
             live[i] = led_key(0, i);
         wkey(6, 0);
+        v[EC_P_LOOP_START] = 0, v[EC_P_LOOP_END] = 128;   /* (0.6.12: LIVE set the region to key 7; the same base) */
+        ec_seq_touch(&A->seq, A->track);
         turn(FM1P_E_ALGO, 3);                        /* step 3 selected */
         wkey(6, 1);
         run(60);

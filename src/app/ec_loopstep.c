@@ -258,7 +258,40 @@ int ec_lp_white(int k, int i, int down, int vel)
     return 1;
 }
 
-/* a loop key (LOOP layer) went down / up: with steps selected, the entry is written when its last key is let go */
+/* 0.6.12 (owner): LIVE (nothing selected), a loop track: the entry (its keys' span) becomes the track's region, in the
+ * loop keys' division (RANGE page: its range over the whole sample), one undo; so the keys set the range, not the knobs */
+static void write_live(int lo, int hi)
+{
+    const float *v = ec_app_params(A);
+    float *tv = ec_project_track(&A->proj, A->track)->v;
+    const int half = P->zoom_half ? 16 : 0;
+    char b[24];
+    if (slice_track())
+        return;
+    if (g.range) {
+        static const uint8_t ids[2] = {EC_P_RANGE_START, EC_P_RANGE_END};
+        const float u = 128.0f / 16.0f;
+        ec_e5_edit_params(A->track, ids, 2, "RANGE");
+        tv[EC_P_RANGE_START] = (float)lo * u;
+        tv[EC_P_RANGE_END] = (float)(hi + 1) * u;
+        snprintf(b, sizeof b, "RANGE %d-%d", lo + 1, hi + 1);
+    } else {
+        static const uint8_t ids[2] = {EC_P_LOOP_START, EC_P_LOOP_END};
+        const int div = clampi((iv(v, EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);
+        const int k0 = clampi(lo + 1 + (div > 16 ? half : 0), 1, div), k1 = clampi(hi + 1 + (div > 16 ? half : 0), 1, div);
+        const float u = 128.0f / (float)div;
+        ec_e5_edit_params(A->track, ids, 2, "LOOP");
+        tv[EC_P_LOOP_START] = (float)(k0 - 1) * u;
+        tv[EC_P_LOOP_END] = (float)k1 * u;
+        snprintf(b, sizeof b, k0 == k1 ? "LOOP %d" : "LOOP %d-%d", k0, k1);
+    }
+    ec_app_message(b);
+    ec_seq_touch(&A->seq, A->track);
+    ec_app_mark_dirty();
+}
+
+/* a loop key (LOOP layer) went down / up: with steps selected, the entry is written when its last key is let go; LIVE
+ * (0.6.12) it sets the track's region */
 void ec_lp_loop_note(int i, int down)
 {
     int lo, hi;
@@ -267,8 +300,6 @@ void ec_lp_loop_note(int i, int down)
     if (g.b11)
         g.b11_used = 1;                            /* (the reverse: B11 held over STEP latched) */
     if (down) {
-        if (ec_lp_first() < 0)
-            return;
         if (!g.keys) {                             /* a new entry */
             g.span = 0;
             g.range = on_range_page();
@@ -280,13 +311,16 @@ void ec_lp_loop_note(int i, int down)
     if (!(g.keys >> i & 1u))
         return;
     g.keys &= ~(1u << i);
-    if (g.keys || ec_lp_first() < 0)
+    if (g.keys)
         return;
     for (lo = 0; lo < EC_NLOWER && !(g.span >> lo & 1u); lo++)
         ;
     for (hi = EC_NLOWER - 1; hi > 0 && !(g.span >> hi & 1u); hi--)
         ;
-    write_entry(lo, hi);
+    if (ec_lp_first() < 0)
+        write_live(lo, hi);
+    else
+        write_entry(lo, hi);
     g.span = 0;
     A->redraw = 1;
 }

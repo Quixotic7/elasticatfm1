@@ -85,7 +85,7 @@ static int f_text(char *out, int cap, int mode)
     const char *what;
     if (!(f1 || f2) || (P->f_held == 3))
         return -1;
-    if (!(P->f_sticky) && !ec_hdr_holding())
+    if (!P->f_sticky && !P->f_held)             /* 0.6.12 (owner): at once, held or sticky, named F1 / F2 */
         return -1;
     switch (mode) {
     case EC_MODE_PAGES: what = "PAGE"; break;
@@ -93,11 +93,11 @@ static int f_text(char *out, int cap, int mode)
     default: what = 0; break;
     }
     if (what)
-        snprintf(out, (size_t)cap, "%s %s", full ? "PASTE" : f1 ? "COPY" : "CUT", what);
+        snprintf(out, (size_t)cap, "F%d %s %s", f1 ? 1 : 2, full ? "PASTE" : f1 ? "COPY" : "CUT", what);
     else if (full)
-        snprintf(out, (size_t)cap, "PASTE / %s", f1 ? "CLR LOCK" : "CLR MOD");
+        snprintf(out, (size_t)cap, "F%d PASTE/%s", f1 ? 1 : 2, f1 ? "CLR LOCK" : "CLR MOD");
     else
-        snprintf(out, (size_t)cap, "%s", f1 ? "COPY / CLR LOCK" : "CUT / CLR MOD");
+        snprintf(out, (size_t)cap, "%s", f1 ? "F1 COPY/CLR LOCK" : "F2 CUT/CLR MOD");
     return EC_C_L12;
 }
 

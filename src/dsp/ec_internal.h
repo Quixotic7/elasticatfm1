@@ -358,6 +358,7 @@ typedef struct {
     int    seq_release_mode;
     ec_anchor_t seq_anchor, keys_anchor;
     uint32_t keys;
+    uint32_t keys_span;     /* 0.6.12: every key of this entry (a release never shrinks the region) */
     int    audition;
     double lo, hi;         /* applied region, engine fractions */
 

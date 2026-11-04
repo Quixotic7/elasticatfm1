@@ -312,10 +312,10 @@ static void test_held(void)
         {EC_CAT_SRC, K_BK, 8, 450, "MOD ENV", EC_C_SRC},
         {EC_CAT_FILT, K_WK, 5, 450, "STEP 5", EC_C_LOCK},
         {EC_CAT_AMP, K_WK2, 3, 450, "2 STEPS", EC_C_LOCK},
-        {EC_CAT_FILT, K_BTN, FM1P_B_OCTDN, 450, "COPY / CLR LOCK", EC_C_L12},
-        {EC_CAT_FILT, K_BTN, FM1P_B_OCTUP, 450, "CUT / CLR MOD", EC_C_L12},
-        {EC_MODE_PAGES, K_BTN, FM1P_B_OCTDN, 450, "COPY PAGE", EC_C_L12},
-        {EC_CAT_PAT, K_BTN, FM1P_B_OCTUP, 450, "CUT PATTERN", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_OCTDN, 450, "F1 COPY/CLR LOCK", EC_C_L12},
+        {EC_CAT_FILT, K_BTN, FM1P_B_OCTUP, 450, "F2 CUT/CLR MOD", EC_C_L12},
+        {EC_MODE_PAGES, K_BTN, FM1P_B_OCTDN, 450, "F1 COPY PAGE", EC_C_L12},
+        {EC_CAT_PAT, K_BTN, FM1P_B_OCTUP, 450, "F2 CUT PATTERN", EC_C_L12},
         {EC_CAT_FILT, K_BTN, FM1P_B_GLO, 450, "SHIFT", EC_C_L12},
         {EC_CAT_FILT, K_SHIFTBK, 11, 450, "FILL", EC_C_L12},
         {EC_CAT_XFD, K_BK, 1, 450, "SCENE A", EC_C_L12},
@@ -348,7 +348,8 @@ static void test_held(void)
         to(h->mode);
         held_down(h, 1);
         run(60);
-        CHECK(!ec_hdr_custom() || h->kind == K_SHIFTBK, "[%s] a tap (60 ms): no held text yet (%s)", h->want, hdr(0));
+        CHECK(!ec_hdr_custom() || h->kind == K_SHIFTBK || (h->want[0] == 'F' && h->want[2] == ' '),
+              "[%s] a tap (60 ms): no held text yet (%s)", h->want, hdr(0));   /* (0.6.12: F1 / F2 at once) */
         run(190);
         CHECK(!strcmp(hdr(&bar), h->want) && bar == h->bar && px(14, 0) == h->bar,
               "[%s] held 250 ms: the header says it (\"%s\", bar %d)", h->want, hdr(0), bar);
@@ -367,7 +368,7 @@ static void test_held(void)
     }
     to(EC_CAT_FILT);                                          /* sticky F1 / SHIFT: at once */
     press(FM1P_B_OCTDN, 40);
-    CHECK(!strcmp(hdr(0), "COPY / CLR LOCK"), "F1 sticky: COPY / CLR LOCK at once (%s)", hdr(0));
+    CHECK(!strcmp(hdr(0), "F1 COPY/CLR LOCK"), "F1 sticky: F1 COPY/CLR LOCK at once (%s)", hdr(0));
     press(FM1P_B_OCTDN, 40);
     CHECK(!ec_hdr_custom(), "F1 off: gone");
     press(FM1P_B_GLO, 40);

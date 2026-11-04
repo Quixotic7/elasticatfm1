@@ -66,6 +66,11 @@ void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, con
         R(bar, 14, 0, W - 14 - (popup ? 21 : 11), 10);
         T(EC_C_BG, buf, 17, 3, EC_AL_LEFT);
     }
+    if (a == &ec_app && a->pn.f_sticky && !popup && !held) {   /* 0.6.12 (owner): sticky F1 / F2 stays in view in
+                                                    * the box at the right, on the accent, whatever the line says */
+        R(EC_C_ACC, W - 11, 0, 11, 10);
+        T(EC_C_BG, a->pn.f_sticky == 1 ? "F1" : "F2", W - 6, 3, EC_AL_CENTER);
+    }
 }
 
 static void header(const ec_app_t *a, const char *title, int page, const char *right)
@@ -322,6 +327,9 @@ static void view_of(const ec_app_t *a, int whole, view_t *w)
             r0 = x;
         if (ec_step_lock_get(st, EC_P_RANGE_END, &x))
             r1 = x;
+    } else if (a->seq.playing) {                   /* 0.6.12: playing, the resolved range (the step's lock) */
+        r0 = ec_seq_value(&a->seq, a->track, EC_P_RANGE_START);
+        r1 = ec_seq_value(&a->seq, a->track, EC_P_RANGE_END);
     }
     w->wa = sl->trim_start + (sl->trim_end - sl->trim_start) * r0 / 128.0f;
     w->wb = sl->trim_start + (sl->trim_end - sl->trim_start) * r1 / 128.0f;
@@ -517,15 +525,26 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                 l1 = x, locked = 1;
             rs = w.x0 + (int)(l0 / 128.0f * (float)w.cols + 0.5f);
             re = w.x0 + (int)(l1 / 128.0f * (float)w.cols + 0.5f);
-        } else {                                   /* live: what the engine plays */
-            rs = vx(&w, st.region_start);
-            re = vx(&w, st.region_end);
+        } else {                                   /* the track's region: static markers (0.6.12, as norns) */
+            const float l0 = ec_seq_value(&a->seq, a->track, EC_P_LOOP_START);
+            const float l1 = ec_seq_value(&a->seq, a->track, EC_P_LOOP_END);
+            rs = w.x0 + (int)(l0 / 128.0f * (float)w.cols + 0.5f);
+            re = w.x0 + (int)(l1 / 128.0f * (float)w.cols + 0.5f);
         }
         rs = clampi(rs, w.x0, w.x0 + w.cols);
         re = clampi(re, w.x0, w.x0 + w.cols);
         if (re <= rs)
             re = rs + 2;
-        view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, rs, re);
+        {                                          /* 0.6.12: the bright span is what the engine plays now (the
+                                                    * loop keys' span, a scrub); the brackets stay put */
+            int ls = clampi(vx(&w, st.region_start), w.x0, w.x0 + w.cols);
+            int le = clampi(vx(&w, st.region_end), w.x0, w.x0 + w.cols);
+            if (!st.reader_on && !a->seq.tr[a->track].live_keys)
+                ls = rs, le = re;
+            if (le <= ls)
+                le = ls + 2;
+            view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, ls, le);
+        }
         brackets(rs, re, top, bot, locked ? EC_C_LOCK : EC_C_L12);
         if (st.reader_on) {
             const int px = vx(&w, st.pos_sample);
@@ -579,12 +598,18 @@ static int lock_pair(const ec_step_t *st, int range, float *lo, float *hi)
         *hi = 128;
     return 1;
 }
-static void loop_steps(const ec_app_t *a, int range)
+/* 0.6.12 (owner): the step strip shows on both layers. tint < 0: the STEP layer (white); else the LOOP layer, where
+ * the strip is in the layer's colour, red (ALERT) with steps selected (the loop keys write into them), blue (SRC)
+ * LIVE, with a rule under it in that colour */
+static void loop_steps(const ec_app_t *a, int range, int tint)
 {
     const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
     const int len = ec_seq_pattern_steps(&a->seq, a->track);
     const int play = ec_seq_step(&a->seq, a->track);
+    const int bright = tint >= 0 ? tint : EC_C_L15, mid = tint >= 0 ? tint : EC_C_L12;
     int i;
+    if (tint >= 0)
+        R(tint, 2, 73, W - 4, 2);              /* (2 units: the grid rule) */
     for (i = 0; i < 16; i++) {
         const int idx = a->step_page * 16 + i, x = 3 + i * 7;
         const ec_step_t *st = &tr->steps[idx];
@@ -595,11 +620,11 @@ static void loop_steps(const ec_app_t *a, int range)
         }
         const int sel = a == &ec_app && ec_lp_is_sel(idx);   /* 0.6.9: every selected step */
         if (st->trig || st->slices)
-            R(sel ? EC_C_L15 : EC_C_L12, x, 64, 5, 6);
+            R(sel ? bright : mid, x, 64, 5, 6);
         else
-            R(sel ? EC_C_L15 : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 68, 5, 2);
+            R(sel ? bright : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 68, 5, 2);
         if (sel)
-            R(EC_C_L15, x, 61, 5, 2);
+            R(bright, x, 61, 5, 2);
         if (idx == play && (a->seq.playing || a->seq.paused))
             R(EC_C_ACC, x, 61, 5, 2);
         if (lock_pair(st, range, &lo, &hi)) {        /* its lock, placed in the cell as in the loop */
@@ -608,26 +633,6 @@ static void loop_steps(const ec_app_t *a, int range)
             r = clampi(r, l + 2, 5);                 /* at least 2 units */
             R(EC_C_LOCK, x + l, 71, r - l, 2);
         }
-    }
-}
-/* 0.6.11 (QA finding 1): on the LOOP layer with steps selected, the step page's 16 cells as caps at y 61..62 over the
- * loop-key ruler: a selected step bright, the others a floor, the playhead the accent; so what the loop keys will
- * write into is in view without switching layers */
-static void sel_caps(const ec_app_t *a)
-{
-    const int len = ec_seq_pattern_steps(&a->seq, a->track);
-    const int play = ec_seq_step(&a->seq, a->track);
-    int i;
-    for (i = 0; i < 16; i++) {
-        const int idx = a->step_page * 16 + i, x = 3 + i * 7;
-        if (idx >= len)
-            continue;
-        if (ec_lp_is_sel(idx))
-            R(EC_C_L15, x, 61, 5, 2);
-        else
-            R(i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 62, 5, 1);
-        if (idx == play && (a->seq.playing || a->seq.paused))
-            R(EC_C_ACC, x, 61, 5, 2);
     }
 }
 /* the step strip: this step page's trigs, ghosts, locks, the held step, the playhead; the pages under it */
@@ -714,13 +719,13 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     }
     sample_area(a, 22, 58, pg->pic == EC_PIC_WAVE_RANGE);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
-        if (a == &ec_app && ec_lp_step_layer()) {  /* 0.6.9: the STEP layer: the step strip; the LOOP layer is live's */
-            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE);
-        } else {
-            key_ruler(a, 66);                      /* 0.6.0: LOOP ENGINE's white keys play the loop */
-            if (a == &ec_app && ec_lp_first() >= 0)
-                sel_caps(a);                       /* 0.6.11: the selected steps stay in view over the loop keys */
-        }
+        if (a == &ec_app && ec_lp_step_layer())    /* 0.6.9: the STEP layer: the step strip, white */
+            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE, -1);
+        else if (a == &ec_app)                     /* 0.6.12: the LOOP layer: the same strip, red with steps selected
+                                                    * (the loop keys write into them), blue LIVE */
+            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE, ec_lp_first() >= 0 ? EC_C_ALERT : EC_C_SRC);
+        else
+            key_ruler(a, 66);                      /* (the mocks: the loop-key ruler) */
     }
     cells(a, pg);
 }

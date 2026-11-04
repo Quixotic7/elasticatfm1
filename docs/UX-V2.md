@@ -863,3 +863,23 @@ the B11 pick mode above)
   BROWSE first ("BROWSE: PLAY AGAIN"). The SAMPLER redirect and the flashing FILE button are gone.
 - Tests: test_file's gating section rewritten, test_ux / test_v61ux adjusted, the demo scripts' HOME / FILE presses
   follow the new rule (one extra SAVE tap where the SAMPLER was wanted).
+
+**0.6.12: LOOP ENGINE second QA round, and F1 / F2 in view** (owner, 2026-11-03)
+- Stopped, the loop keys sound and now the playhead animates (the frame redraws while the track's reader or voices
+  run, ec_app_frame).
+- A loop entry's span never shrinks: with two keys held, letting go of one keeps the region (the DSP's keys_span);
+  a further key while one is held widens the span; letting go of all ends the entry (return mode as before); the
+  next press starts a new one.
+- Playing: the brackets are the track's region (the resolved LOOP START / END: static markers, as norns); the bright
+  span is what the engine plays now (a scrub, a held entry). The view window follows the resolved range (a step's
+  range lock) while playing, not only the target's.
+- LIVE (nothing selected) on a loop track: a loop entry sets the track's LOOP START / END in the keys' division
+  (RANGE page: the range), one undo ("LOOP 3-7"), so the keys set the range and the knobs are no longer needed.
+- LEDs: the STEP layer lights trigs mid, empty steps off, the selected steps blink. The LOOP layer lights only the
+  active (resolved) range, the held keys bright, the playhead's key mid.
+- F1 / F2: the header line names them at once ("F1 COPY/CLR LOCK", "F2 CUT PATTERN"), held or sticky; while sticky
+  the header's right box shows F1 / F2 on the accent whatever the line says (a message, a held key).
+- The step strip shows on both layers (owner): white on the STEP layer; on the LOOP layer in the layer's colour, red
+  (ALERT) with steps selected, blue (the theme's SRC blue) LIVE, a rule under it in that colour; the loop-key ruler
+  is gone from the firmware's screen (the brackets and the key LEDs show the keys' region). The 0.6.11 caps are gone.
+- Tests: test_loopstep (the LIVE write), test_v61ux's strings.

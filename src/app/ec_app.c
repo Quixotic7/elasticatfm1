@@ -1268,8 +1268,16 @@ void ec_app_frame(void)
         A->pn.cat_beats = b;
         A->pn.cat_ms = now, A->pn.cat_n++, A->redraw = 1;
     }
-    if (!A->redraw && !((A->seq.playing || loading || A->msg_ms) && now - A->last_draw >= 30))
-        return;
+    {
+        int live = 0;                              /* 0.6.12: stopped, a loop key sounding: the playhead animates */
+        if (!A->seq.playing && A->cat == EC_CAT_SRC && !A->scr && !A->bus) {
+            ec_track_status_t st;
+            ec_dsp_track_status(A->dsp, A->track, &st);
+            live = st.reader_on || st.voices > 0;
+        }
+        if (!A->redraw && !((A->seq.playing || loading || live || A->msg_ms) && now - A->last_draw >= 30))
+            return;
+    }
     if (A->msg_ms && now - A->msg_ms > 1200)
         A->msg_ms = 0;
     A->redraw = 0;

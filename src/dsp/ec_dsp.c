@@ -225,8 +225,9 @@ static void resolve(const ec_track_t *t, float *s, float *e)
         div = ec_clampi(((div + 1) / 2) * 2, 2, 32);
         float units = 128.f / (float)div;
         int first = -1, last = -1;
+        const uint32_t span = t->keys_span ? t->keys_span : t->keys;   /* 0.6.12: the entry's keys, held or not */
         for (int k = 0; k < 32; ++k)
-            if (t->keys & (1u << k)) { if (first < 0) first = k; last = k; }
+            if (span & (1u << k)) { if (first < 0) first = k; last = k; }
         a = (float)first * units; if (a > 127.f) a = 127.f;
         b = (float)(last + 1) * units; if (b > 128.f) b = 128.f;
         if (b <= a) { b = a + units; if (b > 128.f) b = 128.f; }
@@ -378,7 +379,9 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
     int playing = track_playing(d, t);
     if (ev->value > 0.5f) {
         if (!t->keys && playing) t->keys_anchor = make_anchor(d, t);
+        if (!t->keys) t->keys_span = 0;          /* 0.6.12: a new entry */
         t->keys |= (1u << k);
+        t->keys_span |= (1u << k);
         resolve(t, &s, &e);
         if (playing) {
             within_or_warp(t, s, e);
@@ -393,10 +396,10 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
     } else {
         if (!(t->keys & (1u << k))) return;
         t->keys &= ~(1u << k);
+        if (t->keys) return;                     /* 0.6.12: a key up keeps the region (the span) until all are up */
+        t->keys_span = 0;
         resolve(t, &s, &e);
-        if (t->keys) {
-            set_region(t, s, e);
-        } else {
+        {
             if (playing) release_mode(d, t, t->p.playhead_return, s, e, &t->keys_anchor);
             else set_region(t, s, e);
             t->keys_anchor.valid = 0;
@@ -615,6 +618,7 @@ void ec_dsp_track_params(ec_dsp_t *d, int track, const ec_track_params_t *p)
     build_specs(t);
     if (old_machine != p->machine) {
         t->keys = 0;
+        t->keys_span = 0;
         t->keys_anchor.valid = 0;
         t->seq_anchor.valid = 0;
         t->seq_has_s = t->seq_has_e = 0;

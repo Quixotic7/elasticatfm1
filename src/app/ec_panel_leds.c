@@ -93,9 +93,10 @@ static void leds_loop(void)
         const int len = ec_seq_pattern_steps(&A->seq, A->track);
         for (i = 0; i < EC_NLOWER; i++) {
             const int idx = A->step_page * 16 + i;
-            ec_plat_led_lower(i, idx >= len ? EC_LED_OFF : ec_lp_is_sel(idx) ? EC_LED_LIT
+            /* 0.6.12 (owner): no trig = off, a trig mid, the selected steps blink */
+            ec_plat_led_lower(i, idx >= len ? EC_LED_OFF : ec_lp_is_sel(idx) ? (blink(200) ? EC_LED_LIT : EC_LED_DIM)
                                  : tr->steps[idx].trig || tr->steps[idx].slices ? EC_LED_MID
-                                                                               : EC_LED_FAINT);
+                                                                               : EC_LED_OFF);
         }
         return;
     }
@@ -133,7 +134,7 @@ static void leds_loop(void)
         for (i = 0; i < EC_NLOWER; i++) {
             const int key = i + hi;
             const float ks = (float)key * units, ke = ks + units;
-            uint8_t l = key < div ? EC_LED_FAINT : EC_LED_OFF;
+            uint8_t l = EC_LED_OFF;                /* 0.6.12 (owner): only the active range lights */
             if (key < div && ke > ls + 0.001f && ks < le - 0.001f)
                 l = EC_LED_DIM;
             if (key == ph)

@@ -56,8 +56,13 @@ static int len_now(void) { return ec_seq_pattern_steps(&A->seq, A->track); }
 /* 0.6.14 (owner): the same model in LOOP ENGINE, TRIG and KEYBOARD (B11's layers, the pages, ALGO's step) */
 int ec_lp_active(void)
 {
+    const int m = ec_app_mode();                   /* 0.6.14 (owner: "most pages"): every track page and KEYBOARD */
+    return (ec_src_mode(m) || m == EC_MODE_KEYBOARD) && !A->bus && !A->settings;
+}
+static int step_mode(void)
+{
     const int m = ec_app_mode();
-    return (m == EC_CAT_SRC || m == EC_CAT_TRIG || m == EC_MODE_KEYBOARD) && !A->bus && !A->settings;
+    return m == EC_CAT_SRC || m == EC_CAT_TRIG || m == EC_MODE_KEYBOARD;
 }
 #define SEL (g.sel[A->track])
 int ec_lp_is_sel(int idx) { return idx >= 0 && idx < EC_MAXSTEPS && (SEL[idx / 32] >> (idx % 32) & 1u); }
@@ -149,7 +154,7 @@ void ec_lp_live(void)
     A->redraw = 1;
 }
 
-void ec_lp_b11(int down)
+int ec_lp_b11(int down)
 {
     if (down) {
         g.b11 = 1;
@@ -157,12 +162,16 @@ void ec_lp_b11(int down)
         g.b11_used = 0;
         g.skeys = 0;
         A->redraw = 1;
-        return;
+        return 0;
     }
     if (!g.b11)
-        return;
+        return 0;
     g.b11 = 0;
     if (!g.b11_used && A->ms - g.b11_ms < QUICK_MS) {   /* a quick click: latch the other layer */
+        if (!step_mode()) {                        /* 0.6.14: FILTER / AMP / FX / MOD: the key's own tap (the caller) */
+            A->redraw = 1;
+            return 1;
+        }
         if (ec_app_mode() == EC_MODE_KEYBOARD && ec_kb_slice_track()) {   /* 0.6.14: KEYBOARD, slices: the bank */
             ec_kb_bank_next();
         } else {
@@ -173,6 +182,7 @@ void ec_lp_b11(int down)
         }
     }
     A->redraw = 1;
+    return 0;
 }
 
 /* B11 held + OCT-: the selected steps cleared (trig and every lock), one undo a step page */

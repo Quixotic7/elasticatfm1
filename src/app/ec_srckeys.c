@@ -420,6 +420,22 @@ static void zoom(int det)
     ec_app_message(b);
 }
 
+/* B11's own tap on a page that is not a step mode: FILTER the envelope's mode, FX / MOD its page key */
+static void special_tap(int mode)
+{
+    if (mode == EC_CAT_FILT) {                     /* the filter envelope's mode */
+        float *v = ec_app_params(A);
+        ec_e5_edit_param(A->track, EC_P_FENV_MODE, 0);
+        v[EC_P_FENV_MODE] = iv(v, EC_P_FENV_MODE) == 2 ? 1.0f : 2.0f;
+        ec_seq_touch(&A->seq, A->track);
+        ec_app_mark_dirty();
+        ec_app_message(iv(v, EC_P_FENV_MODE) == 2 ? "FILTER ENV AHR" : "FILTER ENV ADSR");
+        return;
+    }
+    ec_nav_key(mode, 11);
+    A->redraw = 1;
+}
+
 void ec_src_down(int key)
 {
     const int mode = ec_app_mode();
@@ -429,17 +445,13 @@ void ec_src_down(int key)
         P->src_key = key;
         return;
     }
-    if (key == 11 && ec_lp_active()) {             /* 0.6.6 / 0.6.14: B11: the layers, the pages (the step modes) */
+    if (key == 11 && ec_lp_active()) {             /* 0.6.6 / 0.6.14: B11 held: the layers, the pages, K1 / K2 (every
+                                                    * track page); a quick click: the page's own B11 (ec_src_up) */
         ec_lp_b11(1);
         return;
     }
-    if (key == 11 && mode == EC_CAT_FILT) {        /* the filter envelope's mode */
-        float *v = ec_app_params(A);
-        ec_e5_edit_param(A->track, EC_P_FENV_MODE, 0);
-        v[EC_P_FENV_MODE] = iv(v, EC_P_FENV_MODE) == 2 ? 1.0f : 2.0f;
-        ec_seq_touch(&A->seq, A->track);
-        ec_app_mark_dirty();
-        ec_app_message(iv(v, EC_P_FENV_MODE) == 2 ? "FILTER ENV AHR" : "FILTER ENV ADSR");
+    if (key == 11 && mode == EC_CAT_FILT) {
+        special_tap(mode);
         return;
     }
     /* 0.6.2: the page list (ec_nav.c): another group's key jumps to its first page now (FX: B1 INS 1 P1, B3..B5 the
@@ -460,8 +472,11 @@ void ec_src_down(int key)
 void ec_src_up(int key)
 {
     int held = 0;
-    if (key == 11 && ec_lp_b11_held())             /* 0.6.6: LOOP ENGINE's B11 */
-        ec_lp_b11(0);
+    if (key == 11 && ec_lp_b11_held()) {           /* 0.6.6: B11 let go; 0.6.14: a quick click = the page's own tap */
+        if (ec_lp_b11(0))
+            special_tap(ec_app_mode());
+        return;
+    }
     if (ec_hm_armed() == key)                      /* 0.6.1: a hold menu: let go = the pick; else a tap */
         held = ec_hm_up(key);
     if (swap_key == key) {                         /* 0.6.3: SENDS: not held long enough to swap: a tap */
@@ -507,7 +522,7 @@ int ec_src_knob(int role, int det)
             zoom(det);
         return 1;
     }
-    if (ec_lp_b11_held() && (role == EC_E_K1 || role == EC_E_K2) && !A->bus) {   /* 0.6.14 (owner): B11 held: K1
+    if ((ec_lp_b11_held() || ec_app_mode() == EC_MODE_PAGES) && (role == EC_E_K1 || role == EC_E_K2) && !A->bus) {   /* 0.6.14 (owner): B11 held (PAGES: always): K1
                                                     * the pattern length, K2 the track rate (the pages panel) */
         float *v = ec_app_params(A);
         char b[20];

@@ -874,7 +874,7 @@ static void presets(int d)
     const int mode = ec_app_mode();
     if (A->bus)
         return;
-    if ((mode == EC_CAT_SRC || mode == EC_CAT_TRIG || mode == EC_MODE_KEYBOARD) && !A->step_held && !A->settings) {
+    if ((ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held) {   /* 0.6.14: every track page, PAGES */
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
     }

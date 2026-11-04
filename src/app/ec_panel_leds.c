@@ -481,7 +481,8 @@ static void knob_labels(void)
             L(EC_LBL_KNOB0 + EC_E_K1 + k, NK[k]);
         return;
     }
-    if (ec_lp_b11_held() && !A->bus && !A->settings) {   /* 0.6.14: B11 held: the pages panel (the step modes) */
+    if ((ec_lp_b11_held() || mode == EC_MODE_PAGES) && !A->bus && !A->settings) {   /* 0.6.14: B11 held (PAGES:
+                                                    * always): LEN, RATE, the zoom, the page */
         static const char *const BK[4] = {"LEN", "RATE", "ZOOM", ""};
         L(EC_LBL_KNOB0 + EC_E_SELECT, "");
         L(EC_LBL_KNOB0 + EC_E_ALGO, "STEP");

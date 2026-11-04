@@ -76,7 +76,7 @@ int ec_app_target_step(const ec_app_t *a)
 {
     const int m = a->scr ? a->scr : a->cat;
     if (a != &ec_app || a->step_held || a->bus || a->settings ||
-        (m != EC_CAT_SRC && m != EC_CAT_TRIG && m != EC_MODE_KEYBOARD))   /* 0.6.14: the three step modes */
+        (!ec_src_mode(m) && m != EC_MODE_KEYBOARD))   /* 0.6.14: every track page and KEYBOARD */
         return -1;
     return ec_lp_first();                          /* 0.6.9: the first selected step */
 }

@@ -930,3 +930,7 @@ the B11 pick mode above)
   as LOOP ENGINE's, the pages panel while B11 is held.
 - TRIG, a step held (owner): the black keys set its PITCH lock, B6 (F#) = 0, B1 -5 .. B11 +5 (the LEDs: the lock's
   key lit, B6 mid; the labels -5 .. +5). One undo; the trig stays on.
+- "Most pages" (owner): the B11 layer (held: the STEP layer, the pages on B1..B8, K1 LEN, K2 RATE, K3 zoom, the
+  pages panel) and ALGO = the page's step, PRESETS = the page, on every track page (FILTER, AMP, FX, MOD too) and in
+  KEYBOARD; the knobs lock onto the selected steps there as well. A quick click on B11 keeps those pages' own tap
+  (FILTER's envelope mode, FX MIX, MACROS). PAGES mode: K1 LEN, K2 RATE, PRESETS the page, without B11.

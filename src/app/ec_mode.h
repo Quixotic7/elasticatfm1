@@ -279,7 +279,8 @@ int ec_lp_is_sel(int idx);
 uint16_t ec_lp_page_mask(int page);           /* the selected steps of a step page */
 int ec_lp_step_layer(void);                   /* the white keys are the STEP layer now */
 void ec_lp_algo(int det);                     /* ALGO: one step selected, below 1 = LIVE */
-void ec_lp_b11(int down);                     /* B11: held = the other layer, a quick click latches it */
+int ec_lp_b11(int down);                      /* B11: held = the other layer, a quick click latches it; 1 = a quick
+                                               * click on a page that keeps B11's own tap (the caller does it) */
 int ec_lp_b11_held(void);                     /* B11 physically held */
 void ec_lp_b11_used(void);                    /* something done while B11 was down: not a quick click */
 void ec_lp_clear(void);                       /* B11 + OCT-: the selected steps cleared */

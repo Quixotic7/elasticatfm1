@@ -479,17 +479,22 @@ static void test_steps(void)
     btn(FM1P_B_OCTDN, 0);
     run(20);
     CHECK(!ec_step_lock_get(step(2), EC_P_FILTER_CUTOFF, &x) && !A->pn.f_sticky, "F1 + K1: the locks cleared, no sticky");
-    /* ALGO: the step page */
+    /* 0.6.14: PRESETS turns the step page on every track page; ALGO selects the page's step (full left: LIVE) */
     ec_app_params(A)[EC_P_PATTERN_STEPS] = 32;
     ec_seq_timing_changed(&A->seq);
-    turn(FM1P_E_ALGO, 1);
+    turn(FM1P_E_PRESETS, 1);
     run(20);
-    CHECK(A->step_page == 1 && lbl(FM1CORE_LBL_WHITE0 + 0, "17"), "ALGO: step page 2 (W1 = %s)", L(FM1CORE_LBL_WHITE0));
-    turn(FM1P_E_ALGO, 3);
+    CHECK(A->step_page == 1 && lbl(FM1CORE_LBL_WHITE0 + 0, "17"), "PRESETS: step page 2 (W1 = %s)", L(FM1CORE_LBL_WHITE0));
+    turn(FM1P_E_PRESETS, 3);
     run(20);
-    CHECK(A->step_page == 1, "ALGO clamps at the last page");
-    turn(FM1P_E_ALGO, -1);
+    CHECK(A->step_page == 1, "PRESETS clamps at the last page");
+    turn(FM1P_E_ALGO, 2);
     run(20);
+    CHECK(A->pn.target == 18 && ec_app_target_step(A) == 17, "ALGO +2 on page 2: step 18 selected (%d)", A->pn.target);
+    turn(FM1P_E_ALGO, -20);
+    turn(FM1P_E_PRESETS, -1);
+    run(20);
+    CHECK(A->pn.target == 0 && A->step_page == 0, "ALGO full left: LIVE; PRESETS back: page 1");
     ec_app_params(A)[EC_P_PATTERN_STEPS] = 16;
     clear_steps();
     k = 0;
@@ -512,7 +517,7 @@ static void test_presets(void)
     run(800);
     s0 = ec_app_track_slot(A, A->track);
     CHECK(s0 == 2 && A->slot[2].state == EC_SL_READY, "FILE: B10 loads into the next free slot (%d)", s0);
-    to(EC_CAT_FILT);
+    to(EC_CAT_MASTER);                                        /* (0.6.14: on the track pages PRESETS is the page) */
     turn(FM1P_E_PRESETS, 1);
     run(20);
     CHECK(ec_app_track_slot(A, A->track) == 0 && A->ux.to_ms && A->ux.to_kind == EC_TO_SAMPLE,

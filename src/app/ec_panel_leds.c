@@ -283,7 +283,7 @@ static const char *pick_name(int mode, int page)
 {
     if (mode == EC_CAT_FILE)
         return page >= 0 && ec_page_pic(EC_CAT_FILE, page, 0) == EC_PIC_EDITOR ? "EDITOR"
-             : page >= 0 && ec_page_pic(EC_CAT_FILE, page, 0) == EC_PIC_RAZOR ? "RAZOR" : "BROWSE";
+             : page >= 0 && ec_page_pic(EC_CAT_FILE, page, 0) == EC_PIC_RAZOR ? "SLICE" : "BROWSE";
     switch (mode) {
     case EC_CAT_SRC: return "LOOP";
     case EC_CAT_TRIG: return "TRIG";
@@ -380,10 +380,10 @@ static void leds_black(void)
             break;
         case EC_CAT_FILE: {
             const int pic = ec_file_page();
-            if (pic == EC_PIC_EDITOR) {            /* the zoom lit, the scroll keys while zoomed */
-                for (i = 1; i < 10; i++)
-                    l[i] = i - 1 == P->ed_zoom ? EC_LED_LIT : EC_LED_DIM;
-                l[0] = l[10] = P->ed_zoom ? EC_LED_MID : EC_LED_FAINT;
+            if (pic == EC_PIC_EDITOR) {            /* 0.6.15: B1 / B2 the pages (the shown one lit), B9 AUTO BPM */
+                l[0] = A->ux.lane[EC_CAT_FILE] == 0 ? EC_LED_LIT : EC_LED_DIM;
+                l[1] = A->ux.lane[EC_CAT_FILE] == 1 ? EC_LED_LIT : EC_LED_DIM;
+                l[8] = EC_LED_MID;
                 break;
             }
             for (i = 1; i <= EC_NBKEY; i++)
@@ -551,7 +551,7 @@ static void knob_labels(void)
     } else {
         ec_app_page(A, &pg);
         lane = ec_app_lane(A, &pg);
-        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET" : ec_rzui_active(A) ? "SLICE"
+        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : ec_rzui_active(A) ? "SLICE" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET"
                                                     : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
@@ -618,7 +618,7 @@ static const char *button_name(int mb)
                 if (cur == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR)
                     return "EDITOR";
                 if (cur == EC_CAT_FILE && ec_file_page() == EC_PIC_RAZOR)
-                    return "RAZOR";
+                    return "SLICE";
                 return "FILE";
             case EC_MODE_SAMPLER: return "SAMPLER";
             default: break;
@@ -806,8 +806,7 @@ static void black_labels(void)
                 break;
             case EC_CAT_FILE: {
                 static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "", "LOAD", "PREVIEW"};
-                static const char *const ED[EC_NBKEY] = {"<", "1X", "2X", "4X", "8X", "16X", "32X", "64X", "128X",
-                                                          "256X", ">"};
+                static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "", ""};
                 const int pic = ec_file_page();
                 if (pic == EC_PIC_EDITOR)
                     s = ED[i];

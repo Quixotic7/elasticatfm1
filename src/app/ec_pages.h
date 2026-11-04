@@ -43,7 +43,7 @@ enum { EC_G_BPM, EC_G_SWING, EC_G_GLEN, EC_G_QUANT, EC_G_RTN, EC_NG };
 /* E3: razor editor cells (FILE / RAZOR): the selected slice's points + settings, the view */
 enum { EC_RZ_START, EC_RZ_END, EC_RZ_PLAY, EC_RZ_ZOOM, EC_RZ_SNAP, EC_RZ_CHOKE, EC_RZ_PITCH, EC_RZ_SENS, EC_NRZ };
 /* slot fields (the current track's pool slot) */
-enum { EC_S_BPM, EC_S_STEPS, EC_S_GAIN, EC_S_TRIM_START, EC_S_TRIM_END, EC_NS };
+enum { EC_S_BPM, EC_S_STEPS, EC_S_GAIN, EC_S_TRIM_START, EC_S_TRIM_END, EC_S_ZOOM, EC_NS };   /* ZOOM: the EDITOR's view (0.6.15) */
 
 #define EC_IF_STOPPED 1u          /* changes only while the transport is stopped (warp mode, filter machine) */
 

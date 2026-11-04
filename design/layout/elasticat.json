@@ -635,14 +635,23 @@
           "title": "EDITOR",
           "picture": "editor",
           "key": 0,
-          "note": "the sample editor: B2-B10 the zoom, B1 / B11 scroll, the white keys place the trim point F1 / F2 picks (START / END; hold one + a second key: both)",
+          "note": "0.6.15: K1 START, K2 END (each selects the marker the white keys place; the view follows it), K4 ZOOM round the selected marker; P2: BPM, STEPS, GAIN; B1 / B2 the pages, B9 AUTO BPM",
           "lanes": [
-            [{"item": "slot.trim_start", "label": "START"}, {"item": "slot.trim_end", "label": "END"}, {"item": "slot.bpm", "label": "BPM"}, {"item": "slot.gain", "label": "GAIN"}],
-            [{"item": "slot.steps", "label": "STEPS"}]
+            [
+              {"item": "slot.trim_start", "label": "START"},
+              {"item": "slot.trim_end", "label": "END"},
+              null,
+              {"item": "slot.zoom", "label": "ZOOM"}
+            ],
+            [
+              {"item": "slot.bpm", "label": "BPM"},
+              {"item": "slot.steps", "label": "STEPS"},
+              {"item": "slot.gain", "label": "GAIN"}
+            ]
           ]
         },
         {
-          "title": "RAZOR",
+          "title": "SLICE",
           "picture": "razor",
           "key": 0,
           "lanes": [

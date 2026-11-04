@@ -291,40 +291,46 @@ static void test_editor(void)
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "FILE again: the editor");
     sl = &A->proj.slot[ec_app_track_slot(A, 0)];
-    CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "<") && lbl(FM1CORE_LBL_BLACK0 + 3, "4X") && lbl(FM1CORE_LBL_BLACK0 + 10, ">"),
-          "the editor's black keys: %s %s %s", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 3),
-          L(FM1CORE_LBL_BLACK0 + 10));
-    B(4, 40);                                      /* B4: 4X */
-    CHECK(ec_file_zoom() == 4.0f && fabsf(A->pn.ed_view - 0.375f) < 1e-4f, "B4: 4X, round the middle (%g %g)",
-          ec_file_zoom(), A->pn.ed_view);
-    B(11, 40);                                     /* B11: right half a view */
-    CHECK(fabsf(A->pn.ed_view - 0.5f) < 1e-4f, "B11: scrolled right (%g)", A->pn.ed_view);
-    B(11, 40);
-    B(11, 40);
-    CHECK(fabsf(A->pn.ed_view - 0.75f) < 1e-4f, "B11: stops at the end (%g)", A->pn.ed_view);
-    B(1, 40);
-    CHECK(fabsf(A->pn.ed_view - 0.625f) < 1e-4f, "B1: scrolled left (%g)", A->pn.ed_view);
-    /* 0.6.1: F1 / F2 pick the point the keys place (START / END); a tap places it */
+    /* 0.6.15 (owner): K1 START, K2 END (the last turned is the marker the keys place; the view follows it), K4 ZOOM
+     * round that marker; B1 / B2 the pages, B9 AUTO BPM; no scroll or zoom keys */
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "P1") && lbl(FM1CORE_LBL_BLACK0 + 1, "P2") && lbl(FM1CORE_LBL_BLACK0 + 8, "AUTO BPM") &&
+              lbl(FM1CORE_LBL_BLACK0 + 3, "") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K4, "ZOOM") &&
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "START"),
+          "the editor's keys: B1 %s B2 %s B9 %s; K1 %s K4 %s", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 1),
+          L(FM1CORE_LBL_BLACK0 + 8), L(FM1CORE_LBL_KNOB0 + FM1P_E_K1), L(FM1CORE_LBL_KNOB0 + FM1P_E_K4));
+    turn(FM1P_E_K4, 1);
+    turn(FM1P_E_K4, 1);
+    CHECK(ec_file_zoom() == 4.0f && A->pn.ed_view == 0.0f, "K4 twice: 4X round START (at 0) (%g %g)", ec_file_zoom(),
+          A->pn.ed_view);
+    turn(FM1P_E_K2, -1);                           /* END: a nudge selects it and the view follows it */
+    CHECK(A->pn.ed_point == 1 && fabsf(sl->trim_end - 0.995f) < 1e-4f && fabsf(A->pn.ed_view - 0.75f) < 1e-4f,
+          "K2: END selected, the view follows to the end (%d %g %g)", A->pn.ed_point, sl->trim_end, A->pn.ed_view);
+    press(FM1P_B_OCTDN, 40);                       /* F1: START */
     CHECK(A->pn.ed_point == 0 && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "START") &&
               lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "END") && lbl(FM1CORE_LBL_WHITE0 + 4, "START"),
-          "the editor: START by default, F1 START / F2 END (%s %s)", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN),
-          L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP));
+          "F1 START / F2 END (%s %s)", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN), L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP));
     W(1, 40);                                      /* START: the view's left edge */
-    CHECK(fabsf(sl->trim_start - 0.625f) < 1e-4f && fabsf(sl->trim_end - 1.0f) < 1e-4f && A->pn.ed_point == 0,
+    CHECK(fabsf(sl->trim_start - 0.75f) < 1e-4f && fabsf(sl->trim_end - 0.995f) < 1e-4f && A->pn.ed_point == 0,
           "START: W1 places the start at the view's edge (%g %g)", sl->trim_start, sl->trim_end);
     W(1, 40);
-    CHECK(fabsf(sl->trim_start - 0.625f) < 1e-4f && A->pn.ed_point == 0, "START: a second tap places START again");
+    CHECK(fabsf(sl->trim_start - 0.75f) < 1e-4f && A->pn.ed_point == 0, "START: a second tap places START again");
     press(FM1P_B_OCTUP, 40);                       /* F2: END */
     CHECK(A->pn.ed_point == 1 && !A->pn.f_sticky && lbl(FM1CORE_LBL_WHITE0 + 4, "END"),
           "F2: the keys place END (no CUT) (%d %d)", A->pn.ed_point, A->pn.f_sticky);
     W(16, 40);                                     /* END: the view's right edge */
-    CHECK(fabsf(sl->trim_end - 0.875f) < 1e-4f && fabsf(sl->trim_start - 0.625f) < 1e-4f,
+    CHECK(fabsf(sl->trim_end - 1.0f) < 1e-4f && fabsf(sl->trim_start - 0.75f) < 1e-4f,
           "END: W16 places the end (%g)", sl->trim_end);
     CHECK(sl->steps == 8, "the steps follow the trim (%g)", sl->steps);
     CHECK(led_key(0, 0) == FM1P_LED_LIT && led_key(0, 15) == FM1P_LED_LIT && led_key(0, 7) == FM1P_LED_FAINT,
           "the white keys at the trim lit");
-    B(2, 40);                                      /* B2: 1X */
-    CHECK(ec_file_zoom() == 1.0f && A->pn.ed_view == 0.0f, "B2: 1X");
+    turn(FM1P_E_K4, -1);
+    turn(FM1P_E_K4, -1);
+    CHECK(ec_file_zoom() == 1.0f && A->pn.ed_view == 0.0f, "K4 back: 1X");
+    B(2, 40);
+    CHECK(A->ux.lane[EC_CAT_FILE] == 1 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "BPM"), "B2: page 2, K1 BPM (%s)",
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    B(1, 40);
+    CHECK(A->ux.lane[EC_CAT_FILE] == 0, "B1: page 1");
     press(FM1P_B_OCTDN, 40);                       /* F1: START */
     W(4, 40);
     press(FM1P_B_OCTUP, 40);
@@ -397,7 +403,7 @@ static void test_editor(void)
     press(FM1P_B_OCTDN, 40);
     ec_seq_touch_all(&A->seq);
     B(3, 40);
-    CHECK(ec_file_page() == EC_PIC_EDITOR && ec_file_zoom() == 2.0f, "editor: B3 = 2X (no page key here)");
+    CHECK(ec_file_page() == EC_PIC_EDITOR && ec_file_zoom() == 1.0f, "editor: B3 does nothing (0.6.15: no page or zoom keys)");
     turn(FM1P_E_SELECT, -1);
     CHECK(ec_file_page() == EC_PIC_FILE, "SEL: back to the browser");
 }
@@ -422,7 +428,11 @@ static void test_file_pages(void)
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR (0.6.15)");
     press(FM1P_B_SAVE, 40);
-    CHECK(ec_file_page() == EC_PIC_RAZOR, "EDITOR: FILE again = RAZOR");
+    CHECK(ec_file_page() == EC_PIC_RAZOR, "EDITOR: FILE again = the slice editor");
+    B(6, 40);
+    CHECK(ec_file_page() == EC_PIC_RAZOR, "the slice editor: B6 does nothing (0.6.15: its keys are its own)");
+    press(FM1P_B_SAVE, 40);                        /* the SAMPLER */
+    press(FM1P_B_SAVE, 40);                        /* BROWSE */
     B(6, 40);
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR");
@@ -435,6 +445,7 @@ static void test_file_pages(void)
     turn(FM1P_E_SELECT, -1);
     CHECK(ec_file_page() == EC_PIC_EDITOR && ec_rzui.sel == sel0, "RAZOR: SEL back to EDITOR (the slice stays)");
     turn(FM1P_E_SELECT, 1);
+    run(20);
     CHECK(ec_file_page() == EC_PIC_RAZOR, "EDITOR: SEL to RAZOR again");
     CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "SLICE"), "RAZOR: ALGO's label SLICE (%s)",
           L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));

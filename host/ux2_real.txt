@@ -311,7 +311,8 @@ upper 9@115600
 turn SELECT@116000:-2
 png 117400:FileBrowser_screen.png
 press SAVE@117800
-upper 3@118200
+turn K4@118200:1
+turn K4@118300:1
 lower 1@118600
 press OCT+@118680
 lower 14@118750

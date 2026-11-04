@@ -12,6 +12,7 @@ typedef struct {
     int zoom;             /* 1, 2, 4 .. 64 */
     float focus;          /* the last edited point (track space), -1 none: the zoom centres on it */
     int focus_slice;
+    uint32_t sens_ms;     /* 0.6.15: SENS last turned (the transient ticks show for a moment) */
 } ec_rzui_t;
 
 extern ec_rzui_t ec_rzui;

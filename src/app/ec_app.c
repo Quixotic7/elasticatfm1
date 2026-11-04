@@ -250,6 +250,7 @@ float ec_app_item_value(const ec_app_t *a, const ec_item_t *it, int *locked)
         case EC_S_STEPS: return sl->steps;
         case EC_S_GAIN: return sl->gain;
         case EC_S_TRIM_START: return sl->trim_start;
+        case EC_S_ZOOM: return ec_file_zoom();
         default: return sl->trim_end;
         }
     }
@@ -313,6 +314,7 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
         snprintf(out, (size_t)cap, "%s", b);
         return;
     case EC_S_STEPS: snprintf(out, (size_t)cap, "%d", (int)floorf(x + 0.5f)); return;
+    case EC_S_ZOOM: snprintf(out, (size_t)cap, "%dX", (int)floorf(x + 0.5f)); return;
     case EC_S_GAIN: snprintf(out, (size_t)cap, "%.2fX", (double)x); return;
     default: {
         const float sec = x * slot_seconds(a, ec_app_track_slot(a, a->track));
@@ -344,6 +346,7 @@ float ec_app_item_frac(const ec_app_t *a, const ec_item_t *it, float x)
         switch (it->id) {
         case EC_S_BPM: return (x - 20) / 280;
         case EC_S_STEPS: return (x - 1) / 511;
+        case EC_S_ZOOM: return (float)A->pn.ed_zoom / (float)(EC_ED_ZOOMS - 1);
         case EC_S_GAIN: return x / 4;
         default: return x;
         }
@@ -886,17 +889,22 @@ static void edit_slot(int id, int det, int mult)
         sl->gain = A->fn ? ec_global_snap(EC_SNAP_GAIN, sl->gain, det) : sl->gain + 0.05f * (float)(det * mult);
         sl->gain = sl->gain < 0 ? 0 : sl->gain > 4 ? 4 : sl->gain;
         break;
+    case EC_S_ZOOM:                               /* 0.6.15: K4: the view round the selected marker */
+        ec_file_ed_zoom(det);
+        return;
     case EC_S_TRIM_START:   /* (SHIFT: the finest step, the original's trim scan) */
         ec_undo_trim(&A->e5.undo, &A->proj, s, 0, A->ms);   /* 0.6.1: undoable (a turn coalesced) */
         sl->trim_start += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_start = sl->trim_start < 0 ? 0 : sl->trim_start > sl->trim_end - 0.005f ? sl->trim_end - 0.005f
                                                                                            : sl->trim_start;
+        ec_file_ed_select(0);                      /* 0.6.15: K1 selects START; the view follows it */
         break;
     default:
         ec_undo_trim(&A->e5.undo, &A->proj, s, 0, A->ms);
         sl->trim_end += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_end = sl->trim_end > 1 ? 1 : sl->trim_end < sl->trim_start + 0.005f ? sl->trim_start + 0.005f
                                                                                        : sl->trim_end;
+        ec_file_ed_select(1);                      /* 0.6.15: K2 selects END; the view follows it */
         break;
     }
     ec_seq_touch_all(&A->seq);
@@ -908,7 +916,8 @@ static int item_steps(const ec_item_t *it)
     switch (it->kind) {
     case EC_IT_PARAM: return param_steps(it->id);
     case EC_IT_GLOBAL: return it->id == EC_G_BPM ? EC_BPM_ACCEL : it->id == EC_G_GLEN ? 255 : 1;   /* BPM: 0.1 steps */
-    case EC_IT_SLOT: return it->id == EC_S_BPM ? 280 : it->id == EC_S_STEPS ? 511 : it->id == EC_S_GAIN ? 80 : 200;
+    case EC_IT_SLOT: return it->id == EC_S_BPM ? 280 : it->id == EC_S_STEPS ? 511 : it->id == EC_S_GAIN ? 80
+                          : it->id == EC_S_ZOOM ? 9 : 200;
     case EC_IT_RAZOR: return it->id == EC_RZ_START || it->id == EC_RZ_END ? 256 : 1;
     case EC_IT_E5: return it->id == EC_X_XFD ? 128 : 1;
     case EC_IT_UX: return 1;

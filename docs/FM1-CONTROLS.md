@@ -472,9 +472,9 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
 | BROWSE | B3 | - | | | | |
-| EDITOR |  | 1 | START | END | BPM | GAIN |
-|  |  | 2 | STEPS |  |  |  |
-| RAZOR |  | 1 | PLAY | ZOOM | SLCE START | SLCE END |
+| EDITOR |  | 1 | START | END | - | ZOOM |
+|  |  | 2 | BPM | STEPS | GAIN |  |
+| SLICE |  | 1 | PLAY | ZOOM | SLCE START | SLCE END |
 |  |  | 2 | SNAP MODE | CHOKE | PITCH | TRANS SENS |
 | POOL | B6 | - | | | | |
 
@@ -903,7 +903,6 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 | MST/TRACK MIX | The mixer: all six tracks' levels and the S1 / S2 returns at a glance; the knobs set the selected track's level, pan and two sends, and lane 2 its mute. |
 | MST/MASTER | Project timing: tempo, swing, global pattern length and what the playhead does when the loop keys are let go. |
 | MST/SETUP | Playhead return mode, tempo, global BPM (one tempo for every pattern) and the project's name. |
-| FILE/RAZOR | The razor slice editor for the track's sample: move each slice's start / end with a snap mode, zoom, set its play mode, choke group, pitch and the transient sensitivity. OCT+ splits, OCT- deletes. |
 | PAT/PATTERN | The pattern grid with the track's pattern length and step rate, the global length and the pattern change mode. |
 | PAT/SETUP | How a newly picked pattern engages (quantize mode) and the global length it waits for. |
 | XFD/SCENE | The A / B scene crossfader: the fader, its glide positions and the params that morph. The lower keys are the scene row here. |
@@ -1065,7 +1064,7 @@ An FX machine changes at any time (a short fade, no click).
 - 0.6.11: **FILE opens while playing** (BROWSE, POOL, the SAMPLER; loads and previews too). Only the **EDITOR and
   RAZOR** (B4 / B5), **FREE**, **MOVE** and **purge** say STOP FIRST. Inside FILE, PLAY starts and stops (from the
   EDITOR / RAZOR it goes to BROWSE first: "BROWSE: PLAY AGAIN"); REC does nothing.
-- Pages: **BROWSE (B3)** and **POOL (B6)**. 0.6.15: **the FILE button cycles BROWSE > EDITOR > RAZOR > SAMPLER**
+- Pages: **BROWSE (B3)** and **POOL (B6)**. 0.6.15: **the FILE button cycles BROWSE > EDITOR > SLICE (RAZOR) > SAMPLER**
   (playing, the editors are skipped); the editors have no page keys, so their black keys are all theirs (the zoom).
 - **SEL turns the page on EDITOR and RAZOR**, both ways (lane by lane: EDITOR and RAZOR have two lanes each, then the
   next page): BROWSE < EDITOR < RAZOR < POOL. On **BROWSE and POOL, SEL is the list's cursor**; their way out is a page

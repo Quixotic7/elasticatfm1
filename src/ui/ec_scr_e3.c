@@ -59,13 +59,12 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
     double lo, hi;
     int k;
     snprintf(r, sizeof r, "ZOOM %dX", ec_rzui.zoom);
-    ec_scr_header_page(a, "FILE/RAZOR", 2, r);
+    ec_scr_header_page(a, "FILE/SLICE", 2, r);   /* 0.6.15 (owner): SLICE */
     snprintf(t, sizeof t, "SLICE %02d/%02d", sel, count);
     T(razor ? EC_C_L15 : EC_C_L8, t, 2, 13, EC_AL_LEFT);
     snprintf(r, sizeof r, "SNAP %s", ec_rzui_snap_name(rz->snap));
     T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
-    if (!razor)   /* the table is edited for any track; only the razor machines play it */
-        T(EC_C_ALERT, "NOT RAZOR", W / 2, 19, EC_AL_CENTER);
+    (void)razor;  /* (the table is edited for any track; only the slice machines play it: the caption dim then) */
     view(a, &v0, &v1);
     ec_rzui_window(a, a->track, &lo, &hi);
     if (!smp) {
@@ -117,12 +116,13 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
                 const int px = x0 + (int)((e[j] - v0) / (v1 - v0) * (float)(x1 - x0));
                 if (j == 1 && k + 1 < count && fabsf(rz->start[k + 1] - e[1]) < 0.02f)
                     continue;
-                if (px >= x0 && px <= x1)
-                    ec_gfx_dots_v(px, top - 2, bot + 3, 2, k == sel - 1 ? EC_C_L15 : EC_C_L8);
+                if (px >= x0 && px <= x1)      /* 0.6.15: the other slices' edges quiet (L5) */
+                    ec_gfx_dots_v(px, top - 2, bot + 3, 2, k == sel - 1 ? EC_C_L15 : EC_C_L5);
             }
         }
-        /* the transients at the chop sensitivity: ticks over the waveform (Auto-Chop's cut points) */
-        {
+        /* the transients at the chop sensitivity: ticks over the waveform, only while SENS is being turned (0.6.15:
+         * they were noise the rest of the time) */
+        if (ec_rzui.sens_ms && a->ms - ec_rzui.sens_ms < 1500) {
             float tr[EC_RZ_ONSET_WINDOWS];
             const int n = ec_rzui_transients(a, a->track, tr, EC_RZ_ONSET_WINDOWS);
             for (k = 0; k < n; k++) {
@@ -151,9 +151,8 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             snprintf(n, sizeof n, "%d", k + 1);
             if (c1 <= c0)
                 continue;
-            if (k == sel - 1 || px1s - px0s >= TW(n) + 2)
-                T(k == sel - 1 ? EC_C_L15 : rz->mute[k] ? EC_C_L3 : EC_C_L8, n, (px0s + px1s) / 2, bot + 5,
-                  EC_AL_CENTER);
+            if (k == sel - 1)                      /* 0.6.15: only the selected slice's number (the rest was noise) */
+                T(EC_C_L15, n, (px0s + px1s) / 2, bot + 5, EC_AL_CENTER);
         }
     }
     /* the zoom window over the whole track (zoomed in) */

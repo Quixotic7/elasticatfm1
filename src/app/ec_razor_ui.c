@@ -227,7 +227,10 @@ void ec_rzui_edit(ec_app_t *a, int id, int det, int mult)
     case EC_RZ_SNAP: rz->snap = (uint8_t)clampi(rz->snap + det, 1, EC_NSNAP); break;
     case EC_RZ_CHOKE: rz->choke[k] = (int8_t)clampi(rz->choke[k] + det, 0, 8); break;
     case EC_RZ_PITCH: rz->pitch[k] = clampf(floorf(rz->pitch[k] + 0.5f) + (float)det, -24, 24); break;
-    default: rz->sens = (uint8_t)clampi(rz->sens + det * mult, 0, 100); break;
+    default:
+        rz->sens = (uint8_t)clampi(rz->sens + det * mult, 0, 100);
+        ec_rzui.sens_ms = a->ms ? a->ms : 1;
+        break;
     }
     changed(a);
 }

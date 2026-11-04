@@ -966,3 +966,9 @@ the B11 pick mode above)
   and never cycles; the only way to change a button's mode is the hold + a black key.
 - While a mode button is held the white keys are swallowed (nothing reaches the mode) and their LEDs are dark:
   only the picker's black keys light. APP SETTINGS is SHIFT + ARP (its SHIFT label says so); SHIFT + HOME is LOOP SETUP.
+- **The EDITOR** (owner): K1 START, K2 END (the last one turned is the marker the white keys place, and the view
+  scrolls to keep it in sight), K4 ZOOM round that marker; page 2 holds BPM, STEPS, GAIN; B1 / B2 the pages, B9 AUTO
+  BPM (the trim as a power-of-two number of bars at the tempo nearest the project's). The scroll / zoom keys are gone.
+- **SLICE** (was RAZOR; the header says FILE/SLICE): quieter: the other slices' edges dim, only the selected
+  slice's number, the transient ticks only for 1.5 s after SENS is turned, no NOT RAZOR text; its black keys are its
+  own (no page keys lead out: the FILE button does).

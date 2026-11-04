@@ -351,6 +351,8 @@ void ec_file_black(int key, int down);        /* FILE's and SAMPLER's black keys
 void ec_file_white(int i, int down);          /* the editor's white keys (the trim): press and release */
 void ec_file_hdr_init(void);                  /* 0.6.1: the header's text for a held trim key (ec_hdr_provider) */
 void ec_file_ed_point(int end);               /* 0.6.1: the EDITOR's F1 / F2: a white key places 0 START, 1 END */
+void ec_file_ed_select(int end);              /* 0.6.15: K1 / K2 moved a marker: it is the selected one, the view follows */
+void ec_file_ed_zoom(int det);                /* 0.6.15: K4: the zoom, round the selected marker */
 int ec_file_f2(void);                         /* F2 in the browser: free the pool slot of the file under the cursor */
 int ec_file_play_leave(void);                 /* 0.6.11: PLAY in FILE on the EDITOR / RAZOR: to BROWSE, 1 = press used */
 void ec_file_select(int d);                   /* SEL in the browser */

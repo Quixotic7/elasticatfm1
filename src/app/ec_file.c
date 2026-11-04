@@ -599,24 +599,79 @@ static void view_clamp(void)
     P->ed_view = P->ed_view < 0 ? 0 : P->ed_view > 1.0f - w ? 1.0f - w : P->ed_view;
 }
 
+static void steps_recalc(ec_slot_t *sl, int s);
+
+/* 0.6.15 (owner): the selected marker (START / END: the last knob turned, F1 / F2) */
+static float marker_pos(void)
+{
+    const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
+    return P->ed_point ? sl->trim_end : sl->trim_start;
+}
+
 static void zoom(int z)
 {
-    const float c = P->ed_view + 0.5f / ec_file_zoom();
     char b[16];
     P->ed_zoom = clampi(z, 0, EC_ED_ZOOMS - 1);
-    P->ed_view = c - 0.5f / ec_file_zoom();
+    P->ed_view = marker_pos() - 0.5f / ec_file_zoom();   /* round the selected marker */
     view_clamp();
     snprintf(b, sizeof b, "ZOOM %dX", 1 << P->ed_zoom);
     ec_app_message(b);
+    A->redraw = 1;
 }
 
-static void scroll(int d)
+void ec_file_ed_zoom(int det) { zoom(P->ed_zoom + (det > 0 ? 1 : -1)); }
+
+/* the view scrolls so the selected marker stays in it (a knob moved it off the edge: it lands a quarter in) */
+static void follow(void)
 {
-    if (!P->ed_zoom)
-        return;
-    P->ed_view += (float)d * 0.5f / ec_file_zoom();
+    const float w = 1.0f / ec_file_zoom(), m = marker_pos();
+    if (m < P->ed_view)
+        P->ed_view = m - 0.25f * w;
+    else if (m > P->ed_view + w)
+        P->ed_view = m - 0.75f * w;
     view_clamp();
     A->redraw = 1;
+}
+
+void ec_file_ed_select(int end)
+{
+    P->ed_point = end ? 1 : 0;
+    follow();
+}
+
+/* B9: AUTO BPM: the trim is a whole number of bars (a power of two, 1/4 .. 64) at the tempo nearest the project's */
+static void auto_bpm(void)
+{
+    const int s = ec_app_track_slot(A, A->track);
+    ec_slot_t *sl = &A->proj.slot[s];
+    const ec_ss_sample_t *x = A->slot[s].handle >= 0 ? ec_ss_ready(A->slot[s].handle) : 0;
+    const float dur = x && x->rate ? (float)x->frames / (float)x->rate * (sl->trim_end - sl->trim_start) : 0;
+    float best = 0, bars = 0, b;
+    char m[24];
+    if (dur <= 0.01f) {
+        ec_app_message("NO SAMPLE");
+        return;
+    }
+    for (b = 0.25f; b <= 64.0f; b *= 2.0f) {
+        const float bpm = 240.0f * b / dur;
+        if (bpm < 40.0f || bpm > 300.0f)
+            continue;
+        if (!best || fabsf(bpm - A->proj.bpm) < fabsf(best - A->proj.bpm))
+            best = bpm, bars = b;
+    }
+    if (!best) {
+        ec_app_message("NO FIT");
+        return;
+    }
+    sl->bpm = floorf(best * 10.0f + 0.5f) / 10.0f;
+    steps_recalc(sl, s);
+    ec_seq_touch_all(&A->seq);
+    ec_app_mark_dirty();
+    if (bars >= 1.0f)
+        snprintf(m, sizeof m, "BPM %.1f = %d BAR%s", (double)sl->bpm, (int)bars, bars > 1 ? "S" : "");
+    else
+        snprintf(m, sizeof m, "BPM %.1f = 1/%d BAR", (double)sl->bpm, (int)(1.0f / bars));
+    ec_app_message(m);
 }
 
 static void steps_recalc(ec_slot_t *sl, int s)
@@ -874,14 +929,17 @@ void ec_file_black(int key, int down)
     if (!down || mode != EC_CAT_FILE)
         return;
     pic = ec_file_page();
-    if (pic == EC_PIC_EDITOR) {
-        if (key == 1 || key == 11)
-            scroll(key == 1 ? -1 : 1);
-        else
-            zoom(key - 2);
+    if (pic == EC_PIC_EDITOR) {                    /* 0.6.15: B1 / B2 its pages, B9 AUTO BPM (the zoom is K4) */
+        if (key == 1 || key == 2) {
+            A->ux.lane[EC_CAT_FILE] = key - 1;
+            A->redraw = 1;
+        } else if (key == 9)
+            auto_bpm();
         return;
     }
-    if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B4 EDITOR, B5 RAZOR, B6 POOL (the layout's keys) */
+    if (pic == EC_PIC_RAZOR)                       /* 0.6.15 (owner): the slice editor's keys are its own: no page keys */
+        return;
+    if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B6 POOL (the layout's keys; the editors have none) */
         const int pic2 = ec_page_pic(EC_CAT_FILE, ec_file_key_page(key), 0);
         if (A->seq.playing && (pic2 == EC_PIC_EDITOR || pic2 == EC_PIC_RAZOR)) {
             ec_app_alert("STOP FIRST");            /* 0.6.11: only the EDITOR and RAZOR need the transport stopped */

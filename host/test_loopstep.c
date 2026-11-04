@@ -71,8 +71,20 @@ static void test_entry(void)
     let_b(11);
     CHECK(A->pn.target == 10, "B11 + W10: step 10 (%d)", A->pn.target);
     CHECK(iv_div() == 16, "B11 is not the zoom any more");
+    CHECK(!ec_lp_picking(), "held + a key: pick mode ends with B11");
+    /* a tap: pick mode (a mouse can't hold B11 and press a key), then a key picks */
     B(11, 40);
-    CHECK(A->pn.target == 0, "B11 tapped: LIVE (%d)", A->pn.target);
+    CHECK(ec_lp_picking() && A->pn.target == 10, "B11 tapped: pick mode, the target still 10");
+    run(60);
+    CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "STEP 3"), "pick mode: the white keys say STEP n (%s)", L(FM1CORE_LBL_WHITE0 + 2));
+    wkey(2, 1);
+    wkey(2, 0);
+    CHECK(A->pn.target == 3 && !ec_lp_picking() && lockv(2, EC_P_LOOP_START) < 0,
+          "W3 in pick mode: step 3 is the target, pick mode off, nothing written (%d)", A->pn.target);
+    /* tap, tap: LIVE */
+    B(11, 40);
+    B(11, 40);
+    CHECK(A->pn.target == 0 && !ec_lp_picking(), "B11 tapped twice: LIVE (%d)", A->pn.target);
     /* B11 held + K1: the zoom (not a LIVE tap) */
     A->pn.target = 4;
     hold_b(11);

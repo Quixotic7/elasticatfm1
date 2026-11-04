@@ -269,7 +269,8 @@ void ec_kb_target(int det);                   /* ALGO */
 int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */
 int ec_lp_target(void);                       /* its target step 1.., 0 = LIVE (or not LOOP ENGINE) */
 void ec_lp_b11(int down);                     /* B11: held = pick a step with a white key, a tap = LIVE */
-int ec_lp_b11_held(void);
+int ec_lp_b11_held(void);                     /* B11 physically held */
+int ec_lp_picking(void);                      /* pick mode: the white keys pick the target step */
 void ec_lp_b11_used(void);                    /* B11 held + K1 turned the zoom: not a tap */
 int ec_lp_white(int k, int i, int down, int vel);   /* 1 = taken */
 uint32_t ec_lp_keys(void);                    /* the entry's keys held now */

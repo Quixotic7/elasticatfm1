@@ -343,6 +343,8 @@ static void leds_black(void)
             break;
         }
     }
+    if (ec_lp_active() && !A->fn)                  /* 0.6.6: LOOP ENGINE's B11: pick mode blinks, a target lit */
+        l[10] = ec_lp_picking() ? (blink(200) ? EC_LED_LIT : EC_LED_DIM) : P->target ? EC_LED_LIT : EC_LED_MID;
     for (i = 0; i < EC_NBKEY; i++)
         ec_plat_led_upper(i, l[i]);
 }
@@ -607,7 +609,7 @@ static void white_labels(void)
             case EC_CAT_MASTER: snprintf(b, sizeof b, "%s", i < 9 ? T[i] : ""); break;
             case EC_CAT_SRC: {
                 const float *v = ec_app_params(A);
-                if (ec_lp_b11_held())              /* 0.6.6: B11 held: the keys pick a step */
+                if (ec_lp_picking())               /* 0.6.6: B11's pick mode: the keys pick a step */
                     snprintf(b, sizeof b, "STEP %d", A->step_page * 16 + i + 1);
                 else
                     snprintf(b, sizeof b, "%s%d", is_slice_m(iv(v, EC_P_MACHINE)) ? "SL" : "L",

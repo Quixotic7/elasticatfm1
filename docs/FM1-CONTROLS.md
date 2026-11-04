@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.6)
+# Elasticat on the FM-1: controls (0.6.7)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -997,16 +997,16 @@ An FX machine changes at any time (a short fade, no click).
 | B2 / B3 / B4 | **MACHINE**, **WARP**, **RANGE** |
 | B6-B10 | the sources |
 | ALGO | **the target step** (shared with KEYBOARD); below step 1 is **LIVE** |
-| B11 | held + a white key: **the target jumps to that step**; tapped: **LIVE**. Held + K1: **the zoom** (16 loop keys → 32, keys 1-16 → 32, keys 17-32; the track's LOOP DIV) |
+| B11 | **pick a step**: tap B11 (it blinks, the header says PICK STEP, the white keys STEP 1-16), then tap a white key: that step is the target. Tap B11 twice: **LIVE**. Holding B11 + a white key also works. Held + K1: the zoom (16 loop keys → 32, keys 1-16 → 32, keys 17-32; the track's LOOP DIV) |
 | White keys | LIVE: **play the loop** (the loop keys). With a target step: **write it** (below) |
 
-- **Sequencing regions and ranges (0.6.6)**: turn ALGO to a step (or hold B11 + its white key). Then hold one or
+- **Sequencing regions and ranges (0.6.6)**: turn ALGO to a step (or tap B11, then the step's white key). Then hold one or
   more white keys: letting go of the last writes their span as the step's **region** lock (one key: that division)
   and a trig, and the target moves on (ADVANCE in HOME's settings; SHIFT while writing does the other). On the
   **RANGE page** (B4) the keys write the step's **range** instead (the 16 keys over the whole sample). Stopped, the
   keys sound while held. With a target the **knobs lock onto it** (the cells show its locks; F1 + a knob clears its
   lock). The screen swaps the loop-key ruler for the step strip: the target's cap, each step's lock as a small bar
-  where it sits in the loop, and the target's lock on the waveform. B11 tapped (or ALGO below 1) is LIVE again.
+  where it sits in the loop, and the target's lock on the waveform. B11 tapped twice (or ALGO below 1) is LIVE again.
 - **The loop keys** (the live scrub): hold one key to loop that part of the range, two or more to span them. Let go
   and the playhead returns as RET MODE says (return / boomerang / reset). While stopped they audition.
 - **On slice machines** (SLICE, S.POLY, RAZOR, R.POLY) the white keys are **slice pads**, velocity sensitive.

@@ -820,3 +820,7 @@ them:
   value knob snaps that param (ec_snap.c, the norns snap lists). SHIFT's own BPM / SWING / TRACK / SNAP cells are
   gone.
 - **SHIFT + B4 = RECALL, SHIFT + B5 = MEMORIZE** (B3 is dark now).
+- 0.6.7 (owner: "B11 still does zoom"): on the web panel a mouse can't hold B11 and press a key, so **B11 is a
+  tap toggle**: a tap turns pick mode on (B11 blinks, the header says PICK STEP, the white keys STEP n), a white key
+  picks the target and ends it, a second B11 tap is LIVE. Held + a key still works; held + K1 is still the zoom, no
+  longer named in the header.

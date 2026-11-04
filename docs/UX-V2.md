@@ -791,3 +791,20 @@ them:
   sliding.
 - Built in 0.6.5 by hand: ec_seq.c (hold_set, holds_clear_sound, start_slides, ec_seq_param_edited), EC_P_SLIDE;
   tests: test_seq's test_sticky (the owner's case, trigless lock, slide, the knob), e5 / seq_e4 / rec / mtx updated.
+
+**LOOP ENGINE step entry: sequencing regions and ranges** (owner, 2026-11-03)
+- The norns grid had a step row and a loop-key row at once (hold a step, tap loop keys). The FM-1 has one row, so
+  LOOP ENGINE gets KEYBOARD's **target step**:
+  - **ALGO = the target step** (shared with KEYBOARD); below step 1 is **LIVE** (the white keys scrub the loop live,
+    as now). The header says STEP n.
+  - **B11 replaces the zoom**: hold B11 + a white key = jump the target to that step (of the step page shown);
+    tap B11 = LIVE. The 32-key zoom moves to SHIFT + B11.
+- **With a target step, the white keys write it**: hold one or more keys; letting go of the last one writes their
+  span as the step's region lock (one key: that division; several: first..last) and puts a trig on it, then the
+  target moves on (KEYBOARD's ADVANCE setting; SHIFT + the keys does the other). Stopped, the held keys also
+  sound, so you hear the region you are writing. Slice tracks: the key's slice goes on the step.
+- **RANGE page (B4) with a target**: the keys write the step's **range** lock the same way (the 16 keys span the
+  whole sample), and R-ST / R-EN fine-tune it.
+- **With a target, the knobs lock onto it** (as holding that step does); the cells show its locks.
+- The screen shows a **step strip**: the step page's 16 steps, each with its trig and a small bar of its region lock,
+  the target outlined; the waveform marks the target step's region.

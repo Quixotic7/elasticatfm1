@@ -282,9 +282,9 @@ static void test_swaps(void)
         B(5, 40);
     CHECK(ec_fx_on_sends(), "SENDS");
     hold_b(1);
-    run(250);
+    run(350);                                      /* (0.6.14: the header text past the 300 ms quick click) */
     CHECK(!strcmp(hdr_text(), "MOVE INSERT") && ec_hm_raised() < 0 && v[EC_P_FX_MACHINE] == EC_FX_REVERB,
-          "B1 held 250 ms: the header (%s), not raised yet", hdr_text());
+          "B1 held 350 ms: the header (%s), not raised yet", hdr_text());
     run(250);
     CHECK(ec_hm_raised() == 0 && v[EC_P_FX_MACHINE] == EC_FX_REVERB && !strcmp(hdr_text(), "MOVE REVERB"),
           "B1 held 500 ms: I 1 raised (%s), nothing moved", hdr_text());

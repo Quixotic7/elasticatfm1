@@ -187,7 +187,8 @@ const char *ec_pn_roles(int mode, int *cur);  /* the 11 black-key roles (the LED
  * A held key's text: a provider's (ec_hdr_provider, asked newest first), else the built-in ones (docs/FM1-CONTROLS.md
  * "The header"). The bar's colour is a palette slot: EC_C_L12 the plain bar, EC_C_SRC a source key, EC_C_LOCK held
  * steps, EC_C_ALERT an alert. ---- */
-#define EC_HDR_MS 150                         /* a held key's text shows this long after the last press (a tap: none) */
+#define EC_HDR_MS 300                         /* 0.6.14 (owner): a held key's text shows only past the quick-click time
+                                               * (300 ms, B11's), never on a tap */
 typedef int (*ec_hdr_fn)(char *out, int cap); /* a held key's text into out: the bar's slot (EC_C_*), -1 nothing held */
 void ec_hdr_provider(ec_hdr_fn fn);           /* register (once; up to 4): asked before the built-in held keys */
 int ec_hdr_held(char *out, int cap);          /* the held keys' text now: the bar's slot, -1 none */

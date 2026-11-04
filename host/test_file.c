@@ -345,7 +345,7 @@ static void test_editor(void)
           "START at W16, after END: swapped (%g %g)", sl->trim_start, sl->trim_end);
     /* two keys: hold one (the chosen point), a second places the other */
     key(0, 4, 1);                                  /* START: W5 held = the start */
-    run(200);
+    run(350);                                      /* (0.6.14: the header text past 300 ms) */
     {
         char h[40];
         CHECK(ec_hdr_held(h, sizeof h) >= 0 && !strcmp(h, "START + KEY = END"), "W5 held: the header says (%s)", h);

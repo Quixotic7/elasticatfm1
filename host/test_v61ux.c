@@ -350,9 +350,9 @@ static void test_held(void)
         run(60);
         CHECK(!ec_hdr_custom() || h->kind == K_SHIFTBK || (h->want[0] == 'F' && h->want[2] == ' '),
               "[%s] a tap (60 ms): no held text yet (%s)", h->want, hdr(0));   /* (0.6.12: F1 / F2 at once) */
-        run(190);
+        run(290);                                              /* (0.6.14: past the 300 ms quick click) */
         CHECK(!strcmp(hdr(&bar), h->want) && bar == h->bar && px(14, 0) == h->bar,
-              "[%s] held 250 ms: the header says it (\"%s\", bar %d)", h->want, hdr(0), bar);
+              "[%s] held 350 ms: the header says it (\"%s\", bar %d)", h->want, hdr(0), bar);
         CHECK(mode() == h->mode || h->kind == K_BTN, "[%s] held: the mode stays", h->want);
         run(h->hold - 250);
         held_down(h, 0);
@@ -471,7 +471,7 @@ static void test_capture(void)
 {
     to(EC_CAT_XFD);
     bk(11, 1);
-    run(250);
+    run(350);                                                 /* (0.6.14: past the 300 ms quick click) */
     CHECK(!strcmp(hdr(0), "CAPTURE"), "CROSSFADER: B11 held: CAPTURE (%s)", hdr(0));
     bk(1, 1);
     run(20);

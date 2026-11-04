@@ -122,7 +122,8 @@ static int builtin(char *out, int cap)
         if (P->xf_key >= 0)
             return say(out, cap, EC_C_L12, "GLIDE TO %d", (int)floorf(ec_xfd_key_value(P->xf_key) * 127.0f + 0.5f));
     }
-    if (plain && ec_lp_step_layer())               /* 0.6.9: LOOP ENGINE's STEP layer (B11) */
+    if (plain && ec_lp_step_layer() && (late || !ec_lp_b11_held()))   /* 0.6.9: the STEP layer (B11); 0.6.14: a
+                                                    * quick click never shows it (latched: at once) */
         return say(out, cap, EC_C_L12, "SELECT STEPS", 0);
     if (late && A->fill_held)
         return say(out, cap, EC_C_L12, "FILL", 0);

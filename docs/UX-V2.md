@@ -911,3 +911,5 @@ the B11 pick mode above)
   spread was scaled by the file's length (SPRD 60 ms on a long file = a slab of the whole file, so the cursor's
   movement and the region were invisible); it is +-SPRD seconds around the cursor now. The grain view draws no frame
   box any more: the live region bright, the brackets and the playhead over the grains as on the other pages.
+- Held-key texts (owner: "SELECT STEPS flashes on a quick B11 click"): a held key's header text shows only past the
+  quick-click time, 300 ms (EC_HDR_MS, was 150), everywhere; B11's SELECT STEPS too (latched: at once).

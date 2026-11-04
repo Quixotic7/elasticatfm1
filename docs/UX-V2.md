@@ -914,3 +914,5 @@ the B11 pick mode above)
 - Held-key texts (owner: "SELECT STEPS flashes on a quick B11 click"): a held key's header text shows only past the
   quick-click time, 300 ms (EC_HDR_MS, was 150), everywhere; B11's SELECT STEPS too (latched: at once).
 - Colours (owner): the STEP layer's strip is red; the LOOP layer's is white with steps selected, blue LIVE.
+- LOOP layer LEDs with a step selected (owner): the lit range is that step's region (its lock, else the track's), so
+  stepping with ALGO shows each step's loop on the keys; a held loop key shows live.

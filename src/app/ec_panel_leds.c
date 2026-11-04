@@ -120,9 +120,16 @@ static void leds_loop(void)
     {
         const int div = clampi((iv(v, EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);
         const float units = 128.0f / (float)div;
-        const float ls = ec_seq_value(&A->seq, A->track, EC_P_LOOP_START);
-        const float le = ec_seq_value(&A->seq, A->track, EC_P_LOOP_END);
+        float ls = ec_seq_value(&A->seq, A->track, EC_P_LOOP_START);
+        float le = ec_seq_value(&A->seq, A->track, EC_P_LOOP_END);
+        const int tgt = ec_app_target_step(A);
         int ph = -1;
+        if (tgt >= 0 && !st.keys_held) {           /* 0.6.14 (owner): a selected step: its region (its lock) */
+            const ec_step_t *sp = &ec_project_track(&A->proj, A->track)->steps[tgt];
+            float x;
+            ls = ec_step_lock_get(sp, EC_P_LOOP_START, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_LOOP_START];
+            le = ec_step_lock_get(sp, EC_P_LOOP_END, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_LOOP_END];
+        }
         if (st.reader_on) {   /* the playhead in track space -> its key */
             const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
             const float span = sl->trim_end - sl->trim_start;

@@ -150,7 +150,7 @@ void ec_pages_black_down(int key)
     pg.held |= bit;
     pg.used &= (uint16_t)~bit;
     pg.ms[i] = A->ms;
-    if (others && i < pages) {                     /* two keys held: the loop between them */
+    if (others && i < 8) {                         /* two keys held: the loop between them (past the end: longer) */
         int lo = i, hi = i, k;
         uint16_t m = 0;
         for (k = 0; k < EC_NBKEY; k++)
@@ -160,8 +160,14 @@ void ec_pages_black_down(int key)
                 if (k > hi)
                     hi = k;
             }
-        if (hi >= pages)
-            hi = pages - 1;
+        if (hi >= pages) {                         /* 0.6.14 (owner): a span past the end grows the track */
+            float *v = ec_app_params(A);
+            ec_e5_edit_param(A->track, EC_P_PATTERN_STEPS, 0);
+            v[EC_P_PATTERN_STEPS] = (float)((hi + 1) * 16);
+            ec_seq_timing_changed(&A->seq);
+            ec_seq_touch(&A->seq, A->track);
+            ec_app_mark_dirty();
+        }
         for (k = lo; k <= hi; k++)
             m |= (uint16_t)(1u << k);
         pg.used |= pg.held;                        /* (no tap, hold or double-tap from these keys) */

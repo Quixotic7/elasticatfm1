@@ -918,3 +918,6 @@ the B11 pick mode above)
   stepping with ALGO shows each step's loop on the keys; a held loop key shows live.
 - Colours again (owner): blue = LIVE, red = loop keys (steps selected), yellow (SPECIAL) = the STEP layer; the
   selected steps are white on every layer. The bars under the steps are their region (RANGE page: range) locks.
+- B11 held (owner): the cells area is the **pages panel** (8 tiles: the shown page filled, in the loop outlined,
+  muted dim, past the length a dot; LEN and RATE under them); **K1 = LEN, K2 = RATE** (the zoom moves to K3); two
+  page keys held past the end grow the track to that page. Page LEDs: a muted page dark, the shown page muted blinks.

@@ -637,6 +637,48 @@ static void loop_steps(const ec_app_t *a, int range, int tint)
         }
     }
 }
+#define A_IS_BUS(a) ((a)->bus != 0)
+/* 0.6.14 (owner): while B11 is held the cells area shows the pattern's pages instead of the knobs' params: up to 8
+ * tiles (the shown page filled, a page in the loop outlined bright, a muted one dim, beyond the length a dot; the
+ * playing page's number in the accent), and under them LEN (K1) and RATE (K2) */
+static void pages_panel(const ec_app_t *a)
+{
+    const float *v = tv(a);
+    const int len = ec_seq_pattern_steps(&a->seq, a->track), pages = (len + 15) / 16;
+    const uint16_t m = ec_e5_page_loop_mask(&a->proj, a->track, pages);
+    const int play = ec_seq_step(&a->seq, a->track) / 16;
+    char b[16];
+    int i;
+    R(EC_C_L3, 0, 76, W, 2);
+    for (i = 0; i < 8; i++) {
+        const int x = 2 + i * 15, y = 80, w = 13, h = 15;
+        const int cur = i == a->step_page, in = i < pages && (m >> i & 1u);
+        snprintf(b, sizeof b, "%d", i + 1);
+        if (i >= pages) {
+            R(EC_C_L3, x + 5, y + 7, 3, 2);
+            continue;
+        }
+        if (cur)
+            R(EC_C_L15, x, y, w, h);
+        else if (in) {
+            R(EC_C_L12, x, y, w, h);
+            R(EC_C_BG, x + 2, y + 2, w - 4, h - 4);
+        } else {
+            R(EC_C_L5, x, y, w, h);
+            R(EC_C_BG, x + 2, y + 2, w - 4, h - 4);
+        }
+        T(cur ? EC_C_BG : i == play && (a->seq.playing || a->seq.paused) ? EC_C_ACC : in ? EC_C_L15 : EC_C_L5, b,
+          x + w / 2, y + 4, EC_AL_CENTER);
+    }
+    T(EC_C_L8, "LEN", 2, 100, EC_AL_LEFT);
+    T(EC_C_L8, "K1", 57, 100, EC_AL_RIGHT);
+    snprintf(b, sizeof b, "%d", len);
+    T2(EC_C_L15, b, 2, 107, EC_AL_LEFT);
+    T(EC_C_L8, "RATE", 62, 100, EC_AL_LEFT);
+    T(EC_C_L8, "K2", W - 3, 100, EC_AL_RIGHT);
+    T2(EC_C_L15, ec_rate_label(iv(v, EC_P_RATE)), 62, 107, EC_AL_LEFT);
+    R(EC_C_L3, 59, 97, 2, 23);
+}
 /* the step strip: this step page's trigs, ghosts, locks, the held step, the playhead; the pages under it */
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
 {
@@ -729,7 +771,10 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
         else
             key_ruler(a, 66);                      /* (the mocks: the loop-key ruler) */
     }
-    cells(a, pg);
+    if (a == &ec_app && ec_lp_b11_held() && !A_IS_BUS(a))   /* 0.6.14 (owner): B11 held: the pages, LEN and RATE */
+        pages_panel(a);
+    else
+        cells(a, pg);
 }
 
 /* ------------------------------------------------------------------------------------------- generic pages --- */

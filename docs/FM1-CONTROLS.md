@@ -999,7 +999,7 @@ An FX machine changes at any time (a short fade, no click).
 | B2 / B3 / B4 | **MACHINE**, **WARP**, **RANGE** |
 | B6-B10 | the sources |
 | ALGO | **selects one step** (shared with KEYBOARD's target; 0.6.11: each track's own); below step 1 is **LIVE** (nothing selected) |
-| B11 held + B1..B10 | 0.6.13: **the pages**, as FIZZ: tap = select, hold = mute (out of the loop), double-tap = solo, two held = loop between them (the same on PAGES' black keys) |
+| B11 held + B1..B8 | 0.6.13: **the pages**, as FIZZ: tap = select, hold = mute (out of the loop), double-tap = solo, two held = loop between them (past the end: the track grows to it). The screen's cells become the pages panel; **K1 = LEN, K2 = RATE, K3 = the zoom** (0.6.14) |
 | B11 | **the STEP layer**: held = the white keys select steps; a quick click latches it (another quick click: loop keys again). Latched, held = the loop keys. B11 never goes LIVE. Held + **OCT-**: clear the selected steps. Held + K1: the zoom (16 loop keys → 32, keys 1-16 → 32, keys 17-32) |
 | White keys | **the loop keys, always live**; with steps selected each entry is also written into them. STEP layer: select steps |
 

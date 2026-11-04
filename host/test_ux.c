@@ -723,27 +723,27 @@ static void test_sources(void)
     tapkey(1, bkey(2), 40);                                   /* M1 page, back to FILTER: hold M1 there? MOD only */
     to(EC_CAT_FILT);
     ec_app_set_page(EC_CAT_FILT, 0);
-    /* LOOP ENGINE: B11 held + K1 = the zoom (0.6.6: B11 itself picks the target step, test_loopstep) */
+    /* LOOP ENGINE: B11 held + K3 = the zoom (0.6.14: K1 / K2 are LEN / RATE; 0.6.6: B11 itself picks the target step) */
     to(EC_CAT_SRC);
     v = ec_app_params(A);
     v[EC_P_LOOP_DIVISION] = 16;
     key(1, bkey(11), 1);
     run(20);
-    turn(FM1P_E_K1, 1);
-    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11 + K1: 32, first half");
-    turn(FM1P_E_K1, 1);
+    turn(FM1P_E_K3, 1);
+    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11 + K3: 32, first half");
+    turn(FM1P_E_K3, 1);
     run(60);
     CHECK(v[EC_P_LOOP_DIVISION] == 32 && A->pn.zoom_half && lbl(FM1CORE_LBL_WHITE0, "STEP 1"),
-          "B11 + K1: the second half; while B11 is held the keys pick steps (W1 = %s)", L(FM1CORE_LBL_WHITE0));
+          "B11 + K3: the second half; while B11 is held the keys pick steps (W1 = %s)", L(FM1CORE_LBL_WHITE0));
     key(1, bkey(11), 0);
     run(60);
     CHECK(lbl(FM1CORE_LBL_WHITE0, "L17"), "B11 let go: the second half's loop keys (W1 = %s)", L(FM1CORE_LBL_WHITE0));
     key(1, bkey(11), 1);
     run(20);
-    turn(FM1P_E_K1, -2);
+    turn(FM1P_E_K3, -2);
     key(1, bkey(11), 0);
     run(20);
-    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11 + K1 -2: back to 16");
+    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11 + K3 -2: back to 16");
     /* FX: the buses, the slot keys */
     to(EC_CAT_FX);
     tapkey(1, bkey(3), 40);
@@ -1069,7 +1069,7 @@ static void test_labels(void)
 {
     to(EC_CAT_SRC);
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 10, "STEP") && lbl(FM1CORE_LBL_WHITE0, "L1") &&   /* 0.6.6: B11 / ALGO the target */
-              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "SLOT") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "TARGET"),
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "PAGE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "TARGET"),
           "LOOP ENGINE: B11 %s W1 %s PRESETS %s ALGO %s", L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_WHITE0),
           L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS), L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
     CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "COPY") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "CUT"),

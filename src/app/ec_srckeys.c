@@ -495,14 +495,45 @@ static void show(int id)
     ec_ux_takeover(EC_PARAMS[id].label, val, ec_param_frac(id, x));
 }
 
+static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
+
 int ec_src_knob(int role, int det)
 {
     const int mode = ec_app_mode();
     int id;
-    if (ec_lp_b11_held() && role == EC_E_K1) {     /* 0.6.6: LOOP ENGINE: B11 held + K1 = the zoom */
+    if (ec_lp_b11_held() && role == EC_E_K3) {     /* 0.6.6: LOOP ENGINE: B11 held + K3 = the zoom (0.6.14: was K1) */
         ec_lp_b11_used();
         for (; det; det += det > 0 ? -1 : 1)       /* a detent a step */
             zoom(det);
+        return 1;
+    }
+    if (ec_lp_b11_held() && (role == EC_E_K1 || role == EC_E_K2) && !A->bus) {   /* 0.6.14 (owner): B11 held: K1
+                                                    * the pattern length, K2 the track rate (the pages panel) */
+        float *v = ec_app_params(A);
+        char b[20];
+        ec_lp_b11_used();
+        if (role == EC_E_K1) {
+            const int n = clampi(iv(v, EC_P_PATTERN_STEPS) + det * ec_ux_accel(role, 128, det), 1, 128);
+            if (n != iv(v, EC_P_PATTERN_STEPS)) {
+                ec_e5_edit_param(A->track, EC_P_PATTERN_STEPS, 0);
+                v[EC_P_PATTERN_STEPS] = (float)n;
+                ec_seq_timing_changed(&A->seq);
+                ec_seq_touch(&A->seq, A->track);
+                ec_app_mark_dirty();
+            }
+            snprintf(b, sizeof b, "LEN %d", n);
+        } else {
+            const int n = clampi(iv(v, EC_P_RATE) + (det > 0 ? 1 : -1), 1, EC_RATES);
+            if (n != iv(v, EC_P_RATE)) {
+                ec_e5_edit_param(A->track, EC_P_RATE, 0);
+                v[EC_P_RATE] = (float)n;
+                ec_seq_timing_changed(&A->seq);
+                ec_seq_touch(&A->seq, A->track);
+                ec_app_mark_dirty();
+            }
+            snprintf(b, sizeof b, "RATE %s", ec_rate_label(n));
+        }
+        ec_app_message(b);
         return 1;
     }
     if (ec_hm_knob(role, det)) {                   /* 0.6.1: a hold menu (SEL / K1 move it) */

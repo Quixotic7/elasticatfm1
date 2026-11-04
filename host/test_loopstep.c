@@ -253,8 +253,27 @@ static void test_pages_b11(void)
     run(20);
     m = ec_e5_page_loop_mask(&A->proj, A->track, 4);
     CHECK(m == 0x3 && !strcmp(A->msg, "LOOP PAGES 1-2"), "B1 + B2 held: loop pages 1-2 (mask %x, %s)", m, A->msg);
+    key(1, 0, 1);                                  /* 0.6.14: B1 + B6 past the end (4 pages): the track grows */
+    run(40);
+    key(1, 5, 1);
+    run(40);
+    key(1, 0, 0);
+    key(1, 5, 0);
+    run(20);
+    CHECK((int)v[EC_P_PATTERN_STEPS] == 96 && ec_e5_page_loop_mask(&A->proj, A->track, 6) == 0x3F,
+          "B1 + B6 held: LEN 96, pages 1-6 loop (%g %x)", v[EC_P_PATTERN_STEPS],
+          ec_e5_page_loop_mask(&A->proj, A->track, 6));
+    turn(FM1P_E_K1, 1);
+    CHECK((int)v[EC_P_PATTERN_STEPS] == 97 && !strcmp(A->msg, "LEN 97"), "B11 + K1: LEN 97 (%s)", A->msg);
+    turn(FM1P_E_K2, 1);
+    CHECK((int)v[EC_P_RATE] == EC_RATE_UNITY + 1 && !strncmp(A->msg, "RATE", 4), "B11 + K2: the rate up (%s)", A->msg);
+    turn(FM1P_E_K2, -1);
+    turn(FM1P_E_K1, -1);
     hold_b11(0);
     CHECK(!ec_lp_step_layer(), "B11 let go after page keys: no layer latch");
+    v[EC_P_PATTERN_STEPS] = 64;                    /* (back to 4 pages for the checks below) */
+    ec_seq_timing_changed(&A->seq);
+    ec_e5_set_page_loop(&A->proj, A->track, 0, 4);
     /* 0.6.14: ALGO stays on the page; PRESETS turns it; B11 + OCT+ = LIVE */
     A->step_page = 1;
     turn(FM1P_E_ALGO, 3);

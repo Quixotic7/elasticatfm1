@@ -353,9 +353,11 @@ static void leds_black(void)
             if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus) {   /* 0.6.13: B11 held: the pages on B1..B10 */
                 const int pages = ec_pages_count();
                 const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
-                for (i = 0; i < 10; i++)
-                    l[i] = i >= pages ? EC_LED_OFF : i == A->step_page ? EC_LED_LIT : (m >> i & 1u) ? EC_LED_DIM
-                                                                                                   : EC_LED_FAINT;
+                for (i = 0; i < 10; i++) {         /* 0.6.14 (owner): a muted page dark; the shown one muted blinks */
+                    const int in = (m >> i) & 1u;
+                    l[i] = i >= pages ? EC_LED_OFF : i == A->step_page ? (in || blink(200) ? EC_LED_LIT : EC_LED_OFF)
+                                                                       : in ? EC_LED_DIM : EC_LED_OFF;
+                }
             } else if (ec_src_mode(mode)) {
                 int cur = -1;
                 ec_pn_roles(mode, &cur);
@@ -452,6 +454,15 @@ static void knob_labels(void)
             L(EC_LBL_KNOB0 + EC_E_K1 + k, NK[k]);
         return;
     }
+    if (mode == EC_CAT_SRC && ec_lp_b11_held() && !A->bus && !A->settings) {   /* 0.6.14: B11 held: the pages panel */
+        static const char *const BK[4] = {"LEN", "RATE", "ZOOM", ""};
+        L(EC_LBL_KNOB0 + EC_E_SELECT, "");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, "STEP");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, "PAGE");
+        for (k = 0; k < 4; k++)
+            L(EC_LBL_KNOB0 + EC_E_K1 + k, BK[k]);
+        return;
+    }
     if (P->as_open) {
         L(EC_LBL_KNOB0 + EC_E_SELECT, "ROW");
         L(EC_LBL_KNOB0 + EC_E_ALGO, "");
@@ -479,7 +490,7 @@ static void knob_labels(void)
         lane = ec_app_lane(A, &pg);
         L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET" : ec_rzui_active(A) ? "SLICE"
                                                     : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, (mode == EC_CAT_SRC || mode == EC_CAT_TRIG) && !A->bus && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
         else if (A->settings)

@@ -156,6 +156,9 @@ typedef struct {
     int ed_point;              /*   0.6.1: the point a white key places: 0 START (F1), 1 END (F2) */
     int ed_hold;               /*   the white key held (0..15; the second key places the other point), -1 */
     int pool_cur;              /* 0.6.1: POOL's cursor (slot 0..127) */
+    int pool_b11;              /* 0.6.15: B11 held in POOL: the slot in hand moves with SEL / K1, drops on release */
+    uint32_t pv_keys;          /* 0.6.15: the white keys held: the preview loops over their span (16ths of the file) */
+    double pv_lo, pv_hi;       /* the preview's loop (frames) while keys are held, else 0 / the end */
     int pool_carry;            /*   MOVE: the slot picked up, -1 none */
     /* SAMPLER (ec_sampler.c) */
     float smp_gain_db;         /* the input gain */
@@ -353,7 +356,12 @@ void ec_file_hdr_init(void);                  /* 0.6.1: the header's text for a 
 void ec_file_ed_point(int end);               /* 0.6.1: the EDITOR's F1 / F2: a white key places 0 START, 1 END */
 void ec_file_ed_select(int end);              /* 0.6.15: K1 / K2 moved a marker: it is the selected one, the view follows */
 void ec_file_ed_zoom(int det);                /* 0.6.15: K4: the zoom, round the selected marker */
-int ec_file_f2(void);                         /* F2 in the browser: free the pool slot of the file under the cursor */
+int ec_file_f2(void);                         /* F2 / B9 in the browser: free the pool slot of the file under the cursor */
+void ec_file_algo(int d);                     /* 0.6.15: the browser's ALGO: CW adds the file to the pool, CCW removes it */
+void ec_file_preview_toggle(void);            /* 0.6.15: PRESETS in FILE: the audible preview on / off (APP SETTINGS') */
+void ec_file_pv_key(int i, int down);         /* 0.6.15: a white key in BROWSE / POOL: the preview as a loop key */
+void ec_file_pool_carry(int down);            /* 0.6.15: B11 in POOL: held = the slot in hand, let go = dropped */
+int ec_file_pool_carrying(void);
 int ec_file_play_leave(void);                 /* 0.6.11: PLAY in FILE on the EDITOR / RAZOR: to BROWSE, 1 = press used */
 void ec_file_select(int d);                   /* SEL in the browser */
 int ec_file_page(void);                       /* FILE's page: its picture (EC_PIC_FILE / EDITOR / RAZOR / POOL) */

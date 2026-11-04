@@ -26,7 +26,7 @@
 
 /* what a key does from its press to its release */
 enum { R_NONE, R_LP, R_STEP, R_LOOP_LIVE, R_PAD, R_KB, R_RAZOR, R_F3, R_SWALLOW, R_TRK, R_XFD, R_SRCB, R_PAGEB, R_SHIFTB,
-       R_FILEB, R_FILEW };
+       R_FILEB, R_FILEW, R_FILEPV };
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
 static int iv(const float *v, int id) { return (int)floorf(v[id] + 0.5f); }
@@ -497,11 +497,11 @@ static void button_down(int b)
             ec_file_f2();
         } else if (fpic == EC_PIC_EDITOR) {        /* 0.6.1: the EDITOR: F1 START, F2 END (what a white key places) */
             ec_file_ed_point(b == EC_B_OCTUP);
-        } else if (fpic == EC_PIC_POOL) {          /* 0.6.1: POOL: F1 MOVE, F2 FREE */
+        } else if (fpic == EC_PIC_POOL) {          /* 0.6.1: POOL: F2 FREE; 0.6.15: the move is B11 held */
             if (b == EC_B_OCTUP)
                 ec_file_pool_f2();
             else
-                ec_file_pool_f1();
+                ec_app_message("HOLD B11 TO MOVE");
         } else if (b == EC_B_OCTDN && !A->fn && ec_lp_b11_held()) {   /* 0.6.9: LOOP ENGINE: B11 held + F1 clears */
             ec_lp_clear();                         /* the selected steps */
         } else if (b == EC_B_OCTUP && !A->fn && ec_lp_b11_held()) {   /* 0.6.14: B11 held + F2 = LIVE */
@@ -771,8 +771,9 @@ static void white_down(int k, int i, int vel, int lean)
                 A->key_role[k] = R_FILEW;
                 return;
             }
-            if (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) {   /* (the lists: nothing to step) */
-                A->key_role[k] = R_SWALLOW;
+            if (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) {   /* 0.6.15: the preview's loop keys */
+                ec_file_pv_key(i, 1);
+                A->key_role[k] = R_FILEPV;
                 return;
             }
             /* fall through: RAZOR's keys are its slices */
@@ -816,6 +817,7 @@ static void white_up(int k, int i, int vel)
     case R_KB: ec_kb_key(k, 0, 0); break;
     case R_RAZOR: ec_rzui_key(A, i, 0, 0); break;
     case R_FILEW: ec_file_white(i, 0); break;
+    case R_FILEPV: ec_file_pv_key(i, 0); break;
     case R_TRK: ec_mix_track_up(i); break;
     case R_XFD: ec_xfd_white(i, 0, 0); break;
     default: break;
@@ -975,6 +977,10 @@ static void presets(int d)
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
     }
+    if (mode == EC_CAT_FILE && !A->settings) {     /* 0.6.15 (owner): FILE: PRESETS = the audible preview on / off */
+        ec_file_preview_toggle();
+        return;
+    }
     if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track, no pop-up (the
                                                     * header's target box says it) */
         const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
@@ -1064,6 +1070,7 @@ static void select_knob(int d)
 
 static void knob(int r, int d)
 {
+    const int mode = ec_app_mode();
     if (ec_e5_knob(r, d))                          /* E5: naming */
         return;
     if (P->as_open) {
@@ -1106,6 +1113,10 @@ static void knob(int r, int d)
     }
     if (ec_src_knob(r, d))                         /* a slot key / quick setting held */
         return;
+    if (r == EC_E_K1 && ec_file_pool_carrying()) { /* 0.6.15: POOL, B11 held: K1 moves the slot in hand (as SEL) */
+        ec_file_pool_select(d);
+        return;
+    }
     switch (r) {
     case EC_E_SELECT: select_knob(d); break;
     case EC_E_ALGO:
@@ -1115,6 +1126,10 @@ static void knob(int r, int d)
             ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
         else if (ec_lp_active())
             ec_lp_algo(d);                         /* 0.6.9 / 0.6.14: the step modes: the page's step, below 1 LIVE */
+        else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE)
+            ec_file_algo(d);                       /* 0.6.15: the browser: CW adds to the pool, CCW removes */
+        else if (mode == EC_CAT_FILE)
+            ;                                      /* (the other FILE pages: no step page) */
         else {                                     /* the step page */
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
             const int p = clampi(A->step_page + (d > 0 ? 1 : -1), 0, pages - 1);
@@ -1296,8 +1311,8 @@ const char *ec_pn_roles(int mode, int *cur)
         for (i = 1; i <= EC_NBKEY; i++)
             if (ec_file_key_page(i) >= 0)
                 r[i - 1] = 'P';
-        if (pic == EC_PIC_FILE) {                  /* B1 up, B2 in, B10 LOAD, B11 preview */
-            r[0] = r[1] = r[9] = 'A';
+        if (pic == EC_PIC_FILE) {                  /* B1 up, B2 in, B9 REMOVE, B10 LOAD, B11 preview */
+            r[0] = r[1] = r[8] = r[9] = 'A';
             r[10] = 'X';
         } else if (pic == EC_PIC_POOL) {           /* 0.6.1: B10 ASSIGN, B11 preview; the page's key */
             r[9] = 'A';

@@ -387,6 +387,76 @@ void ec_file_leave(void)
 {
     preview_drop();
     P->ed_hold = P->pool_carry = -1;               /* (a MOVE in hand is put down) */
+    P->pool_b11 = 0;
+    P->pv_keys = 0;
+}
+
+static void pool_preview(int s, int play);
+static int slot_has(int s);
+static const char *cursor_path(void);
+
+/* 0.6.15 (owner): PRESETS in FILE: the audible preview on / off (the APP SETTINGS record keeps it) */
+void ec_file_preview_toggle(void)
+{
+    P->as.preview = !P->as.preview;
+    ec_as_store();
+    if (!P->as.preview)
+        P->pv_play = 0;
+    ec_app_message(P->as.preview ? "PREVIEW ON" : "PREVIEW OFF");
+    A->redraw = 1;
+}
+
+/* 0.6.15 (owner): the white keys in BROWSE / POOL are loop keys over the previewed file: key i = its i-th 16th, keys
+ * held together their span, looping while held (as the live loop keys), silent on release */
+static void pv_span(void)
+{
+    const ec_ss_sample_t *x = P->pv_state == EC_PV_READY ? ec_ss_ready(P->pv_handle) : 0;
+    int lo = -1, hi = -1, i;
+    for (i = 0; i < 16; i++)
+        if (P->pv_keys >> i & 1u) {
+            if (lo < 0)
+                lo = i;
+            hi = i;
+        }
+    if (!x || lo < 0) {
+        P->pv_lo = 0, P->pv_hi = 0;
+        return;
+    }
+    P->pv_lo = (double)x->frames * lo / 16.0;
+    P->pv_hi = (double)x->frames * (hi + 1) / 16.0;
+}
+
+void ec_file_pv_key(int i, int down)
+{
+    if (i < 0 || i >= 16)
+        return;
+    if (!down) {
+        P->pv_keys &= ~(1u << i);
+        if (!P->pv_keys) {
+            P->pv_play = 0;
+            P->pv_lo = P->pv_hi = 0;
+        } else
+            pv_span();
+        A->redraw = 1;
+        return;
+    }
+    if (!P->pv_keys) {                             /* the first key: the file under the cursor (or the pool slot) */
+        if (ec_file_page() == EC_PIC_POOL) {
+            if (slot_has(P->pool_cur))
+                pool_preview(P->pool_cur, 1);
+        } else {
+            const char *p = cursor_path();
+            if (p)
+                preview(p, 1);
+        }
+    }
+    P->pv_keys |= 1u << i;
+    pv_span();
+    if (P->pv_state == EC_PV_READY) {
+        P->pv_pos = P->pv_lo;
+        P->pv_play = 1;
+    }
+    A->redraw = 1;
 }
 
 void ec_file_preview_mix(int16_t *out, uint32_t n)
@@ -398,8 +468,11 @@ void ec_file_preview_mix(int16_t *out, uint32_t n)
         return;
     step = x->rate ? (double)x->rate / (double)EC_FS : 1.0;
     for (k = 0; k < n; k++) {
-        const uint32_t i = (uint32_t)P->pv_pos;
+        uint32_t i;
         int c;
+        if (P->pv_keys && P->pv_hi > P->pv_lo && P->pv_pos >= P->pv_hi)   /* 0.6.15: keys held: the span loops */
+            P->pv_pos = P->pv_lo;
+        i = (uint32_t)P->pv_pos;
         if (i >= x->frames) {
             P->pv_play = 0;
             A->redraw = 1;
@@ -566,6 +639,18 @@ int ec_file_play_leave(void)
     ec_app_message("BROWSE: PLAY AGAIN");
     A->redraw = 1;
     return 1;
+}
+
+/* 0.6.15 (owner): the browser's ALGO: clockwise adds the file under the cursor to the pool (LOAD), anticlockwise
+ * removes it (FREE) */
+void ec_file_algo(int d)
+{
+    if (ec_file_page() != EC_PIC_FILE)
+        return;
+    if (d > 0)
+        load();
+    else
+        ec_file_f2();
 }
 
 int ec_file_f2(void)
@@ -852,6 +937,46 @@ void ec_file_slots_swapped(int a, int b)
     A->redraw = 1;
 }
 
+/* 0.6.15 (owner): B11 held in POOL takes the slot under the cursor in hand; SEL / K1 move it (the list shows it on
+ * the way); letting B11 go drops it there (a swap, one undo). Not while playing. */
+int ec_file_pool_carrying(void) { return P->pool_b11 && P->pool_carry >= 0; }
+
+void ec_file_pool_carry(int down)
+{
+    const int s = P->pool_cur, c = P->pool_carry;
+    char m[24];
+    if (down) {
+        if (A->seq.playing || ec_seq_counting_in(&A->seq)) {
+            ec_app_alert("STOP FIRST");
+            return;
+        }
+        if (!slot_has(s)) {
+            ec_app_message("EMPTY SLOT");
+            return;
+        }
+        P->pool_b11 = 1;
+        P->pool_carry = s;
+        P->pv_play = 0;
+        A->redraw = 1;
+        return;
+    }
+    if (!P->pool_b11)
+        return;
+    P->pool_b11 = 0;
+    P->pool_carry = -1;
+    A->redraw = 1;
+    if (c < 0 || c == s) {
+        if (c >= 0)
+            ec_app_message("NOT MOVED");
+        return;
+    }
+    ec_undo_slots(&A->e5.undo, c, s, A->ms);       /* one undo: the swap again */
+    ec_project_swap_slots(&A->proj, c, s);
+    ec_file_slots_swapped(c, s);
+    snprintf(m, sizeof m, "MOVED %d > %d", c + 1, s + 1);
+    ec_app_message(m);
+}
+
 void ec_file_pool_f1(void)
 {
     const int s = P->pool_cur, c = P->pool_carry;
@@ -926,6 +1051,10 @@ void ec_file_black(int key, int down)
         ec_sampler_black(key, down);
         return;
     }
+    if (mode == EC_CAT_FILE && key == 11 && (P->pool_b11 || (down && ec_file_page() == EC_PIC_POOL))) {
+        ec_file_pool_carry(down);                  /* 0.6.15: POOL's B11: the slot in hand while held */
+        return;
+    }
     if (!down || mode != EC_CAT_FILE)
         return;
     pic = ec_file_page();
@@ -950,16 +1079,11 @@ void ec_file_black(int key, int down)
         A->redraw = 1;
         return;
     }
-    if (pic == EC_PIC_POOL) {                      /* B10 ASSIGN, B11 preview */
+    if (pic == EC_PIC_POOL) {                      /* B10 ASSIGN, B9 FREE (B11: the move, above) */
         if (key == 10)
             pool_assign();
-        else if (key == 11) {
-            const ec_slotrt_t *r = &A->slot[P->pool_cur];
-            if (P->pv_play && r->handle >= 0 && P->pv_handle == r->handle)
-                P->pv_play = 0;
-            else if (slot_has(P->pool_cur))
-                pool_preview(P->pool_cur, 1);
-        }
+        else if (key == 9)
+            ec_file_pool_f2();
         A->redraw = 1;
         return;
     }
@@ -968,6 +1092,7 @@ void ec_file_black(int key, int down)
     switch (key) {
     case 1: folder_up(); break;
     case 2: folder_in(); break;
+    case 9: ec_file_f2(); break;                   /* 0.6.15: B9 removes from the pool */
     case 10: load(); break;
     case 11: {
         const char *p = cursor_path();

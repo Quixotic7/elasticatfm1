@@ -120,7 +120,20 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
         if (bw > 1)
             R(EC_C_ACC, 2 + bw - 2, 68, 2, 4);
     }
-    ec_scr_cells(a, pg);
+    {   /* 0.6.15 (owner): no knob edits these, so no cell boxes: plain rows (label, value) in the cells area */
+        int k;
+        R(EC_C_L3, 0, 76, W, 2);
+        for (k = 0; k < pg->n && k < 4; k++) {
+            const ec_item_t *it = &pg->it[k];
+            const int x = k % 2 ? 62 : 2, y = k < 2 ? 82 : 102;
+            char val[24];
+            if (it->kind == EC_IT_BLANK)
+                continue;
+            ec_app_item_format(a, it, ec_app_item_value(a, it, 0), val, sizeof val);
+            T(EC_C_L8, ec_app_item_label(it), x, y, EC_AL_LEFT);
+            T2(EC_C_L15, val, x, y + 7, EC_AL_LEFT);
+        }
+    }
 }
 
 /* ------------------------------------------------------------------------------------------- the editor --- */
@@ -228,7 +241,16 @@ void ec_scr_file_pool(const ec_app_t *a, const ec_page_t *pg)
         snprintf(r, sizeof r, "%d", s + 1);
         T(on ? EC_C_BG : s == carry ? EC_C_ACC : EC_C_L8, r, 14, y, EC_AL_RIGHT);
         if (s == carry && !on)
-            R(EC_C_ACC, 0, y - 2, 2, 9);           /* the slot in hand */
+            R(EC_C_ACC, 0, y - 2, 2, 9);           /* the slot in hand: where it came from */
+        if (on && carry >= 0 && carry != s) {      /* 0.6.15: the slot in hand rides on the cursor (animated) */
+            const ec_slot_t *cs = &a->proj.slot[carry];
+            const ec_ss_sample_t *cx = a->slot[carry].handle >= 0 ? ec_ss_ready(a->slot[carry].handle) : 0;
+            const char *n = cx ? cx->name : cs->path[0] ? (strrchr(cs->path, '/') ? strrchr(cs->path, '/') + 1 : cs->path) : "...";
+            fit(buf, sizeof buf, n, 13);
+            T(EC_C_BG, buf, 18, y, EC_AL_LEFT);
+            T(EC_C_BG, ((a->ms / 150) & 1u) ? ">" : " ", 96, y, EC_AL_LEFT);
+            continue;
+        }
         if (used) {
             const char *n = x ? x->name : sl->path[0] ? (strrchr(sl->path, '/') ? strrchr(sl->path, '/') + 1
                                                                                   : sl->path) : "...";

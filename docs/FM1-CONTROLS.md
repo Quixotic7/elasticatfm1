@@ -471,7 +471,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| BROWSE | B3 | - | | | | |
+| BROWSE | B7 | - | | | | |
 | EDITOR |  | 1 | START | END | - | ZOOM |
 |  |  | 2 | BPM | STEPS | GAIN |  |
 | SLICE |  | 1 | PLAY | ZOOM | SLCE START | SLCE END |

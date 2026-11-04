@@ -812,7 +812,7 @@ static const ec_lay_page_t ec_layout_shipped_page[48] = {
     {"TRACK MIX", 16, 0, 0, 75, 1},   /* MST/TRACK MIX */
     {"MASTER", 0, 0, 0, 76, 1},   /* MST/MASTER */
     {"SETUP", 0, 0, 0, 77, 1},   /* MST/SETUP */
-    {"BROWSE", 18, 0, 3, 78, 1},   /* FILE/BROWSE B3 */
+    {"BROWSE", 18, 0, 7, 78, 1},   /* FILE/BROWSE B7 */
     {"EDITOR", 22, 0, 0, 79, 1},   /* FILE/EDITOR */
     {"SLICE", 19, 0, 0, 80, 1},   /* FILE/SLICE */
     {"POOL", 23, 0, 6, 81, 1},   /* FILE/POOL B6 */

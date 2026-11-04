@@ -128,14 +128,16 @@ static void test_folders(void)
     B(2, 40);
     CHECK(!strcmp(A->pn.fdir, "/audio") && A->cursor == 0, "B2 on AUDIO/: back in /audio (%s)", A->pn.fdir);
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "UP") && lbl(FM1CORE_LBL_BLACK0 + 1, "INTO") &&
-              lbl(FM1CORE_LBL_BLACK0 + 9, "LOAD") && lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") &&
-              lbl(FM1CORE_LBL_BLACK0 + 3, ""),
-          "the browser's labels: B1 %s B2 %s B10 %s B11 %s B4 %s (0.6.15: no EDITOR key)", L(FM1CORE_LBL_BLACK0),
-          L(FM1CORE_LBL_BLACK0 + 1), L(FM1CORE_LBL_BLACK0 + 9), L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_BLACK0 + 3));
+              lbl(FM1CORE_LBL_BLACK0 + 9, "ADD") && lbl(FM1CORE_LBL_BLACK0 + 8, "REMOVE") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") && lbl(FM1CORE_LBL_BLACK0 + 3, "") &&
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "+/- POOL") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "PREVIEW"),
+          "the browser's labels: B1 %s B2 %s B9 %s B10 %s B11 %s; ALGO %s PRESETS %s", L(FM1CORE_LBL_BLACK0),
+          L(FM1CORE_LBL_BLACK0 + 1), L(FM1CORE_LBL_BLACK0 + 8), L(FM1CORE_LBL_BLACK0 + 9), L(FM1CORE_LBL_BLACK0 + 10),
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO), L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS));
     {
         int cur;
         const char *r = ec_pn_roles(EC_CAT_FILE, &cur);
-        CHECK(!strcmp(r, "AAPOOPOOOAX"), "the browser's roles (0.6.15: B3 BROWSE, B6 POOL): %s", r);
+        CHECK(!strcmp(r, "AAOOOPPOAAX"), "the browser's roles (0.6.15: B6 POOL, B7 BROWSE, B9 / B10 remove / add): %s", r);
     }
 }
 
@@ -214,7 +216,7 @@ static void test_load(void)
         settle(200);
         B(10, 40);
         CHECK(!strcmp(A->msg, "FULL") && A->msg_alert, "a full pool: FULL in ALERT (%s)", A->msg);
-        CHECK(lbl(FM1CORE_LBL_BLACK0 + 9, "LOAD") && ec_pn_item_value(EC_UX_FSLOT) == 0.0f,
+        CHECK(lbl(FM1CORE_LBL_BLACK0 + 9, "ADD") && ec_pn_item_value(EC_UX_FSLOT) == 0.0f,
               "SLOT cell: FULL (%g)", ec_pn_item_value(EC_UX_FSLOT));
         snprintf(A->proj.slot[0].path, EC_PATH, "/audio/a_drums_bpm120.wav");
         for (k = 4; k < EC_NSLOT; k++) {
@@ -416,14 +418,14 @@ static void test_file_pages(void)
     const int t = A->track;
     int sel0, cur0;
     to(EC_CAT_FILE);
-    B(3, 40);
+    B(7, 40);
     CHECK(ec_file_page() == EC_PIC_FILE && lbl(FM1CORE_LBL_BLACK0 + 5, "POOL") &&
               lbl(FM1CORE_LBL_BLACK0 + 3, "") && lbl(FM1CORE_LBL_BLACK0 + 4, ""),
           "BROWSE: B6 POOL, no B4 / B5 (0.6.15: the editors are on the FILE button) (%s)", L(FM1CORE_LBL_BLACK0 + 5));
     B(6, 40);
     CHECK(ec_file_page() == EC_PIC_POOL, "BROWSE: B6 leaves for POOL");
-    B(3, 40);
-    CHECK(ec_file_page() == EC_PIC_FILE, "POOL: B3 leaves for BROWSE");
+    B(7, 40);
+    CHECK(ec_file_page() == EC_PIC_FILE, "POOL: B7 leaves for BROWSE (0.6.15)");
     B(6, 40);
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR (0.6.15)");
@@ -462,7 +464,7 @@ static void test_file_pages(void)
     CHECK(ec_file_page() == EC_PIC_POOL && A->pn.pool_cur == cur0 + 1, "POOL: SEL scrolls the slots (%d)",
           A->pn.pool_cur);
     turn(FM1P_E_SELECT, -1);
-    B(3, 40);
+    B(7, 40);
 }
 
 /* ------------------------------------------------------------------------------------------- POOL --- */
@@ -476,9 +478,9 @@ static void test_pool(void)
     A->pn.as.preview = 1;
     B(6, 40);
     CHECK(ec_file_page() == EC_PIC_POOL && lbl(FM1CORE_LBL_BLACK0 + 9, "ASSIGN") &&
-              lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "MOVE") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "MOVE") && lbl(FM1CORE_LBL_BLACK0 + 8, "FREE") &&
               lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "FREE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_SELECT, "SLOT"),
-          "B6: POOL, B10 ASSIGN, B11 PREVIEW, F1 MOVE, F2 FREE, SEL SLOT");
+          "B6: POOL, B10 ASSIGN, B11 MOVE (held), B9 / F2 FREE, SEL SLOT (0.6.15)");
     {
         int cur;
         const char *r = ec_pn_roles(EC_CAT_FILE, &cur);
@@ -494,10 +496,10 @@ static void test_pool(void)
     run(20);
     CHECK(A->pn.pool_cur == 1 && A->pn.pv_play && A->pn.pv_handle == A->slot[1].handle,
           "SEL onto slot 2: it previews (%d %d)", A->pn.pv_play, A->pn.pv_handle);
-    B(11, 40);
-    CHECK(!A->pn.pv_play, "B11: the preview stops");
-    B(11, 40);
-    CHECK(A->pn.pv_play, "B11: it plays again");
+    turn(FM1P_E_PRESETS, 1);                       /* 0.6.15: PRESETS = the audible preview on / off */
+    CHECK(!A->pn.as.preview && !A->pn.pv_play, "PRESETS: the preview off, silent");
+    turn(FM1P_E_PRESETS, 1);
+    CHECK(A->pn.as.preview, "PRESETS again: on");
     turn(FM1P_E_SELECT, 3);                        /* slot 5: empty, the preview stops */
     CHECK(A->pn.pool_cur == 4 && !A->pn.pv_play, "SEL onto an empty slot: silence");
     B(10, 40);
@@ -509,16 +511,20 @@ static void test_pool(void)
     /* MOVE: slot 1 (T1's, and a step lock in pattern A3, not the current one) to slot 10 */
     CHECK(A->proj.current != 2 && ec_step_lock_get(&A->proj.pat[2].tr[3].steps[7], EC_P_SLOT, &(float){0}),
           "(a slot-1 lock in A3, which is not playing)");
-    press(FM1P_B_OCTDN, 40);
-    CHECK(A->pn.pool_carry == 0 && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "DROP"), "F1: slot 1 picked up (MOVE 1)");
-    turn(FM1P_E_SELECT, 9);
-    press(FM1P_B_OCTDN, 40);
+    key(1, 10, 1);                                 /* 0.6.15: B11 held = slot 1 in hand */
+    run(20);
+    CHECK(A->pn.pool_carry == 0 && ec_file_pool_carrying(), "B11 held: slot 1 in hand (MOVE 1)");
+    turn(FM1P_E_SELECT, 4);
+    turn(FM1P_E_K1, 5);                            /* SEL and K1 both move it on the way */
+    CHECK(A->pn.pool_cur == 9 && A->pn.pool_carry == 0, "SEL 4 + K1 5: on slot 10, still in hand (%d)", A->pn.pool_cur);
+    key(1, 10, 0);                                 /* let go: dropped there */
+    run(20);
     {
         float lk = 0;
         ec_step_lock_get(&A->proj.pat[2].tr[3].steps[7], EC_P_SLOT, &lk);
         CHECK(A->pn.pool_carry < 0 && !strcmp(A->proj.slot[9].path, drums) && !A->proj.slot[0].path[0] &&
                   A->slot[9].handle == h0 && A->slot[0].state == EC_SL_EMPTY,
-              "F1 on slot 10: slot 1 moved there (%s)", A->msg);
+              "B11 let go on slot 10: slot 1 moved there (%s)", A->msg);
         CHECK(ec_app_track_slot(A, t) == 9 && A->assigned[t] == h0, "the track follows: slot 10, the same sample");
         CHECK((int)lk == 10, "the step lock in A3 follows: slot 10 (%g)", lk);
         CHECK(A->proj.pat[2].tr[0].v[EC_P_SLOT] == 2.0f, "A3's tracks on slot 2 untouched");
@@ -549,17 +555,23 @@ static void test_pool(void)
           "SHIFT + B11: purge (%s)", A->msg);
     /* a slot in hand is put down when POOL is left */
     turn(FM1P_E_SELECT, -A->pn.pool_cur);
-    press(FM1P_B_OCTDN, 40);
-    B(3, 40);
-    CHECK(A->pn.pool_carry < 0 && ec_file_page() == EC_PIC_FILE, "B3 with a slot in hand: BROWSE, MOVE dropped");
+    key(1, 10, 1);
+    run(20);
+    B(7, 40);
+    key(1, 10, 0);
+    run(20);
+    CHECK(A->pn.pool_carry < 0 && ec_file_page() == EC_PIC_FILE, "B7 with a slot in hand: BROWSE, the move dropped");
     /* 0.6.11: POOL opens while playing; MOVE and FREE do not */
     to(EC_CAT_SRC);
     press(FM1P_B_PLAY, 40);
     press(FM1P_B_SAVE, 40);
     B(6, 40);
     CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_POOL && A->seq.playing, "playing: POOL opens (%d)", mode());
-    press(FM1P_B_OCTDN, 40);
-    CHECK(A->pn.pool_carry < 0 && !strcmp(A->msg, "STOP FIRST"), "MOVE while playing: STOP FIRST");
+    key(1, 10, 1);
+    run(20);
+    key(1, 10, 0);
+    run(20);
+    CHECK(A->pn.pool_carry < 0 && !strcmp(A->msg, "STOP FIRST"), "B11 (the move) while playing: STOP FIRST");
     press(FM1P_B_OCTUP, 40);
     CHECK(!strcmp(A->msg, "STOP FIRST"), "FREE while playing: STOP FIRST");
     press(FM1P_B_PLAY, 40);
@@ -740,7 +752,7 @@ static void test_razor_keys(void)
     shift_down(1);
     W(2, 40);
     shift_down(0);
-    B(3, 40);
+    B(7, 40);
 }
 
 int main(int argc, char **argv)

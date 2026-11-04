@@ -627,7 +627,7 @@
         {
           "title": "BROWSE",
           "picture": "file",
-          "key": 3,
+          "key": 7,
           "note": "the browser (docs/UX-V2.md FILE): SEL walks the folders, B1 up, B2 in, B10 LOAD, B11 preview; its cells are fixed in the firmware: SLOT (where LOAD goes), LENGTH, BPM, FREE",
           "lanes": []
         },

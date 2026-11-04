@@ -389,13 +389,15 @@ static void leds_black(void)
             for (i = 1; i <= EC_NBKEY; i++)
                 if (ec_file_key_page(i) >= 0)
                     l[i - 1] = ec_file_key_page(i) == A->page[EC_CAT_FILE] ? EC_LED_LIT : EC_LED_DIM;
-            if (pic == EC_PIC_FILE) {
+            if (pic == EC_PIC_FILE) {              /* 0.6.15: B9 REMOVE (lit when the file is pooled), B10 ADD */
                 l[0] = l[1] = EC_LED_DIM;
+                l[8] = EC_LED_MID;
                 l[9] = ec_file_next_free() >= 0 ? EC_LED_MID : EC_LED_FAINT;
                 l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
-            } else if (pic == EC_PIC_POOL) {       /* 0.6.1: ASSIGN, preview */
+            } else if (pic == EC_PIC_POOL) {       /* 0.6.1: ASSIGN; 0.6.15: B9 FREE, B11 the move (lit in hand) */
+                l[8] = EC_LED_MID;
                 l[9] = EC_LED_MID;
-                l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
+                l[10] = ec_file_pool_carrying() ? (blink(200) ? EC_LED_LIT : EC_LED_MID) : EC_LED_MID;
             }
         } break;
         case EC_MODE_SAMPLER: {
@@ -551,9 +553,10 @@ static void knob_labels(void)
     } else {
         ec_app_page(A, &pg);
         lane = ec_app_lane(A, &pg);
-        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : ec_rzui_active(A) ? "SLICE" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET"
+        L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : ec_rzui_active(A) ? "SLICE" : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE ? "+/- POOL"
+                                                    : mode == EC_CAT_FILE ? "" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET"
                                                     : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : mode == EC_CAT_FILE ? "PREVIEW" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
         else if (A->settings)
@@ -665,7 +668,7 @@ static void button_labels(void)
         L(EC_LBL_BTN0 + EC_B_OCTDN, "START");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "END");
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_POOL) {
-        L(EC_LBL_BTN0 + EC_B_OCTDN, P->pool_carry >= 0 ? "DROP" : "MOVE");
+        L(EC_LBL_BTN0 + EC_B_OCTDN, "");           /* 0.6.15: the move is B11 held */
         L(EC_LBL_BTN0 + EC_B_OCTUP, "FREE");
     } else if (P->f_held && P->f_held != 3) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, P->f_held & 1 ? "COPY" : "F3");
@@ -805,10 +808,13 @@ static void black_labels(void)
                     snprintf(b, sizeof b, "BANK %c", 'A' + i), s = b;
                 break;
             case EC_CAT_FILE: {
-                static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "", "LOAD", "PREVIEW"};
+                static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "REMOVE", "ADD", "PREVIEW"};
+                static const char *const PO[EC_NBKEY] = {"", "", "", "", "", "", "", "", "FREE", "ASSIGN", "MOVE"};
                 static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "", ""};
                 const int pic = ec_file_page();
-                if (pic == EC_PIC_EDITOR)
+                if (pic == EC_PIC_POOL && (i == 8 || i == 9 || i == 10))
+                    s = PO[i];
+                else if (pic == EC_PIC_EDITOR)
                     s = ED[i];
                 else if (ec_file_key_page(i + 1) >= 0) {
                     ec_page_t pg;

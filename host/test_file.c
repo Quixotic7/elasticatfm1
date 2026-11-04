@@ -408,7 +408,7 @@ static void test_editor(void)
     B(3, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR && ec_file_zoom() == 1.0f, "editor: B3 does nothing (0.6.15: no page or zoom keys)");
     turn(FM1P_E_SELECT, -1);
-    CHECK(ec_file_page() == EC_PIC_FILE, "SEL: back to the browser");
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "SEL -: the editor keeps its page (0.6.15: the FILE button leaves)");
 }
 
 /* ------------------------------------------------------------------------------------------- FILE's pages --- */
@@ -418,7 +418,8 @@ static void test_file_pages(void)
 {
     const int t = A->track;
     int sel0, cur0;
-    to(EC_CAT_FILE);
+    to(EC_CAT_SRC);
+    to(EC_CAT_FILE);                               /* (from another mode: BROWSE) */
     B(7, 40);
     CHECK(ec_file_page() == EC_PIC_FILE && lbl(FM1CORE_LBL_BLACK0 + 5, "POOL") &&
               lbl(FM1CORE_LBL_BLACK0 + 3, "") && lbl(FM1CORE_LBL_BLACK0 + 4, ""),
@@ -439,17 +440,27 @@ static void test_file_pages(void)
     B(6, 40);
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR");
-    turn(FM1P_E_SELECT, 1);                        /* EDITOR's second lane, then RAZOR */
+    turn(FM1P_E_SELECT, 1);                        /* EDITOR's second lane; 0.6.15: SEL stays on the editor's page */
     turn(FM1P_E_SELECT, 1);
-    CHECK(ec_file_page() == EC_PIC_RAZOR && ec_rzui_active(A), "EDITOR: SEL on to RAZOR");
+    CHECK(ec_file_page() == EC_PIC_EDITOR && A->ux.lane[EC_CAT_FILE] == 1, "EDITOR: SEL stays on its pages (lane %d)",
+          A->ux.lane[EC_CAT_FILE]);
+    press(FM1P_B_SAVE, 40);                        /* FILE again: the slice editor */
+    CHECK(ec_file_page() == EC_PIC_RAZOR && ec_rzui_active(A), "FILE again: the slice editor");
     trk(t)->v[EC_P_SLICE_COUNT] = 16;
     ec_rzui.sel = 3;
     sel0 = ec_rzui.sel;
     turn(FM1P_E_SELECT, -1);
-    CHECK(ec_file_page() == EC_PIC_EDITOR && ec_rzui.sel == sel0, "RAZOR: SEL back to EDITOR (the slice stays)");
+    CHECK(ec_file_page() == EC_PIC_RAZOR && ec_rzui.sel == sel0, "the slice editor: SEL back stays (the slice stays)");
     turn(FM1P_E_SELECT, 1);
     run(20);
-    CHECK(ec_file_page() == EC_PIC_RAZOR, "EDITOR: SEL to RAZOR again");
+    CHECK(ec_file_page() == EC_PIC_RAZOR && A->ux.lane[EC_CAT_FILE] == 1, "SEL on: its second page (lane %d)",
+          A->ux.lane[EC_CAT_FILE]);
+    B(1, 40);
+    CHECK(A->ux.lane[EC_CAT_FILE] == 0 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "SLCE START") &&
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K4, "ZOOM") && lbl(FM1CORE_LBL_BLACK0 + 8, "EVEN") &&
+              lbl(FM1CORE_LBL_BLACK0 + 9, "CHOP") && lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW"),
+          "B1: page 1: K1 SLCE START, K4 ZOOM; B9 EVEN, B10 CHOP, B11 PREVIEW (%s %s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_K1),
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_K4));
     CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "SLICE"), "RAZOR: ALGO's label SLICE (%s)",
           L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
     turn(FM1P_E_ALGO, 1);
@@ -457,9 +468,15 @@ static void test_file_pages(void)
           ec_rzui.sel);
     turn(FM1P_E_ALGO, -2);
     CHECK(ec_rzui.sel == sel0 - 1, "RAZOR: ALGO back two (%d)", ec_rzui.sel);
-    turn(FM1P_E_SELECT, 1);                        /* RAZOR's second lane, then POOL */
+    turn(FM1P_E_SELECT, 1);                        /* its pages 2 and 3; 0.6.15: SEL never leaves the editor */
     turn(FM1P_E_SELECT, 1);
-    CHECK(ec_file_page() == EC_PIC_POOL, "RAZOR: SEL on to POOL");
+    turn(FM1P_E_SELECT, 1);
+    CHECK(ec_file_page() == EC_PIC_RAZOR && A->ux.lane[EC_CAT_FILE] == 2, "the slice editor: SEL to page 3 and stays (%d)",
+          A->ux.lane[EC_CAT_FILE]);
+    press(FM1P_B_SAVE, 40);                        /* the SAMPLER, BROWSE, then B6: POOL */
+    press(FM1P_B_SAVE, 40);
+    B(6, 40);
+    CHECK(ec_file_page() == EC_PIC_POOL, "FILE twice, B6: POOL");
     cur0 = A->pn.pool_cur;
     turn(FM1P_E_SELECT, 1);
     CHECK(ec_file_page() == EC_PIC_POOL && A->pn.pool_cur == cur0 + 1, "POOL: SEL scrolls the slots (%d)",
@@ -475,6 +492,7 @@ static void test_pool(void)
     const int h0 = A->slot[0].handle, t = A->track;
     char drums[EC_PATH];
     int i;
+    to(EC_CAT_SRC);
     to(EC_CAT_FILE);
     A->pn.as.preview = 1;
     B(6, 40);

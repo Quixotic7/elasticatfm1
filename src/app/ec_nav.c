@@ -224,6 +224,11 @@ int ec_nav_sel(int d)
     for (; d; d -= s) {
         if (i + s < 0 || i + s >= n)           /* the ends: no wrap */
             break;
+        if (m == EC_CAT_FILE && o[i + s].page != o[i].page) {   /* 0.6.15 (owner): an editor's SEL stays on its page */
+            const int pic = ec_page_pic(EC_CAT_FILE, o[i].page, 0);
+            if (pic == EC_PIC_EDITOR || pic == EC_PIC_RAZOR)
+                break;
+        }
         i += s;
         moved = 1;
         if (o[i].rows)                         /* a list stops the turn on it */

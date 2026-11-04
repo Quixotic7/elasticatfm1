@@ -83,6 +83,19 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             R(EC_C_L15, sx, top - 2, ex - sx, bot - top + 4);   /* the selected slice: a cream block (mockup) */
         else
             ec_gfx_dots_h(x0, x1, mid, 2, EC_C_L3);
+        for (k = 0; k < count; k++) {              /* 0.6.15 (owner): the other slices' edges behind the wave, dark */
+            const float e[2] = {rz->start[k], rz->end[k]};
+            int j;
+            if (k == sel - 1)
+                continue;
+            for (j = 0; j < 2; j++) {
+                const int px = x0 + (int)((e[j] - v0) / (v1 - v0) * (float)(x1 - x0));
+                if (j == 1 && k + 1 < count && fabsf(rz->start[k + 1] - e[1]) < 0.02f)
+                    continue;
+                if (px >= x0 && px <= x1)
+                    R(EC_C_L3, px & ~1, top - 2, 2, bot - top + 6);
+            }
+        }
         for (c = 0; c + 1 < pcols; c += 2) {
             const double a0 = f0 + (f1 - f0) * c / pcols, a1 = f0 + (f1 - f0) * (c + 2) / pcols;
             uint32_t i0 = a0 < 0 ? 0 : (uint32_t)a0, i1 = a1 < 0 ? 0 : (uint32_t)a1, i, step;
@@ -108,16 +121,13 @@ void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
             col = sl == sel ? EC_C_BG : !sl || rz->mute[sl - 1] ? EC_C_L5 : EC_C_L12;
             ec_gfx_rect(px0 + c, mid - h, 2, 2 * h + 2, col);
         }
-        /* the slice starts (and ends where a gap follows), dotted */
-        for (k = 0; k < count; k++) {
-            const float e[2] = {rz->start[k], rz->end[k]};
+        {                                          /* the selected slice's edges, in front */
+            const float e[2] = {rz->start[sel - 1], rz->end[sel - 1]};
             int j;
             for (j = 0; j < 2; j++) {
                 const int px = x0 + (int)((e[j] - v0) / (v1 - v0) * (float)(x1 - x0));
-                if (j == 1 && k + 1 < count && fabsf(rz->start[k + 1] - e[1]) < 0.02f)
-                    continue;
-                if (px >= x0 && px <= x1)      /* 0.6.15: solid 2-unit edges on the lattice, the others' quiet */
-                    R(k == sel - 1 ? EC_C_L15 : EC_C_L5, px & ~1, top - 2, 2, bot - top + 6);
+                if (px >= x0 && px <= x1)
+                    R(EC_C_L15, px & ~1, top - 2, 2, bot - top + 6);
             }
         }
         /* the transients at the chop sensitivity: ticks over the waveform, only while SENS is being turned (0.6.15:

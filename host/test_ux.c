@@ -1071,11 +1071,11 @@ static void test_file_keys(void)
     CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_RAZOR, "FILE again: RAZOR");
     turn(FM1P_E_SELECT, -1);
     turn(FM1P_E_SELECT, -1);
-    turn(FM1P_E_SELECT, -1);                                  /* RAZOR -> the editor's lanes -> the browser */
-    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "SEL back: the browser");
-    press(FM1P_B_SAVE, 40);
-    turn(FM1P_E_SELECT, -2);
-    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "the editor, SEL back: the browser");
+    turn(FM1P_E_SELECT, -1);                                  /* 0.6.15: SEL stays on the slice editor's pages */
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_RAZOR, "SEL back: still the slice editor");
+    press(FM1P_B_SAVE, 40);                                   /* the SAMPLER */
+    press(FM1P_B_SAVE, 40);                                   /* BROWSE */
+    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "FILE twice: round to the browser");
 }
 
 /* ------------------------------------------------------------------------------------------- PATTERN LAUNCH --- */

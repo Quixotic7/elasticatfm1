@@ -18,6 +18,9 @@ typedef struct {
 extern ec_rzui_t ec_rzui;
 
 int ec_rzui_active(const ec_app_t *a);                 /* the RAZOR page is on screen (lower keys are its pads) */
+void ec_rzui_autochop(ec_app_t *a);                    /* 0.6.15: B10: slices at the transients (SENS) */
+void ec_rzui_even(ec_app_t *a);                        /* 0.6.15: B9: COUNT even slices */
+void ec_rzui_preview(ec_app_t *a, int slice);          /* 0.6.15: a slice through the preview player (any machine) */
 int ec_rzui_count(const ec_app_t *a);                  /* slices in use (slice_count) */
 /* cells (EC_IT_RAZOR) */
 float ec_rzui_value(const ec_app_t *a, int id);

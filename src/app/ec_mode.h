@@ -360,6 +360,7 @@ int ec_file_f2(void);                         /* F2 / B9 in the browser: free th
 void ec_file_algo(int d);                     /* 0.6.15: the browser's ALGO: CW adds the file to the pool, CCW removes it */
 void ec_file_preview_toggle(void);            /* 0.6.15: PRESETS in FILE: the audible preview on / off (APP SETTINGS') */
 void ec_file_pv_key(int i, int down);         /* 0.6.15: a white key in BROWSE / POOL: the preview as a loop key */
+void ec_file_preview_region(float f0, float f1);   /* 0.6.15: the track's slot heard from f0 to f1 (0..1), once */
 void ec_file_pool_carry(int down);            /* 0.6.15: B11 in POOL: held = the slot in hand, let go = dropped */
 int ec_file_pool_carrying(void);
 int ec_file_play_leave(void);                 /* 0.6.11: PLAY in FILE on the EDITOR / RAZOR: to BROWSE, 1 = press used */

@@ -330,6 +330,7 @@ static void preview(const char *path, int play)
     preview_drop();
     snprintf(P->pv_path, sizeof P->pv_path, "%s", path);
     P->pv_pos = 0;
+    P->pv_lo = P->pv_hi = 0;
     if (s >= 0 && A->slot[s].state == EC_SL_READY && A->slot[s].handle >= 0) {   /* in the pool: play that */
         P->pv_handle = A->slot[s].handle;
         P->pv_owned = 0;
@@ -426,6 +427,26 @@ static void pv_span(void)
     P->pv_hi = (double)x->frames * (hi + 1) / 16.0;
 }
 
+/* 0.6.15 (owner): the track's slot heard from fraction f0 to f1 of its sample, once (the editors' B11, a slice) */
+void ec_file_preview_region(float f0, float f1)
+{
+    const int s = ec_app_track_slot(A, A->track);
+    const ec_ss_sample_t *x;
+    if (!slot_has(s))
+        return;
+    pool_preview(s, 1);
+    x = P->pv_state == EC_PV_READY ? ec_ss_ready(P->pv_handle) : 0;
+    if (!x)
+        return;
+    f0 = f0 < 0 ? 0 : f0 > 1 ? 1 : f0;
+    f1 = f1 < f0 ? f0 : f1 > 1 ? 1 : f1;
+    P->pv_lo = (double)x->frames * f0;
+    P->pv_hi = (double)x->frames * f1;
+    P->pv_pos = P->pv_lo;
+    P->pv_play = 1;
+    A->redraw = 1;
+}
+
 void ec_file_pv_key(int i, int down)
 {
     if (i < 0 || i >= 16)
@@ -470,8 +491,16 @@ void ec_file_preview_mix(int16_t *out, uint32_t n)
     for (k = 0; k < n; k++) {
         uint32_t i;
         int c;
-        if (P->pv_keys && P->pv_hi > P->pv_lo && P->pv_pos >= P->pv_hi)   /* 0.6.15: keys held: the span loops */
-            P->pv_pos = P->pv_lo;
+        if (P->pv_hi > P->pv_lo && P->pv_pos >= P->pv_hi) {   /* 0.6.15: a span: keys held loop it, else it ends */
+            if (P->pv_keys)
+                P->pv_pos = P->pv_lo;
+            else {
+                P->pv_play = 0;
+                P->pv_lo = P->pv_hi = 0;
+                A->redraw = 1;
+                return;
+            }
+        }
         i = (uint32_t)P->pv_pos;
         if (i >= x->frames) {
             P->pv_play = 0;
@@ -874,6 +903,7 @@ static void pool_preview(int s, int play)
     if (P->pv_state == EC_PV_READY && P->pv_handle == r->handle) {
         P->pv_play = play;
         P->pv_pos = 0;
+        P->pv_lo = P->pv_hi = 0;
         return;
     }
     preview_drop();
@@ -1077,12 +1107,25 @@ void ec_file_black(int key, int down)
             ec_app_mark_dirty();
             snprintf(m, sizeof m, "STEPS %d", (int)A->proj.slot[s].steps);
             ec_app_message(m);
-        } else if (key == 11)
-            zoom(0);
+        } else if (key == 11) {                    /* 0.6.15 (owner): B11 = the trim heard (the zoom reset is gone) */
+            const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
+            ec_file_preview_region(sl->trim_start, sl->trim_end);
+        }
         return;
     }
-    if (pic == EC_PIC_RAZOR)                       /* 0.6.15 (owner): the slice editor's keys are its own: no page keys */
+    if (pic == EC_PIC_RAZOR) {                     /* 0.6.15 (owner): the slice editor's keys are its own: B1..B3 its
+                                                    * pages, B9 EVEN, B10 CHOP (transients), B11 the slice's preview */
+        if (key >= 1 && key <= 3) {
+            A->ux.lane[EC_CAT_FILE] = key - 1;
+            A->redraw = 1;
+        } else if (key == 9)
+            ec_rzui_even(A);
+        else if (key == 10)
+            ec_rzui_autochop(A);
+        else if (key == 11)
+            ec_rzui_preview(A, ec_rzui.sel);
         return;
+    }
     if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B6 POOL (the layout's keys; the editors have none) */
         const int pic2 = ec_page_pic(EC_CAT_FILE, ec_file_key_page(key), 0);
         if (A->seq.playing && (pic2 == EC_PIC_EDITOR || pic2 == EC_PIC_RAZOR)) {

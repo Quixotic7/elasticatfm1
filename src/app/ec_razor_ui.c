@@ -278,8 +278,61 @@ void ec_rzui_key(ec_app_t *a, int i, int down, int vel)
     if (is_slice_machine(a)) {
         ec_seq_slice_pad(&a->seq, a->track, slice, 1, (float)vel / 127.0f);
         g_pads |= (uint16_t)(1u << i);
-    }
+    } else
+        ec_rzui_preview(a, slice);                   /* 0.6.15 (owner): any machine: the slice heard as a preview */
     a->redraw = 1;
+}
+
+/* 0.6.15 (owner): B10 (and FN + OCT+): Auto-Chop at the transients; B9 (FN + OCT-): COUNT even slices */
+void ec_rzui_autochop(ec_app_t *a)
+{
+    ec_razor_t *rz = &a->proj.razor[a->track];
+    const ec_ss_sample_t *smp = ec_app_track_sample(a, a->track);
+    float p[EC_RZ_ONSET_WINDOWS];
+    double lo, hi;
+    char m[32];
+    int n;
+    if (!smp) {
+        say(a, "NO SAMPLE");
+        return;
+    }
+    n = ec_razor_transients(onsets(smp), (float)rz->sens / 100.0f, p, EC_RZ_ONSET_WINDOWS);
+    ec_rzui_window(a, a->track, &lo, &hi);
+    n = ec_razor_autochop(&a->proj, a->track, p, n, lo, hi);
+    if (!n) {
+        say(a, "NO TRANSIENTS");
+        return;
+    }
+    snprintf(m, sizeof m, "AUTO-CHOP %d", n);
+    U->sel = 1;
+    U->zoom = 1;
+    U->focus = -1;
+    say(a, m);
+    changed(a);
+}
+
+void ec_rzui_even(ec_app_t *a)
+{
+    ec_razor_t *rz = &a->proj.razor[a->track];
+    const int count = ec_rzui_count(a);
+    char m[32];
+    ec_razor_redistribute(rz, count);
+    snprintf(m, sizeof m, "EVEN %d", count);
+    U->focus = -1;
+    say(a, m);
+    changed(a);
+}
+
+/* the selected slice (or slice k) heard through the preview player (any machine): its span of the sample */
+void ec_rzui_preview(ec_app_t *a, int slice)
+{
+    const ec_razor_t *rz = &a->proj.razor[a->track];
+    const int count = ec_rzui_count(a);
+    double lo, hi;
+    if (slice < 1 || slice > count)
+        return;
+    ec_rzui_window(a, a->track, &lo, &hi);
+    ec_file_preview_region((float)(lo + (hi - lo) * rz->start[slice - 1]), (float)(lo + (hi - lo) * rz->end[slice - 1]));
 }
 
 void ec_rzui_oct(ec_app_t *a, int up)
@@ -288,29 +341,11 @@ void ec_rzui_oct(ec_app_t *a, int up)
     const int s = sel(a), count = ec_rzui_count(a);
     char m[32];
     if (a->fn && up) {                                /* FN + OCT+: Auto-Chop */
-        const ec_ss_sample_t *smp = ec_app_track_sample(a, a->track);
-        float p[EC_RZ_ONSET_WINDOWS];
-        double lo, hi;
-        int n;
-        if (!smp) {
-            say(a, "NO SAMPLE");
-            return;
-        }
-        n = ec_razor_transients(onsets(smp), (float)rz->sens / 100.0f, p, EC_RZ_ONSET_WINDOWS);
-        ec_rzui_window(a, a->track, &lo, &hi);
-        n = ec_razor_autochop(&a->proj, a->track, p, n, lo, hi);
-        if (!n) {
-            say(a, "NO TRANSIENTS");
-            return;
-        }
-        snprintf(m, sizeof m, "AUTO-CHOP %d", n);
-        U->sel = 1;
-        U->zoom = 1;
-        U->focus = -1;
+        ec_rzui_autochop(a);
+        return;
     } else if (a->fn) {                               /* FN + OCT-: Redistribute */
-        ec_razor_redistribute(rz, count);
-        snprintf(m, sizeof m, "EVEN %d", count);
-        U->focus = -1;
+        ec_rzui_even(a);
+        return;
     } else if (up) {                                  /* OCT+: split the slice at the focus (else its middle) */
         const float x = U->focus_slice == s ? U->focus : -1;
         if (count >= EC_RZ_SLICES) {

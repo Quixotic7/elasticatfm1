@@ -984,3 +984,9 @@ the B11 pick mode above)
   tempo; BPM and the trim no longer recalculate STEPS, B10 RECALC does. SLICE: solid 2-unit edges on the lattice.
   POOL: a slot in hand shows the result (the swap applied) with the two moving rows nudging. BROWSE / POOL preview
   keys: the span's LEDs lit, the playhead's key flashing inside it.
+- SLICE, second round (owner): SEL stays on the editor's own pages (the EDITOR's too: the FILE button leaves);
+  the other slices' edges sit behind the waveform in L3, the selected one in front; K1 SLCE START, K2 SLCE END, K3
+  PLAY, K4 ZOOM (ZOOM on K4 of all three pages); page 2 SNAP / CHOKE / PITCH; page 3 COUNT / TRANS SENS (the slice
+  functions' settings); B1..B3 the pages, B9 EVEN (COUNT even slices), B10 CHOP (at the transients), B11 the
+  selected slice heard; a white key fires the slice on any machine (a slice machine: the pad, else the preview
+  player). Both editors: B11 previews (the trim / the slice); the zoom reset is gone; B6 / B7 do nothing there.

@@ -398,7 +398,14 @@ static void leds_black(void)
                 l[0] = A->ux.lane[EC_CAT_FILE] == 0 ? EC_LED_LIT : EC_LED_DIM;
                 l[1] = A->ux.lane[EC_CAT_FILE] == 1 ? EC_LED_LIT : EC_LED_DIM;
                 l[8] = l[9] = EC_LED_MID;
-                l[10] = P->ed_zoom ? EC_LED_MID : EC_LED_FAINT;
+                l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
+                break;
+            }
+            if (pic == EC_PIC_RAZOR) {             /* 0.6.15: B1..B3 the pages, B9 EVEN, B10 CHOP, B11 the preview */
+                for (i = 0; i < 3; i++)
+                    l[i] = A->ux.lane[EC_CAT_FILE] == i ? EC_LED_LIT : EC_LED_DIM;
+                l[8] = l[9] = EC_LED_MID;
+                l[10] = P->pv_play ? EC_LED_LIT : EC_LED_MID;
                 break;
             }
             for (i = 1; i <= EC_NBKEY; i++)
@@ -826,12 +833,15 @@ static void black_labels(void)
             case EC_CAT_FILE: {
                 static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "REMOVE", "ADD", "PREVIEW"};
                 static const char *const PO[EC_NBKEY] = {"", "", "", "", "", "", "", "", "FREE", "ASSIGN", "MOVE"};
-                static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "RECALC", "1X"};
+                static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "RECALC", "PREVIEW"};
+                static const char *const RZ[EC_NBKEY] = {"P1", "P2", "P3", "", "", "", "", "", "EVEN", "CHOP", "PREVIEW"};
                 const int pic = ec_file_page();
                 if (pic == EC_PIC_POOL && (i == 8 || i == 9 || i == 10))
                     s = PO[i];
                 else if (pic == EC_PIC_EDITOR)
                     s = ED[i];
+                else if (pic == EC_PIC_RAZOR)
+                    s = RZ[i];
                 else if (ec_file_key_page(i + 1) >= 0) {
                     ec_page_t pg;
                     ec_page_items(EC_CAT_FILE, ec_file_key_page(i + 1), ec_app_params(A), 0, &pg);

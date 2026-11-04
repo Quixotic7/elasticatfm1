@@ -60,6 +60,16 @@ static int sel_leave(int d)
     return -1;
 }
 
+/* 0.6.15: FILE's editor pages fence SEL in: at their page's edge it stays */
+static int fenced(const char *mn, int i, int dir)
+{
+    int pic;
+    if (strcmp(mn, "FILE") || i + dir < 0 || i + dir >= nL || L_[i + dir].page == L_[i].page)
+        return 0;
+    pic = ec_page_pic(EC_CAT_FILE, L_[i].page, 0);
+    return pic == EC_PIC_EDITOR || pic == EC_PIC_RAZOR;
+}
+
 static void walk(const char *mn)
 {
     char line[1024];
@@ -84,6 +94,11 @@ static void walk(const char *mn)
             go(i + 1);
             continue;
         }
+        if (fenced(mn, i, 1)) {
+            CHECK(sel_leave(1) < 0 && at() == i, "%s: SEL + from %d stays on its editor page (%d)", mn, i, at());
+            go(i + 1);
+            continue;
+        }
         CHECK(sel_leave(1) == i + 1, "%s: SEL + from %d: %d (want %d)", mn, i, at(), i + 1);
         if (at() != i + 1)
             go(i + 1);
@@ -99,6 +114,11 @@ static void walk(const char *mn)
         if (L_[i].rows == EC_NAV_ROWS) {
             sel(-1);
             CHECK(at() == i, "%s: SEL - on the list %d keeps the page (%d)", mn, i, at());
+            go(i - 1);
+            continue;
+        }
+        if (fenced(mn, i, -1)) {
+            CHECK(sel_leave(-1) < 0 && at() == i, "%s: SEL - from %d stays on its editor page (%d)", mn, i, at());
             go(i - 1);
             continue;
         }

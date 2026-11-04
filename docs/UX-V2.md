@@ -846,3 +846,5 @@ the B11 pick mode above)
 - 0.6.10 (owner: "on a step the loop keys need to work exactly the same as live"): the LOOP layer always draws and
   lights as live (the loop-key ruler, the key LEDs, the brackets while a loop key is held); only with no key held do
   the brackets show the first selected step's region. The step strip and step LEDs belong to the STEP layer.
+- 0.6.10 (owner): step selection works as FIZZ: keys held together are one selection; once every step key is let
+  go, the next press starts a new selection (that step alone). No toggling.

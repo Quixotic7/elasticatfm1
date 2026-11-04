@@ -6,8 +6,8 @@
  *     entry (the keys held together; letting go of the last) also writes its span into every selected step: the
  *     region lock (LOOP_START / LOOP_END in the loop keys' division) or, on the RANGE page, the range lock (the 16
  *     keys over the whole sample), and a trig. Slice tracks: the keys' slices. Nothing advances.
- *   - STEP layer: the white keys select steps (of the step page shown): the first key since the layer came up
- *     replaces the selection, the next ones add / remove steps.
+ *   - STEP layer: the white keys select steps (of the step page shown), as FIZZ: keys held together are one
+ *     selection; once every step key is let go, the next press starts a new one (that step alone).
  *   - B11 held = the other layer while held; a quick click (nothing else done while it was down) latches the other
  *     layer (STEP latched: hold B11 for the loop keys, the reverse). B11 never goes LIVE: ALGO below step 1 does.
  *   - B11 held + OCT- = clear the selected steps (trig and locks; one undo). B11 held + K1 = the zoom (ec_srckeys.c).
@@ -31,7 +31,7 @@ static struct {
     int b11;              /* B11 held */
     uint32_t b11_ms;
     int b11_used;         /* something was done while B11 was down: not a quick click */
-    int fresh;            /* the STEP layer just came up: its first key replaces the selection */
+    uint32_t skeys;       /* the STEP layer's keys held now (a press with none held starts a new selection) */
     uint32_t keys;        /* the LOOP entry's keys (bit i: white key i), still held */
     uint32_t span;        /* every key of the entry */
     int range;            /* the entry started on the RANGE page */
@@ -119,8 +119,7 @@ void ec_lp_b11(int down)
         g.b11 = 1;
         g.b11_ms = A->ms;
         g.b11_used = 0;
-        if (!g.latched)                            /* the STEP layer comes up while held */
-            g.fresh = 1;
+        g.skeys = 0;
         A->redraw = 1;
         return;
     }
@@ -129,8 +128,7 @@ void ec_lp_b11(int down)
     g.b11 = 0;
     if (!g.b11_used && A->ms - g.b11_ms < QUICK_MS) {   /* a quick click: latch the other layer */
         g.latched = !g.latched;
-        if (g.latched)
-            g.fresh = 1;
+        g.skeys = 0;
         ec_app_message(g.latched ? "STEP KEYS" : "LOOP KEYS");
     }
     A->redraw = 1;
@@ -219,20 +217,24 @@ static void write_entry(int lo, int hi)
 int ec_lp_white(int k, int i, int down, int vel)
 {
     (void)k, (void)vel;
-    if (!ec_lp_step_layer() || i < 0 || i >= EC_NLOWER)
+    if (i < 0 || i >= EC_NLOWER)
         return 0;
-    if (down) {
+    if (!down) {                                   /* (let go: its role was taken on the press) */
+        g.skeys &= ~(1u << i);
+        return 1;
+    }
+    if (!ec_lp_step_layer())
+        return 0;
+    {
         const int idx = A->step_page * 16 + i;
         if (g.b11)
             g.b11_used = 1;
         if (idx >= len_now())
             return 1;
-        if (g.fresh) {                             /* the layer's first key: a new selection */
+        if (!g.skeys)                              /* no step key held: a new selection (FIZZ) */
             memset(g.sel, 0, sizeof g.sel);
-            g.fresh = 0;
-            sel_set(idx, 1);
-        } else
-            sel_set(idx, !ec_lp_is_sel(idx));
+        g.skeys |= 1u << i;
+        sel_set(idx, 1);
         sync_target();
     }
     return 1;

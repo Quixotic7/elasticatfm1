@@ -39,10 +39,12 @@ static void test_layers(void)
     CHECK(ec_lp_step_layer(), "B11 held: the STEP layer");
     run(60);
     CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "STEP 3"), "the keys say STEP n (%s)", L(FM1CORE_LBL_WHITE0 + 2));
-    wtap(2);
-    wtap(4);
+    wkey(2, 1);                                      /* held together: one selection (FIZZ) */
+    wkey(4, 1);
+    wkey(2, 0);
+    wkey(4, 0);
     CHECK(ec_lp_is_sel(2) && ec_lp_is_sel(4) && ec_lp_count() == 2 && live_keys() == 0,
-          "W3, W5: steps 3 and 5 selected, nothing played");
+          "W3 + W5 held together: steps 3 and 5 selected, nothing played");
     hold_b11(0);
     CHECK(!ec_lp_step_layer() && ec_lp_count() == 2, "B11 let go: loop keys again, the selection kept");
     /* a loop key: live AND written into both */
@@ -65,12 +67,14 @@ static void test_layers(void)
     run(500);
     hold_b11(0);
     CHECK(ec_lp_count() == 2 && !ec_lp_step_layer(), "B11 held, nothing pressed: the selection kept, never LIVE");
-    /* a new hold: the first key replaces, the next one removes */
+    /* FIZZ: every step key let go, the next press starts a new selection */
     hold_b11(1);
     wtap(7);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(7), "W8: a new selection, step 8 alone (%d)", ec_lp_count());
     wtap(7);
-    CHECK(ec_lp_count() == 0, "a new hold: W8 replaces the selection, W8 again removes it (%d)", ec_lp_count());
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(7), "W8 again: still step 8 (no toggle)");
     wtap(9);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(9), "W10 after letting go: step 10 alone");
     hold_b11(0);
     CHECK(ec_lp_count() == 1 && ec_lp_is_sel(9) && A->pn.target == 10, "W10: step 10 (target %d)", A->pn.target);
     /* a quick click: STEP latched; a key selects; B11 held there = loop keys (the reverse) */
@@ -137,8 +141,10 @@ static void test_knobs(void)
     float *v = ec_app_params(A);
     const float track = v[EC_P_PITCH];
     hold_b11(1);
-    wtap(4);
-    wtap(5);
+    wkey(4, 1);
+    wkey(5, 1);
+    wkey(4, 0);
+    wkey(5, 0);
     hold_b11(0);
     turn(FM1P_E_K1, 3);                              /* LOOP page K1: PITCH */
     CHECK(lockv(4, EC_P_PITCH) >= 0 && lockv(5, EC_P_PITCH) == lockv(4, EC_P_PITCH) && v[EC_P_PITCH] == track,

@@ -1000,13 +1000,13 @@ An FX machine changes at any time (a short fade, no click).
 | B11 | **the STEP layer**: held = the white keys select steps; a quick click latches it (another quick click: loop keys again). Latched, held = the loop keys. B11 never goes LIVE. Held + **OCT-**: clear the selected steps. Held + K1: the zoom (16 loop keys → 32, keys 1-16 → 32, keys 17-32) |
 | White keys | **the loop keys, always live**; with steps selected each entry is also written into them. STEP layer: select steps |
 
-- **Sequencing regions and ranges (0.6.9)**: **hold B11** and press step keys to select steps (the first key
-  replaces the selection, more keys add or remove), then let go: the white keys are loop keys again, and **they
+- **Sequencing regions and ranges (0.6.9)**: **hold B11** and press step keys to select steps (as FIZZ: keys held
+  together are one selection; once you let go of them, the next press starts a new one), then let go of B11: the white keys are loop keys again, and **they
   play exactly as live**, but each entry (the keys held together, written when the last is let go) also goes into
   **every selected step**: its region lock (one key: that division; several: first..last) and a trig. On the
   **RANGE page** (B4) the entry is the steps' **range** (the 16 keys over the whole sample). The selection stays
   until you select again (holding B11 and pressing nothing keeps it); ALGO selects one step, and ALGO below step 1
-  is LIVE (nothing selected). **A quick click on B11 latches the STEP layer** (tap steps to select them; hold B11
+  is LIVE (nothing selected). **A quick click on B11 latches the STEP layer** (press steps to select them; hold B11
   for the loop keys, the reverse order); another quick click goes back to loop keys. **B11 + OCT-** clears the
   selected steps (trig and locks; SHIFT + F1 undoes). With steps selected **the knobs lock onto all of them** (the
   cells show the first one's; F1 + a knob clears their lock). **On the loop keys everything is as live** (0.6.10):

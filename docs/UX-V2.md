@@ -907,3 +907,7 @@ the B11 pick mode above)
   playhead; the rule under it is gone (it meant nothing). The STEP layer stays white with the accent playhead.
 - LOOP layer LEDs (owner, again): the active range's keys fully lit, the rest off (the playhead a dim trace outside
   the range), the selected steps blinking on their keys.
+- GRAIN (owner: "the grains sweep across the whole loop and don't follow my sequence", "GSPD does nothing"): the
+  spread was scaled by the file's length (SPRD 60 ms on a long file = a slab of the whole file, so the cursor's
+  movement and the region were invisible); it is +-SPRD seconds around the cursor now. The grain view draws no frame
+  box any more: the live region bright, the brackets and the playhead over the grains as on the other pages.

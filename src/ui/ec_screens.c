@@ -389,7 +389,9 @@ static void view_wave(const ec_ss_sample_t *smp, const view_t *w, int top, int b
 
 /* the live grains (GRAIN warps), when the engine publishes them: the frame, the waveform dim, the grains, in the
  * view window. 0 = none */
-static int grain_view(const ec_app_t *a, const ec_ss_sample_t *smp, const view_t *w, int top, int bot)
+/* 0.6.14 (owner): the grain view keeps the region in view: the bright span ls..le (the caller's columns, in w) and
+ * the brackets / playhead the caller draws after it */
+static int grain_view(const ec_app_t *a, const ec_ss_sample_t *smp, const view_t *w, int top, int bot, int ls, int le)
 {
 #ifndef EC_KIT_LOCAL_GRAIN_VIEW
     ec_grain_view_t g[EC_GRAIN_VIEW_MAX];
@@ -398,6 +400,7 @@ static int grain_view(const ec_app_t *a, const ec_ss_sample_t *smp, const view_t
     int k, m = 0;
     if (n <= 0)
         return 0;
+
     for (k = 0; k < n; k++) {                      /* into the window; the ones outside are not drawn */
         const float p = (g[k].pos - w->wa) / (w->wb - w->wa);
         if (p < -0.05f || p > 1.05f)
@@ -407,13 +410,11 @@ static int grain_view(const ec_app_t *a, const ec_ss_sample_t *smp, const view_t
         g[m].len = g[k].len / (w->wb - w->wa);
         m++;
     }
-    ec_kit_grain_frame(2, top, W - 4, bot - top, -1);
-    in.x0 = 4, in.cols = W - 8;
-    view_wave(smp, &in, top + 3, bot - 3, EC_C_L3, EC_C_L3, 0, W);
-    ec_kit_grains(g, m, 4, W - 4, top + 3);
+    view_wave(smp, &in, top, bot, EC_C_L8, EC_C_L3, ls, le);   /* (owner: no frame box; the live region brighter) */
+    ec_kit_grains(g, m, w->x0, w->x0 + w->cols, top);
     return 1;
 #else
-    (void)a, (void)smp, (void)w, (void)top, (void)bot;
+    (void)a, (void)smp, (void)w, (void)top, (void)bot, (void)ls, (void)le;
     return 0;
 #endif
 }
@@ -506,8 +507,6 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             }
             return;
         }
-        if (grain_view(a, smp, &w, top, bot))
-            return;
         if (whole) {                               /* RANGE: the range (the target's lock, else the track's) */
             float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END], x;
             if (tst && ec_step_lock_get(tst, EC_P_RANGE_START, &x))
@@ -543,7 +542,8 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                 ls = rs, le = re;
             if (le <= ls)
                 le = ls + 2;
-            view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, ls, le);
+            if (!grain_view(a, smp, &w, top, bot, ls, le))   /* 0.6.14: the grains too get the brackets below */
+                view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, ls, le);
         }
         brackets(rs, re, top, bot, locked ? EC_C_LOCK : EC_C_L12);
         if (st.reader_on) {

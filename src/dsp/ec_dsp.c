@@ -771,7 +771,7 @@ static void fam_render(ec_dsp_t *d, ec_track_t *t, int fam, double run, float *L
         double einc = inc * (t->hi - t->lo) * F;
         double density = ec_clampd(p->grain_density, 1.0, 64.0);
         ec_grains_process(&t->gr, &t->smp, d->hann, rp * F, einc, density,
-                          (double)t->gsize_lag * d->fs, (double)t->gspread_lag * F,
+                          (double)t->gsize_lag * d->fs, (double)t->gspread_lag * (double)t->smp.rate,   /* 0.6.14: seconds, not a file fraction */
                           t->brs * pitch_ratio(t), p->grain_speed_rand, p->grain_direction,
                           L, R, n);
         t->emit_ph += inc * n;
@@ -835,7 +835,7 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     t->rate_lag = ec_lag(t->rate_lag, ec_clampf(p->warp_rate, 0.03125f, 8.f), d->lag02, n);
     t->pitch_lag = ec_lag(t->pitch_lag, ec_clampf(p->pitch, -48.f, 48.f), d->lag03, n);
     t->gsize_lag = ec_lag(t->gsize_lag, ec_clampf(p->grain_size, 0.002f, 0.5f), d->lag05, n);
-    t->gspread_lag = ec_lag(t->gspread_lag, ec_clampf(2.f * p->grain_jitter, 0.f, 1.f), d->lag05, n);
+    t->gspread_lag = ec_lag(t->gspread_lag, ec_clampf(p->grain_jitter, 0.f, 0.5f), d->lag05, n);   /* +-SPRD seconds */
     t->gspeed_lag = ec_lag(t->gspeed_lag, ec_clampf(p->grain_speed, 0.f, 4.f), d->lag05, n);
     float mute0 = t->mute_gain;
     t->mute_gain = ec_lag(t->mute_gain, p->mute ? 0.f : 1.f, d->lag03, n);

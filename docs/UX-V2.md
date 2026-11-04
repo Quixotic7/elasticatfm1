@@ -902,3 +902,4 @@ the B11 pick mode above)
 - LEN tops out at 128 steps = 8 pages, so every page is on B11 + B1..B8.
 - B11 held + OCT+ = LIVE (nothing selected); OCT- still clears the selected steps.
 - The tempo always shows one decimal (120.0) in the SHIFT layer's cell and on F3 (owner). GLO LENGTH tops out at 128 too.
+- The BPM knob's acceleration is capped: 0.1 a slow detent, at most 1.0 BPM a detent flat out (it reached 17.5).

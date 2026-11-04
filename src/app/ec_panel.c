@@ -961,7 +961,7 @@ static void knob(int r, int d)
     if (UX->f3) {                                  /* F3: SELECT tempo, ALGO swing, PRESETS the name, K1-K4 */
         if (r == EC_E_SELECT || r == EC_E_ALGO) {
             const int id = r == EC_E_SELECT ? EC_G_BPM : EC_G_SWING;
-            ec_app_edit_global(id, d, ec_ux_accel(r, id == EC_G_BPM ? 2800 : 1, d));
+            ec_app_edit_global(id, d, ec_ux_accel(r, id == EC_G_BPM ? EC_BPM_ACCEL : 1, d));
         } else if (r == EC_E_PRESETS)
             ec_e5_name_pattern();
         else
@@ -973,7 +973,7 @@ static void knob(int r, int d)
         if (r == EC_E_SELECT || r == EC_E_ALGO) { /* 0.6.6: no snap here (SHIFT is how you get to them): BPM in
                                                     * 0.1 steps, accelerated */
             const int id = r == EC_E_SELECT ? EC_G_BPM : EC_G_SWING;
-            ec_app_edit_global_f(id, d, ec_ux_accel(r, id == EC_G_BPM ? 2800 : 1, d), 0);
+            ec_app_edit_global_f(id, d, ec_ux_accel(r, id == EC_G_BPM ? EC_BPM_ACCEL : 1, d), 0);
             return;
         }
         if (r == EC_E_PRESETS) {

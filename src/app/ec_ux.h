@@ -44,6 +44,9 @@ typedef struct {
 int ec_ux_lanes(int n);                                  /* lanes of a page with n cells */
 /* the knob speed: steps a click for a value with `steps` finest steps over its range (lists: 1) */
 int ec_ux_accel(int role, int steps, int det);
+/* 0.6.14 (owner: "the acceleration on BPM is too much"): the BPM knob accelerates as a 160-step range: at most
+ * 10 tenths (1.0 BPM) a detent flat out, 0.1 turned slowly (it was 17.5 BPM a detent) */
+#define EC_BPM_ACCEL 160
 /* the takeover */
 void ec_ux_takeover(const char *label, const char *val, float frac);
 /* the lock chips: id is locked on some step of the selected track (outlined chip) */

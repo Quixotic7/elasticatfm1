@@ -875,7 +875,7 @@ static int item_steps(const ec_item_t *it)
 {
     switch (it->kind) {
     case EC_IT_PARAM: return param_steps(it->id);
-    case EC_IT_GLOBAL: return it->id == EC_G_BPM ? 2800 : it->id == EC_G_GLEN ? 255 : 1;   /* BPM: 0.1 steps */
+    case EC_IT_GLOBAL: return it->id == EC_G_BPM ? EC_BPM_ACCEL : it->id == EC_G_GLEN ? 255 : 1;   /* BPM: 0.1 steps */
     case EC_IT_SLOT: return it->id == EC_S_BPM ? 280 : it->id == EC_S_STEPS ? 511 : it->id == EC_S_GAIN ? 80 : 200;
     case EC_IT_RAZOR: return it->id == EC_RZ_START || it->id == EC_RZ_END ? 256 : 1;
     case EC_IT_E5: return it->id == EC_X_XFD ? 128 : 1;

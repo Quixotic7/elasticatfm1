@@ -122,8 +122,8 @@ static int builtin(char *out, int cap)
         if (P->xf_key >= 0)
             return say(out, cap, EC_C_L12, "GLIDE TO %d", (int)floorf(ec_xfd_key_value(P->xf_key) * 127.0f + 0.5f));
     }
-    if (plain && ec_lp_picking())                  /* 0.6.6: LOOP ENGINE's B11: pick mode */
-        return say(out, cap, EC_C_L12, "PICK STEP", 0);
+    if (plain && ec_lp_step_layer())               /* 0.6.9: LOOP ENGINE's STEP layer (B11) */
+        return say(out, cap, EC_C_L12, "SELECT STEPS", 0);
     if (late && A->fill_held)
         return say(out, cap, EC_C_L12, "FILL", 0);
     if (late && plain && P->slot_key && quick_text(mode, P->slot_key))   /* the quick setting (K1 / SEL) */

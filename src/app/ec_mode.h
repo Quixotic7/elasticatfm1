@@ -265,14 +265,22 @@ int ec_pages_count(void);                     /* the selected track's pattern pa
 void ec_kb_key(int k, int down, int vel);     /* any of the 27 keys (k: the note key) */
 void ec_kb_oct(int d);
 void ec_kb_target(int det);                   /* ALGO */
-/* 0.6.6: LOOP ENGINE step entry (ec_loopstep.c): the target step (shared with KEYBOARD) written by the white keys */
+/* 0.6.6 / 0.6.9: LOOP ENGINE step entry (ec_loopstep.c): B11 switches the white keys between LOOP and STEP layers;
+ * the selected steps get the loop keys' regions / ranges and the knobs' locks */
 int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */
-int ec_lp_target(void);                       /* its target step 1.., 0 = LIVE (or not LOOP ENGINE) */
-void ec_lp_b11(int down);                     /* B11: held = pick a step with a white key, a tap = LIVE */
+int ec_lp_target(void);                       /* the first selected step 1.., 0 = LIVE (or not LOOP ENGINE) */
+int ec_lp_first(void);                        /* the first selected step's index, -1 none */
+int ec_lp_count(void);                        /* steps selected */
+int ec_lp_is_sel(int idx);
+uint16_t ec_lp_page_mask(int page);           /* the selected steps of a step page */
+int ec_lp_step_layer(void);                   /* the white keys are the STEP layer now */
+void ec_lp_algo(int det);                     /* ALGO: one step selected, below 1 = LIVE */
+void ec_lp_b11(int down);                     /* B11: held = the other layer, a quick click latches it */
 int ec_lp_b11_held(void);                     /* B11 physically held */
-int ec_lp_picking(void);                      /* pick mode: the white keys pick the target step */
-void ec_lp_b11_used(void);                    /* B11 held + K1 turned the zoom: not a tap */
-int ec_lp_white(int k, int i, int down, int vel);   /* 1 = taken */
+void ec_lp_b11_used(void);                    /* something done while B11 was down: not a quick click */
+void ec_lp_clear(void);                       /* B11 + OCT-: the selected steps cleared */
+int ec_lp_white(int k, int i, int down, int vel);   /* STEP layer: 1 = taken */
+void ec_lp_loop_note(int i, int down);        /* LOOP layer: a loop key (writes into the selection) */
 uint32_t ec_lp_keys(void);                    /* the entry's keys held now */
 int ec_kb_slice_track(void);
 int ec_kb_semis(int k);                       /* key k's note in semitones from C4, the octave applied */

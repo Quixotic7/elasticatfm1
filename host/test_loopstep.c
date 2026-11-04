@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* test_loopstep: 0.6.6's LOOP ENGINE step entry (docs/UX-V2.md "LOOP ENGINE step entry") through the panel:
- *   ALGO picks the target step (LIVE below step 1); a white key writes the step's region (one key: its division),
- *   puts a trig on it and moves on (ADVANCE); keys held together write their span; SHIFT does the other advance;
- *   B11 held + a white key jumps to that step, a B11 tap goes LIVE; SHIFT + B11 is the zoom; the RANGE page writes the
- *   range; with a target the knobs lock onto it (and F1 + knob clears only its lock); LIVE keys stay the live loop
- *   keys (no lock written); one UNDO takes an entry back.
+/* test_loopstep: 0.6.9's LOOP ENGINE step entry (docs/UX-V2.md "LOOP ENGINE step entry", the owner's second pass)
+ * through the panel:
+ *   the loop keys always play live (a live loop key down) and, with steps selected, also write the entry's region
+ *   into every selected step; B11 held = the STEP layer (keys select steps: the first replaces, the next add /
+ *   remove), let go = loop keys again, selection kept; a B11 hold with no key keeps the selection; a quick click
+ *   latches the STEP layer (another quick click unlatches); latched, B11 held = the loop keys (the reverse); B11 never
+ *   goes LIVE, ALGO below step 1 does; ALGO selects one step; B11 + OCT- clears the selected steps (one undo); the
+ *   RANGE page writes ranges; the knobs lock onto every selected step.
  *   ec_test_loopstep <folder> */
 #include "ec_harness.h"
 
@@ -13,12 +15,12 @@ static float lockv(int idx, int id)
     float x = -1;
     return ec_step_lock_get(step(idx), id, &x) ? x : -1;
 }
-static int iv_div(void) { return (int)floorf(ec_app_params(A)[EC_P_LOOP_DIVISION] + 0.5f); }
-static void hold_b(int b) { key(1, b - 1, 1); run(20); }
-static void let_b(int b) { key(1, b - 1, 0); run(20); }
+static void hold_b11(int d) { key(1, 10, d); run(20); }
 static void wkey(int i, int down) { key(0, i, down); run(20); }
+static void wtap(int i) { wkey(i, 1); wkey(i, 0); }
+static int live_keys(void) { return (int)A->seq.tr[A->track].live_keys; }
 
-static void test_entry(void)
+static void test_layers(void)
 {
     float *v;
     to(EC_CAT_SRC);
@@ -26,97 +28,107 @@ static void test_entry(void)
     clear_steps(A->track);
     v[EC_P_LOOP_DIVISION] = 16;
     v[EC_P_PATTERN_STEPS] = 16;
-    CHECK(ec_as->advance, "ADVANCE is on by default");
-    CHECK(A->pn.target == 0, "LOOP ENGINE starts LIVE");
+    CHECK(ec_lp_first() < 0 && !ec_lp_step_layer(), "LOOP ENGINE starts LIVE, loop keys");
     /* LIVE: a key is the live loop key, nothing written */
     wkey(2, 1);
+    CHECK(live_keys() != 0, "LIVE: the key plays the loop live");
     wkey(2, 0);
-    CHECK(lockv(0, EC_P_LOOP_START) < 0 && !step(0)->trig, "LIVE: a key writes nothing");
-    turn(FM1P_E_ALGO, 1);
-    CHECK(A->pn.target == 1, "ALGO +1: step 1 (%d)", A->pn.target);
-    wkey(2, 1);
-    wkey(2, 0);
-    CHECK(step(0)->trig && lockv(0, EC_P_LOOP_START) == 16 && lockv(0, EC_P_LOOP_END) == 24,
-          "W3: step 1 = division 3 (start %g end %g), a trig", lockv(0, EC_P_LOOP_START), lockv(0, EC_P_LOOP_END));
-    CHECK(A->pn.target == 2, "ADVANCE: on to step 2 (%d)", A->pn.target);
-    /* a span: W5 + W8 held together */
-    wkey(4, 1);
-    wkey(7, 1);
-    CHECK(lockv(1, EC_P_LOOP_START) < 0, "nothing written while keys are still held");
-    wkey(4, 0);
-    CHECK(lockv(1, EC_P_LOOP_START) < 0, "one key let go, one still held: still nothing");
-    wkey(7, 0);
-    CHECK(lockv(1, EC_P_LOOP_START) == 32 && lockv(1, EC_P_LOOP_END) == 64 && A->pn.target == 3,
-          "the last key let go: step 2 = 5..8 (%g..%g), on to 3", lockv(1, EC_P_LOOP_START), lockv(1, EC_P_LOOP_END));
-    /* SHIFT: the other advance */
-    shift_down(1);
-    wkey(0, 1);
-    wkey(0, 0);
-    shift_down(0);
-    CHECK(lockv(2, EC_P_LOOP_START) == 0 && lockv(2, EC_P_LOOP_END) == 8 && A->pn.target == 3,
-          "SHIFT + W1: step 3 = 1, stays on 3 (%d)", A->pn.target);
-    /* undo */
+    CHECK(lockv(0, EC_P_LOOP_START) < 0 && !step(0)->trig, "LIVE: nothing written");
+    /* hold B11: the STEP layer; W3 + W5 select steps 3 and 5 */
+    hold_b11(1);
+    CHECK(ec_lp_step_layer(), "B11 held: the STEP layer");
+    run(60);
+    CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "STEP 3"), "the keys say STEP n (%s)", L(FM1CORE_LBL_WHITE0 + 2));
+    wtap(2);
+    wtap(4);
+    CHECK(ec_lp_is_sel(2) && ec_lp_is_sel(4) && ec_lp_count() == 2 && live_keys() == 0,
+          "W3, W5: steps 3 and 5 selected, nothing played");
+    hold_b11(0);
+    CHECK(!ec_lp_step_layer() && ec_lp_count() == 2, "B11 let go: loop keys again, the selection kept");
+    /* a loop key: live AND written into both */
+    wkey(6, 1);
+    CHECK(live_keys() != 0, "a loop key with steps selected still plays live");
+    wkey(6, 0);
+    CHECK(lockv(2, EC_P_LOOP_START) == 48 && lockv(2, EC_P_LOOP_END) == 56 && lockv(4, EC_P_LOOP_START) == 48 &&
+              step(2)->trig && step(4)->trig,
+          "L7: steps 3 and 5 = division 7 (%g..%g), trigs", lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
+    /* a span */
+    wkey(8, 1);
+    wkey(11, 1);
+    wkey(8, 0);
+    wkey(11, 0);
+    CHECK(lockv(2, EC_P_LOOP_START) == 64 && lockv(2, EC_P_LOOP_END) == 96 && lockv(4, EC_P_LOOP_END) == 96,
+          "L9 + L12 held together: 9..12 into both (%g..%g)", lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
+    CHECK(ec_lp_count() == 2, "nothing advances: still steps 3 and 5");
+    /* a B11 hold with no key keeps the selection */
+    hold_b11(1);
+    run(500);
+    hold_b11(0);
+    CHECK(ec_lp_count() == 2 && !ec_lp_step_layer(), "B11 held, nothing pressed: the selection kept, never LIVE");
+    /* a new hold: the first key replaces, the next one removes */
+    hold_b11(1);
+    wtap(7);
+    wtap(7);
+    CHECK(ec_lp_count() == 0, "a new hold: W8 replaces the selection, W8 again removes it (%d)", ec_lp_count());
+    wtap(9);
+    hold_b11(0);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(9) && A->pn.target == 10, "W10: step 10 (target %d)", A->pn.target);
+    /* a quick click: STEP latched; a key selects; B11 held there = loop keys (the reverse) */
+    B(11, 40);
+    CHECK(ec_lp_step_layer(), "a quick click: STEP latched");
+    wtap(0);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(0) && live_keys() == 0, "latched: W1 selects step 1 (a new selection)");
+    hold_b11(1);
+    CHECK(!ec_lp_step_layer(), "latched + B11 held: the loop keys");
+    wkey(1, 1);
+    CHECK(live_keys() != 0, "...live");
+    wkey(1, 0);
+    hold_b11(0);
+    CHECK(lockv(0, EC_P_LOOP_START) == 8 && lockv(0, EC_P_LOOP_END) == 16 && ec_lp_step_layer(),
+          "L2 written into step 1; B11 let go (used): still STEP latched");
+    B(11, 40);
+    CHECK(!ec_lp_step_layer() && ec_lp_count() == 1, "a quick click again: loop keys, the selection kept");
+    /* B11 + OCT-: clear the selected steps; undo */
+    hold_b11(1);
+    press(FM1P_B_OCTDN, 40);
+    hold_b11(0);
+    CHECK(!step(0)->trig && lockv(0, EC_P_LOOP_START) < 0 && !ec_lp_step_layer(),
+          "B11 + OCT-: step 1 cleared (trig and locks), not a quick click");
     btn(FM1P_B_GLO, 1);
     run(20);
     press(FM1P_B_OCTDN, 40);
     btn(FM1P_B_GLO, 0);
     run(20);
-    CHECK(lockv(2, EC_P_LOOP_START) < 0 && !step(2)->trig, "SHIFT + F1: the entry undone");
+    CHECK(step(0)->trig && lockv(0, EC_P_LOOP_START) == 8, "SHIFT + F1: step 1 back");
     if (A->pn.shift_sticky)
         press(FM1P_B_GLO, 40);
-    /* B11 held + a key: jump; a B11 tap: LIVE */
-    hold_b(11);
-    wkey(9, 1);
-    wkey(9, 0);
-    let_b(11);
-    CHECK(A->pn.target == 10, "B11 + W10: step 10 (%d)", A->pn.target);
-    CHECK(iv_div() == 16, "B11 is not the zoom any more");
-    CHECK(!ec_lp_picking(), "held + a key: pick mode ends with B11");
-    /* a tap: pick mode (a mouse can't hold B11 and press a key), then a key picks */
-    B(11, 40);
-    CHECK(ec_lp_picking() && A->pn.target == 10, "B11 tapped: pick mode, the target still 10");
-    run(60);
-    CHECK(lbl(FM1CORE_LBL_WHITE0 + 2, "STEP 3"), "pick mode: the white keys say STEP n (%s)", L(FM1CORE_LBL_WHITE0 + 2));
-    wkey(2, 1);
-    wkey(2, 0);
-    CHECK(A->pn.target == 3 && !ec_lp_picking() && lockv(2, EC_P_LOOP_START) < 0,
-          "W3 in pick mode: step 3 is the target, pick mode off, nothing written (%d)", A->pn.target);
-    /* tap, tap: LIVE */
-    B(11, 40);
-    B(11, 40);
-    CHECK(A->pn.target == 0 && !ec_lp_picking(), "B11 tapped twice: LIVE (%d)", A->pn.target);
-    /* B11 held + K1: the zoom (not a LIVE tap) */
-    A->pn.target = 4;
-    hold_b(11);
-    turn(FM1P_E_K1, 1);
-    CHECK(iv_div() == 32 && !A->pn.zoom_half, "B11 + K1 +1: 32, first half (LOOP DIV %d)", iv_div());
-    turn(FM1P_E_K1, 1);
-    CHECK(iv_div() == 32 && A->pn.zoom_half, "K1 +1 again: the second half");
-    turn(FM1P_E_K1, -2);
-    let_b(11);
-    CHECK(iv_div() == 16 && A->pn.target == 4, "K1 -2: back to 16; letting go of B11 after K1 is not LIVE (%d)",
-          A->pn.target);
-    A->pn.target = 0;
+    /* ALGO: one step; below 1 = LIVE */
+    turn(FM1P_E_ALGO, 2);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(2), "ALGO +2 from step 1: step 3 alone");
+    turn(FM1P_E_ALGO, -5);
+    CHECK(ec_lp_count() == 0 && ec_lp_first() < 0, "ALGO below step 1: LIVE");
 }
 
-/* the knobs lock onto the target; F1 + knob clears only its lock */
+/* the knobs lock onto every selected step */
 static void test_knobs(void)
 {
     float *v = ec_app_params(A);
     const float track = v[EC_P_PITCH];
-    A->pn.target = 5;
-    A->step_page = 0;
+    hold_b11(1);
+    wtap(4);
+    wtap(5);
+    hold_b11(0);
     turn(FM1P_E_K1, 3);                              /* LOOP page K1: PITCH */
-    CHECK(lockv(4, EC_P_PITCH) >= 0 && v[EC_P_PITCH] == track,
-          "with a target, K1 locks PITCH on step 5 (%g), the track value untouched", lockv(4, EC_P_PITCH));
-    CHECK(ec_app_held_step(A) == 4, "the target counts as the held step (the cells show its locks)");
-    A->pn.target = 0;
+    CHECK(lockv(4, EC_P_PITCH) >= 0 && lockv(5, EC_P_PITCH) == lockv(4, EC_P_PITCH) && v[EC_P_PITCH] == track,
+          "K1 locks PITCH on steps 5 and 6 (%g), the track value untouched", lockv(4, EC_P_PITCH));
+    CHECK(ec_app_held_step(A) == 4, "the first selected counts as the held step (the cells)");
+    turn(FM1P_E_ALGO, -20);
     turn(FM1P_E_K1, 1);
     CHECK(v[EC_P_PITCH] != track, "LIVE: K1 is the track's PITCH again");
     v[EC_P_PITCH] = track;
 }
 
-/* RANGE page: the keys write the range over the whole sample */
+/* RANGE page: the keys write the range over the whole sample into the selection */
 static void test_range(void)
 {
     int n;
@@ -128,12 +140,9 @@ static void test_range(void)
             break;
         B(4, 40);
     }
-    {
-        ec_page_t pg;
-        ec_app_page(A, &pg);
-        CHECK(pg.pic == EC_PIC_WAVE_RANGE, "RANGE page");
-    }
-    A->pn.target = 7;
+    hold_b11(1);
+    wtap(6);
+    hold_b11(0);
     wkey(1, 1);
     wkey(5, 1);
     wkey(1, 0);
@@ -141,7 +150,7 @@ static void test_range(void)
     CHECK(lockv(6, EC_P_RANGE_START) == 8 && lockv(6, EC_P_RANGE_END) == 48 && lockv(6, EC_P_LOOP_START) < 0,
           "RANGE: W2 + W6 = step 7's range 8..48 (%g..%g), no region lock", lockv(6, EC_P_RANGE_START),
           lockv(6, EC_P_RANGE_END));
-    A->pn.target = 0;
+    turn(FM1P_E_ALGO, -20);
 }
 
 int main(int argc, char **argv)
@@ -152,7 +161,7 @@ int main(int argc, char **argv)
     }
     ec_fs_native_root(argv[1], "elasticat");
     boot(NULL, 0);
-    test_entry();
+    test_layers();
     test_knobs();
     test_range();
     C->shutdown();

@@ -411,6 +411,8 @@ static void button_down(int b)
                 ec_file_pool_f2();
             else
                 ec_file_pool_f1();
+        } else if (b == EC_B_OCTDN && !A->fn && ec_lp_b11_held()) {   /* 0.6.9: LOOP ENGINE: B11 held + F1 clears */
+            ec_lp_clear();                         /* the selected steps */
         } else if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
@@ -626,12 +628,6 @@ static void white_down(int k, int i, int vel, int lean)
                 return;
             }
             break;
-        case EC_CAT_SRC:                           /* 0.6.6: LOOP ENGINE with a target step: the other advance */
-            if (ec_lp_white(k, i, 1, vel)) {
-                A->key_role[k] = R_LP;
-                return;
-            }
-            break;
         default: break;
         }
         if (i < 9)
@@ -648,11 +644,13 @@ static void white_down(int k, int i, int vel, int lean)
             }
             return;
         case EC_CAT_SRC:
-            if (ec_lp_white(k, i, 1, vel)) {       /* 0.6.6: B11's step pick, or the target step's entry */
+            if (ec_lp_white(k, i, 1, vel)) {       /* 0.6.9: the STEP layer selects steps */
                 A->key_role[k] = R_LP;
                 return;
             }
-            loop_down(k, i, vel);
+            loop_down(k, i, vel);                  /* the LOOP layer: live, always */
+            if (A->key_role[k] == R_LOOP_LIVE || A->key_role[k] == R_PAD)
+                ec_lp_loop_note(i, 1);             /* (and written into the selected steps) */
             return;
         case EC_MODE_KEYBOARD:
             ec_kb_key(k, 1, vel);
@@ -707,8 +705,14 @@ static void white_up(int k, int i, int vel)
     switch (r) {
     case R_LP: ec_lp_white(k, i, 0, vel); break;
     case R_STEP: step_up(i, vel); break;
-    case R_LOOP_LIVE: ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0); break;
-    case R_PAD: ec_seq_slice_pad(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0, 0); break;
+    case R_LOOP_LIVE:
+        ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0);
+        ec_lp_loop_note(i, 0);
+        break;
+    case R_PAD:
+        ec_seq_slice_pad(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0, 0);
+        ec_lp_loop_note(i, 0);
+        break;
     case R_KB: ec_kb_key(k, 0, 0); break;
     case R_RAZOR: ec_rzui_key(A, i, 0, 0); break;
     case R_FILEW: ec_file_white(i, 0); break;
@@ -959,8 +963,10 @@ static void knob(int r, int d)
             ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
         else if (ec_fx_on_sends())
             ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
-        else if (mode == EC_MODE_KEYBOARD || (mode == EC_CAT_SRC && !A->bus))
-            ec_kb_target(d);                       /* KEYBOARD, 0.6.6 LOOP ENGINE: the target step */
+        else if (mode == EC_CAT_SRC && !A->bus)
+            ec_lp_algo(d);                         /* 0.6.9: LOOP ENGINE: one step selected, below 1 = LIVE */
+        else if (mode == EC_MODE_KEYBOARD)
+            ec_kb_target(d);                       /* KEYBOARD: the target step */
         else {                                     /* the step page */
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
             const int p = clampi(A->step_page + (d > 0 ? 1 : -1), 0, pages - 1);

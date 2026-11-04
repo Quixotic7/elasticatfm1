@@ -582,7 +582,7 @@ static void loop_steps(const ec_app_t *a, int range)
 {
     const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
     const int len = ec_seq_pattern_steps(&a->seq, a->track);
-    const int play = ec_seq_step(&a->seq, a->track), tgt = ec_app_target_step(a);
+    const int play = ec_seq_step(&a->seq, a->track);
     int i;
     for (i = 0; i < 16; i++) {
         const int idx = a->step_page * 16 + i, x = 3 + i * 7;
@@ -592,11 +592,12 @@ static void loop_steps(const ec_app_t *a, int range)
             R(EC_C_L3, x + 1, 68, 2, 2);
             continue;
         }
+        const int sel = a == &ec_app && ec_lp_is_sel(idx);   /* 0.6.9: every selected step */
         if (st->trig || st->slices)
-            R(idx == tgt ? EC_C_L15 : EC_C_L12, x, 64, 5, 6);
+            R(sel ? EC_C_L15 : EC_C_L12, x, 64, 5, 6);
         else
-            R(idx == tgt ? EC_C_L15 : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 68, 5, 2);
-        if (idx == tgt)
+            R(sel ? EC_C_L15 : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 68, 5, 2);
+        if (sel)
             R(EC_C_L15, x, 61, 5, 2);
         if (idx == play && (a->seq.playing || a->seq.paused))
             R(EC_C_ACC, x, 61, 5, 2);
@@ -692,7 +693,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     }
     sample_area(a, 22, 58, pg->pic == EC_PIC_WAVE_RANGE);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
-        if (ec_app_target_step(a) >= 0) {          /* 0.6.6: a target step: the keys write it */
+        if (ec_app_target_step(a) >= 0 || (a == &ec_app && ec_lp_step_layer())) {   /* steps selected / STEP layer */
             loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE);
         } else
             key_ruler(a, 66);                      /* 0.6.0: LOOP ENGINE's white keys play the loop */

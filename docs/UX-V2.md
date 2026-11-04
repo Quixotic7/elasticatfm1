@@ -831,3 +831,15 @@ them:
   Grains, slices and playheads are mapped into the window.
 - With a target step the brackets are its region (its lock in the LOCK colour, else the track's), as norns did when
   a step was held; the orange bar under the waveform is gone.
+
+**LOOP ENGINE step entry, second pass** (owner, 2026-11-03; 0.6.9, by hand; replaces the target step / ADVANCE and
+the B11 pick mode above)
+- B11 switches the white keys between the LOOP and STEP layers: held = the other layer while held; a quick click
+  (nothing done while down) latches the other layer. B11 never goes LIVE; ALGO below step 1 does (ALGO selects one
+  step).
+- STEP layer: the keys select steps, several at once (the first key since the layer came up replaces the
+  selection; later ones toggle). The selection stays until the next selection.
+- LOOP layer: the loop keys are always live (scrub and sound); with steps selected each entry is also written into
+  every selected step (region, or range on the RANGE page; a trig). Nothing advances.
+- B11 held + OCT- clears the selected steps (trig and locks, one undo a page). The knobs lock onto all selected steps.
+- Tests: test_loopstep (28 checks).

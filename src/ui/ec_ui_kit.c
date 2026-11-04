@@ -77,7 +77,7 @@ void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
         R(i == lane ? EC_C_L15 : EC_C_L5, W - 1 - (lanes - i) * 10, 73, 8, 2);
     for (i = 0; i < 4; i++) {
         const unsigned fl = c[i].flags;
-        const int lock = (fl & EC_KC_LOCK) != 0, hot = (fl & EC_KC_HOT) != 0;
+        const int lock = (fl & EC_KC_LOCK) != 0, hot = (fl & EC_KC_HOT) != 0, readout = (fl & EC_KC_READOUT) != 0;
         const char *val = c[i].value ? c[i].value : "";
         int bx, by, bw, bh, x, y, by0, big, k;
         char tag[4];
@@ -99,6 +99,13 @@ void ec_kit_cells(const ec_kit_cell_t c[4], int lanes, int lane)
             R(EC_C_LOCK, bx, by + bh - 2, bw, 2);
             R(EC_C_LOCK, bx, by, 2, bh);
             R(EC_C_LOCK, bx + bw - 2, by, 2, bh);
+        }
+        if (readout) {                               /* 0.6.14: a readout: the label, the value, a dotted rule */
+            T(EC_C_L5, c[i].label, x, y, 1, EC_AL_LEFT);
+            T(EC_C_L12, val, x, TW(val, 2) <= 54 ? y + 6 : y + 8, TW(val, 2) <= 54 ? 2 : 1, EC_AL_LEFT);
+            for (k = 0; k < EC_KIT_BAR_CELLS; k += 2)
+                R(EC_C_L3, x + 2 * k, by0, 2, 2);
+            continue;
         }
         T(lock ? EC_C_BG : hot ? EC_C_L15 : EC_C_L8, c[i].label, x, y, 1, EC_AL_LEFT);
         if (c[i].mark && c[i].mark[0]) {             /* a matrix destination: its source's tag and a dot */

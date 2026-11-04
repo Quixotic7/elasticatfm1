@@ -28,6 +28,8 @@ enum {
     EC_KC_SOME = 16u,     /* locked on some step of the pattern (no step held): a 2-unit LOCK outline round the cell */
     EC_KC_ACTUAL = 32u,   /* `actual` (0..1) is the resolved value: an accent mark on the bar */
     EC_KC_HOT = 64u,      /* a source key held, the cell is its depth: the label bright, the bar in SRC (blue) */
+    EC_KC_READOUT = 128u, /* 0.6.14: a readout, not a knob's parameter (PAGES' LOOP): no K-tag, no bar, the label
+                           * in L5, the value dim-bright; set by the keys, not a knob */
 };
 typedef struct {
     const char *label;    /* NULL / "": an empty cell (its K-tag dark) */

@@ -934,3 +934,4 @@ the B11 pick mode above)
   pages panel) and ALGO = the page's step, PRESETS = the page, on every track page (FILTER, AMP, FX, MOD too) and in
   KEYBOARD; the knobs lock onto the selected steps there as well. A quick click on B11 keeps those pages' own tap
   (FILTER's envelope mode, FX MIX, MACROS). PAGES mode: K1 LEN, K2 RATE, PRESETS the page, without B11.
+- PAGES' LOOP cell (owner): a readout, not K3's parameter: no K-tag, no bar (a dotted rule), the label dim.

@@ -1401,8 +1401,20 @@ void ec_app_ui_info(char *buf, uint32_t n)
         if (l < n) {
             ec_track_status_t st;
             ec_dsp_track_status(A->dsp, A->track, &st);
-            snprintf(buf + l, n - l, " ppos:%d warp:%d gspd:%d", (int)(st.pos_sample * 1000.0f + 0.5f),
-                     iv(ec_app_params(A), EC_P_MODE), (int)(ec_app_params(A)[EC_P_GRAIN_SPEED] * 100.0f + 0.5f));
+            ec_grain_view_t g[EC_GRAIN_VIEW_MAX];
+            const int ng = ec_dsp_grains(A->dsp, A->track, g);
+            float gs = 0, gmin = 2, gmax = -1;
+            int k;
+            for (k = 0; k < ng; k++) {
+                gs += g[k].pos;
+                gmin = g[k].pos < gmin ? g[k].pos : gmin;
+                gmax = g[k].pos > gmax ? g[k].pos : gmax;
+            }
+            snprintf(buf + l, n - l, " ppos:%d warp:%d gspd:%d grains:%d gmean:%d gmin:%d gmax:%d",
+                     (int)(st.pos_sample * 1000.0f + 0.5f), iv(ec_app_params(A), EC_P_MODE),
+                     (int)(ec_app_params(A)[EC_P_GRAIN_SPEED] * 100.0f + 0.5f), ng,
+                     ng ? (int)(gs / (float)ng * 1000.0f + 0.5f) : -1, ng ? (int)(gmin * 1000.0f + 0.5f) : -1,
+                     ng ? (int)(gmax * 1000.0f + 0.5f) : -1);
         }
     }
 }

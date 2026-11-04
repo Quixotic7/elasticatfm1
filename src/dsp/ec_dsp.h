@@ -448,6 +448,7 @@ void  ec_dsp_mod_sources(const ec_dsp_t *dsp, int track, float *src);
 typedef struct {
     float pos, len, level;   /* pos / len: 0..1 of the sample; level: the envelope 0..1 */
     uint8_t newest;
+    int8_t dir;              /* 0.6.15: +1 reads forwards, -1 backwards */
 } ec_grain_view_t;
 #define EC_GRAIN_VIEW_MAX 16
 #endif

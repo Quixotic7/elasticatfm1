@@ -106,7 +106,7 @@ enum { EC_PK_NUM, EC_PK_OPT, EC_PK_BIN };
 /* display formats */
 enum {
     EC_PF_INT, EC_PF_DEC1, EC_PF_DEC2, EC_PF_MS, EC_PF_ENV, EC_PF_HZ, EC_PF_BIP, EC_PF_PAN, EC_PF_PCT01,
-    EC_PF_PCT100, EC_PF_X, EC_PF_PITCH, EC_PF_OPT, EC_PF_BIN, EC_PF_RATE, EC_PF_STEPS, EC_PF_SEC,
+    EC_PF_PCT100, EC_PF_X, EC_PF_GDIR, EC_PF_PITCH, EC_PF_OPT, EC_PF_BIN, EC_PF_RATE, EC_PF_STEPS, EC_PF_SEC,
     EC_PF_UNIT,           /* E4: real units by id (dB, ms, :1, bits, Hz; ec_param_format_unit) */
     EC_PF_MDST,           /* 0.5.0: a matrix slot's DST (0 OFF, else param id + 1) */
     EC_PF_MDEP,           /* 0.5.0: a matrix slot's DEPTH, -100..100 % (fine steps near 0) */

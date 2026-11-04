@@ -82,7 +82,7 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_GRAIN_JITTER] = NUM("grain_jitter", "SPRD", 0, 0.25f, 0.001f, 0.01f, EC_PF_MS, L),
     [EC_P_GRAIN_SPEED] = NUM("grain_speed", "GSPD", 0, 4, 0.01f, 1, EC_PF_X, L),   /* 0.6.14: 0.01 steps: a crawl */
     [EC_P_GRAIN_SPEED_RAND] = NUM("grain_speed_rand", "RAND", 0, 1, 0.01f, 0, EC_PF_PCT01, L),
-    [EC_P_GRAIN_DIRECTION] = NUM("grain_direction", "DIR", 0, 1, 0.01f, 1, EC_PF_PCT01, L),
+    [EC_P_GRAIN_DIRECTION] = NUM("grain_direction", "DIR", 0, 1, 0.01f, 1, EC_PF_GDIR, L),   /* 0.6.15: FWD / REV / a mix */
     [EC_P_WARP_RATE] = NUM("warp_rate", "RATE", 0.0625f, 8, 0.01f, 1, EC_PF_X, L),
     [EC_P_SLICE_COUNT] = NUM("slice_count", "CNT", 1, 32, 1, 16, EC_PF_INT, L),
     [EC_P_SLICE_INDEX] = NUM("slice_index", "SLIC", 1, 32, 1, 1, EC_PF_INT, L),
@@ -517,6 +517,15 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
     } break;
     case EC_PF_PCT01: snprintf(out, (size_t)cap, "%d%%", (int)floorf(x * 100.0f + 0.5f)); break;
     case EC_PF_PCT100: snprintf(out, (size_t)cap, "%d%%", (int)floorf(x + 0.5f)); break;
+    case EC_PF_GDIR: {                                                 /* 0.6.15: the share of forward grains */
+        const int f = (int)floorf(x * 100.0f + 0.5f);
+        if (f >= 100)
+            snprintf(out, (size_t)cap, "FWD");
+        else if (f <= 0)
+            snprintf(out, (size_t)cap, "REV");
+        else
+            snprintf(out, (size_t)cap, "F%d R%d", f, 100 - f);
+    } break;
     case EC_PF_X:
         snprintf(b, sizeof b, "%.2f", (double)x);
         trim0(b);

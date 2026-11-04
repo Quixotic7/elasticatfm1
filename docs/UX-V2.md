@@ -943,3 +943,9 @@ the B11 pick mode above)
   step selected the knob locks GSPD onto that step, not the track (the cell fills LOCK); go LIVE to set the track's.
 - MIX (owner): PRESETS selects the track without a pop-up; the MIX page stays when the track changes (only MST's
   MASTER page comes and goes). Switching tracks no longer moves the step page to the new track's selected step.
+
+**0.6.15** (owner, 2026-11-04)
+- GRAIN DIR reads FWD, REV or "F70 R30" (the share of grains reading forwards); each drawn grain carries a blue head
+  at its leading end (left = reverse). GSPD measured in the harness (ui_info ppos / gmean): the cloud follows the
+  cursor at 0.14 as at 1.0 and 4.0, so the engine responds; a new version number every build so the web player
+  never serves a stale cart under the old name.

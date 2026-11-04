@@ -89,6 +89,7 @@ static void gview_add(gview_t *v, double pos, double rate, float phase, float in
     float ph = ec_clampf(phase, 0.f, 0.9999f);
     g.level = ec_clampf(ec_hann_lerp(v->hann, ph), 0.f, 1.f);
     g.newest = 0;
+    g.dir = rate < 0 ? -1 : 1;
     float age = phase / inc;   /* inc is fixed at spawn: phase / inc = samples since the spawn */
     int is_new = !v->have_cand || age < v->best_age;
     if (is_new) { v->best_age = age; v->cand = g; v->have_cand = 1; v->newest = -1; }

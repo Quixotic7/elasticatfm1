@@ -387,6 +387,8 @@ void ec_kit_grains(const ec_grain_view_t *g, int n, int x0, int x1, int top)
                 w = 2, x = x < x0 + 1 ? x0 : x1 - 2;
             col = newest ? EC_C_ACC : lv > 0.75f ? EC_C_L15 : lv > 0.45f ? EC_C_L12 : lv > 0.2f ? EC_C_L8 : EC_C_L5;
             R(col, x, top + ((k * 5) % 9) * 4, w, 2);
+            if (w >= 6)                              /* 0.6.15 (owner): its direction: a blue head at the leading end */
+                R(EC_C_SRC, g[k].dir < 0 ? x : x + w - 2, top + ((k * 5) % 9) * 4, 2, 2);
         }
 }
 

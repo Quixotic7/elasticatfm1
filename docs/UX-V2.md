@@ -808,3 +808,7 @@ them:
 - **With a target, the knobs lock onto it** (as holding that step does); the cells show its locks.
 - The screen shows a **step strip**: the step page's 16 steps, each with its trig and a small bar of its region lock,
   the target outlined; the waveform marks the target step's region.
+- Built in 0.6.6 by hand: ec_loopstep.c (B11, the entries), ec_app_target_step (the target as a held step: knobs,
+  cells, F1 + knob), the step strip and the target's lock on the waveform (ec_screens.c loop_steps / target_on_wave).
+  **The zoom moved to B11 held + K1** (SHIFT + B11 is FILL); while B11 is held the white keys are labelled STEP n and
+  the header says STEP  K1 ZOOM. Tests: test_loopstep (22 checks), test_ux's zoom; the real shot Loop_target.

@@ -70,20 +70,32 @@ const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int t)
     return r->handle >= 0 ? ec_ss_ready(r->handle) : 0;
 }
 
+/* 0.6.6: LOOP ENGINE's target step acts as a held step (the knobs lock onto it, the cells show its locks) while no
+ * step key is held: docs/UX-V2.md "LOOP ENGINE step entry" */
+int ec_app_target_step(const ec_app_t *a)
+{
+    if (a->step_held || a->bus || a->settings || (a->scr ? a->scr : a->cat) != EC_CAT_SRC || a->pn.target <= 0)
+        return -1;
+    return a->pn.target - 1;
+}
+
 int ec_app_held_step(const ec_app_t *a)
 {
     int i;
     for (i = 0; i < EC_NLOWER; i++)
         if (a->step_held >> i & 1u)
             return a->step_page * 16 + i;
-    return -1;
+    return ec_app_target_step(a);
 }
 
 /* 0.6.1: the lock of param id on the held steps (the first held step that has one): 1 = locked, *x its value */
 int ec_app_held_lock(const ec_app_t *a, int id, float *x)
 {
     const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
+    const int ts = ec_app_target_step(a);
     int i;
+    if (ts >= 0)                                   /* 0.6.6: LOOP ENGINE's target */
+        return ec_step_lock_get(&tr->steps[ts], id, x);
     for (i = 0; i < EC_NLOWER; i++)
         if (a->step_held >> i & 1u) {
             const int s = a->step_page * 16 + i;
@@ -684,10 +696,13 @@ void ec_app_edit_param_f(int id, int det, int mult, int flags)
         return;
     if (hs >= 0 && !A->settings && (d->flags & EC_PF_LOCKABLE)) {   /* hold a step + turn = p-lock it */
         int i;
-        ec_e5_edit_param(A->track, id, 1);                           /* E5: undo */
+        const int ts = ec_app_target_step(A);      /* 0.6.6: or LOOP ENGINE's target step */
+        const uint16_t mask = ts >= 0 ? (uint16_t)(1u << (ts % 16)) : A->step_held;
+        const int page = ts >= 0 ? ts / 16 : A->step_page;
+        ec_undo_steps(&A->e5.undo, &A->proj, A->track, page, mask, "LOCK", 0x100u + (uint32_t)id, A->ms);   /* E5 */
         for (i = 0; i < EC_NLOWER; i++)
-            if (A->step_held >> i & 1u) {
-                ec_step_t *s = step_at(A->step_page * 16 + i);
+            if (mask >> i & 1u) {
+                ec_step_t *s = step_at(page * 16 + i);
                 float x;
                 if (!ec_step_lock_get(s, id, &x))
                     x = v[id];
@@ -742,6 +757,11 @@ void ec_app_clear_lock(int id)
             if (A->step_held >> i & 1u)
                 n += ec_step_lock_clear(step_at(A->step_page * 16 + i), id);
         A->step_edited |= A->step_held;
+    } else if (ec_app_target_step(A) >= 0) {       /* 0.6.6: LOOP ENGINE's target step: only its lock */
+        const int ts = ec_app_target_step(A);
+        ec_undo_steps(&A->e5.undo, &A->proj, A->track, ts / 16, (uint16_t)(1u << (ts % 16)), "UNLOCK",
+                      0xA00u + (uint32_t)id, A->ms);
+        n += ec_step_lock_clear(&tr->steps[ts], id);
     } else {
         int pg;
         for (pg = 0; pg * 16 < len; pg++) {

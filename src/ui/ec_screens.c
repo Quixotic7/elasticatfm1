@@ -430,6 +430,84 @@ static void key_ruler(const ec_app_t *a, int ky)
     ec_kit_key_ruler(ky, lit, in, n);
 }
 
+/* 0.6.6: LOOP ENGINE with a target step (docs/UX-V2.md "LOOP ENGINE step entry"), in place of the loop-key ruler:
+ * the step page's 16 steps (y 64..69: a trig a bright block, else a floor), the target (a bright cap) and the
+ * playhead (an accent cap) at y 61..62, and under each step its region lock (RANGE page: its range lock) as a LOCK bar
+ * placed in its cell like the region in the loop (y 71..72). On the waveform the target's lock is a LOCK bar (y 59) */
+static int lock_pair(const ec_step_t *st, int range, float *lo, float *hi)
+{
+    const int a = range ? EC_P_RANGE_START : EC_P_LOOP_START, b = range ? EC_P_RANGE_END : EC_P_LOOP_END;
+    const int ha = ec_step_lock_get(st, a, lo), hb = ec_step_lock_get(st, b, hi);
+    if (!ha && !hb)
+        return 0;
+    if (!ha)
+        *lo = 0;
+    if (!hb)
+        *hi = 128;
+    return 1;
+}
+static void loop_steps(const ec_app_t *a, int range)
+{
+    const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
+    const int len = ec_seq_pattern_steps(&a->seq, a->track);
+    const int play = ec_seq_step(&a->seq, a->track), tgt = ec_app_target_step(a);
+    int i;
+    for (i = 0; i < 16; i++) {
+        const int idx = a->step_page * 16 + i, x = 3 + i * 7;
+        const ec_step_t *st = &tr->steps[idx];
+        float lo, hi;
+        if (idx >= len) {
+            R(EC_C_L3, x + 1, 68, 2, 2);
+            continue;
+        }
+        if (st->trig || st->slices)
+            R(idx == tgt ? EC_C_L15 : EC_C_L12, x, 64, 5, 6);
+        else
+            R(idx == tgt ? EC_C_L15 : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 68, 5, 2);
+        if (idx == tgt)
+            R(EC_C_L15, x, 61, 5, 2);
+        if (idx == play && (a->seq.playing || a->seq.paused))
+            R(EC_C_ACC, x, 61, 5, 2);
+        if (lock_pair(st, range, &lo, &hi)) {        /* its lock, placed in the cell as in the loop */
+            int l = (int)floorf(lo / 128.0f * 5.0f), r = (int)ceilf(hi / 128.0f * 5.0f);
+            l = clampi(l, 0, 3);
+            r = clampi(r, l + 2, 5);                 /* at least 2 units */
+            R(EC_C_LOCK, x + l, 71, r - l, 2);
+        }
+    }
+}
+/* the target step's lock on the waveform (whole-sample x, through the slot's trim and the range) */
+static void target_on_wave(const ec_app_t *a, int range, int y)
+{
+    const int tgt = ec_app_target_step(a);
+    const float *v = tv(a);
+    const ec_slot_t *sl = &a->proj.slot[ec_app_track_slot(a, a->track)];
+    const ec_step_t *st;
+    float lo, hi, rs, re;
+    int x0, x1;
+    if (tgt < 0)
+        return;
+    st = &a->proj.pat[a->proj.current].tr[a->track].steps[tgt];
+    if (!lock_pair(st, range, &lo, &hi))
+        return;
+    if (range) {
+        rs = lo / 128.0f;
+        re = hi / 128.0f;
+    } else {                                         /* the region lives inside the range (the step's, else the track's) */
+        float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END];
+        lock_pair(st, 1, &r0, &r1);
+        rs = (r0 + (r1 - r0) * lo / 128.0f) / 128.0f;
+        re = (r0 + (r1 - r0) * hi / 128.0f) / 128.0f;
+    }
+    rs = sl->trim_start + (sl->trim_end - sl->trim_start) * rs;
+    re = sl->trim_start + (sl->trim_end - sl->trim_start) * re;
+    x0 = 2 + 2 * (int)floorf(rs * (float)(W - 4) * 0.5f);
+    x1 = 2 + 2 * (int)ceilf(re * (float)(W - 4) * 0.5f);
+    if (x1 < x0 + 2)
+        x1 = x0 + 2;
+    R(EC_C_LOCK, x0, y, x1 - x0, 2);
+}
+
 /* the step strip: this step page's trigs, ghosts, locks, the held step, the playhead; the pages under it */
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
 {
@@ -514,7 +592,11 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     }
     sample_area(a, 22, 58);
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
-        key_ruler(a, 66);                          /* 0.6.0: LOOP ENGINE's white keys play the loop */
+        if (ec_app_target_step(a) >= 0) {          /* 0.6.6: a target step: the keys write it */
+            target_on_wave(a, pg->pic == EC_PIC_WAVE_RANGE, 59);
+            loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE);
+        } else
+            key_ruler(a, 66);                      /* 0.6.0: LOOP ENGINE's white keys play the loop */
     }
     cells(a, pg);
 }

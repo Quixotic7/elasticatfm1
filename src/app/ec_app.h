@@ -90,6 +90,7 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
 const char *ec_app_item_label(const ec_item_t *it);
 float ec_app_item_frac(const ec_app_t *a, const ec_item_t *it, float x);
 int ec_app_held_step(const ec_app_t *a);                      /* the first held step's index in the pattern, -1 */
+int ec_app_target_step(const ec_app_t *a);                    /* 0.6.6: LOOP ENGINE's target step as a held one, -1 */
 int ec_app_held_lock(const ec_app_t *a, int id, float *x);   /* 0.6.1: id locked on a held step: its value */
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int track);
 int ec_app_track_slot(const ec_app_t *a, int track);         /* 0-based pool slot */

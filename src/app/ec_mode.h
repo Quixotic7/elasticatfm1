@@ -265,6 +265,14 @@ int ec_pages_count(void);                     /* the selected track's pattern pa
 void ec_kb_key(int k, int down, int vel);     /* any of the 27 keys (k: the note key) */
 void ec_kb_oct(int d);
 void ec_kb_target(int det);                   /* ALGO */
+/* 0.6.6: LOOP ENGINE step entry (ec_loopstep.c): the target step (shared with KEYBOARD) written by the white keys */
+int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */
+int ec_lp_target(void);                       /* its target step 1.., 0 = LIVE (or not LOOP ENGINE) */
+void ec_lp_b11(int down);                     /* B11: held = pick a step with a white key, a tap = LIVE */
+int ec_lp_b11_held(void);
+void ec_lp_b11_used(void);                    /* B11 held + K1 turned the zoom: not a tap */
+int ec_lp_white(int k, int i, int down, int vel);   /* 1 = taken */
+uint32_t ec_lp_keys(void);                    /* the entry's keys held now */
 int ec_kb_slice_track(void);
 int ec_kb_semis(int k);                       /* key k's note in semitones from C4, the octave applied */
 int ec_kb_lit_key(void);                      /* the key lit as sounding (the note + PITCH), -1 none */

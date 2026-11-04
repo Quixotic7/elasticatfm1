@@ -354,6 +354,10 @@ press HOME@135600
 upper 2@136200+1000
 turn K1@136700:2
 png 137000:Loop_menu.png
+# 0.6.6: ALGO +3 = target step 3 (the step strip in place of the loop-key ruler), then back to LIVE
+turn ALGO@137300:3
+png 137450:Loop_target.png
+turn ALGO@137500:-3
 
 # ======== 0.6.1 (v61b-panel): the list menus. APP SETTINGS (SHIFT + HOME) with THEME selected: two lines, the
 # theme's name on the second; the record settings (REC held), SEL twice: COUNT-IN selected, K1 is that row

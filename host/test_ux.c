@@ -713,17 +713,27 @@ static void test_sources(void)
     tapkey(1, bkey(2), 40);                                   /* M1 page, back to FILTER: hold M1 there? MOD only */
     to(EC_CAT_FILT);
     ec_app_set_page(EC_CAT_FILT, 0);
-    /* LOOP ENGINE: B11 = the zoom */
+    /* LOOP ENGINE: B11 held + K1 = the zoom (0.6.6: B11 itself picks the target step, test_loopstep) */
     to(EC_CAT_SRC);
     v = ec_app_params(A);
     v[EC_P_LOOP_DIVISION] = 16;
-    tapkey(1, bkey(11), 40);
-    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11: 32, first half");
-    tapkey(1, bkey(11), 40);
-    CHECK(v[EC_P_LOOP_DIVISION] == 32 && A->pn.zoom_half && lbl(FM1CORE_LBL_WHITE0, "L17"),
-          "B11: the second half (W1 = %s)", L(FM1CORE_LBL_WHITE0));
-    tapkey(1, bkey(11), 40);
-    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11: back to 16");
+    key(1, bkey(11), 1);
+    run(20);
+    turn(FM1P_E_K1, 1);
+    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11 + K1: 32, first half");
+    turn(FM1P_E_K1, 1);
+    run(60);
+    CHECK(v[EC_P_LOOP_DIVISION] == 32 && A->pn.zoom_half && lbl(FM1CORE_LBL_WHITE0, "STEP 1"),
+          "B11 + K1: the second half; while B11 is held the keys pick steps (W1 = %s)", L(FM1CORE_LBL_WHITE0));
+    key(1, bkey(11), 0);
+    run(60);
+    CHECK(lbl(FM1CORE_LBL_WHITE0, "L17"), "B11 let go: the second half's loop keys (W1 = %s)", L(FM1CORE_LBL_WHITE0));
+    key(1, bkey(11), 1);
+    run(20);
+    turn(FM1P_E_K1, -2);
+    key(1, bkey(11), 0);
+    run(20);
+    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11 + K1 -2: back to 16");
     /* FX: the buses, the slot keys */
     to(EC_CAT_FX);
     tapkey(1, bkey(3), 40);

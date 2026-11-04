@@ -399,17 +399,16 @@ static void goto_source(int i)
     }
 }
 
-/* LOOP ENGINE's B11: 16 loop keys -> 32 (the first 16) -> 32 (the second 16) */
-static void zoom(void)
+/* LOOP ENGINE's zoom: 16 loop keys -> 32 (the first 16) -> 32 (the second 16). 0.6.6: B11 held + K1 (B11 itself
+ * picks the target step; SHIFT + B11 is FILL): K1 right steps it on, left back */
+static void zoom(int det)
 {
     float *v = ec_app_params(A);
     const int div = iv(v, EC_P_LOOP_DIVISION);
-    int nd = 16, half = 0;
+    const int at = div == 32 ? (P->zoom_half ? 2 : 1) : 0;
+    const int to = at + (det > 0 ? 1 : -1) < 0 ? 0 : at + (det > 0 ? 1 : -1) > 2 ? 2 : at + (det > 0 ? 1 : -1);
+    int nd = to ? 32 : 16, half = to == 2;
     char b[16];
-    if (div == 16)
-        nd = 32;
-    else if (div == 32 && !P->zoom_half)
-        nd = 32, half = 1;
     if (nd != div) {
         ec_e5_edit_param(A->track, EC_P_LOOP_DIVISION, 0);
         v[EC_P_LOOP_DIVISION] = (float)nd;
@@ -430,8 +429,8 @@ void ec_src_down(int key)
         P->src_key = key;
         return;
     }
-    if (key == 11 && mode == EC_CAT_SRC) {
-        zoom();
+    if (key == 11 && mode == EC_CAT_SRC) {         /* 0.6.6: B11 picks the target step (held + K1: the zoom) */
+        ec_lp_b11(1);
         return;
     }
     if (key == 11 && mode == EC_CAT_FILT) {        /* the filter envelope's mode */
@@ -461,6 +460,8 @@ void ec_src_down(int key)
 void ec_src_up(int key)
 {
     int held = 0;
+    if (key == 11 && ec_lp_b11_held())             /* 0.6.6: LOOP ENGINE's B11 */
+        ec_lp_b11(0);
     if (ec_hm_armed() == key)                      /* 0.6.1: a hold menu: let go = the pick; else a tap */
         held = ec_hm_up(key);
     if (swap_key == key) {                         /* 0.6.3: SENDS: not held long enough to swap: a tap */
@@ -498,6 +499,12 @@ int ec_src_knob(int role, int det)
 {
     const int mode = ec_app_mode();
     int id;
+    if (ec_lp_b11_held() && role == EC_E_K1) {     /* 0.6.6: LOOP ENGINE: B11 held + K1 = the zoom */
+        ec_lp_b11_used();
+        for (; det; det += det > 0 ? -1 : 1)       /* a detent a step */
+            zoom(det);
+        return 1;
+    }
     if (ec_hm_knob(role, det)) {                   /* 0.6.1: a hold menu (SEL / K1 move it) */
         if (ec_hm_armed())
             P->bk_used |= (uint16_t)(1u << (ec_hm_armed() - 1));

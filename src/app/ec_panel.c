@@ -24,7 +24,7 @@
 #define TAP_MS 250            /* a step key released within this (not edited): a tap toggles the trig */
 
 /* what a key does from its press to its release */
-enum { R_NONE, R_STEP, R_LOOP_LIVE, R_PAD, R_KB, R_RAZOR, R_F3, R_SWALLOW, R_TRK, R_XFD, R_SRCB, R_PAGEB, R_SHIFTB,
+enum { R_NONE, R_LP, R_STEP, R_LOOP_LIVE, R_PAD, R_KB, R_RAZOR, R_F3, R_SWALLOW, R_TRK, R_XFD, R_SRCB, R_PAGEB, R_SHIFTB,
        R_FILEB, R_FILEW };
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
@@ -626,6 +626,12 @@ static void white_down(int k, int i, int vel, int lean)
                 return;
             }
             break;
+        case EC_CAT_SRC:                           /* 0.6.6: LOOP ENGINE with a target step: the other advance */
+            if (ec_lp_white(k, i, 1, vel)) {
+                A->key_role[k] = R_LP;
+                return;
+            }
+            break;
         default: break;
         }
         if (i < 9)
@@ -641,7 +647,13 @@ static void white_down(int k, int i, int vel, int lean)
                 A->key_role[k] = R_TRK;
             }
             return;
-        case EC_CAT_SRC: loop_down(k, i, vel); return;
+        case EC_CAT_SRC:
+            if (ec_lp_white(k, i, 1, vel)) {       /* 0.6.6: B11's step pick, or the target step's entry */
+                A->key_role[k] = R_LP;
+                return;
+            }
+            loop_down(k, i, vel);
+            return;
         case EC_MODE_KEYBOARD:
             ec_kb_key(k, 1, vel);
             A->key_role[k] = R_KB;
@@ -693,6 +705,7 @@ static void white_up(int k, int i, int vel)
     } else if (ec_e5_lower_up(k, i))
         return;
     switch (r) {
+    case R_LP: ec_lp_white(k, i, 0, vel); break;
     case R_STEP: step_up(i, vel); break;
     case R_LOOP_LIVE: ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0); break;
     case R_PAD: ec_seq_slice_pad(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0, 0); break;
@@ -945,8 +958,8 @@ static void knob(int r, int d)
             ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
         else if (ec_fx_on_sends())
             ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
-        else if (mode == EC_MODE_KEYBOARD)
-            ec_kb_target(d);                       /* KEYBOARD: the target step */
+        else if (mode == EC_MODE_KEYBOARD || (mode == EC_CAT_SRC && !A->bus))
+            ec_kb_target(d);                       /* KEYBOARD, 0.6.6 LOOP ENGINE: the target step */
         else {                                     /* the step page */
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
             const int p = clampi(A->step_page + (d > 0 ? 1 : -1), 0, pages - 1);

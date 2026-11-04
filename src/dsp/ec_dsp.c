@@ -770,9 +770,12 @@ static void fam_render(ec_dsp_t *d, ec_track_t *t, int fam, double run, float *L
         double rp = ec_clampd(t->lo + t->emit_ph * (t->hi - t->lo), 0.0, 0.999999);
         double einc = inc * (t->hi - t->lo) * F;
         double density = ec_clampd(p->grain_density, 1.0, 64.0);
+        /* 0.6.15 (owner): GSPD slows each grain's own read as well as the cursor (0.05 at the floor: a crawl, never
+         * a stall); 1 = the track's pitch, 4 = four times */
+        double gread = ec_clampd(t->gspeed_lag, 0.05, 4.0);
         ec_grains_process(&t->gr, &t->smp, d->hann, rp * F, einc, density,
                           (double)t->gsize_lag * d->fs, (double)t->gspread_lag * (double)t->smp.rate,   /* 0.6.14: seconds, not a file fraction */
-                          t->brs * pitch_ratio(t), p->grain_speed_rand, p->grain_direction,
+                          t->brs * pitch_ratio(t) * gread, p->grain_speed_rand, p->grain_direction,
                           L, R, n);
         t->emit_ph += inc * n;
         t->emit_ph -= floor(t->emit_ph);

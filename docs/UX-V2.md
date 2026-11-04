@@ -949,3 +949,5 @@ the B11 pick mode above)
   at its leading end (left = reverse). GSPD measured in the harness (ui_info ppos / gmean): the cloud follows the
   cursor at 0.14 as at 1.0 and 4.0, so the engine responds; a new version number every build so the web player
   never serves a stale cart under the old name.
+- GSPD (owner: "each grain too"): besides the cursor's drift, GSPD scales each grain's own read rate (x PITCH;
+  0.05 at the floor so a grain never stalls): at 0.1 every grain crawls, an octave and more down; at 4 four times up.

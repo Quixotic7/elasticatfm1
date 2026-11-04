@@ -4,7 +4,8 @@
  * intro, SHIFT (held / sticky) and its layer, F1 / F2 (tap sticky, hold momentary; both = F3), PLAY, REC, the white
  * keys as steps, PRESETS = the track's pool slot, ALGO = the step page. The modes' own keys are in ec_srckeys.c,
  * ec_mix.c, ec_keyboard.c, ec_xfd.c, ec_patlaunch.c, ec_file.c, ec_sampler.c; live REC in ec_liverec.c.
- * FILE cannot open while playing (STOP FIRST, its button flashes); inside it PLAY and REC do nothing. */
+ * 0.6.11: FILE opens while playing (BROWSE, POOL, the SAMPLER); the EDITOR, RAZOR, free, move and purge need a stop
+ * (STOP FIRST). Inside FILE PLAY works (from the EDITOR / RAZOR it goes to BROWSE first); REC does nothing. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -144,11 +145,6 @@ void ec_pn_enter(int mode)
     const int b = ec_mode_button(mode);
     if (mode < 0 || mode >= EC_NMODE)
         return;
-    if (mode == EC_CAT_FILE && was != EC_CAT_FILE && (A->seq.playing || ec_seq_counting_in(&A->seq))) {
-        ec_app_alert("STOP FIRST");                /* FILE can't open while playing: its button flashes */
-        P->file_refused_ms = A->ms ? A->ms : 1;
-        return;
-    }
     overlays_close();
     ec_mk_off();                                   /* a source key's hold ends (no tap) */
     P->src_key = P->slot_key = 0;
@@ -159,8 +155,15 @@ void ec_pn_enter(int mode)
         ec_sampler_enter(0);
     if (was == EC_CAT_FILE && mode != EC_CAT_FILE)
         ec_file_leave();                           /* the preview stops */
-    if (mode == EC_CAT_FILE && was != EC_CAT_FILE)
+    if (mode == EC_CAT_FILE && was != EC_CAT_FILE) {
+        int p;
         ec_liverec_stop();                         /* (no live REC inside FILE: a CAPTURE waiting ends) */
+        for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)   /* 0.6.11 (QA finding 2): it opens on BROWSE, always */
+            if (ec_page_pic(EC_CAT_FILE, p, 0) == EC_PIC_FILE) {
+                ec_app_set_page(EC_CAT_FILE, p);
+                break;
+            }
+    }
     if (mode >= EC_NCAT)
         A->scr = mode;
     else {
@@ -225,10 +228,10 @@ static void mode_tap(int b)
         return;
     }
     {
-        int m = P->last[mb] >= 0 ? P->last[mb] : modes[0];
-        if (m == EC_CAT_FILE && (A->seq.playing || ec_seq_counting_in(&A->seq)))
-            m = EC_MODE_SAMPLER;                   /* playing: FILE can't open, its SAMPLER (not gated) does */
-        ec_pn_enter(m);
+        /* 0.6.11 (QA findings 2, 3): HOME and FILE from another mode always open their first sub-mode (LOOP ENGINE,
+         * FILE's BROWSE), so a blind press lands in one place; a tap again cycles. EDIT keeps MIX / PAGES as it was */
+        const int remembered = mb != EC_MB_HOME && mb != EC_MB_FILE;
+        ec_pn_enter(remembered && P->last[mb] >= 0 ? P->last[mb] : modes[0]);
     }
 }
 
@@ -259,6 +262,8 @@ void ec_pn_select_target(int i)      /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
 {
     i = clampi(i, 0, EC_NTRACK + 2);
     if (i < EC_NTRACK) {
+        if (i != A->track)
+            ec_lp_track(A->track, i);              /* 0.6.11: the step selection and target are the track's */
         A->track = i;
         A->bus = 0;
     } else
@@ -435,9 +440,9 @@ static void button_down(int b)
         return;
     }
     switch (b) {
-    case EC_B_PLAY:                                /* start / stop at once, on press (FILE: nothing) */
-        if (ec_app_mode() == EC_CAT_FILE)
-            break;
+    case EC_B_PLAY:                                /* start / stop at once, on press */
+        if (ec_app_mode() == EC_CAT_FILE && !A->seq.playing && ec_file_play_leave())
+            break;                                 /* 0.6.11: the EDITOR / RAZOR can't play: it goes to BROWSE first */
         if (A->seq.playing) {
             ec_seq_stop(&A->seq);
             ec_liverec_stop();

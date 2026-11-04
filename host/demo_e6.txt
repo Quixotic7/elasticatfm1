@@ -7,9 +7,10 @@ png-scale 2
 master 640@0
 press PLAY@1200
 
-# ---- FILE while playing = the SAMPLER (FILE itself opens only while stopped): the input (AIN1) into the next free
-#      pool slot (SLOT 2), the VU
+# ---- FILE while playing opens BROWSE (0.6.11); FILE again = the SAMPLER: the input (AIN1) into the next free pool
+#      slot (SLOT 2), the VU
 press SAVE@1400
+press SAVE@1550
 png 1700:01_rec_idle.png
 # B2: 1 BAR
 upper 1@1800+60
@@ -38,6 +39,7 @@ png 7700:07_input_none.png
 # ---- the SAMPLER without input; FILE held: the recorder's setup (0.4's REC pop-up), K1 = the master out as the
 #      source (resample); F1 closes it
 press SAVE@7900
+press SAVE@8050
 png 8200:08_rec_no_input.png
 press SAVE@8300+500
 turn K1@8900:1

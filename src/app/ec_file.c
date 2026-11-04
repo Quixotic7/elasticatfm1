@@ -551,11 +551,32 @@ static void load(void)
     ec_app_message(m);
 }
 
+/* 0.6.11: PLAY inside FILE: 1 = the EDITOR / RAZOR was shown, now BROWSE (the press is used up; play from there) */
+int ec_file_play_leave(void)
+{
+    const int pic = ec_file_page();
+    int p;
+    if (pic != EC_PIC_EDITOR && pic != EC_PIC_RAZOR)
+        return 0;
+    for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)
+        if (ec_page_pic(EC_CAT_FILE, p, 0) == EC_PIC_FILE) {
+            ec_app_set_page(EC_CAT_FILE, p);
+            break;
+        }
+    ec_app_message("BROWSE: PLAY AGAIN");
+    A->redraw = 1;
+    return 1;
+}
+
 int ec_file_f2(void)
 {
     const char *path = cursor_path();
     const int s = path ? ec_file_pooled(path) : -1;
     char m[24];
+    if (A->seq.playing) {                          /* 0.6.11: a slot a track may be playing: not while playing */
+        ec_app_alert("STOP FIRST");
+        return -1;
+    }
     if (s < 0) {
         ec_app_message("NOT IN THE POOL");
         return 0;
@@ -810,6 +831,10 @@ void ec_file_pool_f2(void)
 {
     const int s = P->pool_cur;
     char m[24];
+    if (A->seq.playing) {                          /* 0.6.11: not while a track may be playing it */
+        ec_app_alert("STOP FIRST");
+        return;
+    }
     if (!slot_has(s)) {
         ec_app_message("EMPTY SLOT");
         return;
@@ -857,6 +882,11 @@ void ec_file_black(int key, int down)
         return;
     }
     if (ec_file_key_page(key) >= 0) {             /* B3 BROWSE, B4 EDITOR, B5 RAZOR, B6 POOL (the layout's keys) */
+        const int pic2 = ec_page_pic(EC_CAT_FILE, ec_file_key_page(key), 0);
+        if (A->seq.playing && (pic2 == EC_PIC_EDITOR || pic2 == EC_PIC_RAZOR)) {
+            ec_app_alert("STOP FIRST");            /* 0.6.11: only the EDITOR and RAZOR need the transport stopped */
+            return;
+        }
         ec_nav_key(EC_CAT_FILE, key);              /* 0.6.2: its page; tapped again there, its next lane */
         P->pool_carry = -1;
         A->redraw = 1;

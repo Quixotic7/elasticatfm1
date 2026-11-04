@@ -181,6 +181,30 @@ static void test_range(void)
     turn(FM1P_E_ALGO, -20);
 }
 
+/* 0.6.11 (QA findings 1 / 4): the selection and the target step are each track's own */
+static void test_tracks(void)
+{
+    to(EC_CAT_SRC);
+    ec_pn_select_target(0);
+    hold_b11(1);
+    wtap(2);
+    hold_b11(0);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(2) && A->pn.target == 3, "T1: step 3 selected (target 3)");
+    ec_pn_select_target(1);
+    CHECK(A->track == 1 && ec_lp_count() == 0 && A->pn.target == 0, "T2: nothing selected, LIVE (%d %d)",
+          ec_lp_count(), A->pn.target);
+    hold_b11(1);
+    wtap(4);
+    hold_b11(0);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(4) && A->pn.target == 5, "T2: step 5 selected, its own");
+    ec_pn_select_target(0);
+    CHECK(ec_lp_count() == 1 && ec_lp_is_sel(2) && A->pn.target == 3, "back on T1: step 3 again (target %d)",
+          A->pn.target);
+    ec_pn_select_target(1);
+    CHECK(ec_lp_is_sel(4) && A->pn.target == 5, "T2 again: step 5 kept");
+    ec_pn_select_target(0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -192,6 +216,7 @@ int main(int argc, char **argv)
     test_layers();
     test_knobs();
     test_range();
+    test_tracks();
     C->shutdown();
     printf("test_loopstep: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

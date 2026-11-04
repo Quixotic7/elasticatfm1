@@ -32,7 +32,9 @@ Words used here:
 | ARP | CROSSFADER | - | (none: NO SETTINGS) | (none) |
 | SEQ | PATTERN LAUNCH | - | F3 | F3 |
 
-- **Each mode remembers its page.** A button with sub-modes (HOME, EDIT, FILE) comes back to the sub-mode it was on.
+- **Each mode remembers its page.** EDIT comes back to the sub-mode it was on (MIX / PAGES). 0.6.11: **HOME from
+  another mode is always LOOP ENGINE** (tap again: TRIG, KEYBOARD) and **FILE is always BROWSE** (again: the SAMPLER),
+  so a blind press lands in one place.
 - **Settings stay open** when you let go. F1 or F2 closes them, back to the mode they were opened over. The mode's
   own button (or SHIFT + it again) goes back too. Another mode button closes them and opens its mode.
 - **Power-on and project load: LOOP ENGINE.** There is no separate "main view" any more.
@@ -996,7 +998,7 @@ An FX machine changes at any time (a short fade, no click).
 | B1 | **LOOP** (hold: the machine, with K1 or SEL) |
 | B2 / B3 / B4 | **MACHINE**, **WARP**, **RANGE** |
 | B6-B10 | the sources |
-| ALGO | **selects one step** (shared with KEYBOARD's target); below step 1 is **LIVE** (nothing selected) |
+| ALGO | **selects one step** (shared with KEYBOARD's target; 0.6.11: each track's own); below step 1 is **LIVE** (nothing selected) |
 | B11 | **the STEP layer**: held = the white keys select steps; a quick click latches it (another quick click: loop keys again). Latched, held = the loop keys. B11 never goes LIVE. Held + **OCT-**: clear the selected steps. Held + K1: the zoom (16 loop keys → 32, keys 1-16 → 32, keys 17-32) |
 | White keys | **the loop keys, always live**; with steps selected each entry is also written into them. STEP layer: select steps |
 
@@ -1005,7 +1007,9 @@ An FX machine changes at any time (a short fade, no click).
   play exactly as live**, but each entry (the keys held together, written when the last is let go) also goes into
   **every selected step**: its region lock (one key: that division; several: first..last) and a trig. On the
   **RANGE page** (B4) the entry is the steps' **range** (the 16 keys over the whole sample). The selection stays
-  until you select again (holding B11 and pressing nothing keeps it); ALGO selects one step, and ALGO below step 1
+  until you select again (holding B11 and pressing nothing keeps it); 0.6.11: it is **the track's own** (T2 has its
+  own selection and target step; switching tracks never writes into another track's steps), and on the LOOP layer the
+  selected steps stay in view as **bright caps over the loop-key ruler**; ALGO selects one step, and ALGO below step 1
   is LIVE (nothing selected). **A quick click on B11 latches the STEP layer** (press steps to select them; hold B11
   for the loop keys, the reverse order); another quick click goes back to loop keys. **B11 + OCT-** clears the
   selected steps (trig and locks; SHIFT + F1 undoes). With steps selected **the knobs lock onto all of them** (the
@@ -1054,8 +1058,9 @@ An FX machine changes at any time (a short fade, no click).
 
 ### FILE (FILE, first)
 
-- **FILE can't open while playing.** The button flashes and the screen says STOP FIRST. Tapping FILE while playing
-  opens the SAMPLER instead. Inside FILE, PLAY and REC do nothing.
+- 0.6.11: **FILE opens while playing** (BROWSE, POOL, the SAMPLER; loads and previews too). Only the **EDITOR and
+  RAZOR** (B4 / B5), **FREE**, **MOVE** and **purge** say STOP FIRST. Inside FILE, PLAY starts and stops (from the
+  EDITOR / RAZOR it goes to BROWSE first: "BROWSE: PLAY AGAIN"); REC does nothing.
 - Pages: **BROWSE (B3)**, **EDITOR (B4)**, **RAZOR (B5)**, **POOL (B6)**, in that order.
 - **SEL turns the page on EDITOR and RAZOR**, both ways (lane by lane: EDITOR and RAZOR have two lanes each, then the
   next page): BROWSE < EDITOR < RAZOR < POOL. On **BROWSE and POOL, SEL is the list's cursor**; their way out is a page
@@ -1352,7 +1357,7 @@ What the code does where the spec says otherwise (or says nothing):
 - **EDIT's settings** are the project's MASTER settings (NAME, GLO BPM, BPM, RETURN MODE), not per-track settings.
 - **ARP has no settings** (NO SETTINGS). The glide time is on W13-W16 and kept in the APP SETTINGS record.
 - **SHIFT + FILE saves**; only a hold of FILE opens its settings, which are the recorder's setup (0.4's REC pop-up).
-- **FILE while playing:** besides STOP FIRST and the flashing button, tapping FILE opens the SAMPLER.
+- **FILE while playing** opens BROWSE (0.6.11); tapping FILE again is the SAMPLER.
 - **FILE's pages are on B3 / B4 / B5** (BROWSE / EDITOR / RAZOR). In the EDITOR every black key is a zoom or scroll
   key, so **SEL** goes back to BROWSE.
 - **LOAD** also sets the selected track to the new slot, and a file already in the pool is not loaded again.

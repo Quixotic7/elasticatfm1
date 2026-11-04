@@ -610,6 +610,26 @@ static void loop_steps(const ec_app_t *a, int range)
         }
     }
 }
+/* 0.6.11 (QA finding 1): on the LOOP layer with steps selected, the step page's 16 cells as caps at y 61..62 over the
+ * loop-key ruler: a selected step bright, the others a floor, the playhead the accent; so what the loop keys will
+ * write into is in view without switching layers */
+static void sel_caps(const ec_app_t *a)
+{
+    const int len = ec_seq_pattern_steps(&a->seq, a->track);
+    const int play = ec_seq_step(&a->seq, a->track);
+    int i;
+    for (i = 0; i < 16; i++) {
+        const int idx = a->step_page * 16 + i, x = 3 + i * 7;
+        if (idx >= len)
+            continue;
+        if (ec_lp_is_sel(idx))
+            R(EC_C_L15, x, 61, 5, 2);
+        else
+            R(i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 62, 5, 1);
+        if (idx == play && (a->seq.playing || a->seq.paused))
+            R(EC_C_ACC, x, 61, 5, 2);
+    }
+}
 /* the step strip: this step page's trigs, ghosts, locks, the held step, the playhead; the pages under it */
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
 {
@@ -696,8 +716,11 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
         if (a == &ec_app && ec_lp_step_layer()) {  /* 0.6.9: the STEP layer: the step strip; the LOOP layer is live's */
             loop_steps(a, pg->pic == EC_PIC_WAVE_RANGE);
-        } else
+        } else {
             key_ruler(a, 66);                      /* 0.6.0: LOOP ENGINE's white keys play the loop */
+            if (a == &ec_app && ec_lp_first() >= 0)
+                sel_caps(a);                       /* 0.6.11: the selected steps stay in view over the loop keys */
+        }
     }
     cells(a, pg);
 }

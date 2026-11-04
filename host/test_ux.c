@@ -188,9 +188,9 @@ static void test_modes(void)
     CHECK(mode() == EC_MODE_KEYBOARD && A->scr == EC_MODE_KEYBOARD, "HOME again: KEYBOARD");
     press(FM1P_B_FX, 40);
     press(FM1P_B_HOME, 40);
-    CHECK(mode() == EC_MODE_KEYBOARD, "HOME from FX: back to the sub-mode it was on");
+    CHECK(mode() == EC_CAT_SRC, "HOME from FX: LOOP ENGINE, always (0.6.11), not the sub-mode it was on");
     press(FM1P_B_HOME, 40);
-    CHECK(mode() == EC_CAT_SRC, "HOME again: round to LOOP ENGINE");
+    CHECK(mode() == EC_CAT_TRIG, "HOME again: TRIG");
     press(FM1P_B_EDIT, 40);
     CHECK(mode() == EC_CAT_MASTER, "EDIT: MIX");
     press(FM1P_B_EDIT, 40);

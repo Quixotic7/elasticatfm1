@@ -241,9 +241,9 @@ static void test_messages(void)
     press(FM1P_B_OCTDN, 40);
     to(EC_CAT_SRC);                                           /* an alert: FILE while playing */
     press(FM1P_B_PLAY, 40);
-    press(FM1P_B_SAVE, 40);                                   /* (playing: FILE opens the SAMPLER; again: refused) */
+    press(FM1P_B_SAVE, 40);                                   /* (0.6.11: FILE opens playing; the EDITOR is refused) */
     run(100);
-    press(FM1P_B_SAVE, 40);
+    tapkey(1, 3, 40);
     run(30);
     CHECK(!strcmp(hdr(&bar), "STOP FIRST") && bar == EC_C_ALERT && px(14, 0) == EC_C_ALERT,
           "an alert: STOP FIRST on the ALERT bar (%s %d)", hdr(0), bar);

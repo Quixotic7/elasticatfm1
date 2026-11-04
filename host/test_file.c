@@ -49,36 +49,50 @@ static void settle(int n)
 }
 
 /* ------------------------------------------------------------------------------------------- gating --- */
+/* 0.6.11 (QA finding 5): FILE opens while playing, on BROWSE; only the EDITOR, RAZOR, FREE, MOVE and purge need a stop */
 static void test_gating(void)
 {
     to(EC_CAT_SRC);
     press(FM1P_B_PLAY, 40);
     CHECK(A->seq.playing, "playing");
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_MODE_SAMPLER, "FILE while playing: the SAMPLER opens (FILE can't) (%d)", mode());
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE && A->seq.playing,
+          "FILE while playing: BROWSE opens, still playing (%d)", mode());
+    B(4, 40);
+    CHECK(ec_file_page() == EC_PIC_FILE && A->msg_alert && !strcmp(A->msg, "STOP FIRST"),
+          "B4 while playing: the EDITOR refused, STOP FIRST (%s)", A->msg);
+    B(5, 40);
+    CHECK(ec_file_page() == EC_PIC_FILE && !strcmp(A->msg, "STOP FIRST"), "B5 while playing: RAZOR refused");
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!strcmp(A->msg, "STOP FIRST"), "F2 (FREE) while playing: refused (%s)", A->msg);
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_MODE_SAMPLER && A->msg_alert && !strcmp(A->msg, "STOP FIRST") && A->pn.file_refused_ms,
-          "FILE again while playing: refused, STOP FIRST in ALERT (%s %d)", A->msg, A->msg_alert);
-    {
-        int on = 0, off = 0, i;
-        for (i = 0; i < 30; i++) {
-            run(10);
-            on += led_btn(FM1P_B_SAVE) == FM1P_LED_LIT;
-            off += led_btn(FM1P_B_SAVE) == FM1P_LED_OFF;
-        }
-        CHECK(on && off, "the FILE button flashes (%d lit, %d off)", on, off);
-    }
+    CHECK(mode() == EC_MODE_SAMPLER, "FILE again: the SAMPLER (%d)", mode());
     press(FM1P_B_PLAY, 40);                        /* PLAY works in the SAMPLER */
     CHECK(!A->seq.playing, "stopped from the SAMPLER");
+    to(EC_CAT_SRC);
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_CAT_FILE, "stopped: FILE opens (%d)", mode());
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "stopped, from LOOP ENGINE: FILE on BROWSE (%d)",
+          mode());
     press(FM1P_B_PLAY, 40);
-    CHECK(!A->seq.playing && lbl(FM1CORE_LBL_BTN0 + FM1P_B_PLAY, ""), "inside FILE PLAY does nothing");
+    CHECK(A->seq.playing, "inside BROWSE PLAY starts");
+    press(FM1P_B_PLAY, 40);
+    CHECK(!A->seq.playing, "and stops");
+    B(4, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "stopped: B4 opens the EDITOR");
+    press(FM1P_B_PLAY, 40);
+    CHECK(!A->seq.playing && ec_file_page() == EC_PIC_FILE, "PLAY on the EDITOR: back to BROWSE, not playing (%s)",
+          A->msg);
+    press(FM1P_B_PLAY, 40);
+    CHECK(A->seq.playing, "PLAY again: playing from BROWSE");
+    press(FM1P_B_PLAY, 40);
     press(FM1P_B_REC, 40);
     press(FM1P_B_REC, 500);
     CHECK(!ec_liverec_on() && !A->pn.rs_open, "inside FILE REC does nothing (tap, hold)");
+    B(4, 40);
+    to(EC_CAT_SRC);
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "FILE from another mode: BROWSE, never the EDITOR");
 }
-
 /* ------------------------------------------------------------------------------------------- the browser --- */
 static void test_folders(void)
 {
@@ -530,11 +544,16 @@ static void test_pool(void)
     press(FM1P_B_OCTDN, 40);
     B(3, 40);
     CHECK(A->pn.pool_carry < 0 && ec_file_page() == EC_PIC_FILE, "B3 with a slot in hand: BROWSE, MOVE dropped");
-    /* gated while playing, as the rest of FILE */
+    /* 0.6.11: POOL opens while playing; MOVE and FREE do not */
     to(EC_CAT_SRC);
     press(FM1P_B_PLAY, 40);
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_MODE_SAMPLER && A->seq.playing, "playing: FILE (and POOL) can't open (%d)", mode());
+    B(6, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_POOL && A->seq.playing, "playing: POOL opens (%d)", mode());
+    press(FM1P_B_OCTDN, 40);
+    CHECK(A->pn.pool_carry < 0 && !strcmp(A->msg, "STOP FIRST"), "MOVE while playing: STOP FIRST");
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!strcmp(A->msg, "STOP FIRST"), "FREE while playing: STOP FIRST");
     press(FM1P_B_PLAY, 40);
     for (i = 0; i < 2 && mode() != EC_CAT_FILE; i++)
         to(EC_CAT_FILE);

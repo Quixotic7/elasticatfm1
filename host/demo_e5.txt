@@ -119,8 +119,9 @@ png 15000:21_cleared.png
 press OCT+@15100
 
 # ---- slice programs on T2: SHIFT + W2; FILE (stopped first: FILE opens only while stopped): SELECT the bass, B10
-#      loads it into the next slot; HOME held = the machine settings, K1 + 2 = SLICE; HOME tapped closes them onto
-#      HOME's last mode (TRIG); HOME, HOME = KEYBOARD, LOOP ENGINE: the white keys are the slice pads; PLAY again
+#      loads it into the next slot; HOME held = the machine settings, K1 + 2 = SLICE; HOME tapped closes them and
+#      opens LOOP ENGINE (0.6.11: HOME from another mode is always LOOP ENGINE): the white keys are the slice pads;
+#      PLAY again
 press GLO@15300+200
 lower 1@15350+60
 press PLAY@15550
@@ -130,8 +131,6 @@ upper 9@15800+60
 press HOME@16300+500
 turn K1@16850:2
 press HOME@16950
-press HOME@17050
-press HOME@17150
 press PLAY@17220
 # hold pad 3 + KN1 (pitch) = that slice's lock; SELECT = SOURCE's lane 2, KN2 = CHOK (its choke group)
 lower 2@17300+900

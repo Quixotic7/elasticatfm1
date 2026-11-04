@@ -4,8 +4,9 @@
 # time. lower I = W(I+1), upper I = B(I+1). 0.6.1: no mode pop-ups (their shots are gone) and no toasts (messages show
 # in the header). A source key's route takes two turns: the
 # first detent makes the route, the next ones set its depth (one ec_run turn is one knob event). The machine and the
-# warp change only while stopped. Each mode button returns to the mode it showed last (HOME: LOOP ENGINE / TRIG /
-# KEYBOARD, EDIT: MIX / PAGES, SAVE: FILE / SAMPLER), so the presses below follow that.
+# warp change only while stopped. EDIT returns to the mode it showed last (MIX / PAGES); 0.6.11: HOME from another
+# mode is always LOOP ENGINE (then TRIG, KEYBOARD) and SAVE always FILE on BROWSE (then the SAMPLER), so the presses
+# below follow that.
 png-scale 2
 
 # ---- the intro (frame 42 of 55 at 10 fps: the whole logo), before any input
@@ -121,7 +122,7 @@ upper 0@37400+700
 turn K1@37600:3
 png 39600:Fx_screen.png
 
-# ---- HOME's pop-ups on their remembered pages: TRIG (its last) on COND, KEYBOARD, LOOP ENGINE on WARP; AMP on AMP ENV
+# ---- HOME's three sub-modes on their remembered pages: LOOP ENGINE on WARP, TRIG on COND, KEYBOARD; AMP on AMP ENV
 press HOME@40400
 press HOME@41200
 press HOME@42000
@@ -130,7 +131,7 @@ png 43800:Amp_screen.png
 press ENV@44200
 png 44800:Mod_env_screen.png
 
-# ---- KEYBOARD on T2 (SLICE), from FILTER: HOME = LOOP ENGINE (its last), TRIG, KEYBOARD (B4 there: slice 4), out and
+# ---- KEYBOARD on T2 (SLICE), from FILTER: HOME = LOOP ENGINE, TRIG, KEYBOARD (B4 there: slice 4), out and
 # in again for its pop-up; the target step 5 (ALGO)
 press SEL@45400
 press GLO@45800+300
@@ -208,11 +209,14 @@ turn K1@79500:30
 lower 8@81300+1000
 png 81500:Crossfader_screen.png
 
-# ---- SAMPLER (SAVE while playing): 2 BARS (B3); out and in again (its pop-up on 2 BARS); armed (B11): the next bar
+# ---- SAMPLER (SAVE while playing = BROWSE, 0.6.11; SAVE again): 2 BARS (B3); out and in again (its pop-up on 2
+# BARS); armed (B11): the next bar
 press SAVE@82400
+press SAVE@82600
 upper 2@82800
 press SEL@83200
 press SAVE@83600
+press SAVE@83800
 upper 10@84200
 png 85250:Sampler_screen.png
 
@@ -226,11 +230,10 @@ press HOME@95600
 png 96400:AppSettings_screen.png
 press HOME@97000
 
-# ======== stopped: FILE (SAVE twice: it remembers SAMPLER): /audio/kit (SEL, B2) loaded file by file (B10, SEL), up
+# ======== stopped: FILE (SAVE: BROWSE, always): /audio/kit (SEL, B2) loaded file by file (B10, SEL), up
 # (B1), into /audio/breaks (SEL, B2), three loads; the EDITOR (B4) at 4X (B4), the trim (W2 START, F2, W15 END, F1)
 press PLAY@97600
 press SAVE@98000
-press SAVE@98400
 turn SELECT@99000:1
 upper 1@99200
 upper 9@99600
@@ -348,9 +351,8 @@ png 132200:Fx_menu.png
 png 133400:Fx_two_inserts.png
 upper 1@133800
 png 134800:Fx_p2.png
-# ---- LOOP ENGINE (HOME twice from FILE: KEYBOARD, its last, then LOOP ENGINE): B3 held = the warp mode menu, K1 2
+# ---- LOOP ENGINE (HOME from FILE: LOOP ENGINE, always): B3 held = the warp mode menu, K1 2
 press HOME@135200
-press HOME@135600
 upper 2@136200+1000
 turn K1@136700:2
 png 137000:Loop_menu.png
@@ -370,8 +372,9 @@ turn SELECT@140300:2
 png 140800:Record_settings.png
 press OCT-@141000
 # ======== 0.6.1 (v61b-file): FILE's EDITOR in END mode, the POOL page
-# ---- FILE (SAVE: its EDITOR, the page it showed last, still 4X): F1 START + W3, F2 END + W13: the header says END
+# ---- FILE (SAVE: BROWSE; B4: the EDITOR, still 4X): F1 START + W3, F2 END + W13: the header says END
 press SAVE@142000
+upper 3@142200
 press OCT-@142600
 lower 2@142800
 press OCT+@143200

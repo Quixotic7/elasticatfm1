@@ -268,6 +268,7 @@ void ec_kb_target(int det);                   /* ALGO */
 /* 0.6.6 / 0.6.9: LOOP ENGINE step entry (ec_loopstep.c): B11 switches the white keys between LOOP and STEP layers;
  * the selected steps get the loop keys' regions / ranges and the knobs' locks */
 int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */
+void ec_lp_track(int from, int to);           /* 0.6.11: the selected track changed: its own selection / target */
 int ec_lp_target(void);                       /* the first selected step 1.., 0 = LIVE (or not LOOP ENGINE) */
 int ec_lp_first(void);                        /* the first selected step's index, -1 none */
 int ec_lp_count(void);                        /* steps selected */
@@ -340,6 +341,7 @@ void ec_file_white(int i, int down);          /* the editor's white keys (the tr
 void ec_file_hdr_init(void);                  /* 0.6.1: the header's text for a held trim key (ec_hdr_provider) */
 void ec_file_ed_point(int end);               /* 0.6.1: the EDITOR's F1 / F2: a white key places 0 START, 1 END */
 int ec_file_f2(void);                         /* F2 in the browser: free the pool slot of the file under the cursor */
+int ec_file_play_leave(void);                 /* 0.6.11: PLAY in FILE on the EDITOR / RAZOR: to BROWSE, 1 = press used */
 void ec_file_select(int d);                   /* SEL in the browser */
 int ec_file_page(void);                       /* FILE's page: its picture (EC_PIC_FILE / EDITOR / RAZOR / POOL) */
 int ec_file_key_page(int key);                /* the FILE page black key 1..11 opens, -1 */

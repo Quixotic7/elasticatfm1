@@ -848,3 +848,18 @@ the B11 pick mode above)
   the brackets show the first selected step's region. The step strip and step LEDs belong to the STEP layer.
 - 0.6.10 (owner): step selection works as FIZZ: keys held together are one selection; once every step key is let
   go, the next press starts a new selection (that step alone). No toggling.
+
+**0.6.11: the QA pass's five high findings** (results/qa-ux-0.6.10/report.html; the owner: "fix the five", 2026-11-03)
+- The step selection and the target step are **each track's own** (ec_loopstep.c `ec_lp_track`, called from
+  `ec_pn_select_target`): switching to T4 never writes into T1's selected step, and KEYBOARD's target step on T4 is
+  T4's. The new track's target brings its step page back.
+- On the **LOOP layer the selection is visible**: the step page's 16 cells as caps over the loop-key ruler (y 61..62;
+  a selected step bright, the playhead the accent), so what the loop keys write into is in view without B11.
+- **HOME from another mode is always LOOP ENGINE**, **FILE always BROWSE** (ec_panel.c mode_tap ignores `last` for
+  them; the button labels say what will open). Tapping again still cycles (TRIG, KEYBOARD; the SAMPLER). EDIT keeps
+  its memory (MIX / PAGES).
+- **FILE opens while playing** (BROWSE, POOL, the SAMPLER, loads and previews). Only the EDITOR and RAZOR pages,
+  FREE (F2, POOL's too), MOVE and purge say STOP FIRST. PLAY inside FILE works; from the EDITOR / RAZOR it goes to
+  BROWSE first ("BROWSE: PLAY AGAIN"). The SAMPLER redirect and the flashing FILE button are gone.
+- Tests: test_file's gating section rewritten, test_ux / test_v61ux adjusted, the demo scripts' HOME / FILE presses
+  follow the new rule (one extra SAVE tap where the SAMPLER was wanted).

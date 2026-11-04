@@ -514,8 +514,10 @@ static const char *button_name(int mb)
     const int n = ec_button_modes(mb, modes, 8);
     const int cur = shown_mode();
     static const char *const D[EC_NMB] = {"", "FX", "FILTER", "AMP", "MOD", "MIX", "LOOP", "FILE", "XFADE", "PATTERN"};
+    /* 0.6.11: HOME and FILE from another mode open their first sub-mode (ec_panel.c mode_tap), EDIT its last */
+    const int opens = mb == EC_MB_HOME || mb == EC_MB_FILE ? (n > 0 ? modes[0] : -1) : P->last[mb];
     for (i = 0; i < n; i++)                        /* a button with sub-modes: the one it is on (or will open) */
-        if (modes[i] == cur || (ec_mode_button(cur) != mb && modes[i] == P->last[mb])) {
+        if (modes[i] == cur || (ec_mode_button(cur) != mb && modes[i] == opens)) {
             switch (modes[i]) {
             case EC_CAT_SRC: return "LOOP";
             case EC_CAT_TRIG: return "TRIG";

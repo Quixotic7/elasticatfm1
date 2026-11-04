@@ -26,7 +26,8 @@
 #define QUICK_MS 300u
 
 static struct {
-    uint32_t sel[EC_MAXSTEPS / 32];   /* the selected steps (bit idx) */
+    uint32_t sel[EC_NTRACK][EC_MAXSTEPS / 32];   /* 0.6.11: each track's selected steps (bit idx) */
+    int target[EC_NTRACK];/* 0.6.11: each track's target step (P->target is the selected track's) */
     int latched;          /* STEP latched as the base layer */
     int b11;              /* B11 held */
     uint32_t b11_ms;
@@ -53,15 +54,32 @@ static int on_range_page(void)
 static int len_now(void) { return ec_seq_pattern_steps(&A->seq, A->track); }
 
 int ec_lp_active(void) { return ec_app_mode() == EC_CAT_SRC && !A->bus && !A->settings; }
-int ec_lp_is_sel(int idx) { return idx >= 0 && idx < EC_MAXSTEPS && (g.sel[idx / 32] >> (idx % 32) & 1u); }
+#define SEL (g.sel[A->track])
+int ec_lp_is_sel(int idx) { return idx >= 0 && idx < EC_MAXSTEPS && (SEL[idx / 32] >> (idx % 32) & 1u); }
 static void sel_set(int idx, int on)
 {
     if (idx < 0 || idx >= EC_MAXSTEPS)
         return;
     if (on)
-        g.sel[idx / 32] |= 1u << (idx % 32);
+        SEL[idx / 32] |= 1u << (idx % 32);
     else
-        g.sel[idx / 32] &= ~(1u << (idx % 32));
+        SEL[idx / 32] &= ~(1u << (idx % 32));
+}
+
+/* 0.6.11 (QA finding 1 / 4): the selection and the target step are each track's own. The selected track changes
+ * (ec_pn_select_target): the old track keeps its target, the new one's comes back (its step page shown) */
+void ec_lp_track(int from, int to)
+{
+    int len;
+    if (from < 0 || from >= EC_NTRACK || to < 0 || to >= EC_NTRACK || from == to)
+        return;
+    g.target[from] = P->target;
+    len = ec_seq_pattern_steps(&A->seq, to);
+    P->target = clampi(g.target[to], 0, len);
+    if (P->target)
+        A->step_page = (P->target - 1) / 16;
+    g.skeys = g.keys = g.span = 0;
+    A->redraw = 1;
 }
 int ec_lp_first(void)
 {
@@ -107,7 +125,7 @@ void ec_lp_algo(int det)
     int f = ec_lp_first();
     P->target = f >= 0 ? f + 1 : 0;
     ec_kb_target(det);
-    memset(g.sel, 0, sizeof g.sel);
+    memset(SEL, 0, sizeof SEL);
     if (P->target)
         sel_set(P->target - 1, 1);
     A->redraw = 1;
@@ -232,7 +250,7 @@ int ec_lp_white(int k, int i, int down, int vel)
         if (idx >= len_now())
             return 1;
         if (!g.skeys)                              /* no step key held: a new selection (FIZZ) */
-            memset(g.sel, 0, sizeof g.sel);
+            memset(SEL, 0, sizeof SEL);
         g.skeys |= 1u << i;
         sel_set(idx, 1);
         sync_target();

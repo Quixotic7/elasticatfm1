@@ -104,12 +104,14 @@ turn K2@14000:-60
 turn K3@14100:-90
 png 14200:12_amp_env.png
 
-# ---- T4: percussion on every other step (TRIG: HOME's last mode); KEYBOARD (HOME again) writes slices 5 9 13 16 on
+# ---- T4: percussion on every other step (HOME = LOOP ENGINE, again = TRIG; 0.6.11: HOME from another mode is always
+#      LOOP ENGINE); KEYBOARD (HOME again) writes slices 5 9 13 16 on
 #      steps 3 7 11 15 (ALGO = the target step, a black key = the slice, B11 = the next ten); step 15 ratchets (TRIG's
 #      third page = B3, hold the step + KN3)
 press GLO@14500+150
 lower 3@14550+60
 press HOME@14700
+press HOME@14800
 lower 0@14900+60
 lower 2@15000+60
 lower 4@15100+60

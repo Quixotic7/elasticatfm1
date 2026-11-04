@@ -765,6 +765,16 @@ static void black_down(int k, int key, int vel)
     }
     if (A->settings)
         return;
+    if (mode == EC_CAT_TRIG && A->step_held && !A->bus) {   /* 0.6.14 (owner): a step held: the black keys are the
+                                                    * note, B6 (F#) = 0, B1 -5 .. B11 +5 */
+        char b[16];
+        const int st = key - 6;
+        ec_app_lock_held_set(EC_P_PITCH, (float)st);
+        snprintf(b, sizeof b, "PITCH %+d", st);
+        ec_app_message(b);
+        A->redraw = 1;
+        return;
+    }
     if (ec_lp_b11_held() && key <= 10 && !A->bus) {   /* 0.6.13 / 0.6.14: B11 held: B1..B10 the pages (the step modes) */
         ec_lp_b11_used();
         ec_pages_black_down(key);
@@ -951,7 +961,6 @@ static void select_knob(int d)
 
 static void knob(int r, int d)
 {
-    const int mode = ec_app_mode();
     if (ec_e5_knob(r, d))                          /* E5: naming */
         return;
     if (P->as_open) {

@@ -109,6 +109,36 @@ int ec_app_held_lock(const ec_app_t *a, int id, float *x)
 
 static ec_step_t *step_at(int index) { return &ec_project_track(&A->proj, A->track)->steps[index]; }
 
+/* 0.6.14 (owner): a lock set outright on the held steps (TRIG: a black key = the PITCH), or the selected ones */
+int ec_app_lock_held_set(int id, float value)
+{
+    const int ts = ec_app_target_step(A);
+    int page, i, n = 0;
+    const int p0 = ts >= 0 ? 0 : A->step_page;
+    const int p1 = ts >= 0 ? (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16 : A->step_page + 1;
+    if (!A->step_held && ts < 0)
+        return 0;
+    for (page = p0; page < p1; page++) {
+        const uint16_t mask = ts >= 0 ? ec_lp_page_mask(page) : A->step_held;
+        if (!mask)
+            continue;
+        ec_undo_steps(&A->e5.undo, &A->proj, A->track, page, mask, "LOCK", 0x100u + (uint32_t)id + ((uint32_t)page << 12),
+                      A->ms);
+        for (i = 0; i < EC_NLOWER; i++)
+            if (mask >> i & 1u) {
+                ec_step_t *s = step_at(page * 16 + i);
+                if (ec_step_lock_set(s, id, value) < 0)
+                    message("LOCKS FULL");
+                s->trig = 1;
+                n++;
+            }
+    }
+    A->step_edited |= A->step_held;
+    ec_seq_touch(&A->seq, A->track);
+    mark_dirty();
+    return n;
+}
+
 /* ------------------------------------------------------------------------------------------- items --- */
 void ec_app_page(const ec_app_t *a, ec_page_t *out)
 {

@@ -928,3 +928,5 @@ the B11 pick mode above)
   as the trig's height, a PITCH lock as a blue mark (above the middle: up). KEYBOARD: whole keys filled in the mode's
   colour (blue LIVE, red with steps selected, yellow on the STEP layer), the selected steps' notes white, its strip
   as LOOP ENGINE's, the pages panel while B11 is held.
+- TRIG, a step held (owner): the black keys set its PITCH lock, B6 (F#) = 0, B1 -5 .. B11 +5 (the LEDs: the lock's
+  key lit, B6 mid; the labels -5 .. +5). One undo; the trig stays on.

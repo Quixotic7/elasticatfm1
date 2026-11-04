@@ -207,11 +207,12 @@ static void test_plocks(void)
     CHECK(tr->v[EC_P_FILTER_CUTOFF] == 127, "the track value is never written");
     CHECK(fabsf(ec_seq_value(&S, 0, EC_P_FILTER_CUTOFF) - 40) < 0.01f, "resolved value");
     run(2 * step + 100);
-    CHECK(fabsf(lastp[0].filter_cutoff - ec_xf_cutoff_hz(127)) < 0.01f, "lock window over: cutoff %.1f",
-          lastp[0].filter_cutoff);
-    CHECK(lastp_at[0] - t0 == 11025, "the window ends on its sample (%llu, want 11025)",
-          (unsigned long long)(lastp_at[0] - t0));
+    CHECK(fabsf(lastp[0].filter_cutoff - ec_xf_cutoff_hz(40)) < 0.01f,
+          "0.6.4 sticky: the note's window is over, the lock holds (cutoff %.1f)", lastp[0].filter_cutoff);
     run(2 * step);
+    CHECK(fabsf(lastp[0].filter_cutoff - ec_xf_cutoff_hz(127)) < 0.01f,
+          "step 5's trig (no cutoff lock): the track value (cutoff %.1f)", lastp[0].filter_cutoff);
+    CHECK(lastp_at[0] - t0 == 22050, "reset on the trig's sample (%llu, want 22050)", (unsigned long long)(lastp_at[0] - t0));
     r = nth(EC_EV_TRIG, 0, 1);
     CHECK(r && r->ev.start == 32 && r->ev.end == 64 && (r->ev.flags & EC_TF_JUMP) && r->ev.mode == 3,
           "region lock: TRIG start %.0f end %.0f flags %d mode %d", r ? r->ev.start : -9, r ? r->ev.end : -9,
@@ -229,6 +230,80 @@ static void test_plocks(void)
         const rec_t *g = nth(EC_EV_TRIG, 0, 5);
         CHECK(g && (g->ev.flags & EC_TF_GHOST), "ghost TRIG flagged");
     }
+}
+
+/* 0.6.4 (docs/UX-V2.md §10 "Locks like Elektron"): sticky locks, the trigless lock, the slide, the knob's takeover.
+ * The owner's case: track cutoff 127 ("20 kHz"); step 1 trig, cutoff 100 ("15 kHz"), one step long; step 2 empty;
+ * step 3 trig, cutoff 60 ("5 kHz"): step 2 stays at 100 */
+static void test_sticky(void)
+{
+    ec_ptrack_t *tr;
+    const double step = 5512.5;   /* 120 BPM, 1/16 */
+    uint64_t t0;
+#define AT(k, f) run_to(t0 + (uint64_t)((k) * step + (f) * step))
+#define CUT() ec_seq_value(&S, 0, EC_P_FILTER_CUTOFF)
+    setup();
+    tr = ec_project_track(&P, 0);
+    tr->v[EC_P_FILTER_CUTOFF] = 127;
+    tr->v[EC_P_AMP] = 100;
+    tr->steps[0].trig = 1;
+    ec_step_lock_set(&tr->steps[0], EC_P_FILTER_CUTOFF, 100);
+    ec_step_lock_set(&tr->steps[0], EC_P_LENGTH, 1);
+    tr->steps[2].trig = 1;
+    ec_step_lock_set(&tr->steps[2], EC_P_FILTER_CUTOFF, 60);
+    ec_step_lock_set(&tr->steps[2], EC_P_LENGTH, 1);
+    tr->steps[3].trig = 1;                                   /* a plain trig */
+    ec_step_lock_set(&tr->steps[4], EC_P_FILTER_CUTOFF, 30); /* a trigless lock (no trig) */
+    tr->steps[6].trig = 1;                                   /* slide from 0 to step 9's 120 */
+    ec_step_lock_set(&tr->steps[6], EC_P_FILTER_CUTOFF, 0);
+    ec_step_lock_set(&tr->steps[6], EC_P_SLIDE, 1);
+    ec_step_lock_set(&tr->steps[7], EC_P_AMP, 50);           /* a trigless lock of another param: not a stop */
+    tr->steps[8].trig = 1;
+    ec_step_lock_set(&tr->steps[8], EC_P_FILTER_CUTOFF, 120);
+    tr->steps[10].trig = 1;                                  /* a slide to a plain trig: nothing to slide to */
+    ec_step_lock_set(&tr->steps[10], EC_P_FILTER_CUTOFF, 10);
+    ec_step_lock_set(&tr->steps[10], EC_P_SLIDE, 1);
+    tr->steps[11].trig = 1;
+    run(256);
+    ec_seq_start(&S);
+    t0 = S.now;
+    AT(0, 0.5);
+    CHECK(CUT() == 100, "step 1: its lock (%g)", CUT());
+    AT(1, 0.5);
+    CHECK(CUT() == 100, "step 2 (empty; step 1's note over): still 100, sticky (%g)", CUT());
+    AT(2, 0.5);
+    CHECK(CUT() == 60, "step 3: its lock (%g)", CUT());
+    AT(3, 0.5);
+    CHECK(CUT() == 127, "step 4, a plain trig: the track value (%g)", CUT());
+    AT(4, 0.5);
+    CHECK(CUT() == 30 && ec_seq_value(&S, 0, EC_P_AMP) == 100, "step 5, a trigless lock: cutoff 30, amp untouched");
+    AT(5, 0.5);
+    CHECK(CUT() == 30, "step 6 (empty): the trigless lock holds (%g)", CUT());
+    AT(6, 0.0 + 0.01);
+    CHECK(CUT() < 5, "step 7 (slide on): starts at its lock (%g)", CUT());
+    AT(7, 0.0);
+    CHECK(fabs(CUT() - 60) < 3, "half way to step 9: about 60 (%g)", CUT());
+    AT(7, 0.5);
+    CHECK(CUT() > 75 && CUT() < 105 && ec_seq_value(&S, 0, EC_P_AMP) == 50,
+          "three quarters (%g); step 8's trigless AMP lock did not stop the slide", CUT());
+    AT(8, 0.01);
+    CHECK(fabs(CUT() - 120) < 0.5, "step 9: arrived at its lock (%g)", CUT());
+    AT(10, 0.5);
+    CHECK(CUT() == 10, "step 11 (slide on, next step a plain trig): no slide, its lock (%g)", CUT());
+    AT(11, 0.5);
+    CHECK(CUT() == 127, "step 12, the plain trig: the track value (%g)", CUT());
+    /* the knob: a sticky lock lets go of a param turned by hand */
+    AT(16, 0.5);                                              /* the second pass: step 1 again, cutoff 100 */
+    CHECK(CUT() == 100, "pass 2, step 1: 100 (%g)", CUT());
+    tr->v[EC_P_FILTER_CUTOFF] = 90;
+    ec_seq_param_edited(&S, 0, EC_P_FILTER_CUTOFF);
+    CHECK(CUT() == 90, "the knob turned while step 1's lock holds: heard at once (%g)", CUT());
+    AT(17, 0.5);
+    CHECK(CUT() == 90, "step 2: the knob's value stays (%g)", CUT());
+    AT(18, 0.5);
+    CHECK(CUT() == 60, "step 3: the next lock takes it (%g)", CUT());
+#undef AT
+#undef CUT
 }
 
 /* ------------------------------------------------------------------------------------------- conditions --- */
@@ -405,6 +480,7 @@ int main(void)
     test_timing(133.0, 9, 66);
     test_tempo_change();
     test_plocks();
+    test_sticky();
     test_conditions();
     test_ratchet();
     test_patterns();

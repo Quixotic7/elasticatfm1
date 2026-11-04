@@ -328,6 +328,8 @@ static void test_migration(void)
     home();
     v = pr->pat[pr->current].tr[0].v;
     clear_matrix();
+    memset(pr->pat[pr->current].tr[0].steps, 0, sizeof pr->pat[pr->current].tr[0].steps);   /* 0.6.4: the earlier
+                                                * tests' step locks would stick (Elektron), not this test's subject */
     v[EC_P_LFO1_DEST] = 3;                                   /* CUT */
     v[EC_P_LFO1_DEPTH] = 128;                                /* +1 */
     v[EC_P_LFO1_WAVE] = 5;                                   /* SQR: +-1 */

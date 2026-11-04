@@ -91,7 +91,11 @@ enum {
     EC_P_INS2_MACHINE, EC_P_INS2_MIX,
     EC_P_INS2_P1, EC_P_INS2_P2, EC_P_INS2_P3, EC_P_INS2_P4, EC_P_INS2_P5, EC_P_INS2_P6, EC_P_INS2_P7, EC_P_INS2_P8,
     EC_P_V61_END,
-    EC_NP = EC_P_V61_END
+    /* 0.6.4: Elektron's parameter slide (docs/UX-V2.md §10 "Locks like Elektron"): a step with SLIDE on ramps each
+     * param it locks to the value the next step that sets that param locks, arriving as that step plays */
+    EC_P_SLIDE = EC_P_V61_END,
+    EC_P_V64_END,
+    EC_NP = EC_P_V64_END
 };
 #define EC_INS2_NP 8            /* INS 2's generic params (the most any machine has: DESTROY's eight) */
 #define EC_MICRO_DIV 24         /* micro timing units per step (as Elektron's 1/384 note on a 16th): +-12 = half a step */

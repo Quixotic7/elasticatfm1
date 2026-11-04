@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.4)
+# Elasticat on the FM-1: controls (0.6.5)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -66,6 +66,14 @@ These hold in every mode unless the mode says otherwise.
 - **Hold a step + turn PRESETS** = lock a pool slot on the step (the trig goes on too). The trig plays that slot; the
   next unlocked trig plays the track's own.
 - Holding a trig step while stopped plays it (the step preview).
+- **Locks stick, as on an Elektron (0.6.5).** A locked value holds after its note ends, until something changes it:
+  - a **trig without that lock** puts the track value back (a ghost trig, with ERST / LRST / FRST all off, carries
+    the values on);
+  - a **lock-only step** (Elektron's trigless lock) sets only the params it locks;
+  - **turning the knob** of that param while it plays is heard at once.
+  Loop start / end locks still last only for their note. Stopping the transport puts every track value back.
+- **SLIDE** (TRIG, second lane, K1; lock it ON on a step): each param the step locks slides to the value the next step
+  that sets that param locks, arriving as that step plays. Nothing slides to a plain trig (it resets the param).
 - **ALGO** picks the step page; the white keys then show that page. "PAGE 2/4" says where you are.
 - LEDs: trig mid, a trig with locks flickers, a lock-only step dim, the playhead bright, held keys bright.
 
@@ -446,7 +454,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
 | TRIG | B1 | 1 | NOTE | LEN | VEL | MICRO |
-|  |  | 2 | - | ENV RESET | LFO RESET | FILT RESET |
+|  |  | 2 | SLIDE | ENV RESET | LFO RESET | FILT RESET |
 | COND | B2 | 1 | CHANCE | COND | RATCHET |  |
 | PLAYHEAD (as SLICE) · SLICE/RAZOR | B3 | 1 | SLIC | PLAY | RTCH | SREV |
 | PLAYHEAD · otherwise |  | 1 | SNAP START | RET MODE |  |  |
@@ -521,9 +529,10 @@ TRIG (HOME, second): the step's own settings (note, length, velocity, resets), t
 | `env_reset` | ERST | Envelope reset | ON: the step retriggers the mod envelope. With ERST, LRST and FRST all off the step is a ghost trig (no new note). P-lockable. |
 | `lfo_reset` | LRST | LFO reset | ON: the step restarts the LFOs that are in TRIG, ONE or HOLD mode. P-lockable. |
 | `filter_reset` | FRST | Filter reset | No effect of its own (a placeholder, as in the original), but with ERST and LRST also off the step becomes a ghost trig. P-lockable. |
-| `default_length` | LEN | Note length | How long a step's note lasts, 1/4 to 16 steps: the envelope gate, and how long its region and p-locks hold. P-lockable. |
+| `default_length` | LEN | Note length | How long a step's note lasts, 1/4 to 16 steps: the envelope gate, and how long its region locks hold (its other p-locks stick until a trig or lock changes them, as Elektron's). P-lockable. |
 | `default_velocity` | VEL | Velocity | Trig velocity, 0 to 100%. Sets a slice's level and feeds the VELOCITY mod source (slice trigs only). P-lockable. |
 | `micro_timing` | MICRO | Micro timing | A trig early or late by n/24 of a step (-12..+12). Live REC writes it from each hit's offset (unless QUANTIZE is HARD). P-lockable. |
+| `trig_slide` | SLDE | Slide | ON (as a step lock): each param this step locks slides to the value the next step that sets it locks, arriving as that step plays (Elektron's parameter slide). Nothing slides to a plain trig, which resets to the track value. |
 | `global.bpm` | BPM | Tempo | The project tempo, 20 to 300 BPM (SHIFT snaps to common tempos). Saved per pattern unless GBPM is on. |
 | `global.swing` | SWNG | Swing | Global swing, 50% (straight) to 75% (heavy): odd steps get longer, even ones shorter. |
 

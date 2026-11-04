@@ -285,6 +285,10 @@
       "name": "Trig ratchet",
       "desc": "Repeats the step 1 to 8 times, evenly spread over the step. P-lockable."
     },
+    "trig_slide": {
+      "name": "Slide",
+      "desc": "ON (as a step lock): each param this step locks slides to the value the next step that sets it locks, arriving as that step plays (Elektron's parameter slide). Nothing slides to a plain trig, which resets to the track value."
+    },
     "env_reset": {
       "name": "Envelope reset",
       "desc": "ON: the step retriggers the mod envelope. With ERST, LRST and FRST all off the step is a ghost trig (no new note). P-lockable."
@@ -479,7 +483,7 @@
     },
     "default_length": {
       "name": "Note length",
-      "desc": "How long a step's note lasts, 1/4 to 16 steps: the envelope gate, and how long its region and p-locks hold. P-lockable."
+      "desc": "How long a step's note lasts, 1/4 to 16 steps: the envelope gate, and how long its region locks hold (its other p-locks stick until a trig or lock changes them, as Elektron's). P-lockable."
     },
     "default_velocity": {
       "name": "Velocity",

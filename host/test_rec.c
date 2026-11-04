@@ -439,7 +439,7 @@ static void test_micro_switch(void)
     CHECK(i == nrec, "no other track fired");
 }
 
-/* lock-only steps: the locks apply as the playhead passes (one step), no voice */
+/* lock-only steps: the locks apply as the playhead passes, no voice; 0.6.4: they stick (Elektron's trigless lock) */
 static void test_ghost_locks(void)
 {
     uint64_t at[8];
@@ -460,7 +460,7 @@ static void test_ghost_locks(void)
           "step 3 (lock only): cutoff 20 while it plays");
     run(6000, 100);
     after = cut_now[0];
-    CHECK(locked < base && after == base, "the engine's cutoff: %g -> %g -> %g", base, locked, after);
+    CHECK(locked < base && after == locked, "the engine's cutoff: %g -> %g -> %g (sticky)", base, locked, after);
     CHECK(trigs(0, at, 8) == 0, "no voice");
 }
 

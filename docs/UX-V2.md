@@ -776,3 +776,18 @@ them:
   move slides the boxes past each other over 160 ms (device time) instead of jumping.
 - Built in 0.6.4 (by hand): ec_holdmenu.c's EC_HM_SWAP (ec_hm_raised), ec_fx_swap_do / ec_fx_swap_undo in
   ec_srckeys.c, slot_block in ec_scr_e4.c; test_fx2's test_swaps; the real shot Fx_sends_move.
+
+**Locks like Elektron** (owner, 2026-11-03; replaces "a lock holds while its note lasts")
+- **Sticky**: a step's lock holds after its note, until a trig or lock changes that param. A trig without the lock
+  puts the track value back first (its own locks then apply); a ghost trig (no new note) carries the values on. A
+  lock-only step (a trigless lock) sets only what it locks. The owner's case: track cutoff 20 kHz, step 1 locked to
+  15 kHz (one step long), step 2 empty, step 3 locked to 5 kHz: step 2 stays at 15 kHz.
+- **The knob takes over**: turning a track value by hand while a lock holds it is heard at once (until the next
+  trig or lock).
+- Region locks (loop start / end) keep their note window; the slot lock already worked this way.
+- **SLIDE** (new param `trig_slide`, TRIG lane 2 K1, OFF; a step lock): on a step with SLIDE on, each sound param it
+  locks ramps linearly to the lock of the next step that sets that param (a trig without that lock: no slide),
+  arriving on that step's grid boundary; the look-ahead follows the play order. Resent every audio chunk while
+  sliding.
+- Built in 0.6.5 by hand: ec_seq.c (hold_set, holds_clear_sound, start_slides, ec_seq_param_edited), EC_P_SLIDE;
+  tests: test_seq's test_sticky (the owner's case, trigless lock, slide, the knob), e5 / seq_e4 / rec / mtx updated.

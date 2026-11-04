@@ -84,8 +84,12 @@ int main(void)
     CHECK(lastp.mod.lfo[0].depth == 1.0f && lastp.fx.machine == EC_FX_DELAY && lastp.fx.delay_feedback == 1.0f,
           "the step 13 locks reach the engine: depth %.3f fb %.3f", lastp.mod.lfo[0].depth, lastp.fx.delay_feedback);
     run((uint64_t)(step * 2));
+    CHECK(lastp.mod.lfo[0].depth == 1.0f && lastp.fx.delay_feedback == 1.0f,
+          "0.6.4 sticky: after the note the locks hold: depth %.3f fb %.3f", lastp.mod.lfo[0].depth,
+          lastp.fx.delay_feedback);
+    run((uint64_t)(step * 2));                  /* the next pass's step 1: a trig without those locks */
     CHECK(lastp.mod.lfo[0].depth == 0.0f && fabsf(lastp.fx.delay_feedback - 38.0f / 127.0f) < 1e-6f,
-          "after the note the base values return: depth %.3f fb %.3f", lastp.mod.lfo[0].depth,
+          "the next trig without them: the base values return: depth %.3f fb %.3f", lastp.mod.lfo[0].depth,
           lastp.fx.delay_feedback);
 
     /* the bus records: save / load */

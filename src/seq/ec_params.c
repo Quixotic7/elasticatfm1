@@ -294,6 +294,7 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_INS2_P6] = NUM("fx2_p6", "P6", 0, 128, 1, 0, EC_PF_INT, L),
     [EC_P_INS2_P7] = NUM("fx2_p7", "P7", 0, 128, 1, 0, EC_PF_INT, L),
     [EC_P_INS2_P8] = NUM("fx2_p8", "P8", 0, 128, 1, 0, EC_PF_INT, L),
+    [EC_P_SLIDE] = BIN("trig_slide", "SLDE", 0, L | EC_PF_SEQ),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {

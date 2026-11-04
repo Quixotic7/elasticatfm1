@@ -711,6 +711,7 @@ void ec_app_edit_param_f(int id, int det, int mult, int flags)
         v[id] = ec_app_move_param(id, v[id], det, mult);
     if (d->flags & EC_PF_LOCKABLE)
         ec_liverec_param(id, v[id]);              /* 0.6.0: live REC's AUTOMATION (a lock on the step) */
+    ec_seq_param_edited(&A->seq, A->track, id);   /* 0.6.4: heard at once over a sticky lock (Elektron) */
     if (id == EC_P_RATE)
         ec_seq_timing_changed(&A->seq);
     {

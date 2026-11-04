@@ -137,12 +137,13 @@ static void test_scene_morph(void)
         tr->v[EC_P_PATTERN_STEPS] = 16;
         tr->steps[0].trig = 1;
         ec_step_lock_set(&tr->steps[0], EC_P_FILTER_CUTOFF, 5);
+        tr->steps[1].trig = 1;                         /* 0.6.4: a plain trig ends the sticky lock */
         tr->v[EC_P_LENGTH] = 1;
         ec_seq_start(&S);
         run(64);
         CHECK(val(0, EC_P_FILTER_CUTOFF) == 5, "a firing step's lock wins over the morph");
-        run(6000);                                     /* one step (5512.5) later the window is over */
-        CHECK(NEAR(val(0, EC_P_FILTER_CUTOFF), 100), "the morph resumes after the step: %.2f",
+        run(6000);                                     /* step 2 (5512.5): a plain trig, the lock lets go */
+        CHECK(NEAR(val(0, EC_P_FILTER_CUTOFF), 100), "the morph resumes at the next plain trig: %.2f",
               (double)val(0, EC_P_FILTER_CUTOFF));
     }
     /* a pattern switch: the one-sided morph against the new pattern's base */

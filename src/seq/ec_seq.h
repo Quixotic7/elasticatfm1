@@ -40,9 +40,15 @@ typedef struct {
     int play_index;                /* 0-based step index in the pattern */
     int pass;                      /* pattern pass (A:B, 1ST) */
     int8_t last_cond;              /* PRE / !PRE: -1 none, 0 / 1 */
-    uint8_t hold_on[EC_NP];        /* param_lock_holds */
+    uint8_t hold_on[EC_NP];        /* param_lock_holds (0.6.4: sticky, as Elektron's: held until a trig or lock changes
+                                    * them; only the region locks keep their note window) */
     float hold_val[EC_NP];
     uint64_t hold_exp[EC_NP];      /* sample time the window ends (UINT64_MAX: never) */
+    /* 0.6.4: slides (EC_P_SLIDE): param id ramps hold_val -> slide_to over [slide_t0, slide_t1) */
+    uint8_t slide_on[EC_NP];
+    float slide_to[EC_NP];
+    uint64_t slide_t0[EC_NP], slide_t1[EC_NP];
+    int sliding;                   /* params sliding (resent every chunk while > 0) */
     uint64_t hold_min;             /* the earliest of them (UINT64_MAX: none) */
     /* ratchets of the last fired step */
     int rat_left, rat_k, rat_index;
@@ -173,6 +179,8 @@ double ec_seq_song_beats(const ec_seq_t *s);
 
 /* reads */
 int ec_seq_track_slot(const ec_seq_t *s, int track);        /* 0.6.0: the slot (1-based) the engine plays (a lock) */
+/* 0.6.4: a track value turned by hand: it is heard at once (a sticky lock or slide on it lets go, as Elektron's) */
+void ec_seq_param_edited(ec_seq_t *s, int track, int id);
 float ec_seq_value(const ec_seq_t *s, int track, int id);   /* the resolved ("actual") value */
 int ec_seq_step(const ec_seq_t *s, int track);              /* the playing step index (0-based), -1 stopped */
 int ec_seq_pattern_steps(const ec_seq_t *s, int track);

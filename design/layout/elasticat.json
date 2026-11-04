@@ -17,7 +17,7 @@
           "picture": "steps",
           "lanes": [
             [{"item": "pitch", "label": "NOTE"}, "default_length", "default_velocity", {"item": "micro_timing", "label": "MICRO"}],
-            [null, {"item": "env_reset", "label": "ENV RESET"}, {"item": "lfo_reset", "label": "LFO RESET"}, {"item": "filter_reset", "label": "FILT RESET"}]
+            [{"item": "trig_slide", "label": "SLIDE"}, {"item": "env_reset", "label": "ENV RESET"}, {"item": "lfo_reset", "label": "LFO RESET"}, {"item": "filter_reset", "label": "FILT RESET"}]
           ],
           "note": "FILT RESET: We should make this work, not a placeholder"
         },

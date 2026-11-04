@@ -115,13 +115,47 @@ static void hold_min_update(ec_seq_track_t *st)
         if (st->hold_on[i] && st->hold_exp[i] < st->hold_min)
             st->hold_min = st->hold_exp[i];
 }
+static void slides_clear(ec_seq_track_t *st)
+{
+    memset(st->slide_on, 0, sizeof st->slide_on);
+    st->sliding = 0;
+}
+static void slide_end(ec_seq_track_t *st, int id)
+{
+    if (st->slide_on[id]) {
+        st->slide_on[id] = 0;
+        st->sliding--;
+    }
+}
 static void holds_clear(ec_seq_track_t *st)
 {
     memset(st->hold_on, 0, sizeof st->hold_on);
+    slides_clear(st);
     st->hold_min = NEVER;
     st->dirty = 1;
 }
+static int is_region(int id) { return id == EC_P_LOOP_START || id == EC_P_LOOP_END; }
 static int region_hold(const ec_seq_track_t *st) { return st->hold_on[EC_P_LOOP_START] || st->hold_on[EC_P_LOOP_END]; }
+/* 0.6.4: a trig resets the sound back to the track values (Elektron: an unlocked trig wipes the slate): every sticky
+ * hold goes; the region holds keep their own note window (monophonic: the caller ends those) */
+static void holds_clear_sound(ec_seq_track_t *st)
+{
+    int i;
+    for (i = 0; i < EC_NP; i++)
+        if (!is_region(i))
+            st->hold_on[i] = 0;
+    slides_clear(st);
+    hold_min_update(st);
+    st->dirty = 1;
+}
+/* a lock takes hold: sticky (until a trig or lock changes it), a region lock for its note window */
+static void hold_set(ec_seq_t *s, ec_seq_track_t *st, int id, float val, uint64_t note)
+{
+    st->hold_on[id] = 1;
+    st->hold_val[id] = val;
+    st->hold_exp[id] = is_region(id) ? s->now + note : NEVER;
+    slide_end(st, id);
+}
 
 /* the lock's value, else the track's */
 static float field(const ec_step_t *rec, const float *v, int id)
@@ -246,24 +280,63 @@ static void mod_trig(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note, in
     emit(s, &e);
 }
 
-/* 0.6.0: a lock-only step (no trig, no slices: the "ghost locks" live recording writes from knob moves) applies
- * its locks as the playhead passes, without a voice: each is held until the step ends (or longer, while a trig's
- * own window for the same param lasts). Region, sequencer and trigger-time locks need a trig: skipped. */
+/* 0.6.0: a lock-only step (no trig, no slices: Elektron's trigless lock; live recording writes them from knob
+ * moves) applies its locks as the playhead passes, without a voice. 0.6.4: they stick, as Elektron's, until a trig
+ * or another lock changes them; the params it does not lock are left as they are. Region, sequencer and
+ * trigger-time locks need a trig: skipped. */
 static void ghost_locks(ec_seq_t *s, int t, const ec_step_t *rec, int64_t pos)
 {
     ec_seq_track_t *st = &s->tr[t];
-    const uint64_t end = sample_at(s, ec_seq_boundary_beats(s, t, pos + 1));
     int k;
+    (void)pos;
     for (k = 0; k < rec->nlock; k++) {
         const int id = rec->lock_id[k];
         if (id >= EC_NP || id == EC_P_SLOT || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)))
             continue;
-        if (!st->hold_on[id] || st->hold_exp[id] < end)
-            st->hold_exp[id] = end;
-        st->hold_on[id] = 1;
-        st->hold_val[id] = rec->lock_val[k];
+        hold_set(s, st, id, rec->lock_val[k], 0);
     }
     hold_min_update(st);
+    st->dirty = 1;
+}
+
+/* 0.6.4: Elektron's slide. The step at clock position pos has SLIDE on: each sound param it locks ramps from its lock
+ * to the lock of the next step that sets that param (a step locking it; a trig without that lock resets it to the
+ * track value, so there is nothing to slide to), arriving on that step's grid boundary. The look-ahead follows the
+ * play order (the page loop, the pattern length) up to one pass. */
+static void start_slides(ec_seq_t *s, int t, const ec_step_t *rec, int64_t pos)
+{
+    ec_seq_track_t *st = &s->tr[t];
+    ec_ptrack_t *tr = ptr(s, t);
+    const int steps = ec_seq_pattern_steps(s, t), slice = is_slice(machine_of(s, t));
+    int k, j;
+    for (k = 0; k < rec->nlock; k++) {
+        const int id = rec->lock_id[k];
+        if (id >= EC_NP || id == EC_P_SLOT || is_region(id) ||
+            (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)) || !st->hold_on[id])
+            continue;
+        for (j = 1; j <= steps; j++) {
+            int pass;
+            const int idx = ec_e5_play_index(s->proj, t, steps, pos + j, &pass);
+            const ec_step_t *nx = idx >= 0 && idx < EC_MAXSTEPS ? &tr->steps[idx] : 0;
+            float to;
+            if (!nx)
+                break;
+            if (ec_step_lock_get(nx, id, &to)) {
+                const uint64_t t1 = sample_at(s, ec_seq_boundary_beats(s, t, pos + j));
+                if (t1 > s->now && to != st->hold_val[id]) {
+                    if (!st->slide_on[id])
+                        st->sliding++;
+                    st->slide_on[id] = 1;
+                    st->slide_to[id] = to;
+                    st->slide_t0[id] = s->now;
+                    st->slide_t1[id] = t1;
+                }
+                break;
+            }
+            if (nx->trig || (slice && nx->slices))   /* a trig without this lock: the track value, no slide */
+                break;
+        }
+    }
     st->dirty = 1;
 }
 
@@ -285,16 +358,23 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
     }
     st->fire_pass = pass;
     active = rec && (is_slice(m) ? (rec->slices != 0 || rec->trig) : rec->trig);
-    if (rec && !active && rec->nlock)
+    if (rec && !active && rec->nlock) {
         ghost_locks(s, t, rec, pos);
+        if (ec_step_reset_active(rec, v, EC_P_SLIDE))
+            start_slides(s, t, rec, pos);
+    }
     fires = active && evaluate_trig(s, t, rec);
     ghost = fires && ec_step_is_ghost(rec, v);
     if (fires)
         st->rat_left = 0;                     /* (a new trig supersedes the last one's ratchets) */
-    /* monophonic: a fresh non-ghost trig ends the previous note's holds */
-    if (!reset && fires && iv(v, EC_P_TRIG_POLY) == 1 && !ghost) {
-        had_region = region_hold(st);
-        holds_clear(st);
+    /* 0.6.4: a trig puts the sound back to the track values first (its own locks then apply), as Elektron's unlocked
+     * trig; monophonic: it ends the previous note's region holds too. A ghost trig (no new note) carries them */
+    if (!reset && fires && !ghost) {
+        if (iv(v, EC_P_TRIG_POLY) == 1) {
+            had_region = region_hold(st);
+            holds_clear(st);
+        } else
+            holds_clear_sound(st);
     }
     note = note_samples(s, t, fires ? rec : 0);
     if (fires && is_slice(m) && rec->slices) {    /* E5: the primary slice's program, under the step's own locks */
@@ -307,9 +387,7 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
             if (id >= EC_NP || id == EC_P_PITCH || id == EC_P_VELOCITY ||
                 (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT | EC_PF_REGION)))
                 continue;
-            st->hold_on[id] = 1;
-            st->hold_val[id] = sm->lock_val[sl][k];
-            st->hold_exp[id] = s->now + note;
+            hold_set(s, st, id, sm->lock_val[sl][k], note);
         }
     }
     if (fires) {
@@ -324,12 +402,12 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
             const int id = rec->lock_id[k];
             if (id >= EC_NP || id == EC_P_SLOT || (EC_PARAMS[id].flags & (EC_PF_SEQ | EC_PF_MOMENT)))
                 continue;
-            st->hold_on[id] = 1;
-            st->hold_val[id] = rec->lock_val[k];
-            st->hold_exp[id] = s->now + note;
+            hold_set(s, st, id, rec->lock_val[k], note);
         }
         hold_min_update(st);
         st->dirty = 1;
+        if (ec_step_reset_active(rec, v, EC_P_SLIDE))
+            start_slides(s, t, rec, pos);
     }
 
     if (m == EC_MACH_LOOP) {
@@ -817,8 +895,9 @@ void ec_seq_render(ec_seq_t *s, float *out, int frames)
                 next = s->now + 1;
             global_rederive(s);
         }
-        for (int t = 0; t < EC_NTRACK; t++)       /* 0.5.0: the modulated params follow their sources */
-            if (s->tr[t].mtx_gen)
+        for (int t = 0; t < EC_NTRACK; t++)       /* 0.5.0: the modulated params follow their sources (0.6.4: and
+                                                   * the slides their ramps) */
+            if (s->tr[t].mtx_gen || s->tr[t].sliding)
                 s->tr[t].dirty = 1;
         flush(s);
         if (s->start_at != NEVER && s->start_at > s->now && (next == NEVER || s->start_at < next))
@@ -1057,6 +1136,18 @@ void ec_seq_set_bpm(ec_seq_t *s, float bpm)
     emit(s, &e);
 }
 
+void ec_seq_param_edited(ec_seq_t *s, int t, int id)
+{
+    ec_seq_track_t *st;
+    if (t < 0 || t >= EC_NTRACK || id < 0 || id >= EC_NP || is_region(id))
+        return;
+    st = &s->tr[t];
+    st->hold_on[id] = 0;
+    slide_end(st, id);
+    hold_min_update(st);
+    st->dirty = 1;
+}
+
 void ec_seq_touch(ec_seq_t *s, int t)
 {
     if (t >= 0 && t < EC_NTRACK)
@@ -1192,8 +1283,16 @@ float ec_seq_value(const ec_seq_t *s, int t, int id)
     const ec_seq_track_t *st = &s->tr[t];
     if (id == EC_P_PITCH && st->live_pitch_on)   /* 0.6.1: the track's PITCH now + the key (PITCH turned while held) */
         return ptr(s, t)->v[EC_P_PITCH] + st->live_semis;
-    if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END)
+    if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END) {
+        if (st->slide_on[id]) {                    /* 0.6.4: a slide: the lock ramps to the next one */
+            const uint64_t t0 = st->slide_t0[id], t1 = st->slide_t1[id];
+            if (s->now >= t1)
+                return st->slide_to[id];
+            return st->hold_val[id] +
+                   (st->slide_to[id] - st->hold_val[id]) * (float)((double)(s->now - t0) / (double)(t1 - t0));
+        }
         return st->hold_val[id];
+    }
     {
         float x;                                   /* E5: the crossfader, source 2 (BASE_VALUE_RESOLVER.md) */
         if (ec_scene_value(s->proj, t, id, &x))

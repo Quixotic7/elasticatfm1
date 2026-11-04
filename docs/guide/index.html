@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elasticat FM-1 Guide</title>
+<meta name="description" content="How to use Elasticat, the norns loop mangler as a Fantasy CFW cart for RemoteFM1: the panel, the modes, loading sounds, sequencing, editing and saving.">
+<style>
+:root{--bg:#f6f3e8;--ink:#1c1b18;--mute:#6e6a5c;--line:#d9d4c3;--card:#fffdf6;--acc:#ff6a1f;--blue:#3f8cff;--red:#ff3b30;--yellow:#e0b020;--lock:#ff6a1f;--code:#efe9d6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15150f;--ink:#f1ecdc;--mute:#a09b8a;--line:#34332e;--card:#1e1d17;--code:#2a281f;--yellow:#ffd23f}}
+:root[data-theme="dark"]{--bg:#15150f;--ink:#f1ecdc;--mute:#a09b8a;--line:#34332e;--card:#1e1d17;--code:#2a281f;--yellow:#ffd23f}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{display:grid;grid-template-columns:240px minmax(0,1fr);gap:0;max-width:1180px;margin:0 auto}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:24px 16px;border-right:1px solid var(--line);font-size:14px}
+nav h1{font-size:18px;margin:0 0 4px}
+nav .v{color:var(--mute);margin:0 0 16px;font-size:13px}
+nav a{display:block;color:var(--ink);text-decoration:none;padding:4px 8px;border-radius:6px}
+nav a:hover{background:var(--card)}
+nav a.sub{padding-left:20px;color:var(--mute)}
+main{padding:24px 16px 80px;min-width:0}
+section{margin:0 0 48px}
+h2{font-size:26px;margin:32px 0 8px;letter-spacing:-.01em}
+h3{font-size:19px;margin:28px 0 6px}
+h4{font-size:16px;margin:20px 0 4px}
+p{margin:8px 0}
+.lead{font-size:18px;color:var(--mute)}
+kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:3px 6px;white-space:nowrap}
+code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:4px}
+table{border-collapse:collapse;width:100%;margin:10px 0 14px;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+td:first-child{white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.tip{border-left:4px solid var(--acc)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+figure{margin:8px 0;display:inline-block;vertical-align:top;margin-right:12px}
+figure img{image-rendering:pixelated;border-radius:8px;border:1px solid var(--line);background:#000;max-width:100%;height:auto}
+figcaption{font-size:12.5px;color:var(--mute);max-width:240px}
+.legend span{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+ol.steps li{margin:6px 0}
+.panel{width:100%;max-width:720px;height:auto;display:block;margin:10px 0}
+.panel text{font:600 9px ui-monospace,Menlo,monospace;fill:var(--ink)}
+.panel .lab{font-size:7px;fill:var(--mute);font-weight:500}
+.panel rect.btn{fill:var(--card);stroke:var(--line)}
+.panel rect.k{fill:var(--code);stroke:var(--line)}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+<h1>Elasticat FM-1</h1>
+<p class="v">User guide, 0.6.15</p>
+<a href="#what">What it is</a>
+<a href="#setup">Setting up</a>
+<a href="#panel">The panel</a>
+<a href="#panel-buttons" class="sub">Buttons and modes</a>
+<a href="#panel-knobs" class="sub">Knobs</a>
+<a href="#panel-shift" class="sub">SHIFT, F1, F2</a>
+<a href="#panel-b11" class="sub">B11 and the pages</a>
+<a href="#panel-colours" class="sub">Colours and LEDs</a>
+<a href="#quick">Quick start</a>
+<a href="#sounds">Getting sounds in</a>
+<a href="#sounds-browse" class="sub">BROWSE and the pool</a>
+<a href="#sounds-editor" class="sub">Trim EDITOR</a>
+<a href="#sounds-slice" class="sub">SLICE editor</a>
+<a href="#sounds-sampler" class="sub">SAMPLER</a>
+<a href="#seq">Sequencing</a>
+<a href="#seq-loop" class="sub">LOOP ENGINE</a>
+<a href="#seq-trig" class="sub">TRIG</a>
+<a href="#seq-keys" class="sub">KEYBOARD</a>
+<a href="#seq-locks" class="sub">Locks, copy, undo</a>
+<a href="#seq-rec" class="sub">Live recording</a>
+<a href="#sound">Shaping the sound</a>
+<a href="#sound-mod" class="sub">Modulation</a>
+<a href="#sound-fx" class="sub">FX</a>
+<a href="#arrange">Arranging</a>
+<a href="#arrange-mix" class="sub">MIX and PAGES</a>
+<a href="#arrange-pat" class="sub">PATTERN LAUNCH</a>
+<a href="#arrange-xfd" class="sub">CROSSFADER</a>
+<a href="#settings">Settings and saving</a>
+<a href="#ref">Reference</a>
+</nav>
+<main>
+
+<section id="what">
+<h2>Elasticat FM-1</h2>
+<p class="lead">A loop mangler for the FM-1 panel: six tracks of loops, slices and grains, a 128-step sequencer with parameter locks, a 128-slot sample pool, effects, modulation and scenes. It is a rewrite of the norns script Elasticat.</p>
+<p>Elasticat is a <strong>Fantasy CFW</strong>: it runs in the RemoteFM1 hosts (the web player, the iOS and Android apps, the FM1VST plug-in), never on an FM-1 by itself. The FM-1 is its panel. It needs more memory than the hardware has and it reads your samples from the RemoteFM1 folder.</p>
+<div class="card tip">Everything here describes version 0.6.15. Names in <kbd>CAPS</kbd> are what the panel's labels and the screen say.</div>
+</section>
+
+<section id="setup">
+<h2>Setting up</h2>
+<ol class="steps">
+<li>Open a RemoteFM1 host (the site, an app or the plug-in), pick <strong>Elasticat</strong> from the catalog and give it your RemoteFM1 folder when it asks.</li>
+<li>Put WAV files in that folder's <code>audio/</code> (subfolders are fine). Elasticat reads them from there; it never moves or writes them.</li>
+<li>Projects, takes and recordings go to <code>data/elasticat/</code> in the same folder: <code>projects/</code> holds your <code>.ecp</code> project files, <code>rec/</code> the SAMPLER's takes.</li>
+<li>A file named with its tempo, like <code>break_bpm136.wav</code>, is tagged with it on load (BPM 136). Untagged files get the project's tempo; you can set it in the EDITOR.</li>
+</ol>
+<p>Power-on plays a short intro (any key skips it; APP SETTINGS turns it off) and lands in LOOP ENGINE with the last project loaded.</p>
+</section>
+
+<section id="panel">
+<h2>The panel</h2>
+<p>Elasticat uses the FM-1's names from the FIZZ layout: white keys <kbd>W1</kbd>…<kbd>W16</kbd>, black keys <kbd>B1</kbd>…<kbd>B11</kbd>, the knobs <kbd>SEL</kbd>, <kbd>ALGO</kbd>, <kbd>PRESETS</kbd>, <kbd>K1</kbd>…<kbd>K4</kbd> and <kbd>MASTER</kbd>. <kbd>GLO</kbd> is <strong>SHIFT</strong>, <kbd>OCT-</kbd> is <strong>F1</strong>, <kbd>OCT+</kbd> is <strong>F2</strong>, and the button printed SAVE is <strong>FILE</strong>.</p>
+<svg class="panel" viewBox="0 0 720 300" role="img" aria-label="The FM-1 panel as Elasticat uses it">
+<g>
+<rect class="k" x="20" y="18" width="46" height="46" rx="23"/><text x="43" y="76" text-anchor="middle" class="lab">MASTER</text>
+<rect class="k" x="86" y="18" width="46" height="46" rx="23"/><text x="109" y="76" text-anchor="middle" class="lab">SEL</text>
+<rect class="k" x="20" y="92" width="46" height="46" rx="23"/><text x="43" y="150" text-anchor="middle" class="lab">PRESETS</text>
+<rect class="k" x="86" y="92" width="46" height="46" rx="23"/><text x="109" y="150" text-anchor="middle" class="lab">ALGO</text>
+<rect class="k" x="470" y="18" width="46" height="46" rx="23"/><text x="493" y="76" text-anchor="middle" class="lab">K1</text>
+<rect class="k" x="530" y="18" width="46" height="46" rx="23"/><text x="553" y="76" text-anchor="middle" class="lab">K2</text>
+<rect class="k" x="590" y="18" width="46" height="46" rx="23"/><text x="613" y="76" text-anchor="middle" class="lab">K3</text>
+<rect class="k" x="650" y="18" width="46" height="46" rx="23"/><text x="673" y="76" text-anchor="middle" class="lab">K4</text>
+<rect x="170" y="18" width="120" height="120" rx="8" fill="#000" stroke="var(--line)"/><text x="230" y="82" text-anchor="middle" fill="#f6f3e8">screen</text>
+<rect class="btn" x="20" y="170" width="40" height="22" rx="5"/><text x="40" y="185" text-anchor="middle">F1</text>
+<rect class="btn" x="68" y="170" width="40" height="22" rx="5"/><text x="88" y="185" text-anchor="middle">F2</text>
+<g font-size="9">
+<rect class="btn" x="340" y="92" width="56" height="24" rx="5"/><text x="368" y="108" text-anchor="middle">FX</text>
+<rect class="btn" x="402" y="92" width="56" height="24" rx="5"/><text x="430" y="108" text-anchor="middle">FILTER</text>
+<rect class="btn" x="464" y="92" width="56" height="24" rx="5"/><text x="492" y="108" text-anchor="middle">AMP</text>
+<rect class="btn" x="526" y="92" width="56" height="24" rx="5"/><text x="554" y="108" text-anchor="middle">MOD</text>
+<rect class="btn" x="588" y="92" width="56" height="24" rx="5"/><text x="616" y="108" text-anchor="middle">MIX</text>
+<rect class="btn" x="650" y="92" width="56" height="24" rx="5"/><text x="678" y="108" text-anchor="middle">SHIFT</text>
+<rect class="btn" x="340" y="124" width="56" height="24" rx="5"/><text x="368" y="140" text-anchor="middle">LOOP</text>
+<rect class="btn" x="402" y="124" width="56" height="24" rx="5"/><text x="430" y="140" text-anchor="middle">FILE</text>
+<rect class="btn" x="464" y="124" width="56" height="24" rx="5"/><text x="492" y="140" text-anchor="middle">XFADE</text>
+<rect class="btn" x="526" y="124" width="56" height="24" rx="5"/><text x="554" y="140" text-anchor="middle">PATTERN</text>
+<rect class="btn" x="588" y="124" width="56" height="24" rx="5"/><text x="616" y="140" text-anchor="middle">PLAY</text>
+<rect class="btn" x="650" y="124" width="56" height="24" rx="5"/><text x="678" y="140" text-anchor="middle">REC</text>
+</g>
+<text x="340" y="86" class="lab">FX · SEL · ENV · LFO · EDIT · GLO</text>
+<text x="340" y="160" class="lab">HOME · SAVE · ARP · SEQ · PLAY · REC (printed names)</text>
+<g>
+<rect class="btn" x="20" y="200" width="680" height="30" rx="6"/>
+<text x="30" y="219" class="lab">B1</text><text x="90" y="219" class="lab">B2</text><text x="150" y="219" class="lab">B3</text><text x="210" y="219" class="lab">B4</text><text x="270" y="219" class="lab">B5</text><text x="330" y="219" class="lab">B6</text><text x="390" y="219" class="lab">B7</text><text x="450" y="219" class="lab">B8</text><text x="510" y="219" class="lab">B9</text><text x="570" y="219" class="lab">B10</text><text x="630" y="219" class="lab">B11</text>
+<rect class="btn" x="20" y="238" width="680" height="30" rx="6"/>
+<text x="30" y="257" class="lab">W1</text><text x="110" y="257" class="lab">W3</text><text x="190" y="257" class="lab">W5</text><text x="270" y="257" class="lab">W7</text><text x="350" y="257" class="lab">W9</text><text x="430" y="257" class="lab">W11</text><text x="510" y="257" class="lab">W13</text><text x="590" y="257" class="lab">W15</text><text x="650" y="257" class="lab">W16</text>
+<text x="20" y="288" class="lab">Black keys: pages, sources, the mode's special key (B11). White keys: steps, loop keys, notes, the fader.</text>
+</g>
+</g>
+</svg>
+
+<h3 id="panel-buttons">Buttons and modes</h3>
+<p>Each menu button opens a mode. A <strong>quick click</strong> on a button whose mode is already showing cycles its sub-modes. A <strong>hold</strong> on any menu button turns the black keys into a <strong>mode picker</strong>: the button's modes light on B1, B2, B3…, the header says PICK A MODE, and a black key opens that one (which also becomes the button's own). Letting go without a key changes nothing.</p>
+<table>
+<tr><th>Button</th><th>Mode(s), in click order</th><th>SHIFT + button</th></tr>
+<tr><td>FX</td><td>FX (clicks step its groups: INSERT 1, INSERT 2, SEND 1, SEND 2, SENDS/MASTER, MIX)</td><td>FX settings</td></tr>
+<tr><td>FILTER (SEL)</td><td>FILTER</td><td>filter settings</td></tr>
+<tr><td>AMP (ENV)</td><td>AMP</td><td>amp settings</td></tr>
+<tr><td>MOD (LFO)</td><td>MODULATION</td><td>(no settings)</td></tr>
+<tr><td>MIX (EDIT)</td><td>MIX → PAGES</td><td>project settings: NAME, GLO BPM, BPM, RETURN MODE</td></tr>
+<tr><td>LOOP (HOME)</td><td>LOOP ENGINE → TRIG → KEYBOARD. From another mode HOME always lands on LOOP ENGINE</td><td>LOOP SETUP: the machine, warp, voice mode, ADVANCE</td></tr>
+<tr><td>FILE (SAVE)</td><td>BROWSE/POOL → EDITOR → SLICE → SAMPLER. From another mode FILE always lands on BROWSE</td><td><strong>save the project</strong></td></tr>
+<tr><td>XFADE (ARP)</td><td>CROSSFADER</td><td><strong>APP SETTINGS</strong></td></tr>
+<tr><td>PATTERN (SEQ)</td><td>PATTERN LAUNCH</td><td>F3, the timing menu</td></tr>
+<tr><td>PLAY</td><td>start / stop at once (stop is a real stop; it ends live recording)</td><td></td></tr>
+<tr><td>REC</td><td>live recording on / off. Hold: the record settings (in the SAMPLER: the recorder's setup)</td><td>the record settings</td></tr>
+</table>
+<p>Settings open only with SHIFT, never on a plain hold. They stay open when you let go; F1 or F2 closes them (F1 = back, F2 = OK) and so does the mode's button. <strong>MODE LOCK</strong> in APP SETTINGS stops quick clicks from cycling, so a button only ever opens the mode you picked with the hold.</p>
+
+<h3 id="panel-knobs">Knobs</h3>
+<table>
+<tr><th>Knob</th><th>Does</th></tr>
+<tr><td>MASTER</td><td>master volume</td></tr>
+<tr><td>SEL</td><td>walks the mode's page list both ways (pages, lanes, knob pages) and stops at its ends. On lists (the browser, the pool, settings) it is the cursor</td></tr>
+<tr><td>ALGO</td><td>on every track page: <strong>selects a step</strong> on the shown page (full left = LIVE, nothing selected). SLICE editor: the slice. BROWSE: add / remove from the pool. Trim EDITOR: moves the selected marker</td></tr>
+<tr><td>PRESETS</td><td>on every track page and in PAGES: <strong>turns the step page</strong>. MIX: selects the track. BROWSE / POOL: the audible preview on / off. EDITOR / SLICE: the track's sample (a pool list pops up)</td></tr>
+<tr><td>K1–K4</td><td>the page's four values. A step held, or steps selected: the value becomes a <strong>lock</strong> on those steps</td></tr>
+</table>
+<p>Knobs accelerate: slow turns are the finest step, fast turns jump further (APP SETTINGS &gt; KNOB SPEED). SHIFT + a value knob snaps to useful values. Turning a value whose box is not on screen shows it big for a second.</p>
+
+<h3 id="panel-shift">SHIFT, F1 and F2</h3>
+<p><strong>SHIFT (GLO)</strong>: hold it, or tap it once for sticky SHIFT (tap again to turn it off; its LED blinks while sticky). The panel's labels change to show the SHIFT layer:</p>
+<table>
+<tr><th>SHIFT +</th><th>Does</th></tr>
+<tr><td>SEL / ALGO</td><td>tempo in 0.1 steps / swing</td></tr>
+<tr><td>PRESETS, or W1–W9</td><td>select the target: tracks T1–T6, the send buses S1 and S2, MST</td></tr>
+<tr><td>a value knob</td><td>snap the value</td></tr>
+<tr><td>F1 / F2</td><td><strong>undo / redo</strong>, one gesture at a time</td></tr>
+<tr><td>B1 / B2</td><td>tap tempo / latch FILL</td></tr>
+<tr><td>B4 / B5</td><td>recall / memorize the project to RAM</td></tr>
+<tr><td>B11 held</td><td>FILL while held</td></tr>
+<tr><td>FILE / ARP / SEQ / HOME</td><td>save / APP SETTINGS / F3 / LOOP SETUP; another menu button: that mode's settings</td></tr>
+</table>
+<p><strong>F1 and F2</strong>: a tap makes one sticky (its LED blinks and the header shows it, e.g. <code>F1 COPY/CLR LOCK</code>), a hold keeps it on while held. With F1 on, the white keys copy and paste steps and a knob clears that parameter's locks; with F2 on they cut and paste, and a knob clears that parameter's modulation. F1 + F2 together is F3. In pop-ups F1 is back and F2 is OK; in KEYBOARD they move the octave.</p>
+
+<h3 id="panel-b11">B11 and the pages</h3>
+<p>On every track page (LOOP ENGINE, TRIG, KEYBOARD, FILTER, AMP, FX, MODULATION) <strong>B11 held</strong> is a layer of its own:</p>
+<ul>
+<li>the white keys <strong>select steps</strong> of the shown page (keys held together are one selection; let them all go and the next press starts a new one);</li>
+<li><strong>B1…B8 are the pattern's pages</strong>, FIZZ style: tap = go to the page, hold = mute it (out of the loop), double-tap = solo it, two keys held = loop between them (past the end: the track grows to that page);</li>
+<li>the cells area shows the <strong>pages panel</strong>, with <kbd>K1</kbd> = LEN (pattern length), <kbd>K2</kbd> = RATE, <kbd>K3</kbd> = the loop-key zoom;</li>
+<li><kbd>F1</kbd> clears the selected steps, <kbd>F2</kbd> goes LIVE (clears the selection).</li>
+</ul>
+<p>A quick click on B11 <strong>latches</strong> the step layer (click again to go back). On FILTER, AMP, FX and MOD the quick click keeps the page's own B11 function (the envelope mode, FX MIX, MACROS). Patterns have up to 128 steps = 8 pages.</p>
+
+<h3 id="panel-colours">Colours and LEDs</h3>
+<div class="card legend">
+<p><span style="background:var(--blue)"></span><strong>Blue</strong> = LIVE. The step strip is blue when nothing is selected: the loop keys play live and, in LOOP ENGINE, set the track's loop.</p>
+<p><span style="background:var(--red)"></span><strong>Red</strong> = loop keys with steps selected: what you play on the keys is written into those steps.</p>
+<p><span style="background:var(--yellow)"></span><strong>Yellow</strong> = the STEP layer (B11): the keys select steps.</p>
+<p><span style="background:#f6f3e8;border:1px solid #999"></span><strong>White</strong> = the selected steps, on every layer. Under a step, a short bar in the lock colour is its region lock.</p>
+<p><span style="background:var(--acc)"></span><strong>Orange</strong> = the playhead, the accent, alerts.</p>
+</div>
+<p>Key LEDs follow the layer: on the loop keys only the active loop range is lit and the selected steps blink; on the step layer trigs are mid, empty steps dark, the selection blinks. A held menu button lights only its picker keys. The header's title line shows messages (STOP FIRST, SAVED, PAGE 2/4) and what a held key does.</p>
+</section>
+
+<section id="quick">
+<h2>Quick start: a loop in two minutes</h2>
+<div class="grid2">
+<div class="card">
+<h4>1. Load a sound</h4>
+<ol class="steps">
+<li>Press <kbd>FILE</kbd>. You are in BROWSE, in <code>audio/</code>.</li>
+<li><kbd>SEL</kbd> moves the cursor; <kbd>B2</kbd> enters a folder, <kbd>B1</kbd> goes up. Each move previews the file once (turn the preview off with <kbd>PRESETS</kbd>).</li>
+<li>Hold white keys to hear parts of the file as loop keys.</li>
+<li><kbd>B10</kbd> (or <kbd>ALGO</kbd> clockwise) adds it to the pool; the selected track plays it.</li>
+</ol>
+</div>
+<div class="card">
+<h4>2. Play it live</h4>
+<ol class="steps">
+<li>Press <kbd>HOME</kbd> (LOOP ENGINE) and <kbd>PLAY</kbd>.</li>
+<li>The white keys are 16 loop keys over the sample: hold one to loop that slice, two to span them. Let go and the playhead returns.</li>
+<li>Turn <kbd>K1</kbd>…<kbd>K4</kbd> (PITCH, SLOT, START, END on the LOOP page). <kbd>B3</kbd> is the WARP page: try GRAIN.</li>
+</ol>
+</div>
+<div class="card">
+<h4>3. Sequence it</h4>
+<ol class="steps">
+<li>Press <kbd>HOME</kbd> again for TRIG. Tap white keys to put trigs on steps.</li>
+<li>Hold a step and turn a knob: that value is locked on the step.</li>
+<li>Back in LOOP ENGINE, turn <kbd>ALGO</kbd> to select a step (its column goes white), then play the loop keys: the region you play is written into that step.</li>
+</ol>
+</div>
+<div class="card">
+<h4>4. More tracks, then save</h4>
+<ol class="steps">
+<li><kbd>SHIFT</kbd> + <kbd>W2</kbd> selects track 2 (or MIX's keys). Load it a sound and repeat.</li>
+<li><kbd>MIX</kbd>: tap a track key to select, hold it to mute.</li>
+<li><kbd>SHIFT</kbd> + <kbd>FILE</kbd> saves the project. It also saves itself when stopped.</li>
+</ol>
+</div>
+</div>
+</section>
+
+<section id="sounds">
+<h2>Getting sounds in</h2>
+<p>Samples live in the <strong>pool</strong>: 128 slots sharing 200 MiB (about 20 minutes of stereo). A track plays its slot (the SLOT parameter on LOOP ENGINE's first page); any step can lock a different slot.</p>
+
+<h3 id="sounds-browse">BROWSE and the pool</h3>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAD/klEQVR42u2cjbmrIAyGWcEVXCEruMJZIfuPcFskISC9BfyJxWA9ILa85/nKXwLVYRKmc4MgOQMb+FSwz5o4hesZ0q+/77tTSE7+TnhPFSqUgASebgCmkqnsAAhpj8oPuleBDiWQ1NNdwEJqAaY0nSQaSV+jdXj3J6lvAM6kxlxslOLVSI1R8juBRdUXTYqbFTUjkntqaE6i7Bgpg22QeBD4umBgA58LXsLrdbzjZb1Gvo55C4aM9Q1fAgCCj99JCFmwprXB8mBAmpukq8DAJ6wJmasKDlJuwCxzlJtVrlGaeAkYQloTvBGVKlomb5rCOnJR6tuAlyVrOkFiukfHUqs0NSOqZSiuNcE2SBh4VDAZ3MEKTdwSQ4PJEGXkM8DscDiPqw6eSuAzuepgckaQmyE6XYYF2yBh4PHAsM67VytS5JFVKeblECfn9YFtPTKINMHzLKAYCwYgXASDuO4DU0odDFFmLhgwkZbf0wVeItiT1cFCxP+Ce6VGIbVPa4KTigMiDhYlxwTt4rJvI/gztMFP6qvn2ekEA18NxtcL1/id8IfPcD69vrAfQx/2hfqCFcEYCo2H49g5l93ZC+aUNth3JSF28dpxei84+970wZnEidR4gNROSL2mFcEuAybNSVS8fVxqk/wdKoNtkBgZ/FT7OE5rMZm0rys4qcEmTdl+01UdnJmhJdM0Gm14gOmqDpZyyhU5Kb80ZcWKXZ/pqg7OZQPcSl0wZftN11uAIQVL14S8x9LuMl21weZENfDI43HqVjzObbyU/dUq4LcRwwXmEwGB2eU2xg9uY12wdB1mw95pbmNdcEHqZGkAdi0NYNFfrQLeLP/kk7sj3Ma8Vyt3G6uBbZAw8FBgALm4lXeVsFnO3RW4z1UFFwc8MTBCPkDuAdNfVTDgFiy6ysOlpi2wemDED1KLvfeIR0kditEGS0nTaQ6mw+OxzUkJbIPE+GD/M7d5/rsyGNjABj4WbF2mgQ386+A/pWDg68DWnAxs4CHAhecMtHiPeENK02KJJhiKzxloAEufSvUSoCa4+JyBJqlxs6nh5uDicwZ6pIZGqbXApecMNPnLeEPKr4BtkBgfTDtSe3amOtoAz9dUxreyDHwlmAqQcT94m2fgO4BjhWjuBrIKGaHfyjLwteDaN3+uYKXK1tCBGPhksOzY+8FxaKABp3oiYODTwTa9NTAOuYMNoG9LTfxRTusGFVWw2PLasy8s/jAHfwUMwh3RLHV6/gg4fwDJtd+xBnjH1jgGd7djDbANEk8Abydq9dO+8me/G+cGvhIsMfXOk2iYlz73/Z838JXgbQVpMd8+VS4D3xNcdozWmuWl08D3ALdXjK0TtXuQMPAl4IfNMv8B+qFRh9JZcpwAAAAASUVORK5CYII=" alt="BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below" width="240" height="240"><figcaption>BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADZElEQVR42u3cgZmrIAwAYFZwha7ACqzQFdh/hKsQISBC8KqkEvrZelr4fTyoGEuVTdJybUKSEljgS2G3aQlr1i+w/nmGbXEfyfDvdLlCSfDXMhoOpXrGP4X1BQ4i3dhyQyk25nRHA0c/HkZVjeBt3fbCS8hpF/TvKVQ1Azir6rh0wfDufVWDNB5GnQd1KdStQqeg9qZjOOtOI2A5SUwE35cEFvhKWCll3WN9Xf+Go/F/w7p7Y9x3nLS22r2uqxo26bgOj6FwKBBeA4wYhR51NyzarwTOMoMVgqHspKphnVDVBRhXtYbtw+FCVePKDg2w3f/0QVWnlc0CxoWHqlXZARF6U6xObXfdiQcsJ4nZ4NeavlN4PsATWOBh8Dd7jcDsYaUEtn2HxRI2pgbXCp8RPt4Le5jCCb2Da4U397GFEd0JH+3lDwe6ANcKb+xjDQNdhMvFE/Yxhx19AJeKJ+xjD3/oQ3hfPAk23GHzeqkjOAcI+z6wMfzhWIwqJNphYdgUcH5wPbUPK4dz/Nfg9oGVYMw/DQ6pAHtcYIEF5g4/75PriWenuUYgc40yZ7uSmO1qcbaIwGxRn9kie7NFb+eL0M92F2a+O21yN1Vu1Qv8ONjKV+cEFvgHYRjQwwt8dS7d2P1SK0Xg++Ervh7ZLEXggfAEn1zVCX/va5LA98IyEBD43wndyYwxWYEfBTNr1e9BSeD7YLtNcsSTdeu9w65j88/KenaDuZB+gbLqWWFMPxbeHpoMG4B1NvNXE47ZMoA1msxK+QS0qKq3eexQy7qZtfR/fDuMJyt3Ni6o52i2G1f8rB4H4wnp1MZlfOPS8bcK2r2p2I9HwGeTq+oR5+MvwP4uT/odMCKcZhWYKZx+4y0uBHjL2n8rUOBb4X3jIsPfbtUCXw6nDawL7m1gAt8K5yeHjpNEbxaBB8HzjTJ1IVFi3W5Afy5MLvDN8IzXTtPBcGUeomQ9F+YxDkG4rjcxGDEUxj9PR8ztoi8QfOmIz/GBdagzCmzgCQJsPXAhwDYMPlfVOq1sctbBsP85UYh2E/vE+e7EAp42smezWRmty1Y3vO2LXgg8CFa72Z3lReDfhfeNKy+tXCa6TO0PKgrMCq40rt5Is8CD4LyFdJwkBP4RePbIHj1m5Af0p7IKfDMsAbZnw38FgTpuODXS5gAAAABJRU5ErkJggg==" alt="POOL: all 128 slots, which tracks play each one" width="240" height="240"><figcaption>POOL: all 128 slots, which tracks play each one</figcaption></figure>
+<table>
+<tr><th>BROWSE</th><th>Does</th></tr>
+<tr><td>SEL</td><td>the cursor (folders first, then files). Each move plays the file once if the preview is on</td></tr>
+<tr><td>B1 / B2</td><td>up a folder / into the folder. Above <code>audio/</code> is the top level with AUDIO/ and PROJECTS/</td></tr>
+<tr><td>B10 ADD, B9 REMOVE</td><td>load the file into the next free slot (the selected track plays it) / free its slot. <kbd>ALGO</kbd> does the same: clockwise adds, anticlockwise removes</td></tr>
+<tr><td>B11</td><td>preview play / stop</td></tr>
+<tr><td>PRESETS</td><td>the audible preview on / off (saved in APP SETTINGS as AUTO-PREVIEW)</td></tr>
+<tr><td>White keys</td><td>preview loop keys: each key a 16th of the file, keys held together loop their span, silent on release. Their LEDs light the span and the playhead's key flashes</td></tr>
+<tr><td>B7 / B6</td><td>BROWSE / POOL</td></tr>
+<tr><td>SHIFT + B11</td><td>purge: free every slot no pattern uses and compact the memory (stopped only)</td></tr>
+</table>
+<p>In PROJECTS/, B10 opens that project. The rows under the browser show the next free SLOT, the file's LENGTH and BPM, and the FREE memory.</p>
+<table>
+<tr><th>POOL</th><th>Does</th></tr>
+<tr><td>SEL</td><td>the slot; a used slot previews</td></tr>
+<tr><td>B10 ASSIGN</td><td>the selected track plays this slot</td></tr>
+<tr><td>B9 or F2</td><td>FREE the slot</td></tr>
+<tr><td>B11 held</td><td><strong>move</strong> the slot: while held, <kbd>SEL</kbd> or <kbd>K1</kbd> carry it to another slot and the list shows the result; let go to drop it (a swap, every reference follows, one undo)</td></tr>
+</table>
+<p>FILE opens while the transport runs; browsing, loading and previewing all work while playing. Only the editors, FREE, MOVE and purge ask you to stop first.</p>
+
+<h3 id="sounds-editor">The trim EDITOR</h3>
+<p>Press <kbd>FILE</kbd> again from BROWSE. The EDITOR trims the selected track's sample.</p>
+<table>
+<tr><th>Control</th><th>Does</th></tr>
+<tr><td>K1 START, K2 END</td><td>move the markers. Turning one also <strong>selects</strong> it: the white keys place that marker and the view scrolls to keep it in sight</td></tr>
+<tr><td>K4 ZOOM</td><td>zooms around the selected marker (on both pages)</td></tr>
+<tr><td>ALGO</td><td>moves the selected marker</td></tr>
+<tr><td>White keys</td><td>16 places across the view: a tap places the selected marker there. Hold one key and tap a second to place both</td></tr>
+<tr><td>F1 / F2</td><td>select START / END (what the keys place)</td></tr>
+<tr><td>B1 / B2</td><td>page 1 (START, END, ZOOM) / page 2 (BPM, STEPS, GAIN, ZOOM)</td></tr>
+<tr><td>B9 AUTO BPM</td><td>sets BPM from the file's name tag, else fits a whole number of bars to the trim at the tempo nearest the project's</td></tr>
+<tr><td>B10 RECALC</td><td>recalculates STEPS from the trim and the BPM</td></tr>
+<tr><td>B11 held</td><td>hear the trim, looping, until you let go</td></tr>
+<tr><td>PRESETS</td><td>change the track's sample; the pool list pops up</td></tr>
+</table>
+
+<h3 id="sounds-slice">The SLICE editor</h3>
+<p>Press <kbd>FILE</kbd> once more. SLICE cuts the sample into up to 32 slices for the RAZOR and R.POLY machines (the table is kept per track and saved with the project).</p>
+<table>
+<tr><th>Control</th><th>Does</th></tr>
+<tr><td>ALGO</td><td>select the slice</td></tr>
+<tr><td>K1 / K2</td><td>SLCE START / SLCE END of the selected slice</td></tr>
+<tr><td>K3 PLAY, K4 ZOOM</td><td>the slice's play mode; the view zoom (K4 on every page)</td></tr>
+<tr><td>B1 / B2 / B3</td><td>page 1 (start, end, play, zoom) / page 2 (SNAP MODE, CHOKE, PITCH) / page 3 (COUNT, TRANS SENS)</td></tr>
+<tr><td>B9 EVEN</td><td>divide into COUNT equal slices</td></tr>
+<tr><td>B10 CHOP</td><td>slice at the transients (TRANS SENS sets how many)</td></tr>
+<tr><td>F2 / F1</td><td>split the selected slice / delete it</td></tr>
+<tr><td>White keys</td><td>play the slices (the slice machines play the pad; any other machine hears it as a preview). SHIFT + a key mutes the slice</td></tr>
+<tr><td>B11 held</td><td>hear the selected slice, looping</td></tr>
+</table>
+<p>The selected slice is the bright block; the other slices' edges sit behind the waveform in grey. SEL stays on the editor's own pages; the FILE button leaves (next: the SAMPLER, then BROWSE).</p>
+
+<h3 id="sounds-sampler">The SAMPLER</h3>
+<p>The last FILE sub-mode records the host's audio input (or the master output) into the next free pool slot, tagged with the tempo and saved to <code>data/elasticat/rec/</code>.</p>
+<table>
+<tr><th>Control</th><th>Does</th></tr>
+<tr><td>B11</td><td>arm. Recording starts on the next bar (at once when stopped); B11 again disarms, or stops at the end of the bar</td></tr>
+<tr><td>B1–B5</td><td>the length: FREE, 1, 2, 4, 8 bars</td></tr>
+<tr><td>White keys</td><td>the input level meter</td></tr>
+<tr><td>K1–K4</td><td>LENGTH, GAIN, MONITOR, FREE</td></tr>
+<tr><td>REC held</td><td>the recorder's setup: SOURCE (IN / MASTER), LENGTH, THRESHOLD, SYNC, SLOT</td></tr>
+</table>
+</section>
+
+<section id="seq">
+<h2>Sequencing</h2>
+<p>Each of the six tracks has its own pattern (length, rate and 128 steps) in each of 64 patterns, A1 to D16. The <strong>selected track</strong> is the one the keys and knobs edit: pick it with SHIFT + W1–W6, SHIFT + PRESETS, or in MIX.</p>
+
+<h3 id="seq-loop">LOOP ENGINE (HOME)</h3>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAGFBMVEX28u7Nyr3/aRiclYtaXVI5jf8xMCkAAAAZijTnAAADKElEQVR42u3ciYGrIBAGYFqwhbRAC7bwWkgL0/6LXAOeQAzDyo+bAxS/7CxGM8ZVlJTptyWSFGDAP4VN0+SfTe6OTKt5sm3LpwznV+tq4jD5Fgrr52mK7rktG/aTh8m++A5g2oV9eDerKAr1dBbqzmAeU1WB5p4Bpm7gyQ17HvwUoau2Qtj9Zh42T4Rh7CQGgtsVwIB/CjtcKXdzk6ms2m2zMjfb3bVl/Qb686O1uYnCvpOKJ8WrStoUt6z7XLva6sskC0dhC6G2T9JQqyjUHlYqqeeFWhzeC3U06rjmBxKlMJXALtjisB84PLBUCK+KsBBaxZuRf0EZg0tvNicReLT36vUhSYNiSMAt4eslX6/7bcCA28FKAWZYKcDZO0H1RPhs7t+BbY3hvbmA9+F0rix8vbIaeF0D3BMc122tDt6u53nwMdUbfNUhhnNXvq3FdcDSMNdtLR9e9+wXPu+Qwjx/r5b2XC/p6z3AZyt7vVy6OAP29bNaL7Bt3qst8Hre0bLXtaXeD7xfLHxnASwHjzWqR3vnGm3vNN4RCA5vnw6P92lx9IwA0k3Pg8fL3iJDP/ZZGJxpG+1s6jPPmBO+jkG/+Z4R4Hbw9yv5txSJbykCxlUDubCL3NlDfvyP+wEGDPhWOIO69QFwexgX0wEGXJ6H8GcGZlcAPw3ubFS/hQrgdjDZy3PDhYz+otXjMn+m5Yfeb7c4X+96UZaudmsiWZivVuWLVq96W9j14lVcw/ZFC8Pc3T6cx2z2nU2oy+CZ1n9jGZioNNQBdgsXhHrm92pR2G5KlLs5mXgtg0vHXal4cxKCa4sJtcT++Gt4/e2QIrj2lBDgxnBd/w9c94oB/yVYbHABBgz4tp1EbVfAjeHxjjL1STnOJRi4Lg0BuDk83qgeEA7JNU62ZX8w165LljZzMkIUDjlB/+8GdV6WLCTYLrMXvcEh1eTidgXP7s4nXwrgNMEmB7vwtgl1lEQVg7UuHlzJ5kS6ZHPqAUZmr+IjTHrxK+AO4VvSTfxvagE/CRYbXIAF4HSAAe4O/jrd1HzvBLgMHu8oszZnZA/oKwrg5jASbM+G/wPWwVdy41MaWwAAAABJRU5ErkJggg==" alt="LOOP ENGINE: the waveform between the loop brackets, the step strip, the page's four values" width="240" height="240"><figcaption>LOOP ENGINE: the waveform between the loop brackets, the step strip, the page's four values</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr2clYtaXVL/ODExMCkAAABwQ+pEAAADCklEQVR42u3cgZWrIBAFUFqwBVqwhd9CWpj+S/gLwoCuCMNGQHm4iRqClzMhUSdxFe3Kcm+JJAUY8K2wfWjxS4u7I/uoXSC7sq0Le7dtePEKz/rC5LbIMEXTfs0/Vuy69m7JayPAdApzyP1T5KF2MMeYlqHhEKKqQEdDUxjqBrDbvLv3IT4ZbOJ3U/bt1APGTmIiuF0BDPhOWClFdjJzs+56s627ZfvEUCcqWpubtjezYqauMG/QzRmOGBVNcthA2i642QiwimC37V2o3XJ1qHewHgE+CXUcbB6AdaEm0WvcDI43zqFVhw7VfOBweLeFAeDJPquPhyQNiiUBt4R7DC3AgAEDBvwdWGUPEpR6G5zbcO4Z6dr3wqn6ceHrTdfXA24Lp5oqlaPr63vD55VK5ej6+hHg35VK5ej6+jHgY7X6Va67Jun6OHD8BHVaJF1L148F50tp19L1T4NLO5eufSN8XQADBvwE+F2fXG/bO811BDLXUeZsZxJznS3OlhFAumlueL7s7WwZ+tm+hcFXfIABAwY8Cnx+vEIdfqUIGPDd8D9TErOCkm0HGDDgr8L72gL4jzPA7WHCxXSAAQMGPDb86VQAt4MpXMToL2q0F7Gmy/ozmT/6fLancvPsiDJN13XlUd0L9pdw+gtWt6VMawdTcTPuM/WHiS8+D/Or1r6xC3Xodx42L9I6ABxFqjDUDJMMdsHuDW/x0ty6aHCtDFNZs7O3Uy+4tvzAffbHf4b998v+JoBD0+Pcbyr54xTAbeEACmGKmu9voQNXgwtwc1iWId8NrnM4vUnAXWDpdyAWposBdjVeATeGb9tJXPx0EnBLeL6jzLpcgjtpM0XeFHBjeL5RPR/MWTJNVJAm252Y6zh3U5iKWPvDu8QLFWfJOMGm+T/ZPQWO//FeQSZ0dXc+wVaWez1JsPWDKYIFmdC6UB+zt71g4iQqid5OMaz1U2Bk9kRwOBmVnQEBbgxXp5vihAPgR8DidFNdjwF3gyvSTd/5AAE88k6itingxjAye0iwIbOHBNuz4P8p2lnrPrln+wAAAABJRU5ErkJggg==" alt="A step selected (white): the loop keys write into it" width="240" height="240"><figcaption>A step selected (white): the loop keys write into it</figcaption></figure>
+<p>The track's sample, its machine and warp, and the loop keys.</p>
+<table>
+<tr><th>Control</th><th>Does</th></tr>
+<tr><td>B1 LOOP, B2 MACHINE, B3 WARP, B4 RANGE</td><td>the pages. Tapped again, a key steps the page's lanes. Held, B1 picks the loop mode, B2 the machine, B3 the warp mode, B4 the voice mode (MONO / POLY) from a list; turn SEL or K1 while holding</td></tr>
+<tr><td>White keys (blue, LIVE)</td><td>the <strong>loop keys</strong>: 16 divisions of the loop. Hold one to loop it, two or more to span them; the span never shrinks while you hold. Let go and the playhead returns as RET MODE says. LIVE, the keys also <strong>set the track's loop</strong> to what you played. Stopped, they audition</td></tr>
+<tr><td>ALGO</td><td>select a step on the shown page (its column turns white; full left = LIVE)</td></tr>
+<tr><td>White keys (red, a step selected)</td><td>still play live, and each entry is <strong>written into the selected steps</strong> as a region lock and a trig. On the RANGE page the entry is a range lock instead</td></tr>
+<tr><td>B11 held (yellow)</td><td>select steps with the keys; B1–B8 the pages; F1 clears the selected steps, F2 goes LIVE</td></tr>
+<tr><td>K1–K4</td><td>the page's values; with steps selected they lock onto all of them</td></tr>
+<tr><td>PRESETS</td><td>the step page</td></tr>
+<tr><td>B6–B10</td><td>the modulation sources (see Modulation)</td></tr>
+</table>
+<p>The waveform shows the loop range; the brackets are the track's region (static while playing) and the bright span is what the engine plays now. With the GRAIN warp each grain is drawn where it reads, with a blue head at its leading end. Slice machines turn the white keys into velocity-sensitive slice pads.</p>
+<div class="card tip"><strong>Machines</strong> (B2 held): LOOP, TRIG (one-shot), SLICE and S.POLY (even slices), RAZOR and R.POLY (the SLICE editor's table, mono / 8 voices), NEIGH (the track to the left), INPUT (the live input). <strong>Warps</strong> (B3 held, stopped): TAPE, VARI, DOMINO, GRAIN, OLA, PITCH, HARM, WTBL, FREEZE, FORMNT, GSTR, GSTR2, CHOP.</div>
+
+<h3 id="seq-trig">TRIG (HOME again)</h3>
+<p>The step grid. A quick tap on a white key puts a trig on the step or takes it off. Hold a step (or select steps with B11) and turn a knob to lock a value. The strip shows trigs, ghosts (lock-only steps), a VELOCITY lock as the trig's height and a PITCH lock as a blue mark. Pages: TRIG (B1), COND (B2: chance, ratchets, conditions), PLAYHEAD (B3: jump and return per step). With a step held, <strong>the black keys set its pitch</strong>: B6 is 0, B1 is −5 semitones, B11 is +5.</p>
+
+<h3 id="seq-keys">KEYBOARD (HOME again)</h3>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAGFBMVEX28u7Nyr2clYv/aRhaXVL/ODExMCkAAAC8EWBDAAACp0lEQVR42u3cgXWDIBAG4FuBFW6FrOAKXSEr3PpVuFPQRBEraP1JfVAT8vlOqXoJJUmKO7dEEgEGfCo8rAqrfUt8K9T2lPPtHVvm30HfU8Te22sXgEM7hsd6+ch0dfGbbO3AXAWeQm0htfBa6LWdLyewuC+hbgeLpKF24g6E2iXvEof6OvB8OLk45C4aXrmjyY0HbDKctGoM4yTxILheAQz4VJhIKwptIn2KwgtIxnX7Cw8L9z88rRraLWGyiMftCCY6sEfYP3QDtPZrWsIGjrAqRNOWFId6Dg9hbg9rUOehTtfTCaFuBZOGcj6cxsMrWVc4nIRlOZxawV3nf02r1yuuPr6krNI24CvA76EABgwYMGDAgAEDBgwYMGDAgAEDBgwYMGDAgAEDBgwYMD5NfQ6ML5IBBgwY8M1hovLvkAEGDBgw4L+Df4bypVJ47SW7K8D1YVyBAAYMGDBgwIABnwy/GxXA9WDRick2kXE2SflD6frH8CPvd5gKaV14nA+61rULH4c0hVkX4ai91VvhqA/rHNitbZb2sPUae6/LnXXWUCfwxl4adlJ3ATianJwZ6hEW2RvqLv5b3QhejAnOGxMKM0+7aOdwagWXlh5ucz4+DOuk9hKYihNwgO8Dl3UFXB0uO0IA3wcWaXRwAb4HfOQkAbgq/KyrTPZlby5Bb9q+l7WugCvDzzuqHziOhfXf0GWV+Mbc7uPDktc1znO1hLeTLossWZR8yUi8XA7mfNi+ke5DrTBLVqjTBFtbuCzUFufM7ovsbSNY4gTbvuHEHHW/EfzAk0S4QrVr1alev+zt4ZcvgC8P211IjBm4CR9LGwOuBE8H1xxevwP9w6MacCN4K8egJwnAN4CXJ4eKJwnAlS4EnpnZ21s+pptyM1WAK8NIsP1v+BeQgLw3rZDxeAAAAABJRU5ErkJggg==" alt="KEYBOARD: the keys filled in the layer's colour, the step strip below" width="240" height="240"><figcaption>KEYBOARD: the keys filled in the layer's colour, the step strip below</figcaption></figure>
+<p>The keybed plays the selected track chromatically (C4 on W5; F1 / F2 move the octave). Stopped, a held key plays the loop at that pitch. With a step selected (ALGO), a key <strong>writes a note</strong> on that step and moves on to the next (ADVANCE in LOOP SETUP; SHIFT + key does the other). On slice tracks B1–B10 pick the slice and a quick click on B11 steps the slice bank. The sounding key fills in the mode's colour; a selected step's note shows white.</p>
+
+<h3 id="seq-locks">Locks, copy and undo</h3>
+<ul>
+<li><strong>Locks stick</strong> as on an Elektron: a locked value holds until a later trig without that lock puts the track value back. SLIDE (TRIG, lane 2) glides between locked values.</li>
+<li><strong>Hold a step + PRESETS</strong> locks a pool slot on it: that step plays another sample.</li>
+<li><strong>F1 + a knob</strong> clears that parameter's locks (on the held steps, else the whole track); <strong>F2 + a knob</strong> clears its modulation.</li>
+<li><strong>Copy / cut / paste</strong>: with F1 (copy) or F2 (cut) on, tap a step to take it into the buffer, tap another to paste. The same works on whole pages (PAGES, black keys) and patterns (PATTERN LAUNCH, white keys). The buffer empties when F1 / F2 turns off.</li>
+<li><strong>SHIFT + F1 / F2</strong> undo and redo, gesture by gesture, with the gesture's name in the header.</li>
+</ul>
+
+<h3 id="seq-rec">Live recording (REC)</h3>
+<p>REC records what you play on the selected track while the transport runs: KEYBOARD notes (pitch and velocity locked), loop keys (the loop position locked), slice pads, and knob moves as locks (AUTOMATION). Hits land on the nearest step and keep their offset as a MICRO lock. Hold REC for the settings: MODE (CAPTURE starts playback on the first key; FIXED records a set number of bars; OVERDUB adds), COUNT-IN, METRONOME, CLICK LVL, AUTOMATION, QUANTIZE.</p>
+</section>
+
+<section id="sound">
+<h2>Shaping the sound</h2>
+<p>Each track runs: sample → <strong>FILTER</strong> → <strong>INSERT 1</strong> → <strong>INSERT 2</strong> → <strong>AMP</strong> (level, pan) → the mix, with sends to the S1 and S2 buses and the master insert after that. FILTER (B1 the type held, B2 its envelope, B3 mix) and AMP (B1 the envelope mode held, B2 AMP ENV, B3 MOD ENV) are the SEL and ENV buttons. All their values lock on steps.</p>
+
+<h3 id="sound-mod">Modulation</h3>
+<p>On every track page the black keys <strong>B6–B10 are the sources</strong>: LFO 1, LFO 2, MOD ENV, VEL, AT. <strong>Hold a source and turn any value knob</strong>: the first detent makes the route, the next set its depth. F2 held while turning removes it. Steps held as well make depth locks. The MOD button (MODULATION) has the MATRIX (B1: eight slots, SEL the row, K1 source, K2 destination, K3 depth), the LFO pages (B6, B7), VELOCITY (B9), and the four <strong>macros</strong> M1–M4 (B2–B5, overview on B11), which are sources too and lockable values.</p>
+
+<h3 id="sound-fx">FX</h3>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr2clYv/aRhaXVIxMCkAAAANW7m/AAADjklEQVR42u2bjbmrIAyGu4IrZIWu4ApdIfuPcFQI/0WgR6D1o9erRwmvT0gkRHywV5Zri0N6AAzwpeDj1GKOtsPlOJLT+26RarUor0WDGAyWllnjDNj9W4QrwZ4sC20GsKNqQxNtW1FeWlS9KEBa1ROAjYIWT+lW8XWq9rpMODOAtSP5YNcZjEvVg9kDR+40AoxB4kbgfgXgnuA1KHkjO7+aai8+BzDAl4JZNl3LNG3jUhsCpK/KSYHw/m9v1YLV38f/48Gm6rGn55PCuMXGALSV+Krc1341hMg5ZnNDw8H8DuyGdzGYvQ7wwKYD1wise3Qs2Fc1P5+cUGZsXG5H+O7E5ucbV76P+4JFOW/BrsPkr2bACXcaAg4fZwbc+1kN8FXgqGzgawpRPsoEuCP4gwLwV4A/sDeAAQYYYID7gem01NUrC/YABvi/wIv7ltYHbwd8bMehPpcAJ+rJRQPW01M9GR4LNr9Q1Ww29dOMWJ2JeuYOyU3IrG7yZRx4sVuoagXyGkwZVKKeb3nJdNM4sH1tGbkTxypMGVeiHofuxKuTx5sEHLmTHshUc0k3Ka23umnk4WAMEvcE4zUuwAB/F/jwcfVwZ3LnVRVpUTU66JivqI3RYD2i6buoAGsBEwMUNzEFmBrAdrCwYPoa8H36mGpdIVA1Oe5U7JIjwfd7VudW973eFj5dXJiXBRhggP8TjPAWYIB/YO5ETnhqE6KFoQ/ZPZEJgSYHm7DU3ZeS7a5OdihYXmKwVXNxlEs2zCVnKjM5+H59rN2IPbeqUDV94k4jwPd7Vr+aihJvlwUYYID/E4zwFmCAAQZ4dvBrUAG4H1jmluS9lM0VtVjoiAIi0ZNXP6v98nYoWN5YUWI18ltpBQ5FT256Nd8czwG25DxYhB0wExep2n4KPQeYq40rFD2Zk8t3oqPBYf6h1CfEnRpEB4Nbi8xjuo/HH4MfR9n3aqsAt4oC3B2sj1vAbaIAdweLhah9k3HViQLcHewbWKVxtYgC3B1sLaPRuACeHHy/KDP3RUkuv68C+iZRgDuD72fVNwRTYnURFU3MU6KZyflqkxFDwanVI0TnWbLdnZILT6YHs7vK6DzlJF/0mnQThfdMNQm2IeDU6qIyVadEqTyJOgpMVJVk8xNs1aIzgO+b2WsAt4oC3B1cO/9ITlMBBhhggAG+FIxh8dfB94syW1fubttni34B7gZGgu23wX/5vAAdDpsVDgAAAABJRU5ErkJggg==" alt="FX SENDS: the routing picture and the four levels" width="240" height="240"><figcaption>FX SENDS: the routing picture and the four levels</figcaption></figure>
+<p>The FX button: B1 / B2 select INSERT 1 / INSERT 2 (tap again for their knob pages; hold for the effect type), B3 / B4 the send buses, B5 steps SENDS (the routing picture: K1 and K2 the inserts' MIX, K3 and K4 the send levels, ALGO the send tap PRE / POST) and MASTER (the master effect and the load meter), B11 the FX MIX page. Eighteen effects: DELAY, REVERB, LOFI, COMP, DESTROY, ECHO, BLACKHOLE, CHORUS, FLANGER, PHASER, DJ EQ, DUCK, TAPE ECHO, CASSETTE, MOTION, RINGS, LIMIT. On SENDS, hold an effect's key and turn K1 to move it to the other slot.</p>
+</section>
+
+<section id="arrange">
+<h2>Arranging</h2>
+<h3 id="arrange-mix">MIX and PAGES (EDIT)</h3>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAACr0lEQVR42u3ai5WDIBAFUFuwBVugBVqwhem/hJWvA6ISVoGER/YYR8WbRY0wZqKgzO8WJk2AAb8Kq0VmsZ4jPUfzox+DuoK1RA5WU5ofhqlDeI7gZ1t67hAmdnI939Qdwi9fTv4wdgLjJjEQXK8ABgwYMGDAgAeH161sb1LSg4EpqcBsBhgwYMCAC+BpKzVg6/QG/zv4BjhoqRfh67O6GYwvEMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDPh1GD/HGAAOfptK7sewdmZZkovjakFgzp9UALgNvM7zKoS9vNWbCvSOVLAsfM22qQ/0fDKQMhUAbgfjchoAxm1xYHjaC+Avh4UQ28QuUoFeoGC7iYH1Grcd2ywKiO+NgjV79cawivhKN1FNPJmJ32z/gGzvQSCI7U2wqfsXO4GDir6pNUwc5rs8D1J76xv2l1Pc1ETicETigxAfhX0+dXI1g1PN5s0TON3U4jToCMZNYlgYnb1Cwx8taQvgX4M7O6vXRgVwPdh3R01f3bxfFrm91N+WSzK92KBvfFtV7o8G2sK2WxL0+q5qW5i9MmHzoTuAbf80GG+d1HaVbVMHQ7n7qodj3Ar+rKk97KtlN7Xcv6vbwW7sLOIR9vU1UQizpm4Fl5Zj9rvS/fgB2PTXXQcltwev4dLOPuCqsKvrsiws23IHlw/mAFeF95MLMGDA3wrHN4eqNwnAlToCo/UyRXbhuQQ7aMvbOCyAq8Mjjp2Gg+1gXIjDA+e7gXmq6sW4Xu7JiKZwmHwR/lnkXZbMpyLidET3sMuCBrXFTYLNNfWx6lVThwm2drBPrOXBrKlTVUV2ErUZzDOhudeES7B9XrUHeLzv6tJn8XoI80S/GnAFOG9YejJMBQwYMGDAVWDcFn8dHq+XWfYrIQ2XVgVcGUaC7bfhP3XZrt9JbV3kAAAAAElFTkSuQmCC" alt="MIX: the nine targets with their levels; the selected one bright" width="240" height="240"><figcaption>MIX: the nine targets with their levels; the selected one bright</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAACG0lEQVR42u3bh4GDIBhAYVZghazACqzgCuw/wqkUwZz9jiIPY8/PpwhRkyhMkuT/pkgSwMD/Cs+L5DI1DsIit2A7L9f7kZsPQSZ+i925CmAjLeBM3yW5bromIGm0WdYnsKwFTop6nvVZmoPqkhR1YM2yfr+oK4BXxb0vG7kBx4eiTtgXWwiXYXuOK5dJi33ZlrDeH8YwKgxzkugIzpeAc8JiSR3Cn083sB19wdJf/cnVzOrjYCPtRABnhucp4FfDNCfgl8PDmPzwALZvSiI+nyWP7YjisNt74BfDPV5ldnUnwW1qX3DW5lQSDl8GAb8WDj9SAL8Wpjn1ABc7SdQAx5fn8fAvV1QAR5UL+JVwf1eZ3MIAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAzcPD4UScD54PM5q6pUa+3nCTs9Lf0167KbX+BcpF+LD1VGNmkK11r5Wl4Xn3nHKHMHawz7Ivs7AdqMrgJVJc9kuN+2DXVEr5UOO4ekg6Upgs4JPVq7rRa2Xz+pycNyElDpXufQ3fL05lYLvJvfXzvzn48ewiB6LvfJA3QwLAdwAbKL4i7AQwI3AxSoXcOZ2fDUP4HbgBycJcfuZeOCscH9XmSpJZ79LcDdte2k7FDgz3F+tBj7yps5VrjuhZmgRnoYdwYMb3IDtY7HNwc+K2pgm4QfNqUGYkwQwMDAwMDAwMDAwMDDw6+AfCr8WHQ0nW1UAAAAASUVORK5CYII=" alt="PAGES: each step page as a row; the loop in the header" width="240" height="240"><figcaption>PAGES: each step page as a row; the loop in the header</figcaption></figure>
+<p><strong>MIX</strong>: W1–W9 are T1–T6, S1, S2, MST. Tap to select, hold to mute, SHIFT + key to solo. B1–B8 set the track's rate (1/8 … 4X), B9 / B10 step it, B11 is the CAT (the dancing-cat visualiser). PRESETS selects the track. The knobs are LEVEL, PAN, SEND 1, SEND 2 (MASTER: BPM, SWING, GLO LENGTH).</p>
+<p><strong>PAGES</strong>: the black keys are the step pages with the same gestures as B11's (tap, hold to mute, double-tap to solo, two held to loop). K1 LEN, K2 RATE, PRESETS the page; the loop reads in the header (LOOP ALL, LOOP 1-2). F1 / F2 copy and cut whole pages.</p>
+<p><strong>F3</strong> (SHIFT + SEQ, or F1 + F2): the timing menu with SEL tempo, ALGO swing, PRESETS to name the pattern, K1 / K2 the track's LENGTH and RATE, K3 / K4 the global length and the launch quantize.</p>
+
+<h3 id="arrange-pat">PATTERN LAUNCH (SEQ)</h3>
+<p>B1–B4 pick the bank A–D; the white keys launch the bank's 16 patterns on the launch quantize (at once when stopped). With F1 / F2 on, the white keys copy, cut and paste whole patterns. The playing pattern's LED is bright, the queued one blinks.</p>
+
+<h3 id="arrange-xfd">CROSSFADER (ARP)</h3>
+<p>Two scenes, A and B, and a fader between them. Hold B1 or B2 and turn a knob to put that value into the scene; B11 held + B1 / B2 captures every morphable value of every track; SHIFT + B1 / B2 clears a scene. W1–W12 are the fader: hold a key and it glides there, harder pressure glides faster; SHIFT + key jumps. W13–W16 set the base glide time. K1 is the fader as a knob. The fader is never recorded; a firing step's lock wins over it.</p>
+</section>
+
+<section id="settings">
+<h2>Settings and saving</h2>
+<table>
+<tr><th>Where</th><th>What</th></tr>
+<tr><td>SHIFT + ARP: APP SETTINGS</td><td>THEME, KNOB SPEED, AUTO-PREVIEW, AFTERTOUCH, METRO SOUND, MIDI CC, INTRO, MODE LOCK. Global, kept across projects and power cycles. SEL the row, K1 the value, F2 keeps, F1 reverts</td></tr>
+<tr><td>SHIFT + HOME: LOOP SETUP</td><td>the machine, warp mode, voice mode, KEYBOARD's ADVANCE</td></tr>
+<tr><td>SHIFT + EDIT: project settings</td><td>NAME, GLO BPM, BPM, RETURN MODE</td></tr>
+<tr><td>SHIFT + FX / SEL / ENV</td><td>the FX, filter and amp settings</td></tr>
+<tr><td>REC held</td><td>the record settings (in the SAMPLER: the recorder's setup)</td></tr>
+</table>
+<p><strong>Saving.</strong> SHIFT + FILE saves the project to <code>data/elasticat/projects/PROJ-nnn.ecp</code>; a project also saves itself two seconds after the last edit while stopped, and power-on reloads the last one. Open another from BROWSE: B1 up to the top level, PROJECTS/, then B10. SHIFT + B5 memorizes the project to RAM and SHIFT + B4 recalls it, for quick A/B comparisons.</p>
+</section>
+
+<section id="ref">
+<h2>Reference</h2>
+<h3>The header</h3>
+<p>Left: the target (T1 … MST). Middle: the mode and page, or a message, or what a held key will do (shown after a quarter second so a quick tap never flashes it; sticky SHIFT / F1 / F2 show at once). Right: the page number, the selected step (S09), or F1 / F2 while sticky.</p>
+<h3>Hold menus</h3>
+<p>LOOP ENGINE's B1–B5 and FX's B1–B5 open a list while held; SEL or K1 moves the cursor and letting go picks. A quick tap still opens the key's page.</p>
+<h3>Where things are kept</h3>
+<table>
+<tr><th>Thing</th><th>Where</th></tr>
+<tr><td>Samples</td><td>your RemoteFM1 folder, <code>audio/</code> (read only)</td></tr>
+<tr><td>Projects</td><td><code>data/elasticat/projects/*.ecp</code></td></tr>
+<tr><td>SAMPLER takes</td><td><code>data/elasticat/rec/*.wav</code></td></tr>
+<tr><td>APP SETTINGS, the last project's name</td><td>the cart's own flash image in the host</td></tr>
+</table>
+<h3>Numbers</h3>
+<table>
+<tr><td>Tracks / buses</td><td>6 tracks, sends S1 and S2, MST</td></tr>
+<tr><td>Patterns</td><td>64 (banks A–D × 16), up to 128 steps (8 pages) per track, polymetric</td></tr>
+<tr><td>Pool</td><td>128 slots, 200 MiB shared</td></tr>
+<tr><td>Modulation</td><td>8 matrix slots per track; LFO 1, LFO 2, MOD ENV, VEL, AT, MW, EXPR, M1–M4</td></tr>
+<tr><td>Slices</td><td>up to 32 per track</td></tr>
+</table>
+<p class="lead" style="font-size:14px;margin-top:32px">Elasticat FM-1 is GPL-3.0. Source and issues: <a href="https://github.com/Quixotic7/elasticatfm1">github.com/Quixotic7/elasticatfm1</a>. The full control reference lives in the repository's <code>docs/FM1-CONTROLS.md</code>.</p>
+</section>
+</main>
+</div>
+</body>
+</html>

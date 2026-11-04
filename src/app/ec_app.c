@@ -792,21 +792,22 @@ static float global_value(int id)
          : id == EC_G_QUANT ? (float)p->quant : (float)p->rtn;
 }
 
-void ec_app_edit_global(int id, int det, int mult)
+/* a global value by det clicks of mult finest steps (BPM: 0.1, 0.6.6), or, snap set, to the next snap value */
+void ec_app_edit_global_f(int id, int det, int mult, int snap)
 {
     ec_project_t *p = &A->proj;
     ec_e5_edit_global(id, global_value(id));     /* E5: undo */
     switch (id) {
     case EC_G_BPM:
-        ec_seq_set_bpm(&A->seq, A->fn ? ec_global_snap(EC_SNAP_BPM, p->bpm, det)
-                                      : floorf(p->bpm + 0.5f) + (float)(det * mult));
+        ec_seq_set_bpm(&A->seq, snap ? ec_global_snap(EC_SNAP_BPM, p->bpm, det)
+                                     : (floorf(p->bpm * 10.0f + 0.5f) + (float)(det * mult)) / 10.0f);
         break;
     case EC_G_SWING:
-        p->swing = A->fn ? ec_global_snap(EC_SNAP_SWING, p->swing, det) : (float)clampi((int)p->swing + det, 50, 75);
+        p->swing = snap ? ec_global_snap(EC_SNAP_SWING, p->swing, det) : (float)clampi((int)p->swing + det, 50, 75);
         ec_seq_timing_changed(&A->seq);
         break;
     case EC_G_GLEN:
-        p->glen = A->fn ? (int)ec_global_snap(EC_SNAP_GLEN, (float)p->glen, det) : clampi(p->glen + det * mult, 1, 256);
+        p->glen = snap ? (int)ec_global_snap(EC_SNAP_GLEN, (float)p->glen, det) : clampi(p->glen + det * mult, 1, 256);
         ec_seq_timing_changed(&A->seq);
         break;
     case EC_G_QUANT: p->quant = clampi(p->quant + det, 1, 4); break;
@@ -817,6 +818,8 @@ void ec_app_edit_global(int id, int det, int mult)
     }
     mark_dirty();
 }
+
+void ec_app_edit_global(int id, int det, int mult) { ec_app_edit_global_f(id, det, mult, A->fn); }
 
 static void edit_slot(int id, int det, int mult)
 {
@@ -862,7 +865,7 @@ static int item_steps(const ec_item_t *it)
 {
     switch (it->kind) {
     case EC_IT_PARAM: return param_steps(it->id);
-    case EC_IT_GLOBAL: return it->id == EC_G_BPM ? 280 : it->id == EC_G_GLEN ? 255 : 1;
+    case EC_IT_GLOBAL: return it->id == EC_G_BPM ? 2800 : it->id == EC_G_GLEN ? 255 : 1;   /* BPM: 0.1 steps */
     case EC_IT_SLOT: return it->id == EC_S_BPM ? 280 : it->id == EC_S_STEPS ? 511 : it->id == EC_S_GAIN ? 80 : 200;
     case EC_IT_RAZOR: return it->id == EC_RZ_START || it->id == EC_RZ_END ? 256 : 1;
     case EC_IT_E5: return it->id == EC_X_XFD ? 128 : 1;

@@ -118,7 +118,8 @@ void ec_app_mark_dirty(void);
 /* 0.6.0: the model for the panel (src/app/ec_panel.c ..) */
 void ec_app_edit_param_f(int id, int det, int mult, int flags);   /* flags: the item's (EC_IF_STOPPED) */
 void ec_app_clear_lock(int id);                              /* F1 + a knob */
-void ec_app_edit_global(int id, int det, int mult);
+void ec_app_edit_global(int id, int det, int mult);   /* SHIFT held: to the next snap value */
+void ec_app_edit_global_f(int id, int det, int mult, int snap);
 void ec_app_knob_cell(int k, int det);                       /* K1..K4 (k 0..3) on the page shown, F3's */
 void ec_app_lane_step(int d);                                /* SELECT on a page */
 void ec_app_set_page(int cat, int page);

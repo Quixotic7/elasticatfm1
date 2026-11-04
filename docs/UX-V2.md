@@ -812,3 +812,11 @@ them:
   cells, F1 + knob), the step strip and the target's lock on the waveform (ec_screens.c loop_steps / target_on_wave).
   **The zoom moved to B11 held + K1** (SHIFT + B11 is FILL); while B11 is held the white keys are labelled STEP n and
   the header says STEP  K1 ZOOM. Tests: test_loopstep (22 checks), test_ux's zoom; the real shot Loop_target.
+
+**SHIFT fixes** (owner, 2026-11-03; built in 0.6.6 by hand)
+- SHIFT + SEL is BPM in **0.1 steps**, accelerated (it was going through the snap path: tens). SHIFT + ALGO swing,
+  one a click. BPM anywhere moves in 0.1 steps (the MASTER page too).
+- SHIFT's screen covers only y 0..75 (BPM, swing, the track keys): **the page's own cells stay** below, and SHIFT + a
+  value knob snaps that param (ec_snap.c, the norns snap lists). SHIFT's own BPM / SWING / TRACK / SNAP cells are
+  gone.
+- **SHIFT + B4 = RECALL, SHIFT + B5 = MEMORIZE** (B3 is dark now).

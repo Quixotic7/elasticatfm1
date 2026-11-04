@@ -360,13 +360,23 @@ static void test_shift(void)
         turn(FM1P_E_ALGO, 2);
         run(20);
         CHECK(A->proj.bpm > bpm && A->proj.swing > sw, "SHIFT + SEL / ALGO: BPM %g, swing %g", A->proj.bpm, A->proj.swing);
+        {   /* 0.6.6: one slow detent = 0.1 BPM (no snap to tens), back down the same */
+            const float b0 = A->proj.bpm;
+            run(200);
+            turn(FM1P_E_SELECT, 1);
+            CHECK(fabsf(A->proj.bpm - b0 - 0.1f) < 0.001f, "SHIFT + SEL, one slow detent: +0.1 BPM (%g -> %g)", b0,
+                  A->proj.bpm);
+            run(200);
+            turn(FM1P_E_SELECT, -1);
+            CHECK(fabsf(A->proj.bpm - b0) < 0.001f, "and back -0.1 (%g)", A->proj.bpm);
+        }
         turn(FM1P_E_PRESETS, 1);
         run(20);
         CHECK(A->track == 1, "SHIFT + PRESETS: the next track");
         turn(FM1P_E_PRESETS, -1);
         run(20);
-        tapkey(1, bkey(3), 40);                               /* MEMORIZE */
-        CHECK(A->e5.memo_ok, "SHIFT + B3: memorized");
+        tapkey(1, bkey(5), 40);                               /* MEMORIZE (0.6.6: B5) */
+        CHECK(A->e5.memo_ok, "SHIFT + B5: memorized");
         tapkey(1, bkey(2), 40);
         CHECK(A->fill_latched, "SHIFT + B2: fill latched");
         tapkey(1, bkey(2), 40);
@@ -1070,7 +1080,8 @@ static void test_labels(void)
               lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "UNDO") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_SAVE, "SAVE"),
           "SHIFT: SEL %s HOME %s F1 %s", L(FM1CORE_LBL_KNOB0), L(FM1CORE_LBL_BTN0 + FM1P_B_HOME),
           L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN));
-    CHECK(led_key(1, bkey(6)) == FM1P_LED_OFF && led_key(1, bkey(3)) == FM1P_LED_LIT, "SHIFT: B6 dark, B3 lit");
+    CHECK(led_key(1, bkey(6)) == FM1P_LED_OFF && led_key(1, bkey(5)) == FM1P_LED_LIT && led_key(1, bkey(3)) == FM1P_LED_OFF,
+          "SHIFT: B6 dark, B5 (MEMO) lit, B3 dark (0.6.6)");
     btn(FM1P_B_GLO, 0);
     run(20);
     to(EC_CAT_FX);

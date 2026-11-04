@@ -88,9 +88,9 @@ png 11600:15_name_edit.png
 press OCT+@11800+60
 png 12000:16_pattern_named.png
 
-# ---- memorize (SHIFT + B3), change the cutoff, recall (SHIFT + B4) while playing, then undo (SHIFT + F1)
+# ---- memorize (SHIFT + B5, 0.6.6), change the cutoff, recall (SHIFT + B4) while playing, then undo (SHIFT + F1)
 press GLO@12300+300
-upper 2@12400+60
+upper 4@12400+60
 png 12450:17_memorize.png
 press SEL@12800
 turn K1@12900:50

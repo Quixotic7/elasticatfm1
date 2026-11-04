@@ -133,21 +133,23 @@ These hold in every mode unless the mode says otherwise.
   and every SHIFT knob and key works; letting go returns to the mode. A hold that was used (a knob, a key) never turns
   sticky on release; a quick unused tap does.
 - While SHIFT is on, only its keys light and the panel labels show what they do.
+- 0.6.6: **SHIFT's screen covers only the top** (BPM, swing, the track keys); the page's own knob boxes stay under
+  it, so you see each param jump as SHIFT + its knob snaps it.
 
 | SHIFT + | Does |
 |---|---|
-| SEL | BPM |
-| ALGO | swing |
+| SEL | BPM, in **0.1 steps** (faster turns move further) |
+| ALGO | swing, one step a click |
 | PRESETS | the target: T1..T6, S1, S2, MST (prev / next) |
-| a value knob | snap |
+| a value knob | **snap** that param on the page to its next useful value (the norns script's snap lists) |
 | W1-W9 | select the target: T1-T6, S1, S2, MST (MIX, CROSSFADER, KEYBOARD: see there) |
 | F1 / F2 | **undo / redo** (per gesture; the LEDs light when there is something to undo / redo) |
 | B1 | **tap tempo** (the average of the last four taps) |
 | B2 | **latch** fill on / off |
-| B3 | **memorize** the project to RAM |
-| B4 | **recall** it (lit once something is memorized) |
+| B4 | **recall** the memorized project (lit once something is memorized) |
+| B5 | **memorize** the project to RAM |
 | B11 (held) | **FILL** while held |
-| B5-B10 | nothing (dark) |
+| B3, B6-B10 | nothing (dark) |
 | FILE | save the project |
 | HOME | APP SETTINGS |
 | SEQ | F3 |

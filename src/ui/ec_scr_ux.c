@@ -24,15 +24,15 @@ void ec_scr_arrows(int x, int y, int c) { ec_kit_arrows(x + 1, y + 1, c); }
 
 /* ------------------------------------------------------------------------------------------- SHIFT's map --- */
 /* SHIFT held alone (the mock's SHIFT): BPM (SELECT) and swing (ALGORITHM) big, the track keys W1..W9 with their
- * levels, and the cells: BPM, SWING, the track (PRESETS), the snap of the value knobs */
+ * levels. 0.6.6: over the top of the page only (y 0..75): the page's own cells stay below, since SHIFT + a knob snaps
+ * those params (the norns snap values, ec_snap.c) */
 static void shift_map(const ec_app_t *a)
 {
     static const char *const N[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
     const int sel = a->bus ? EC_NTRACK - 1 + a->bus : a->track;
     static char bpm[12], sw[8];
-    ec_kit_cell_t c[4];
     int i;
-    R(EC_C_BG, 0, 0, W, H);
+    R(EC_C_BG, 0, 0, W, 76);                         /* down to the cells' top rule (y 76) */
     ec_screens_header(a, "SHIFT", 0, "");
     snprintf(bpm, sizeof bpm, "%.1f", (double)a->proj.bpm);   /* the mock's 120.0: the tenths SELECT sets */
     snprintf(sw, sizeof sw, "%d", (int)floorf(a->proj.swing + 0.5f));
@@ -55,12 +55,6 @@ static void shift_map(const ec_app_t *a)
         if (lv > 0)
             R(i == sel ? EC_C_L15 : EC_C_L5, x + 1, 62, (int)(10.0f * lv + 0.5f) < 2 ? 2 : (int)(10.0f * lv + 0.5f), 3);
     }
-    memset(c, 0, sizeof c);
-    c[0].label = "BPM", c[0].value = bpm, c[0].frac = (a->proj.bpm - 20.0f) / 280.0f;
-    c[1].label = "SWING", c[1].value = sw, c[1].frac = a->proj.swing / 100.0f;
-    c[2].label = "TRACK", c[2].value = N[sel], c[2].frac = (float)sel / 8.0f, c[2].flags = EC_KC_ACC;
-    c[3].label = "SNAP", c[3].value = "K1-K4";
-    ec_kit_cells(c, 1, 0);
 }
 
 /* ------------------------------------------------------------------------------------------- the takeover --- */

@@ -301,7 +301,7 @@ static void tap_tempo(void)
     ec_ux_takeover("TAP", b, (A->proj.bpm - 20.0f) / 280.0f);
 }
 
-/* SHIFT + B1 TAP TEMPO, B2 LATCH, B3 MEMORIZE, B4 RECALL, B11 FILL (held); B5-B10 dark */
+/* SHIFT + B1 TAP TEMPO, B2 LATCH, B4 RECALL, B5 MEMORIZE (0.6.6, owner: was B3 / B4), B11 FILL (held); the rest dark */
 static void shift_black(int key, int down)
 {
     if (!down) {
@@ -318,8 +318,8 @@ static void shift_black(int key, int down)
         ec_seq_set_fill(&A->seq, A->fill_held, A->fill_latched);
         ec_app_message(A->fill_latched ? "FILL LATCHED" : "FILL OFF");
         break;
-    case 3: ec_e5_memorize(); break;
     case 4: ec_e5_recall_memo(); break;
+    case 5: ec_e5_memorize(); break;
     case 11:
         A->fill_held = 1;
         ec_seq_set_fill(&A->seq, 1, A->fill_latched);
@@ -925,7 +925,7 @@ static void knob(int r, int d)
     if (UX->f3) {                                  /* F3: SELECT tempo, ALGO swing, PRESETS the name, K1-K4 */
         if (r == EC_E_SELECT || r == EC_E_ALGO) {
             const int id = r == EC_E_SELECT ? EC_G_BPM : EC_G_SWING;
-            ec_app_edit_global(id, d, ec_ux_accel(r, id == EC_G_BPM ? 280 : 1, d));
+            ec_app_edit_global(id, d, ec_ux_accel(r, id == EC_G_BPM ? 2800 : 1, d));
         } else if (r == EC_E_PRESETS)
             ec_e5_name_pattern();
         else
@@ -934,9 +934,10 @@ static void knob(int r, int d)
     }
     if (A->fn) {                                   /* SHIFT: SELECT BPM, ALGO swing, PRESETS the track, K snap */
         UX->shift_used = 1;
-        if (r == EC_E_SELECT || r == EC_E_ALGO) {
+        if (r == EC_E_SELECT || r == EC_E_ALGO) { /* 0.6.6: no snap here (SHIFT is how you get to them): BPM in
+                                                    * 0.1 steps, accelerated */
             const int id = r == EC_E_SELECT ? EC_G_BPM : EC_G_SWING;
-            ec_app_edit_global(id, d, ec_ux_accel(r, id == EC_G_BPM ? 280 : 1, d));
+            ec_app_edit_global_f(id, d, ec_ux_accel(r, id == EC_G_BPM ? 2800 : 1, d), 0);
             return;
         }
         if (r == EC_E_PRESETS) {

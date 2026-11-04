@@ -252,8 +252,8 @@ static void leds_black(void)
         } else {
             l[0] = blink(250) ? EC_LED_LIT : EC_LED_MID;              /* tap tempo */
             l[1] = A->fill_latched ? EC_LED_LIT : EC_LED_MID;          /* latch */
-            l[2] = EC_LED_LIT;                                         /* memorize */
-            l[3] = A->e5.memo_ok ? EC_LED_LIT : EC_LED_DIM;            /* recall */
+            l[3] = A->e5.memo_ok ? EC_LED_LIT : EC_LED_DIM;            /* recall (B4) */
+            l[4] = EC_LED_LIT;                                         /* memorize (B5) */
             l[10] = ec_seq_fill_active(&A->seq) ? EC_LED_LIT : EC_LED_MID;   /* fill */
         }
     } else if (!A->settings) {
@@ -637,7 +637,7 @@ static void white_labels(void)
 
 static void black_labels(void)
 {
-    static const char *const SH[EC_NBKEY] = {"TAP", "LATCH", "MEMO", "RECALL", "", "", "", "", "", "", "FILL"};
+    static const char *const SH[EC_NBKEY] = {"TAP", "LATCH", "", "RECALL", "MEMO", "", "", "", "", "", "FILL"};
     static const char *const MIX[EC_NBKEY] = {"1/8", "1/4", "1/2", "3/4", "1X", "3/2", "2X", "4X", "SLOWER", "FASTER",
                                               "CAT"};
     static const char *const NN[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};

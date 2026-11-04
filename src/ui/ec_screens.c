@@ -606,10 +606,12 @@ static void loop_steps(const ec_app_t *a, int range, int tint)
     const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
     const int len = ec_seq_pattern_steps(&a->seq, a->track);
     const int play = ec_seq_step(&a->seq, a->track);
+    /* 0.6.14 (owner): on the LOOP layer every element is in the tint (red / blue): the trigs, the empty steps'
+     * floors, the selection and the playhead; the STEP layer is white with the accent playhead */
     const int bright = tint >= 0 ? tint : EC_C_L15, mid = tint >= 0 ? tint : EC_C_L12;
+    const int floor_a = tint >= 0 ? tint : EC_C_L5, floor_b = tint >= 0 ? tint : EC_C_L3;
+    const int head = tint >= 0 ? tint : EC_C_ACC;
     int i;
-    if (tint >= 0)
-        R(tint, 2, 73, W - 4, 2);              /* (2 units: the grid rule) */
     for (i = 0; i < 16; i++) {
         const int idx = a->step_page * 16 + i, x = 3 + i * 7;
         const ec_step_t *st = &tr->steps[idx];
@@ -622,11 +624,11 @@ static void loop_steps(const ec_app_t *a, int range, int tint)
         if (st->trig || st->slices)
             R(sel ? bright : mid, x, 64, 5, 6);
         else
-            R(sel ? bright : i % 4 == 0 ? EC_C_L5 : EC_C_L3, x, 68, 5, 2);
-        if (sel)
-            R(bright, x, 61, 5, 2);
+            R(sel ? bright : i % 4 == 0 ? floor_a : floor_b, x, 68, 5, 2);
+        if (sel)                                     /* selected: its cap joins its cell (a full column) */
+            R(bright, x, 61, 5, sel && !(st->trig || st->slices) ? 9 : 3);
         if (idx == play && (a->seq.playing || a->seq.paused))
-            R(EC_C_ACC, x, 61, 5, 2);
+            R(head, x, 61, 5, 2);
         if (lock_pair(st, range, &lo, &hi)) {        /* its lock, placed in the cell as in the loop */
             int l = (int)floorf(lo / 128.0f * 5.0f), r = (int)ceilf(hi / 128.0f * 5.0f);
             l = clampi(l, 0, 3);

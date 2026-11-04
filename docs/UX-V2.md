@@ -903,3 +903,5 @@ the B11 pick mode above)
 - B11 held + OCT+ = LIVE (nothing selected); OCT- still clears the selected steps.
 - The tempo always shows one decimal (120.0) in the SHIFT layer's cell and on F3 (owner). GLO LENGTH tops out at 128 too.
 - The BPM knob's acceleration is capped: 0.1 a slow detent, at most 1.0 BPM a detent flat out (it reached 17.5).
+- The LOOP layer's strip is all in its tint (owner): trigs, empty floors, the selection (a full column) and the
+  playhead; the rule under it is gone (it meant nothing). The STEP layer stays white with the accent playhead.

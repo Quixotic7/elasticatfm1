@@ -229,7 +229,7 @@ static void leds_white(void)
     int i;
     if (ec_e5_leds_lower())                        /* naming, F3's pages */
         return;
-    if (P->as_open || P->rs_open) {
+    if (P->as_open || P->rs_open || ec_pn_picking()) {   /* (0.6.15: the picker: only the black keys light) */
         for (i = 0; i < EC_NLOWER; i++)
             ec_plat_led_lower(i, EC_LED_OFF);
         return;

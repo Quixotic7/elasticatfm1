@@ -964,3 +964,5 @@ the B11 pick mode above)
   letting go without a key changes nothing. A quick click still cycles the modes.
 - **MODE LOCK** (APP SETTINGS, off by default, saved in the settings record): a click opens the button's own mode
   and never cycles; the only way to change a button's mode is the hold + a black key.
+- While a mode button is held the white keys are swallowed (nothing reaches the mode) and their LEDs are dark:
+  only the picker's black keys light. APP SETTINGS is SHIFT + ARP (its SHIFT label says so); SHIFT + HOME is LOOP SETUP.

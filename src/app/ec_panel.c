@@ -668,6 +668,12 @@ static void loop_down(int k, int i, int vel)
 static void white_down(int k, int i, int vel, int lean)
 {
     const int mode = ec_app_mode();
+    if (P->btn >= 0 && !A->fn) {                   /* 0.6.15 (owner): a mode button held: the keybed is the picker's,
+                                                    * nothing reaches the mode; the release is no click either */
+        P->btn_used = 1;
+        A->key_role[k] = R_SWALLOW;
+        return;
+    }
     if (UX->f3 && !A->e5.naming) {                 /* F3's pages: tap = edit the page, hold = the loop */
         UX->f3_keys |= (uint16_t)(1u << i);
         UX->f3_used &= (uint16_t)~(1u << i);

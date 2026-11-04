@@ -228,6 +228,12 @@ static void test_settings(void)
         char h[40];
         ec_hdr_title("", h, sizeof h);
         CHECK(!A->settings && ec_pn_picking() && !strcmp(h, "PICK A MODE"), "FX held 450 ms: no settings, PICK A MODE (%s)", h);
+        CHECK(led_key(0, 0) == FM1P_LED_OFF && led_key(0, 7) == FM1P_LED_OFF, "picking: the white keys dark");
+        key(0, wkey(3), 1);                                   /* a white key while picking: swallowed */
+        run(20);
+        key(0, wkey(3), 0);
+        run(20);
+        CHECK(!ec_project_track(&A->proj, A->track)->steps[2].trig && !A->step_held, "a white key while picking: nothing reaches the mode");
     }
     btn(FM1P_B_FX, 0);
     run(30);

@@ -1397,6 +1397,13 @@ void ec_app_ui_info(char *buf, uint32_t n)
                     *c = '_';
             snprintf(buf + l, n - l, " hdr:%s hdrbar:%d", ec_hdr_custom() ? h : "-", bar);
         }
+        l = (uint32_t)strlen(buf);   /* 0.6.14: the selected track's playhead (0..1000 of the sample), the warp */
+        if (l < n) {
+            ec_track_status_t st;
+            ec_dsp_track_status(A->dsp, A->track, &st);
+            snprintf(buf + l, n - l, " ppos:%d warp:%d gspd:%d", (int)(st.pos_sample * 1000.0f + 0.5f),
+                     iv(ec_app_params(A), EC_P_MODE), (int)(ec_app_params(A)[EC_P_GRAIN_SPEED] * 100.0f + 0.5f));
+        }
     }
 }
 

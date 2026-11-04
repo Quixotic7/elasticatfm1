@@ -85,9 +85,7 @@ void ec_lp_track(int from, int to)
         return;
     g.target[from] = P->target;
     len = ec_seq_pattern_steps(&A->seq, to);
-    P->target = clampi(g.target[to], 0, len);
-    if (P->target)
-        A->step_page = (P->target - 1) / 16;
+    P->target = clampi(g.target[to], 0, len);      /* (0.6.14, owner: the step page stays where it was) */
     g.skeys = g.keys = g.span = 0;
     A->redraw = 1;
 }

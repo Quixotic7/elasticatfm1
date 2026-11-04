@@ -268,8 +268,13 @@ void ec_pn_select_target(int i)      /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
         A->bus = 0;
     } else
         A->bus = i - EC_NTRACK + 1;
-    if (ec_app_mode() == EC_CAT_MASTER && !A->settings)
-        ec_app_set_page(EC_CAT_MASTER, A->bus == 3 && ec_cat_pages(EC_CAT_MASTER, 0) > 1 ? 1 : 0);
+    if (ec_app_mode() == EC_CAT_MASTER && !A->settings && ec_cat_pages(EC_CAT_MASTER, 0) > 1) {
+        /* 0.6.14 (owner): the page stays; only MST has the MASTER page: onto it, there; off it, back */
+        if (A->bus == 3)
+            ec_app_set_page(EC_CAT_MASTER, 1);
+        else if (A->page[EC_CAT_MASTER] == 1)
+            ec_app_set_page(EC_CAT_MASTER, 0);
+    }
     A->redraw = 1;
 }
 
@@ -878,12 +883,10 @@ static void presets(int d)
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
     }
-    if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track (as SHIFT's) */
+    if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track, no pop-up (the
+                                                    * header's target box says it) */
         const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-        int now;
         ec_pn_select_target(cur + (d > 0 ? 1 : -1));
-        now = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-        ec_ux_takeover("TRACK", target_name(now), (float)now / 8.0f);
         return;
     }
     {   /* the slot the knob starts from: the held step's lock, else the track's */

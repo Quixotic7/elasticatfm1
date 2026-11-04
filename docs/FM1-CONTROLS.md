@@ -747,7 +747,7 @@ MIX (EDIT, first): the mixer - every track's level, pan and sends, and the maste
 | Item | Label | Name | What it does |
 |---|---|---|---|
 | `mute` | MUTE | Mute | Silences the track (its sends still feed S1 / S2). Saved with the pattern; also a held track key. |
-| `global.glen` | GLEN | Global length | The global pattern length, 1 to 128 steps: the boundary that SEQ pattern changes (and TEMP returns) wait for. |
+| `global.glen` | GLEN | Global length | The global pattern length, 1 to 256 steps: the boundary that SEQ pattern changes (and TEMP returns) wait for. |
 | `global.rtn` | RTN | Playhead return | What the playhead does when loop keys are let go: RETURN (back in sync), BOOMR (plays back out in reverse) or RESET (restart). |
 | `e5.gbpm` | GBPM | Global BPM | ON: one tempo for every pattern. OFF: each pattern keeps its own BPM. |
 | `e5.name` | NAME | Project name | Turn to name the project (OCT+ keeps it, OCT- cancels). |

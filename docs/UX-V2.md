@@ -938,3 +938,8 @@ the B11 pick mode above)
   page keys) left the cells for the header's right info ("A1 LOOP ALL", "A1 LOOP 1-2", "A1 LOOP 3 PGS"); K3 is empty.
 - MIX (owner): PRESETS selects the track (T1..T6, S1, S2, MST), as SHIFT + PRESETS does everywhere; the pool walk
   stays on the other modes (CROSSFADER, PATTERN LAUNCH, FILE).
+- GSPD steps by 0.01 (owner: "super slow down the grains"; 0.05 was the floor above a freeze). Measured in the
+  harness (ppos in ui_info): 1.0 = 125/1000 of the sample a half second, 0 = frozen, 4.0 = four times. Note: with a
+  step selected the knob locks GSPD onto that step, not the track (the cell fills LOCK); go LIVE to set the track's.
+- MIX (owner): PRESETS selects the track without a pop-up; the MIX page stays when the track changes (only MST's
+  MASTER page comes and goes). Switching tracks no longer moves the step page to the new track's selected step.

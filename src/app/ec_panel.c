@@ -217,6 +217,26 @@ static void mode_tap(int b)
             return;
     }
     cur = ec_app_mode();
+    if (mb == EC_MB_FILE && cur == EC_CAT_FILE && !A->bus) {   /* 0.6.15 (owner): FILE's sub-modes on its button:
+                                                    * BROWSE / POOL -> the EDITOR -> RAZOR -> the SAMPLER -> BROWSE;
+                                                    * playing, the editors are skipped (they need a stop) */
+        const int pic = ec_file_page();
+        const int playing = A->seq.playing || ec_seq_counting_in(&A->seq);
+        int want = pic == EC_PIC_EDITOR ? EC_PIC_RAZOR : pic == EC_PIC_RAZOR ? -1 : EC_PIC_EDITOR, p;
+        if (playing)
+            want = -1;
+        if (want >= 0) {
+            for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)
+                if (ec_page_pic(EC_CAT_FILE, p, 0) == want) {
+                    ec_app_set_page(EC_CAT_FILE, p);
+                    P->pool_carry = -1;
+                    A->redraw = 1;
+                    return;
+                }
+        }
+        ec_pn_enter(EC_MODE_SAMPLER);
+        return;
+    }
     if (ec_mode_button(cur) == mb) {
         if (n > 1) {
             for (i = 0; i < n && modes[i] != cur; i++)

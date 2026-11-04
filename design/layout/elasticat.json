@@ -634,7 +634,7 @@
         {
           "title": "EDITOR",
           "picture": "editor",
-          "key": 4,
+          "key": 0,
           "note": "the sample editor: B2-B10 the zoom, B1 / B11 scroll, the white keys place the trim point F1 / F2 picks (START / END; hold one + a second key: both)",
           "lanes": [
             [{"item": "slot.trim_start", "label": "START"}, {"item": "slot.trim_end", "label": "END"}, {"item": "slot.bpm", "label": "BPM"}, {"item": "slot.gain", "label": "GAIN"}],
@@ -644,7 +644,7 @@
         {
           "title": "RAZOR",
           "picture": "razor",
-          "key": 5,
+          "key": 0,
           "lanes": [
             ["razor.play", "razor.zoom", {"item": "razor.start", "label": "SLCE START"}, {"item": "razor.end", "label": "SLCE END"}],
             [{"item": "razor.snap", "label": "SNAP MODE"}, {"item": "razor.choke", "label": "CHOKE"}, {"item": "razor.pitch", "label": "PITCH"}, {"item": "razor.sens", "label": "TRANS SENS"}]

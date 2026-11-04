@@ -164,7 +164,7 @@ static void keys(const char *mn, int exempt_mix, int exempt_editor)
         go(first);
         if (ec_pn_roles(mode(), &cur)[kk - 1] != 'P' && ec_pn_roles(mode(), &cur)[kk - 1] != 'S')
             continue;
-        if (exempt_editor && ec_file_page() == EC_PIC_EDITOR)   /* (the EDITOR's black keys are the zoom) */
+        if (exempt_editor && (ec_file_page() == EC_PIC_EDITOR || ec_file_page() == EC_PIC_RAZOR))   /* (the editors: no page keys) */
             continue;
         for (n = 0, j = first; n < cnt; n++) {
             int nx;
@@ -194,7 +194,7 @@ static void keys(const char *mn, int exempt_mix, int exempt_editor)
     for (i = 0; i < nL; i++) {
         int ex = 0;
         go(i);
-        ex = exempt_mix || (exempt_editor && ec_file_page() == EC_PIC_EDITOR);
+        ex = exempt_mix || (exempt_editor && (ec_file_page() == EC_PIC_EDITOR || ec_file_page() == EC_PIC_RAZOR));   /* (0.6.15: RAZOR too: FILE's button) */
         CHECK(reached[i] || ex, "%s: entry %d (%s) is reached by a key", mn, i, name_of(i));
     }
 }

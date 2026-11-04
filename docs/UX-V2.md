@@ -951,3 +951,7 @@ the B11 pick mode above)
   never serves a stale cart under the old name.
 - GSPD (owner: "each grain too"): besides the cursor's drift, GSPD scales each grain's own read rate (x PITCH;
   0.05 at the floor so a grain never stalls): at 0.1 every grain crawls, an octave and more down; at 4 four times up.
+- FILE (owner: "once in the trim page the black keys are the zoom; make the browser and the editors separate modes
+  on the SAVE button"): the FILE button cycles BROWSE / POOL > EDITOR > RAZOR > SAMPLER > BROWSE (the button's label
+  says which; playing, the editors are skipped). EDITOR and RAZOR have no page keys any more (B4 / B5 are free in
+  the browser); SEL still walks BROWSE < EDITOR < RAZOR < POOL. The layout (design/layout/elasticat.json) carries it.

@@ -308,7 +308,7 @@ turn SELECT@115400:2
 upper 9@115600
 turn SELECT@116000:-2
 png 117400:FileBrowser_screen.png
-upper 3@117800
+press SAVE@117800
 upper 3@118200
 lower 1@118600
 press OCT+@118680
@@ -372,9 +372,9 @@ turn SELECT@140300:2
 png 140800:Record_settings.png
 press OCT-@141000
 # ======== 0.6.1 (v61b-file): FILE's EDITOR in END mode, the POOL page
-# ---- FILE (SAVE: BROWSE; B4: the EDITOR, still 4X): F1 START + W3, F2 END + W13: the header says END
+# ---- FILE (SAVE: BROWSE; SAVE again: the EDITOR, still 4X): F1 START + W3, F2 END + W13: the header says END
 press SAVE@142000
-upper 3@142200
+press SAVE@142200
 press OCT-@142600
 lower 2@142800
 press OCT+@143200

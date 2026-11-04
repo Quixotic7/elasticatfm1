@@ -579,7 +579,12 @@ static const char *button_name(int mb)
             case EC_MODE_KEYBOARD: return "KEYS";
             case EC_CAT_MASTER: return "MIX";
             case EC_MODE_PAGES: return "PAGES";
-            case EC_CAT_FILE: return "FILE";
+            case EC_CAT_FILE:                  /* 0.6.15: its sub-modes by page */
+                if (cur == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR)
+                    return "EDITOR";
+                if (cur == EC_CAT_FILE && ec_file_page() == EC_PIC_RAZOR)
+                    return "RAZOR";
+                return "FILE";
             case EC_MODE_SAMPLER: return "SAMPLER";
             default: break;
             }

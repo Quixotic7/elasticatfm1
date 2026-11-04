@@ -95,7 +95,7 @@ These hold in every mode unless the mode says otherwise.
     FX MIX (B11); each effect has as many knob pages as its params need (three a page, K4 its MIX)
   - MODULATION: MATRIX (B1, AT), LFO 1 (B6), LFO 2 (B7), VELOCITY (B9), MACROS (B11), MACRO 1-4 (B2-B5)
   - MIX: TRACK MIX P1, P2, MASTER (no page keys: the black keys are the rates; MST selected shows MASTER)
-  - FILE: BROWSE (B3), EDITOR P1, P2 (B4), RAZOR P1, P2 (B5), POOL (B6)
+  - FILE: BROWSE (B3), POOL (B6); 0.6.15: the EDITOR (P1, P2) and RAZOR (P1, P2) are sub-modes on the FILE button
   - PATTERN LAUNCH: the banks A-D (B1-B4); CROSSFADER, KEYBOARD, PAGES, SAMPLER: one page
   - With a bus selected, the modes that show the bus's page list only its lanes.
 - **Lists** (0.6.1: APP SETTINGS, the record settings, every mode's settings, the recorder's setup): **SEL moves the
@@ -469,9 +469,9 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
 | BROWSE | B3 | - | | | | |
-| EDITOR | B4 | 1 | START | END | BPM | GAIN |
+| EDITOR |  | 1 | START | END | BPM | GAIN |
 |  |  | 2 | STEPS |  |  |  |
-| RAZOR | B5 | 1 | PLAY | ZOOM | SLCE START | SLCE END |
+| RAZOR |  | 1 | PLAY | ZOOM | SLCE START | SLCE END |
 |  |  | 2 | SNAP MODE | CHOKE | PITCH | TRANS SENS |
 | POOL | B6 | - | | | | |
 
@@ -1062,7 +1062,8 @@ An FX machine changes at any time (a short fade, no click).
 - 0.6.11: **FILE opens while playing** (BROWSE, POOL, the SAMPLER; loads and previews too). Only the **EDITOR and
   RAZOR** (B4 / B5), **FREE**, **MOVE** and **purge** say STOP FIRST. Inside FILE, PLAY starts and stops (from the
   EDITOR / RAZOR it goes to BROWSE first: "BROWSE: PLAY AGAIN"); REC does nothing.
-- Pages: **BROWSE (B3)**, **EDITOR (B4)**, **RAZOR (B5)**, **POOL (B6)**, in that order.
+- Pages: **BROWSE (B3)** and **POOL (B6)**. 0.6.15: **the FILE button cycles BROWSE > EDITOR > RAZOR > SAMPLER**
+  (playing, the editors are skipped); the editors have no page keys, so their black keys are all theirs (the zoom).
 - **SEL turns the page on EDITOR and RAZOR**, both ways (lane by lane: EDITOR and RAZOR have two lanes each, then the
   next page): BROWSE < EDITOR < RAZOR < POOL. On **BROWSE and POOL, SEL is the list's cursor**; their way out is a page
   key (B3 B4 B5 B6). The EDITOR's black keys are all zoom keys, so **SEL** leaves it (back to BROWSE, on to RAZOR).

@@ -58,11 +58,6 @@ static void test_gating(void)
     press(FM1P_B_SAVE, 40);
     CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE && A->seq.playing,
           "FILE while playing: BROWSE opens, still playing (%d)", mode());
-    B(4, 40);
-    CHECK(ec_file_page() == EC_PIC_FILE && A->msg_alert && !strcmp(A->msg, "STOP FIRST"),
-          "B4 while playing: the EDITOR refused, STOP FIRST (%s)", A->msg);
-    B(5, 40);
-    CHECK(ec_file_page() == EC_PIC_FILE && !strcmp(A->msg, "STOP FIRST"), "B5 while playing: RAZOR refused");
     press(FM1P_B_OCTUP, 40);
     CHECK(!strcmp(A->msg, "STOP FIRST"), "F2 (FREE) while playing: refused (%s)", A->msg);
     press(FM1P_B_SAVE, 40);
@@ -77,8 +72,8 @@ static void test_gating(void)
     CHECK(A->seq.playing, "inside BROWSE PLAY starts");
     press(FM1P_B_PLAY, 40);
     CHECK(!A->seq.playing, "and stops");
-    B(4, 40);
-    CHECK(ec_file_page() == EC_PIC_EDITOR, "stopped: B4 opens the EDITOR");
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "stopped: FILE again opens the EDITOR (0.6.15)");
     press(FM1P_B_PLAY, 40);
     CHECK(!A->seq.playing && ec_file_page() == EC_PIC_FILE, "PLAY on the EDITOR: back to BROWSE, not playing (%s)",
           A->msg);
@@ -88,7 +83,7 @@ static void test_gating(void)
     press(FM1P_B_REC, 40);
     press(FM1P_B_REC, 500);
     CHECK(!ec_liverec_on() && !A->pn.rs_open, "inside FILE REC does nothing (tap, hold)");
-    B(4, 40);
+    press(FM1P_B_SAVE, 40);
     to(EC_CAT_SRC);
     press(FM1P_B_SAVE, 40);
     CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "FILE from another mode: BROWSE, never the EDITOR");
@@ -134,13 +129,13 @@ static void test_folders(void)
     CHECK(!strcmp(A->pn.fdir, "/audio") && A->cursor == 0, "B2 on AUDIO/: back in /audio (%s)", A->pn.fdir);
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "UP") && lbl(FM1CORE_LBL_BLACK0 + 1, "INTO") &&
               lbl(FM1CORE_LBL_BLACK0 + 9, "LOAD") && lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") &&
-              lbl(FM1CORE_LBL_BLACK0 + 3, "EDITOR"),
-          "the browser's labels: B1 %s B2 %s B10 %s B11 %s B4 %s", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 1),
-          L(FM1CORE_LBL_BLACK0 + 9), L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_BLACK0 + 3));
+              lbl(FM1CORE_LBL_BLACK0 + 3, ""),
+          "the browser's labels: B1 %s B2 %s B10 %s B11 %s B4 %s (0.6.15: no EDITOR key)", L(FM1CORE_LBL_BLACK0),
+          L(FM1CORE_LBL_BLACK0 + 1), L(FM1CORE_LBL_BLACK0 + 9), L(FM1CORE_LBL_BLACK0 + 10), L(FM1CORE_LBL_BLACK0 + 3));
     {
         int cur;
         const char *r = ec_pn_roles(EC_CAT_FILE, &cur);
-        CHECK(!strcmp(r, "AAPPPPOOOAX"), "the browser's roles (0.6.1: B6 POOL): %s", r);
+        CHECK(!strcmp(r, "AAPOOPOOOAX"), "the browser's roles (0.6.15: B3 BROWSE, B6 POOL): %s", r);
     }
 }
 
@@ -293,8 +288,8 @@ static void test_editor(void)
     ec_slot_t *sl;
     to(EC_CAT_FILE);
     A->track = 0;
-    B(4, 40);
-    CHECK(ec_file_page() == EC_PIC_EDITOR, "B4: the editor");
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "FILE again: the editor");
     sl = &A->proj.slot[ec_app_track_slot(A, 0)];
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "<") && lbl(FM1CORE_LBL_BLACK0 + 3, "4X") && lbl(FM1CORE_LBL_BLACK0 + 10, ">"),
           "the editor's black keys: %s %s %s", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 3),
@@ -417,18 +412,20 @@ static void test_file_pages(void)
     to(EC_CAT_FILE);
     B(3, 40);
     CHECK(ec_file_page() == EC_PIC_FILE && lbl(FM1CORE_LBL_BLACK0 + 5, "POOL") &&
-              lbl(FM1CORE_LBL_BLACK0 + 3, "EDITOR") && lbl(FM1CORE_LBL_BLACK0 + 4, "RAZOR"),
-          "BROWSE: B4 EDITOR, B5 RAZOR, B6 POOL (%s)", L(FM1CORE_LBL_BLACK0 + 5));
+              lbl(FM1CORE_LBL_BLACK0 + 3, "") && lbl(FM1CORE_LBL_BLACK0 + 4, ""),
+          "BROWSE: B6 POOL, no B4 / B5 (0.6.15: the editors are on the FILE button) (%s)", L(FM1CORE_LBL_BLACK0 + 5));
     B(6, 40);
     CHECK(ec_file_page() == EC_PIC_POOL, "BROWSE: B6 leaves for POOL");
     B(3, 40);
     CHECK(ec_file_page() == EC_PIC_FILE, "POOL: B3 leaves for BROWSE");
     B(6, 40);
-    B(5, 40);
-    CHECK(ec_file_page() == EC_PIC_RAZOR, "POOL: B5 leaves for RAZOR");
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR (0.6.15)");
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_file_page() == EC_PIC_RAZOR, "EDITOR: FILE again = RAZOR");
     B(6, 40);
-    B(4, 40);
-    CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: B4 leaves for EDITOR");
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR");
     turn(FM1P_E_SELECT, 1);                        /* EDITOR's second lane, then RAZOR */
     turn(FM1P_E_SELECT, 1);
     CHECK(ec_file_page() == EC_PIC_RAZOR && ec_rzui_active(A), "EDITOR: SEL on to RAZOR");
@@ -717,9 +714,11 @@ static void test_razor_keys(void)
 {
     ec_razor_t *rz = &A->proj.razor[A->track];
     const int t = A->track, m0 = rz->mute[1];
+    to(EC_CAT_SRC);
     to(EC_CAT_FILE);
-    B(5, 40);
-    CHECK(ec_rzui_active(A), "B5: RAZOR");
+    press(FM1P_B_SAVE, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_rzui_active(A), "FILE twice from BROWSE: RAZOR");
     clear_steps(t);
     W(2, 40);
     CHECK(!ec_step_has_content(step(A->step_page * 16 + 1)) && A->track == t, "RAZOR: W2 is a slice, not a step");

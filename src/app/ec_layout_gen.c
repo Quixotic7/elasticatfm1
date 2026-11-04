@@ -811,8 +811,8 @@ static const ec_lay_page_t ec_layout_shipped_page[48] = {
     {"MASTER", 0, 0, 0, 76, 1},   /* MST/MASTER */
     {"SETUP", 0, 0, 0, 77, 1},   /* MST/SETUP */
     {"BROWSE", 18, 0, 3, 78, 1},   /* FILE/BROWSE B3 */
-    {"EDITOR", 22, 0, 4, 79, 1},   /* FILE/EDITOR B4 */
-    {"RAZOR", 19, 0, 5, 80, 1},   /* FILE/RAZOR B5 */
+    {"EDITOR", 22, 0, 0, 79, 1},   /* FILE/EDITOR */
+    {"RAZOR", 19, 0, 0, 80, 1},   /* FILE/RAZOR */
     {"POOL", 23, 0, 6, 81, 1},   /* FILE/POOL B6 */
     {"PATTERN", 20, 0, 0, 82, 1},   /* PAT/PATTERN */
     {"SETUP", 0, 0, 0, 83, 1},   /* PAT/SETUP */

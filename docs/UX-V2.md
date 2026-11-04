@@ -935,3 +935,5 @@ the B11 pick mode above)
   KEYBOARD; the knobs lock onto the selected steps there as well. A quick click on B11 keeps those pages' own tap
   (FILTER's envelope mode, FX MIX, MACROS). PAGES mode: K1 LEN, K2 RATE, PRESETS the page, without B11.
 - PAGES' LOOP cell (owner): a readout, not K3's parameter: no K-tag, no bar (a dotted rule), the label dim.
+- MIX (owner): PRESETS selects the track (T1..T6, S1, S2, MST), as SHIFT + PRESETS does everywhere; the pool walk
+  stays on the other modes (CROSSFADER, PATTERN LAUNCH, FILE).

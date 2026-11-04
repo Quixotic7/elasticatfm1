@@ -878,6 +878,14 @@ static void presets(int d)
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
     }
+    if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track (as SHIFT's) */
+        const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
+        int now;
+        ec_pn_select_target(cur + (d > 0 ? 1 : -1));
+        now = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
+        ec_ux_takeover("TRACK", target_name(now), (float)now / 8.0f);
+        return;
+    }
     {   /* the slot the knob starts from: the held step's lock, else the track's */
         const int hs = ec_app_held_step(A);
         float lk;

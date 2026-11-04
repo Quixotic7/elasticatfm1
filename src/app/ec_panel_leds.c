@@ -518,7 +518,7 @@ static void knob_labels(void)
         lane = ec_app_lane(A, &pg);
         L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET" : ec_rzui_active(A) ? "SLICE"
                                                     : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, (mode == EC_CAT_SRC || mode == EC_CAT_TRIG) && !A->bus && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
         else if (A->settings)

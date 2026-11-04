@@ -517,7 +517,7 @@ static void test_presets(void)
     run(800);
     s0 = ec_app_track_slot(A, A->track);
     CHECK(s0 == 2 && A->slot[2].state == EC_SL_READY, "FILE: B10 loads into the next free slot (%d)", s0);
-    to(EC_CAT_MASTER);                                        /* (0.6.14: on the track pages PRESETS is the page) */
+    to(EC_CAT_XFD);                                           /* (0.6.14: track pages: the page; MIX: the track) */
     turn(FM1P_E_PRESETS, 1);
     run(20);
     CHECK(ec_app_track_slot(A, A->track) == 0 && A->ux.to_ms && A->ux.to_kind == EC_TO_SAMPLE,

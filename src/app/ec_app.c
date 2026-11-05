@@ -757,6 +757,9 @@ void ec_app_edit_param_f(int id, int det, int mult, int flags)
         message("STOP FIRST");
         return;
     }
+     if (id == EC_P_SLICE_COUNT)                   /* 0.6.16: COUNT's undo brings the slice table back with it */
+        ec_undo_razor(&A->e5.undo, &A->proj, A->track, "CNT", 0x5Cu, A->ms);
+    else
     ec_e5_edit_param(A->track, id, 0);           /* E5: undo; the knob takes the param back from the fader */
     if (id == EC_P_MACHINE)
         v[id] = nudge_machine(v[id], det);
@@ -893,14 +896,14 @@ static void edit_slot(int id, int det, int mult)
         ec_file_ed_zoom(det);
         return;
     case EC_S_TRIM_START:   /* (SHIFT: the finest step, the original's trim scan) */
-        ec_undo_trim(&A->e5.undo, &A->proj, s, 0, A->ms);   /* 0.6.1: undoable (a turn coalesced) */
+        ec_undo_trim(&A->e5.undo, &A->proj, s, 0, 0, A->ms);   /* 0.6.1: undoable (a turn coalesced) */
         sl->trim_start += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_start = sl->trim_start < 0 ? 0 : sl->trim_start > sl->trim_end - 0.005f ? sl->trim_end - 0.005f
                                                                                            : sl->trim_start;
         ec_file_ed_select(0);                      /* 0.6.15: K1 selects START; the view follows it */
         break;
     default:
-        ec_undo_trim(&A->e5.undo, &A->proj, s, 0, A->ms);
+        ec_undo_trim(&A->e5.undo, &A->proj, s, 1, 0, A->ms);
         sl->trim_end += (A->fn ? 0.001f : 0.005f) * (float)(det * mult);
         sl->trim_end = sl->trim_end > 1 ? 1 : sl->trim_end < sl->trim_start + 0.005f ? sl->trim_start + 0.005f
                                                                                        : sl->trim_end;

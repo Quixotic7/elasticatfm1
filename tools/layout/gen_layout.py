@@ -93,7 +93,7 @@ SPECIAL_NUM = {"EC_IT_BLANK": 0, "EC_IT_PARAM": 1, "EC_IT_GLOBAL": 2, "EC_IT_SLO
                "EC_RZ_START": 0, "EC_RZ_END": 1, "EC_RZ_PLAY": 2, "EC_RZ_ZOOM": 3, "EC_RZ_SNAP": 4, "EC_RZ_CHOKE": 5,
                "EC_RZ_PITCH": 6, "EC_RZ_SENS": 7,
                "EC_S_BPM": 0, "EC_S_STEPS": 1, "EC_S_GAIN": 2, "EC_S_TRIM_START": 3, "EC_S_TRIM_END": 4, "EC_S_ZOOM": 5}
-STOPPED = {"mode", "filter_machine", "filter_mix_mode"}     # change only while stopped (EC_IF_STOPPED)
+STOPPED = {"mode", "machine", "filter_machine", "filter_mix_mode"}     # change only while stopped (EC_IF_STOPPED)
 MAX_LANES, SETUP_LANES, MAX_PAGES = 4, 2, 16
 CELL_LABEL_WARN, LABEL_MAX = 5, 10
 TEXT_W = lambda s: len(s) * 4 - 1 if s else 0               # the 3x5 font (src/ui/ec_gfx.c ec_gfx_text_w), units

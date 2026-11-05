@@ -991,3 +991,29 @@ the B11 pick mode above)
   selected slice heard; a white key fires the slice on any machine (a slice machine: the pad, else the preview
   player). Both editors: B11 previews (the trim / the slice); the zoom reset is gone; B6 / B7 do nothing there.
 - Both editors' B11 (owner): the trim / the slice loops while B11 is held and stops the moment it is let go.
+
+## 12. 0.6.16: the QA session's fixes (2026-11-04)
+
+Two harness sweeps over every mode (results/qa-0.6.15/REPORT.md). Fixed:
+
+- **The slice table is on the undo stack** (EC_U_RAZOR): EVEN, CHOP, split, delete, mute, the slice knobs (start, end,
+  play, choke, pitch, snap, sens: a knob's turns coalesce) and the COUNT knob each make an entry holding the table
+  and the COUNT, so undoing COUNT brings the edges back with it (before: nothing of the table was undoable, and
+  undoing CNT left stale, overlapping edges).
+- **Auto-Chop starts at 0**: a hit in the first analysis window is found (the scan began at window 1), and when the
+  first transient is late the head becomes slice 1 (before: the first hit was left out or split). Two onsets closer
+  than 50 ms are one hit (was 30 ms: a hit's attack could count twice).
+- **The machine changes only while stopped**, like the warp (the LOOP SETUP row says STOP, the knob STOP FIRST).
+- **A held menu button let go with no black key changes nothing** (the release still clicked: the mode cycled).
+- **MODE LOCK with FILE locked to an editor opens BROWSE while playing** (STOP FIRST), as the unlocked cycle does.
+- **PAGES says LAST PAGE** when a hold cannot mute the loop's only page (it said PAGE 1 MUTED).
+- **MOD CLEARED (F2 + a knob) is undoable** (the route's SRC / DST / DEPTH as one entry).
+- **The trim editor's undo**: START, END, AUTO BPM and RECALC are gestures of their own (K1 then K2 no longer merge
+  into one UNDO TRIM; undoing a trim no longer discards the steps RECALC set); the entry carries the slot's BPM too.
+- Docs: FM1-CONTROLS.md's stale 0.6.10 lines (SHIFT + HOME, holds, the SLICE section, PATTERN's knobs, POOL,
+  the recorder's setup), the guide's crossfader capture wording.
+
+Kept as designed (the report called them out): KEYBOARD's black keys with a target step write the slice trig and
+advance (the E1 demo writes slice sequences that way: a note key is not needed); the recorder's setup targets the
+selected track's slot (E6: a resample; its SLOT row picks another); lowering COUNT keeps the table's edges (EVEN
+redistributes); CROSSFADER capture takes the values that differ from their default or that the other scene holds.

@@ -215,6 +215,8 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
     if (ec_pn_f(2)) {                                     /* 0.6.0, F2 while turning: remove that route */
         A->pn.f_used = 3;
         if (k >= 0) {
+            const uint8_t ids[3] = {(uint8_t)ec_mtx_src_id(k), (uint8_t)ec_mtx_dst_id(k), (uint8_t)ec_mtx_depth_id(k)};
+            ec_e5_edit_params(A->track, ids, 3, "MOD CLEAR");   /* 0.6.16: undoable */
             slot_clear(v, k);
             ec_seq_touch(&A->seq, A->track);
             ec_app_mark_dirty();

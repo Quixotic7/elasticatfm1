@@ -73,18 +73,28 @@ static void test_autochop(void)
     for (i = 0; i < n; i++)
         printf(" %.4f", pos[i]);
     printf("\n");
-    CHECK(n == 7, "%d transients, want 7 (the hit at 0 is the head the original leaves out)", n);
-    for (i = 0; i < n && i < 7; i++)
-        if (fabs(pos[i] - HITS[i + 1]) > 2.0 / EC_RZ_ONSET_WINDOWS)
+    CHECK(n == 8, "%d transients, want 8 (0.6.16: the hit at 0 too)", n);
+    for (i = 0; i < n && i < 8; i++)
+        if (fabs(pos[i] - HITS[i]) > 2.0 / EC_RZ_ONSET_WINDOWS)
             ok = 0;
     CHECK(ok, "a transient is more than 2 windows off its hit");
     n = ec_razor_autochop(&P, 0, pos, n, 0.0, 1.0);
-    CHECK(n == 7 && (int)P.pat[0].tr[0].v[EC_P_SLICE_COUNT] == 7, "autochop count %d", n);
-    for (i = 0; i < 7; i++) {
-        CHECK(fabsf(P.razor[0].start[i] - (float)HITS[i + 1] * 128) < 0.6f, "slice %d start %.3f", i + 1,
+    CHECK(n == 8 && (int)P.pat[0].tr[0].v[EC_P_SLICE_COUNT] == 8, "autochop count %d", n);
+    for (i = 0; i < 8; i++) {
+        CHECK(fabsf(P.razor[0].start[i] - (float)HITS[i] * 128) < 0.6f, "slice %d start %.3f", i + 1,
               P.razor[0].start[i]);
-        CHECK(fabsf(P.razor[0].end[i] - (i < 6 ? (float)HITS[i + 2] * 128 : 128.0f)) < 0.6f, "slice %d end %.3f",
+        CHECK(fabsf(P.razor[0].end[i] - (i < 7 ? (float)HITS[i + 1] * 128 : 128.0f)) < 0.6f, "slice %d end %.3f",
               i + 1, P.razor[0].end[i]);
+    }
+    /* 0.6.16: a loop whose first hit is late starts with a slice of the head (slice 1 from 0) */
+    {
+        float late[8];
+        int k;
+        for (k = 0; k < 7; k++)
+            late[k] = (float)HITS[k + 1];
+        n = ec_razor_autochop(&P, 2, late, 7, 0.0, 1.0);
+        CHECK(n == 8 && P.razor[2].start[0] == 0 && fabsf(P.razor[2].end[0] - (float)HITS[1] * 128) < 0.6f,
+              "late first hit: %d slices, slice 1 %.2f..%.2f", n, P.razor[2].start[0], P.razor[2].end[0]);
     }
     /* a track window (trim x Range) of the second half: only the transients inside, in track space */
     n = ec_razor_transients(&on, 0.5f, pos, 64);
@@ -92,7 +102,7 @@ static void test_autochop(void)
     CHECK(n == 4 && fabsf(P.razor[1].start[0] - 0) < 1.2f && fabsf(P.razor[1].start[1] - 16) < 1.2f,
           "half window: %d slices, %.2f %.2f", n, P.razor[1].start[0], P.razor[1].start[1]);
     /* sensitivity: 0 finds fewer or the same */
-    CHECK(ec_razor_transients(&on, 0.0f, pos, 64) <= 7, "sens 0 found more");
+    CHECK(ec_razor_transients(&on, 0.0f, pos, 64) <= 8, "sens 0 found more");
 }
 
 static void test_zero_cross(void)

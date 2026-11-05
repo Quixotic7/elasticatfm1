@@ -112,7 +112,7 @@ static const ec_item_t ec_layout_shipped_item[631] = {
     {EC_IT_BLANK, 0, 0, NULL},
     {EC_IT_PARAM, EC_P_RANGE_START, 0, "R-START"},
     {EC_IT_PARAM, EC_P_RANGE_END, 0, "R-END"},
-    {EC_IT_PARAM, EC_P_MACHINE, 0, "MACHINE"},
+    {EC_IT_PARAM, EC_P_MACHINE, EC_IF_STOPPED, "MACHINE"},
     {EC_IT_PARAM, EC_P_MODE, EC_IF_STOPPED, "WARP MODE"},
     {EC_IT_PARAM, EC_P_LOOP_DIVISION, 0, "LOOP DIV"},
     {EC_IT_PARAM, EC_P_TRIG_POLY, 0, "VOICE MODE"},

@@ -158,11 +158,17 @@ float ec_rzui_frac(const ec_app_t *a, int id, float x)
 /* razor_point_edit: one STRT / END turn under the snap mode. Without a snap the original moved 0.5 per detent; here
  * the ZOOM snap is the plain mode and its detent is 0.5 / zoom, so the marker moves the same visible amount at
  * every zoom (the original's FN fine nudge). */
+static void undoable(ec_app_t *a, const char *label, uint32_t key)   /* 0.6.16: the table before an edit */
+{
+    ec_undo_razor(&a->e5.undo, &a->proj, a->track, label, key, a->ms);
+}
+
 static void edit_point(ec_app_t *a, int which, int det, int mult)
 {
     ec_razor_t *rz = &a->proj.razor[a->track];
     const int s = sel(a), k = s - 1, count = ec_rzui_count(a);
     const float cur = which ? rz->end[k] : rz->start[k];
+    undoable(a, which ? "SLCE END" : "SLCE START", 0x5E00u + (uint32_t)(which * 64 + k));
     const float step = 0.5f / (float)U->zoom;
     float x = cur + (float)(det * mult) * step;
     switch (rz->snap) {
@@ -213,7 +219,7 @@ void ec_rzui_edit(ec_app_t *a, int id, int det, int mult)
     switch (id) {
     case EC_RZ_START: edit_point(a, 0, det, mult); break;
     case EC_RZ_END: edit_point(a, 1, det, mult); break;
-    case EC_RZ_PLAY: rz->play[k] = (int8_t)clampi(rz->play[k] + det, 0, 6); break;
+    case EC_RZ_PLAY: undoable(a, "PLAY", 0x5F00u + (uint32_t)k); rz->play[k] = (int8_t)clampi(rz->play[k] + det, 0, 6); break;
     case EC_RZ_ZOOM: {
         int z = U->zoom;
         if (det > 0)
@@ -224,10 +230,11 @@ void ec_rzui_edit(ec_app_t *a, int id, int det, int mult)
         a->redraw = 1;
         return;   /* (a view, not the project) */
     }
-    case EC_RZ_SNAP: rz->snap = (uint8_t)clampi(rz->snap + det, 1, EC_NSNAP); break;
-    case EC_RZ_CHOKE: rz->choke[k] = (int8_t)clampi(rz->choke[k] + det, 0, 8); break;
-    case EC_RZ_PITCH: rz->pitch[k] = clampf(floorf(rz->pitch[k] + 0.5f) + (float)det, -24, 24); break;
+    case EC_RZ_SNAP: undoable(a, "SNAP", 0x5F40u); rz->snap = (uint8_t)clampi(rz->snap + det, 1, EC_NSNAP); break;
+    case EC_RZ_CHOKE: undoable(a, "CHOKE", 0x5F80u + (uint32_t)k); rz->choke[k] = (int8_t)clampi(rz->choke[k] + det, 0, 8); break;
+    case EC_RZ_PITCH: undoable(a, "PITCH", 0x5FC0u + (uint32_t)k); rz->pitch[k] = clampf(floorf(rz->pitch[k] + 0.5f) + (float)det, -24, 24); break;
     default:
+        undoable(a, "SENS", 0x5F41u);
         rz->sens = (uint8_t)clampi(rz->sens + det * mult, 0, 100);
         ec_rzui.sens_ms = a->ms ? a->ms : 1;
         break;
@@ -267,6 +274,7 @@ void ec_rzui_key(ec_app_t *a, int i, int down, int vel)
         return;
     if (a->fn) {                                      /* FN + key: mute the slice (FN + slice key in the original) */
         ec_razor_t *rz = &a->proj.razor[a->track];
+        undoable(a, "MUTE", 0);
         rz->mute[slice - 1] = !rz->mute[slice - 1];
         snprintf(m, sizeof m, "SLICE %d %s", slice, rz->mute[slice - 1] ? "MUTED" : "ON");
         say(a, m);
@@ -298,6 +306,7 @@ void ec_rzui_autochop(ec_app_t *a)
     }
     n = ec_razor_transients(onsets(smp), (float)rz->sens / 100.0f, p, EC_RZ_ONSET_WINDOWS);
     ec_rzui_window(a, a->track, &lo, &hi);
+    undoable(a, "CHOP", 0);
     n = ec_razor_autochop(&a->proj, a->track, p, n, lo, hi);
     if (!n) {
         say(a, "NO TRANSIENTS");
@@ -316,6 +325,7 @@ void ec_rzui_even(ec_app_t *a)
     ec_razor_t *rz = &a->proj.razor[a->track];
     const int count = ec_rzui_count(a);
     char m[32];
+    undoable(a, "EVEN", 0);
     ec_razor_redistribute(rz, count);
     snprintf(m, sizeof m, "EVEN %d", count);
     U->focus = -1;
@@ -353,6 +363,7 @@ void ec_rzui_oct(ec_app_t *a, int up)
             say(a, "32 SLICES");
             return;
         }
+        undoable(a, "SPLIT", 0);
         ec_razor_add(&a->proj, a->track, s, x);
         snprintf(m, sizeof m, "SPLIT %d", s);
         U->focus = -1;
@@ -361,6 +372,7 @@ void ec_rzui_oct(ec_app_t *a, int up)
             say(a, "LAST SLICE");
             return;
         }
+        undoable(a, "DELETE", 0);
         ec_razor_delete(&a->proj, a->track, s);
         snprintf(m, sizeof m, "DELETE %d", s);
         U->sel = clampi(s, 1, count - 1);

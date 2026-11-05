@@ -224,6 +224,12 @@ static void mode_tap(int b)
         if (ec_mode_button(cur) == mb)
             return;
         if (mb == EC_MB_FILE && P->last[mb] == EC_CAT_FILE && P->last_fpage >= 0) {
+            const int pic = ec_page_pic(EC_CAT_FILE, P->last_fpage, 0);
+            if ((pic == EC_PIC_EDITOR || pic == EC_PIC_RAZOR) && (A->seq.playing || ec_seq_counting_in(&A->seq))) {
+                ec_pn_enter(EC_CAT_FILE);          /* 0.6.16: the editors need a stop: BROWSE instead */
+                ec_app_message("STOP FIRST");
+                return;
+            }
             ec_pn_goto(EC_CAT_FILE, P->last_fpage);
             return;
         }
@@ -603,7 +609,8 @@ static void button_up(int b)
         break;
     default:
         if (P->btn == b) {
-            if (!P->btn_used)
+            if (!P->btn_used && A->ms - P->btn_ms < EC_HDR_MS)   /* 0.6.16: a hold (the picker) let go with no
+                                                                  * key changes nothing */
                 mode_tap(b);
             P->btn = -1;
         }

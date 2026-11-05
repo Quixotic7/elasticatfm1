@@ -260,14 +260,16 @@ int ec_razor_transients(const ec_onsets_t *on, float sens, float *pos01, int cap
     if (on->mean_rise * 3.0f > th)
         th = on->mean_rise * 3.0f;
     spw = (float)on->frames / (float)W / on->rate;
-    gap = (int)ceilf(0.03f / (spw > 1e-6f ? spw : 1e-6f));
+    gap = (int)ceilf(0.05f / (spw > 1e-6f ? spw : 1e-6f));   /* 0.6.16: 50 ms (one hit's attack is one onset) */
     gap = gap < 1 ? 1 : gap;
     last = -gap;
-    for (w = 1; w < W - 1 && n < cap; w++)
-        if (on->rise[w] >= th && on->rise[w] >= on->rise[w - 1] && on->rise[w] > on->rise[w + 1] && w - last >= gap) {
+    for (w = 0; w < W - 1 && n < cap; w++) {       /* 0.6.16: window 0 too (a hit right at the start of the file) */
+        const float before = w ? on->rise[w - 1] : 0;
+        if (on->rise[w] >= th && on->rise[w] >= before && on->rise[w] > on->rise[w + 1] && w - last >= gap) {
             pos01[n++] = (float)w / (float)W;
             last = w;
         }
+    }
     return n;
 }
 
@@ -313,6 +315,13 @@ int ec_razor_autochop(ec_project_t *p, int t, const float *pos01, int n, double 
     }
     if (!cnt)
         return 0;
+    if (x[0] > 0.5f && cnt < EC_RZ_SLICES) {       /* 0.6.16: the sample always starts in slice 1: what is before the
+                                                    * first transient is a slice of its own, not left out */
+        memmove(x + 1, x, (size_t)cnt * sizeof x[0]);
+        x[0] = 0;
+        cnt++;
+    } else if (x[0] > 0)
+        x[0] = 0;
     for (i = 0; i < cnt; i++) {
         const float a = x[i];
         float b = i + 1 < cnt ? x[i + 1] : 128.0f;

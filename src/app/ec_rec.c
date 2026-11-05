@@ -65,7 +65,7 @@ void ec_rec_init(void)
 }
 
 /* ------------------------------------------------------------------------------------------- the take --- */
-static int target_slot(void) { return R->slot_set ? R->slot : ec_app_track_slot(A, A->track); }
+static int target_slot(void) { return R->slot_set ? R->slot : ec_app_track_slot(A, A->track); }   /* (E6: the track's slot: a resample) */
 
 static void drop(void)
 {

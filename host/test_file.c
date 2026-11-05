@@ -774,6 +774,75 @@ static void test_razor_keys(void)
     B(7, 40);
 }
 
+/* 0.6.16 (QA): the slice table is on the undo stack, with the COUNT knob; the trim editor's START and END are gestures
+ * of their own; a held menu button let go with no key changes nothing */
+static void test_qa616(void)
+{
+    ec_razor_t *rz = &A->proj.razor[A->track];
+    ec_slot_t *sl;
+    float s0, e0;
+    int t = A->track, k, undo0;
+    /* the slice editor: EVEN 4 -> UNDO = the 16 before; COUNT -12 -> UNDO = 16 again, the edges as they were */
+    to(EC_CAT_SRC);
+    to(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_rzui_active(A), "QA: the slice editor");
+    ec_razor_redistribute(rz, 16);
+    ec_project_track(&A->proj, t)->v[EC_P_SLICE_COUNT] = 16;
+    s0 = rz->start[5];
+    e0 = rz->end[5];
+    B(3, 40);                                      /* page 3: COUNT, TRANS SENS */
+    turn(FM1P_E_K1, -12);
+    run(20);
+    CHECK(ec_rzui_count(A) == 4, "QA: COUNT 4 (%d)", ec_rzui_count(A));
+    B(9, 40);                                      /* EVEN 4 */
+    run(20);
+    CHECK(fabsf(rz->end[0] - 32.0f) < 0.01f, "QA: EVEN 4: slice 1 ends at 32 (%g)", rz->end[0]);
+    undo0 = A->e5.undo.n;
+    to(EC_CAT_SRC);
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(ec_rzui_count(A) == 4 && fabsf(rz->end[0] - 8.0f) < 0.01f, "QA: UNDO EVEN: the 16 edges back (%g, %s)",
+          rz->end[0], A->msg);
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(ec_rzui_count(A) == 16 && rz->start[5] == s0 && rz->end[5] == e0 && A->e5.undo.n == undo0 - 2,
+          "QA: UNDO CNT: 16 slices, slice 6 as it was (%d, %g..%g, %s)", ec_rzui_count(A), rz->start[5], rz->end[5], A->msg);
+    /* the trim editor: K1 then K2 within a second = two undos */
+    to(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_file_page() == EC_PIC_EDITOR, "QA: the trim editor");
+    sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
+    s0 = sl->trim_start;
+    e0 = sl->trim_end;
+    turn(FM1P_E_K1, 4);
+    run(300);
+    turn(FM1P_E_K2, -4);
+    run(20);
+    CHECK(sl->trim_start > s0 && sl->trim_end < e0, "QA: START and END moved (%g %g)", sl->trim_start, sl->trim_end);
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(sl->trim_start > s0 && sl->trim_end == e0, "QA: UNDO: END back, START still moved (%g %g, %s)", sl->trim_start,
+          sl->trim_end, A->msg);
+    shift_down(1);
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(sl->trim_start == s0, "QA: UNDO again: START back (%g, %s)", sl->trim_start, A->msg);
+    /* a hold with no key: nothing (a click still cycles) */
+    k = mode();
+    press(FM1P_B_ENV, 700);
+    run(20);
+    CHECK(mode() == k, "QA: ENV held 700 ms, no key: the mode stays (%d)", mode());
+    press(FM1P_B_ENV, 40);
+    run(20);
+    CHECK(mode() != k, "QA: ENV clicked: AMP (%d)", mode());
+    to(EC_CAT_FILE);
+}
+
 int main(int argc, char **argv)
 {
     char p[1024];
@@ -800,6 +869,7 @@ int main(int argc, char **argv)
     test_file_pages();
     test_pool();
     test_razor_keys();
+    test_qa616();
     test_sampler();
     test_slot_locks();
     test_rate4x();

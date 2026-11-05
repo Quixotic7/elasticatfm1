@@ -82,7 +82,8 @@ void ec_e5_random_name(char *out, int cap, uint32_t *rng);   /* namesizer: "desc
 enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1: several params at once */,
        EC_U_TRIM /* 0.6.1: a pool slot's trim (start, end, steps) */,
        EC_U_SLOTS /* 0.6.1: two pool slots swapped (FILE / POOL MOVE) with every reference */,
-       EC_U_FXSWAP /* 0.6.3: INSERT 1 / 2 of a track, or SEND 1 / 2, swapped (FX SENDS: a held key) */ };
+       EC_U_FXSWAP /* 0.6.3: INSERT 1 / 2 of a track, or SEND 1 / 2, swapped (FX SENDS: a held key) */,
+       EC_U_RAZOR /* 0.6.16: a track's slice table with its COUNT (the SLICE editor, the CNT knob) */ };
 #define EC_U_NV 10              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8) */
 typedef struct {
     uint8_t kind;
@@ -93,6 +94,7 @@ typedef struct {
     float vals[EC_U_NV];
     uint16_t mask;                 /* EC_U_STEPS: the steps of page `id` saved in st[] */
     ec_step_t st[16];
+    ec_razor_t rz;                 /* EC_U_RAZOR: the table (val: the COUNT param) */
     uint32_t key, ms;
     char label[12];
 } ec_undo_entry_t;
@@ -119,10 +121,13 @@ void ec_undo_params(ec_undo_t *u, const ec_project_t *p, int track, const uint8_
 void ec_undo_steps(ec_undo_t *u, const ec_project_t *p, int track, int page, uint16_t mask, const char *label,
                    uint32_t key, uint32_t ms);
 /* 0.6.1: slot s's trim before an edit (fresh: a gesture of its own, else coalesced with the last edit of that slot) */
-void ec_undo_trim(ec_undo_t *u, const ec_project_t *p, int slot, int fresh, uint32_t ms);
+void ec_undo_trim(ec_undo_t *u, const ec_project_t *p, int slot, int what, int fresh, uint32_t ms);   /* 0.6.16: what: 0 START, 1 END, 2 the steps / BPM */
 /* 0.6.1: slots a and b swapped (ec_project_swap_slots, done by the caller); undo / redo swap them again and hand the
  * caller a in *gid and b in *gval (the app's runtime slots follow) */
 void ec_undo_slots(ec_undo_t *u, int a, int b, uint32_t ms);
+/* 0.6.16: track t's slice table and COUNT before an edit; key: the gesture (the same key inside the window coalesces,
+ * 0: a gesture of its own) */
+void ec_undo_razor(ec_undo_t *u, const ec_project_t *p, int t, const char *label, uint32_t key, uint32_t ms);
 void ec_undo_fxswap(ec_undo_t *u, int track, uint32_t ms);   /* 0.6.3: track >= 0 its inserts, -1 the sends */
 /* pop the last entry into the project; returns its kind (0: nothing to undo). EC_U_GLOBAL: *gid / *gval are the
  * global's id and value for the caller to apply (the project globals belong to the app) */

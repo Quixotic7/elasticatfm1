@@ -235,7 +235,11 @@ void ec_pages_hold_tick(void)
                 ec_app_mark_dirty();
                 {
                     char b[20];
-                    snprintf(b, sizeof b, in ? "PAGE %d MUTED" : "PAGE %d ON", i + 1);
+                    const uint16_t m2 = ec_e5_page_loop_mask(&A->proj, A->track, pages);
+                    if (m2 == m)                   /* 0.6.16: refused (the last page of the loop) */
+                        snprintf(b, sizeof b, "LAST PAGE");
+                    else
+                        snprintf(b, sizeof b, in ? "PAGE %d MUTED" : "PAGE %d ON", i + 1);
                     ec_app_message(b);
                 }
                 A->redraw = 1;

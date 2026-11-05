@@ -765,6 +765,7 @@ static void auto_bpm(void)
     float best = 0;
     int bars = 0, b;
     char m[24];
+    ec_undo_trim(&A->e5.undo, &A->proj, s, 2, 1, A->ms);   /* 0.6.16: undoable (BPM, and the steps it may set) */
     if (tag > 0) {                                 /* the file's own tag ("..._bpm136.wav") wins */
         sl->bpm = tag;
         ec_seq_touch_all(&A->seq);
@@ -852,7 +853,7 @@ void ec_file_white(int i, int down)
     if (P->ed_hold >= 0 && P->ed_hold != i)        /* a second key: the other point */
         end = !P->ed_point;
     else {
-        ec_undo_trim(&A->e5.undo, &A->proj, s, 1, A->ms);
+        ec_undo_trim(&A->e5.undo, &A->proj, s, P->ed_point ? 1 : 0, 1, A->ms);
         end = P->ed_point;
         P->ed_hold = i;
     }
@@ -1110,6 +1111,7 @@ void ec_file_black(int key, int down)
         else if (key == 10) {
             const int s = ec_app_track_slot(A, A->track);
             char m[20];
+            ec_undo_trim(&A->e5.undo, &A->proj, s, 2, 1, A->ms);   /* 0.6.16: undoable */
             steps_recalc(&A->proj.slot[s], s);
             ec_seq_touch_all(&A->seq);
             ec_app_mark_dirty();

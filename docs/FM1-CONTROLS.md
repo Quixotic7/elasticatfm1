@@ -27,7 +27,7 @@ Words used here:
 | ENV | AMP | the next page | amp settings | amp settings |
 | LFO | MODULATION | the next page | (none: NO SETTINGS) | (none) |
 | EDIT | MIX → PAGES | the other one | the project settings (NAME, GLO BPM, BPM, RETURN MODE) | the same |
-| HOME | LOOP ENGINE → TRIG → KEYBOARD | the next one | the loop / machine settings, with KEYBOARD's ADVANCE | **APP SETTINGS** |
+| HOME | LOOP ENGINE → TRIG → KEYBOARD | the next one | the loop / machine settings, with KEYBOARD's ADVANCE | **LOOP SETUP** (APP SETTINGS is SHIFT + ARP) |
 | FILE (SAVE) | FILE → SAMPLER | the other one | the recorder's setup | **save the project** |
 | ARP | CROSSFADER | - | (none: NO SETTINGS) | (none) |
 | SEQ | PATTERN LAUNCH | - | F3 | F3 |
@@ -37,7 +37,8 @@ Words used here:
   so a blind press lands in one place.
 - 0.6.15: **settings open only on SHIFT + the button** (SHIFT + HOME = LOOP SETUP, SHIFT + ARP = APP SETTINGS; the
   recorder's setup = REC held in the SAMPLER). **A held button is a mode picker**: its modes on the black keys, PICK A
-  MODE in the header; let go without a key = nothing. **MODE LOCK** (APP SETTINGS) stops clicks from cycling.
+  MODE in the header; let go without a key = nothing (0.6.16: so, no click either). **MODE LOCK** (APP SETTINGS) stops clicks
+  from cycling (0.6.16: FILE locked to an editor opens BROWSE while playing: the editors need a stop).
 - **Settings stay open** when you let go. F1 or F2 closes them, back to the mode they were opened over. The mode's
   own button (or SHIFT + it again) goes back too. Another mode button closes them and opens its mode.
 - **Power-on and project load: LOOP ENGINE.** There is no separate "main view" any more.
@@ -156,7 +157,7 @@ These hold in every mode unless the mode says otherwise.
 | B11 (held) | **FILL** while held |
 | B3, B6-B10 | nothing (dark) |
 | FILE | save the project |
-| HOME | APP SETTINGS |
+| HOME | LOOP SETUP (0.6.15; APP SETTINGS: SHIFT + ARP) |
 | SEQ | F3 |
 | another mode button | that mode's settings |
 | REC | the record settings |
@@ -176,7 +177,7 @@ The **target** is a track T1-T6 or a bus S1, S2, MST. Pick it with SHIFT + W1-W9
 keys. With a bus selected, every mode but MIX, FILE, PATTERN LAUNCH and CROSSFADER shows that bus's page (its FX
 machine's params); the bus pages are in the tables below.
 
-### F3 (F1 + F2, hold SEQ, or SHIFT + SEQ)
+### F3 (F1 + F2, or SHIFT + SEQ; 0.6.15: a held SEQ is the mode picker)
 
 The timing menu. It stays open; F1, F2, HOME or SEQ close it. PLAY still plays and stops.
 
@@ -263,7 +264,7 @@ patterns (PATTERN LAUNCH's white keys).
   one setting's values over the screen, the header saying what the key does; SEL or K1 moves the cursor, letting go
   picks (nothing changes if the cursor never moved). A tap still opens the key's page (or steps its group).
   - LOOP ENGINE: B1 LOOP = loop mode (the slice play mode on slice machines, else the chop loop mode), B2 MACHINE =
-    machine, B3 WARP = warp mode (STOP FIRST while playing), B4 RANGE = voice mode (MONO / POLY), B5 = ADVANCE
+    machine (0.6.16: STOP FIRST while playing, like the warp), B3 WARP = warp mode (STOP FIRST while playing), B4 RANGE = voice mode (MONO / POLY), B5 = ADVANCE
     (hold only).
   - FX (0.6.3): B1 / B2 / B3 / B4 = INSERT 1's / INSERT 2's / SEND 1's / SEND 2's effect type; B5 on MASTER = the
     master's. On SENDS a held B1-B4 swaps instead (below).
@@ -489,7 +490,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| PATTERN |  | 1 | QUANT | LENGTH |  |  |
+| PATTERN |  | 1 | PLAYING | NEXT | QUANT | LENGTH |
 | SETUP | hold | 1 | LNCH MODE | GLO LENGTH |  |  |
 
 ### Buses (S1, S2, MST: every mode but MIX, FILE, PATTERN LAUNCH and CROSSFADER shows the bus's page)
@@ -550,7 +551,7 @@ LOOP ENGINE (HOME, first; the power-on mode): the track's sound source - pitch, 
 
 | Item | Label | Name | What it does |
 |---|---|---|---|
-| `machine` | MACH | Machine | What the track plays: LOOP, TRIG, SLICE, RAZOR, S.POLY, R.POLY, NEIGH (the left track) or INPUT (the live input). A setting, not p-lockable. |
+| `machine` | MACH | Machine | What the track plays: LOOP, TRIG, SLICE, RAZOR, S.POLY, R.POLY, NEIGH (the left track) or INPUT (the live input). A setting, not p-lockable. Changes only while stopped (0.6.16). |
 | `sample_slot` | SLOT | Sample slot | Which of the 16 pool slots the track plays. Tracks sharing a slot share its sample and its file settings. |
 | `loop_start` | STRT | Loop start | Where the loop region starts, 0 to 128 across the Range. P-lockable (a step can play its own region). |
 | `loop_end` | END | Loop end | Where the loop region ends, 0 to 128 across the Range. P-lockable (a step can play its own region). |
@@ -1098,26 +1099,31 @@ An FX machine changes at any time (a short fade, no click).
 | F1 / F2 | **START / END**: the point the white keys place (the header's right side says which; no copy / cut here) |
 | White keys | **16 places across the view** (the zoom sets how fine): a tap places the chosen point there |
 | A white key held + a second | **both points**: START: the held key is the start, the second the end; END: the reverse |
-| SEL | the page: back to BROWSE, on to RAZOR |
+| SEL | the editor's pages (P1 START / END / ZOOM, P2 BPM / STEPS / GAIN / ZOOM); it stops at the ends. FILE leaves (SLICE next) |
 | K1-K4 | START, END, BPM, GAIN / STEPS |
 
 START never passes END: a placement that would put START after END swaps them. Each placement is one undo (SHIFT +
-F1); a two-key gesture is one. The knobs' START / END are undoable too. The steps follow the trim. The chosen point's
+F1); a two-key gesture is one. The knobs' START / END are undoable too (0.6.16: START, END, AUTO BPM and RECALC each a
+gesture of its own). The steps stay until B10 RECALC (0.6.15). The chosen point's
 marker is ACC, the other light grey. LEDs: the keys at the trim points lit.
 
-**RAZOR** (the razor slice editor, 0.4's)
+**SLICE** (the slice editor, FILE/SLICE; 0.4's RAZOR, reworked in 0.6.15)
 
 | Control | Does |
 |---|---|
 | ALGO | **select the slice** (0.6.1; it was SEL) |
-| SEL | the page: back to EDITOR, on to POOL (lane by lane) |
-| K1-K4 | PLAY, ZOOM, SLCE START, SLCE END / SNAP MODE, CHOKE, PITCH, TRANS SENS |
+| SEL | the editor's pages P1-P3; it stops at the ends. FILE leaves (the SAMPLER next) |
+| K1-K4 | P1: SLCE START, SLCE END, PLAY, ZOOM / P2: SNAP MODE, CHOKE, PITCH, ZOOM / P3: COUNT, TRANS SENS, -, ZOOM |
+| B1 / B2 / B3 | the pages |
+| B9 / B10 | **EVEN** (COUNT equal slices) / **CHOP** (one slice per transient at TRANS SENS; 0.6.16: slice 1 always starts at 0) |
+| B11 held | the selected slice heard, looping, until let go |
 | F2 / F1 | **split** the selected slice / **delete** it |
-| SHIFT + F2 / SHIFT + F1 | **Auto-Chop** (one slice per transient) / **even** (redistribute the slices) |
-| White keys | the slices (select and play); SHIFT + one mutes the slice |
+| White keys | the slices of the selected slice's bank of 16 (slice machines: the pad; any other machine: a preview); SHIFT + one mutes the slice |
 
 The razor machines (RAZOR, R.POLY) play each slice from its own start / end. The table is per track and saved with
-the project. Split and delete renumber the slices after it; the track's steps follow.
+the project. Split and delete renumber the slices after it; the track's steps follow. 0.6.16: every table edit
+(EVEN, CHOP, split, delete, mute, the slice knobs) and the COUNT knob are on the undo stack, as one entry each
+(a knob's turns coalesce); undoing COUNT brings the table back with it.
 
 **POOL** (all 128 slots, 0.6.1)
 
@@ -1134,9 +1140,9 @@ the project. Split and delete renumber the slices after it; the track's steps fo
 - A row: the slot's number, its file (or a dash), its length, and six marks T1-T6: lit for the tracks of the playing
   pattern on that slot (the selected track's in ACC). A slot only step locks play shows a LOCK bar instead.
 - The header is the pool meter: POOL n/128 (slots used) and the memory used in %, with its bar under the header.
-- Like the rest of FILE, POOL can't open while playing. Memorized projects (SHIFT + B3) keep the pool as it was.
+- POOL opens while playing (0.6.11); only FREE, MOVE and purge need a stop. Memorized projects (SHIFT + B5) keep the pool as it was.
 
-**FILE held: the recorder's setup** (0.4's REC pop-up). It samples the live input or the master out into a pool
+**REC held in the SAMPLER: the recorder's setup** (0.4's REC pop-up; 0.6.15). It samples the live input or the master out into a pool
 slot. Its settings are a list (0.6.1: SEL the row, K1 its value): SOURCE (IN / MASTER), LENGTH, THRESHOLD (with SYNC
 FREE), SYNC (PLAY / BAR / FREE), SLOT (the target pool slot). While a take is armed or running only THRESHOLD changes.
 **REC or F2** = arm, then record now, then stop; **F1** = close, disarm, or discard the take. HOME closes it. The
@@ -1155,7 +1161,8 @@ It opens while playing too.
 | K1-K4 | LENGTH, GAIN (the input gain), MONITOR (hear the input), FREE |
 
 The take lands in **the next free pool slot**, tagged with the BPM, and is saved to `/data/rec`. The source is the
-input (the recorder's setup, FILE held, can pick the master out). FULL when the pool has no free slot.
+input (the recorder's setup, REC held, can pick the master out; its SLOT row is the selected track's slot: a resample
+replaces the track's sample, so pick another slot there to keep it). FULL when the pool has no free slot.
 
 ### CROSSFADER (ARP)
 
@@ -1305,7 +1312,7 @@ survive project loads and new projects.
 | PLAY on release, PLAY held = F3 | PLAY on the press; F3 = F1 + F2, or hold SEQ / SHIFT + SEQ |
 | SHIFT + PLAY = stop + step 1 | PLAY stops (the next start is from step 1) |
 | SHIFT + REC = save | SHIFT + FILE |
-| REC = the sampling pop-up | REC = live recording; sampling is the SAMPLER and the recorder's setup (FILE held) |
+| REC = the sampling pop-up | REC = live recording; sampling is the SAMPLER and the recorder's setup (REC held there) |
 | SAVE (FILE) loads the file into the track's slot; SAVE steps SAMPLE / RAZOR | B10 LOAD into the next free slot; B3 / B4 / B5 = BROWSE / EDITOR / RAZOR |
 | Upper T1 / T2 = memorize / recall | SHIFT + B3 / B4 |
 | Upper S1 / S2 = copy / paste the pattern | F1 / F2 in PATTERN LAUNCH |

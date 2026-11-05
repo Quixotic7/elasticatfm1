@@ -125,7 +125,7 @@ static void leds_loop(void)
         for (i = 0; i < EC_NLOWER; i++) {
             const float ks = (float)i * 8.0f, ke = ks + 8.0f;
             uint8_t l = ke > r0 + 0.001f && ks < r1 - 0.001f ? EC_LED_LIT : EC_LED_OFF;
-            if (st.keys_held >> i & 1u)
+            if (ec_lp_keys() >> i & 1u)
                 l = EC_LED_LIT;
             if (ec_lp_is_sel(A->step_page * 16 + i))
                 l = blink(200) ? EC_LED_LIT : EC_LED_OFF;

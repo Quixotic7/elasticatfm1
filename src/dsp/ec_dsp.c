@@ -379,9 +379,15 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
     int playing = track_playing(d, t);
     if (ev->value > 0.5f) {
         if (!t->keys && playing) t->keys_anchor = make_anchor(d, t);
-        t->keys |= (1u << k);
-        t->keys_span = t->keys;                  /* 0.6.21 (owner): a press refits the span to the keys held now
-                                                  * (smaller or larger); a release keeps it */
+        {                                        /* 0.6.21 (owner): a press refits the span to the keys held now
+                                                  * (smaller or larger); a release keeps it. 0.6.23: a held key's
+                                                  * direct neighbour pressed again, the span being just those keys,
+                                                  * takes the span back to the held keys alone */
+            const uint32_t with = t->keys | (1u << k);
+            const int nb = (k > 0 && (t->keys >> (k - 1) & 1u)) || (t->keys >> (k + 1) & 1u);
+            t->keys_span = (t->keys_span == with && t->keys && nb) ? t->keys : with;
+            t->keys = with;
+        }
         resolve(t, &s, &e);
         if (playing) {
             within_or_warp(t, s, e);

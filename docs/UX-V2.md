@@ -1051,3 +1051,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The RANGE page sets the range the same way on every machine (slice tracks included: their keys are not pads
   there), and its LEDs show the range over the 16 keys, not the loop keys.
 - Slice tracks' RANGE page shows no slice edges: the same view as a loop track's.
+
+## 18. 0.6.23: the loop keys' neighbour toggle, live values, the RANGE page's keys (owner, 2026-11-04)
+
+- Pressing a held key's direct neighbour again, when the span is already just those keys, takes the span back to
+  the held keys alone: W1 held, W2 = 1-2, W2 again = 1, again = 1-2. Only a direct neighbour does this.
+- LIVE, the loop keys write the region (RANGE page: the range) at every press, so the cells, the markers and the
+  LEDs follow at once; the header's message comes on the last release as before.
+- The RANGE page's white keys are loop keys on every machine, editing R-START / R-END: the same span rules, LEDs
+  and markers; they neither scrub the loop nor play pads there.

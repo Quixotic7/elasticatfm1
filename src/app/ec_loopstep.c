@@ -292,7 +292,7 @@ int ec_lp_white(int k, int i, int down, int vel)
 
 /* 0.6.12 (owner): LIVE (nothing selected), a loop track: the entry (its keys' span) becomes the track's region, in the
  * loop keys' division (RANGE page: its range over the whole sample), one undo; so the keys set the range, not the knobs */
-static void write_live(int lo, int hi)
+static void write_live(int lo, int hi, int say)   /* say: the header's message (the last release) */
 {
     const float *v = ec_app_params(A);
     float *tv = ec_project_track(&A->proj, A->track)->v;
@@ -317,13 +317,23 @@ static void write_live(int lo, int hi)
         tv[EC_P_LOOP_END] = (float)k1 * u;
         snprintf(b, sizeof b, k0 == k1 ? "LOOP %d" : "LOOP %d-%d", k0, k1);
     }
-    ec_app_message(b);
+    if (say)
+        ec_app_message(b);
     ec_seq_touch(&A->seq, A->track);
     ec_app_mark_dirty();
 }
 
+static void span_of(int *lo, int *hi)
+{
+    for (*lo = 0; *lo < EC_NLOWER && !(g.span >> *lo & 1u); (*lo)++)
+        ;
+    for (*hi = EC_NLOWER - 1; *hi > 0 && !(g.span >> *hi & 1u); (*hi)--)
+        ;
+}
+int ec_lp_range_entry(void) { return g.keys && g.range; }
+
 /* a loop key (LOOP layer) went down / up: with steps selected, the entry is written when its last key is let go; LIVE
- * (0.6.12) it sets the track's region */
+ * (0.6.12) it sets the track's region (0.6.23: at every press) */
 void ec_lp_loop_note(int i, int down)
 {
     int lo, hi;
@@ -332,11 +342,23 @@ void ec_lp_loop_note(int i, int down)
     if (g.b11)
         g.b11_used = 1;                            /* (the reverse: B11 held over STEP latched) */
     if (down) {
+        const uint32_t with = g.keys | (1u << i);
         if (!g.keys)                               /* a new entry */
             g.range = on_range_page();
-        g.keys |= 1u << i;
-        g.span = g.keys;                           /* 0.6.21 (owner): a press refits the span to the keys held now
-                                                    * (smaller or larger); a release keeps it */
+        /* 0.6.21 (owner): a press refits the span to the keys held now (smaller or larger); a release keeps it.
+         * 0.6.23 (owner): pressing a held key's direct neighbour again, when the span is already those keys, takes
+         * the span back to the held keys alone (W1 held: W2 = 1-2, W2 again = 1, again = 1-2) */
+        if (g.span == with && g.keys && (g.keys >> (i > 0 ? i - 1 : 31) & 1u || g.keys >> (i + 1) & 1u))
+            g.span = g.keys;
+        else
+            g.span = with;
+        g.keys = with;
+        if (ec_lp_first() < 0) {                   /* LIVE: the region / range follows at once (the cells, the
+                                                    * markers and LEDs too), not only on the last release */
+            span_of(&lo, &hi);
+            write_live(lo, hi, 0);                 /* (quietly: the header keeps its held-key text) */
+        }
+        A->redraw = 1;
         return;
     }
     if (!(g.keys >> i & 1u))
@@ -344,14 +366,11 @@ void ec_lp_loop_note(int i, int down)
     g.keys &= ~(1u << i);
     if (g.keys)
         return;
-    for (lo = 0; lo < EC_NLOWER && !(g.span >> lo & 1u); lo++)
-        ;
-    for (hi = EC_NLOWER - 1; hi > 0 && !(g.span >> hi & 1u); hi--)
-        ;
-    if (ec_lp_first() < 0)
-        write_live(lo, hi);
-    else
+    span_of(&lo, &hi);
+    if (ec_lp_first() >= 0)
         write_entry(lo, hi);
+    else
+        write_live(lo, hi, 1);                     /* (the same values again, with the message) */
     g.span = 0;
     A->redraw = 1;
 }

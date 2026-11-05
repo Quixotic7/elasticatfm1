@@ -662,7 +662,12 @@ static void loop_down(int k, int i, int vel)
         return;
     }
     ec_liverec_capture();                          /* live REC: CAPTURE's first key starts playback */
-    if (is_slice_m(iv(v, EC_P_MACHINE)) && !ec_lp_on_range()) {   /* (0.6.21: the RANGE page: the range, every machine) */
+    if (ec_lp_on_range()) {                        /* 0.6.21 / 0.6.23: the RANGE page: the keys set the range on every
+                                                    * machine (no loop scrub, no pads) */
+        A->key_role[k] = R_LOOP_LIVE;
+        return;
+    }
+    if (is_slice_m(iv(v, EC_P_MACHINE))) {
         ec_seq_slice_pad(&A->seq, A->track, lk, 1, key_vel(vel));
         A->key_role[k] = R_PAD;
     } else {
@@ -814,7 +819,8 @@ static void white_up(int k, int i, int vel)
     case R_LP: ec_lp_white(k, i, 0, vel); break;
     case R_STEP: step_up(i, vel); break;
     case R_LOOP_LIVE:
-        ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0);
+        if (A->seq.tr[A->track].live_keys >> (ec_e5_loop_key(k, i, 0) - 1) & 1u)   /* (not a RANGE key) */
+            ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0);
         ec_lp_loop_note(i, 0);
         break;
     case R_PAD:

@@ -1041,3 +1041,13 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - Slice tracks draw the RANGE page as a loop track does: the whole file, the range bracketed (the lock colour for a
   target step's range lock), dim outside it, with the slices' edges dark inside the range (0.6.18's slice view had
   taken the page over and drew only the range).
+
+## 17. 0.6.21: the loop keys' span, the RANGE page on every machine (owner, 2026-11-04)
+
+- The loop keys' span is the keys held now: two keys held loop between them, let one go and the other alone is the
+  loop, add a key and the span fits the two again (it shrinks as well as grows; 0.6.11's "never shrinks" is gone).
+  The region written on the last release is the last span, unless the keys were let go together (within 80 ms):
+  then the span before that.
+- The RANGE page sets the range the same way on every machine (slice tracks included: their keys are not pads
+  there), and its LEDs show the range over the 16 keys, not the loop keys.
+- Slice tracks' RANGE page shows no slice edges: the same view as a loop track's.

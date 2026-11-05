@@ -34,6 +34,8 @@ static struct {
     int b11_used;         /* something was done while B11 was down: not a quick click */
     uint32_t skeys;       /* the STEP layer's keys held now (a press with none held starts a new selection) */
     uint32_t keys;        /* the LOOP entry's keys (bit i: white key i), still held */
+    uint32_t prev_span;   /* 0.6.21: the span before the last key up that shrank it, and when (keys let go together) */
+    uint32_t prev_ms;
     uint32_t span;        /* every key of the entry */
     int range;            /* the entry started on the RANGE page */
 } g;
@@ -51,6 +53,7 @@ static int on_range_page(void)
     ec_app_page(A, &pg);
     return pg.pic == EC_PIC_WAVE_RANGE;
 }
+int ec_lp_on_range(void) { return on_range_page(); }   /* 0.6.21: for the keys and LEDs */
 static int len_now(void) { return ec_seq_pattern_steps(&A->seq, A->track); }
 
 /* 0.6.14 (owner): the same model in LOOP ENGINE, TRIG and KEYBOARD (B11's layers, the pages, ALGO's step) */
@@ -297,7 +300,7 @@ static void write_live(int lo, int hi)
     float *tv = ec_project_track(&A->proj, A->track)->v;
     const int half = P->zoom_half ? 16 : 0;
     char b[24];
-    if (slice_track())
+    if (slice_track() && !g.range)                 /* 0.6.21: the RANGE page sets the range on every machine */
         return;
     if (g.range) {
         static const uint8_t ids[2] = {EC_P_RANGE_START, EC_P_RANGE_END};
@@ -332,18 +335,27 @@ void ec_lp_loop_note(int i, int down)
         g.b11_used = 1;                            /* (the reverse: B11 held over STEP latched) */
     if (down) {
         if (!g.keys) {                             /* a new entry */
-            g.span = 0;
             g.range = on_range_page();
+            g.prev_span = 0;
         }
         g.keys |= 1u << i;
-        g.span |= 1u << i;
+        g.span = g.keys;                           /* 0.6.21 (owner): the span is the keys held now */
+        g.prev_span = 0;
         return;
     }
     if (!(g.keys >> i & 1u))
         return;
     g.keys &= ~(1u << i);
-    if (g.keys)
+    if (g.keys) {
+        g.prev_span = g.span;                      /* (a key up shrinks it; the last span is what gets written, unless
+                                                    * the rest is let go within 80 ms: keys let go together) */
+        g.prev_ms = A->ms;
+        g.span = g.keys;
+        A->redraw = 1;
         return;
+    }
+    if (g.prev_span && A->ms - g.prev_ms <= 80)
+        g.span = g.prev_span;
     for (lo = 0; lo < EC_NLOWER && !(g.span >> lo & 1u); lo++)
         ;
     for (hi = EC_NLOWER - 1; hi > 0 && !(g.span >> hi & 1u); hi--)

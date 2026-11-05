@@ -379,9 +379,8 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
     int playing = track_playing(d, t);
     if (ev->value > 0.5f) {
         if (!t->keys && playing) t->keys_anchor = make_anchor(d, t);
-        if (!t->keys) t->keys_span = 0;          /* 0.6.12: a new entry */
         t->keys |= (1u << k);
-        t->keys_span |= (1u << k);
+        t->keys_span = t->keys;                  /* 0.6.21 (owner): the span is the keys held now */
         resolve(t, &s, &e);
         if (playing) {
             within_or_warp(t, s, e);
@@ -396,7 +395,12 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
     } else {
         if (!(t->keys & (1u << k))) return;
         t->keys &= ~(1u << k);
-        if (t->keys) return;                     /* 0.6.12: a key up keeps the region (the span) until all are up */
+        if (t->keys) {                           /* 0.6.21 (owner): a key up shrinks the span to the keys still held */
+            t->keys_span = t->keys;
+            resolve(t, &s, &e);
+            if (playing) within_or_warp(t, s, e); else set_region_phase(t, s, e, 0.0);
+            return;
+        }
         t->keys_span = 0;
         resolve(t, &s, &e);
         {

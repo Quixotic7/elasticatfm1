@@ -662,7 +662,7 @@ static void loop_down(int k, int i, int vel)
         return;
     }
     ec_liverec_capture();                          /* live REC: CAPTURE's first key starts playback */
-    if (is_slice_m(iv(v, EC_P_MACHINE))) {
+    if (is_slice_m(iv(v, EC_P_MACHINE)) && !ec_lp_on_range()) {   /* (0.6.21: the RANGE page: the range, every machine) */
         ec_seq_slice_pad(&A->seq, A->track, lk, 1, key_vel(vel));
         A->key_role[k] = R_PAD;
     } else {

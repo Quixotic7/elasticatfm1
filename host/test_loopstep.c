@@ -64,7 +64,14 @@ static void test_layers(void)
     wkey(8, 0);
     wkey(11, 0);
     CHECK(lockv(2, EC_P_LOOP_START) == 64 && lockv(2, EC_P_LOOP_END) == 96 && lockv(4, EC_P_LOOP_END) == 96,
-          "L9 + L12 held together: 9..12 into both (%g..%g)", lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
+          "L9 + L12 let go together: 9..12 into both (%g..%g)", lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
+    wkey(8, 1);                                    /* 0.6.21 (owner): L12 let go well before L9: the span shrank to L9 */
+    wkey(11, 1);
+    wkey(11, 0);
+    run(200);
+    wkey(8, 0);
+    CHECK(lockv(2, EC_P_LOOP_START) == 64 && lockv(2, EC_P_LOOP_END) == 72, "L12 let go first: L9 alone (%g..%g)",
+          lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
     CHECK(ec_lp_count() == 2, "nothing advances: still steps 3 and 5");
     /* a B11 hold with no key keeps the selection */
     hold_b11(1);
@@ -182,8 +189,8 @@ static void test_range(void)
     wkey(1, 0);
     wkey(5, 0);
     CHECK(lockv(6, EC_P_RANGE_START) == 8 && lockv(6, EC_P_RANGE_END) == 48 && lockv(6, EC_P_LOOP_START) < 0,
-          "RANGE: W2 + W6 = step 7's range 8..48 (%g..%g), no region lock", lockv(6, EC_P_RANGE_START),
-          lockv(6, EC_P_RANGE_END));
+          "RANGE: W2 + W6 let go together = step 7's range 8..48 (%g..%g), no region lock",
+          lockv(6, EC_P_RANGE_START), lockv(6, EC_P_RANGE_END));
     turn(FM1P_E_ALGO, -20);
 }
 

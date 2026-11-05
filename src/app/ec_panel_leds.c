@@ -120,6 +120,19 @@ static void leds_loop(void)
         return;
     }
     ec_dsp_track_status(A->dsp, A->track, &st);
+    if (ec_lp_on_range()) {                        /* 0.6.21 (owner): the RANGE page: the range over the 16 keys */
+        const float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END];
+        for (i = 0; i < EC_NLOWER; i++) {
+            const float ks = (float)i * 8.0f, ke = ks + 8.0f;
+            uint8_t l = ke > r0 + 0.001f && ks < r1 - 0.001f ? EC_LED_LIT : EC_LED_OFF;
+            if (st.keys_held >> i & 1u)
+                l = EC_LED_LIT;
+            if (ec_lp_is_sel(A->step_page * 16 + i))
+                l = blink(200) ? EC_LED_LIT : EC_LED_OFF;
+            ec_plat_led_lower(i, l);
+        }
+        return;
+    }
     if (is_slice_m(m)) {
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
         const uint32_t mute = ec_e5_slices(&A->proj, A->track)->mute;

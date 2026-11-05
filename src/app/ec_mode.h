@@ -281,6 +281,7 @@ void ec_kb_bank_next(void);                   /* 0.6.14: B11's quick click on a 
 /* 0.6.6 / 0.6.9: LOOP ENGINE step entry (ec_loopstep.c): B11 switches the white keys between LOOP and STEP layers;
  * the selected steps get the loop keys' regions / ranges and the knobs' locks */
 int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */
+int ec_lp_on_range(void);                     /* 0.6.21: the RANGE page is shown (its keys set the range on every machine) */
 void ec_lp_track(int from, int to);           /* 0.6.11: the selected track changed: its own selection / target */
 int ec_lp_target(void);                       /* the first selected step 1.., 0 = LIVE (or not LOOP ENGINE) */
 int ec_lp_first(void);                        /* the first selected step's index, -1 none */

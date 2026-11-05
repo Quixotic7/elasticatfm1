@@ -927,6 +927,7 @@ void ec_seq_init(ec_seq_t *s, ec_project_t *proj, const ec_seq_sink_t *sink, dou
     s->start_at = NEVER;
     for (t = 0; t < EC_NTRACK; t++) {
         reset_track(s, t);
+        s->tr[t].aud_step = -1;
         s->tr[t].dirty = 1;
     }
 }
@@ -1278,9 +1279,24 @@ int ec_seq_track_slot(const ec_seq_t *s, int t)
     return s->tr[t].slot_lock ? s->tr[t].slot_lock : clampi(iv(ptr(s, t)->v, EC_P_SLOT), 1, EC_NSLOT);
 }
 
+void ec_seq_audition_step(ec_seq_t *s, int t, int idx)
+{
+    if (t < 0 || t >= EC_NTRACK || s->tr[t].aud_step == idx)
+        return;
+    s->tr[t].aud_step = idx;
+    s->tr[t].dirty = 1;
+}
+
 float ec_seq_value(const ec_seq_t *s, int t, int id)
 {
     const ec_seq_track_t *st = &s->tr[t];
+    if (!s->playing && st->aud_step >= 0 && (EC_PARAMS[id].flags & EC_PF_REGION)) {   /* 0.6.30: stopped, a selected
+                                                    * step: its region / range locks are what the pads and keys hear */
+        const ec_ptrack_t *tr = ptr(s, t);
+        float x;
+        if (st->aud_step < EC_MAXSTEPS && ec_step_lock_get(&tr->steps[st->aud_step], id, &x))
+            return x;
+    }
     if (id == EC_P_PITCH && st->live_pitch_on)   /* 0.6.1: the track's PITCH now + the key (PITCH turned while held) */
         return ptr(s, t)->v[EC_P_PITCH] + st->live_semis;
     if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END) {

@@ -1193,7 +1193,10 @@ void ec_app_init(void)
 
 void ec_app_tick(const ec_input_t *in)
 {
+    int t;
     A->ms = in->ms;
+    for (t = 0; t < EC_NTRACK; t++)                /* 0.6.30: the selected step auditions in its own range (stopped) */
+        ec_seq_audition_step(&A->seq, t, t == A->track && !A->bus ? ec_app_target_step(A) : -1);
     scan_tick();
     loader_tick();
     assign_samples();

@@ -65,6 +65,8 @@ typedef struct {
     float live_semis;              /* 0.6.1: the key's semitones (the pitch follows PITCH while held) */
     int kb_down;                   /* 0.6.1: keyboard keys held (stopped: the loop auditioned until the last) */
     uint32_t live_keys;            /* held live loop keys (bit k-1), for the UI */
+    int aud_step;                  /* 0.6.30: the selected step (-1 none): stopped, the region / range values heard
+                                    * are its locks (the pads and keys audition in its range) */
     uint32_t pads;                 /* held slice pads */
     uint32_t fired_slices;         /* the last step's slices (UI) */
     uint64_t last_fire;            /* sample time of the last fired trig (UI activity) */
@@ -138,6 +140,7 @@ int ec_seq_fill_active(const ec_seq_t *s);
 /* edits: the track's params / steps / slot changed (resolve and resend before the next frames). RATE or swing
  * changes re-derive the positions (no catch-up burst), glen re-derives the global cycle */
 void ec_seq_touch(ec_seq_t *s, int track);
+void ec_seq_audition_step(ec_seq_t *s, int track, int idx);   /* 0.6.30: the selected step, -1 none */
 void ec_seq_touch_all(ec_seq_t *s);
 void ec_seq_timing_changed(ec_seq_t *s);
 

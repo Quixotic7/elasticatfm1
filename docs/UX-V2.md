@@ -1100,3 +1100,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   (ec_track_map: trim, then range); the slice view drew the slices across the trimmed file while the view was the
   range window, so a range lock left only part of them visible. The slices now always span the view's range
   (the target step's lock, else the resolved range), all COUNT of them.
+
+## 25. 0.6.30: a selected step auditions in its own range (owner, 2026-11-04)
+
+- Stopped, with a step selected, the pads and the loop keys play through that step's region / range locks (the
+  sequencer resolves the region params from the selected step: ec_seq_audition_step), so previewing slice 1 on a
+  step whose range is locked plays slice 1 of that range, as the screen shows. Playing, the resolved values are
+  the sequencer's as before (the locks apply as the steps fire).

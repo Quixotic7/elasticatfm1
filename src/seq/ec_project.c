@@ -742,8 +742,12 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
             const uint32_t np = r8(&o);
             uint32_t nsteps;
             int has_mtx = 0;
-            if (tr)
+            if (tr) {
                 ec_params_default(tr->v);
+                if (ver < 3)               /* 0.6.35: SLOT's default was 1 until 0.6.32 (OFF since): a version 2
+                                            * record left a track on slot 1 out, so a missing SLOT is slot 1 there */
+                    tr->v[EC_P_SLOT] = 1.0f;
+            }
             for (k = 0; k < np; k++) {
                 const uint32_t id = r8(&o);
                 const float v = rv(&o, ver);

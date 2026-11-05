@@ -222,7 +222,7 @@ static void test_v05(const char *dir)
     /* resaved as version 2: the same project, smaller */
     m = ec_project_save(&P, buf2, sizeof buf2);
     CHECK(m > 0 && m < n - 4096, "resaved as version 2: %d bytes (version 1: %d)", m, n - 4096);
-    CHECK(buf2[4] == 2, "version 2");
+    CHECK(buf2[4] == EC_PROJECT_VERSION, "the current version (version 2's layout; 3 since 0.6.35)");
     CHECK(ec_project_load(&Q, buf2, (uint32_t)m) == 0 && !memcmp(Q.pat, P.pat, sizeof P.pat) &&
               !memcmp(Q.slot, P.slot, sizeof P.slot) && !memcmp(Q.pe5, P.pe5, sizeof P.pe5) &&
               !memcmp(Q.e5.sc.has, P.e5.sc.has, sizeof P.e5.sc.has) &&

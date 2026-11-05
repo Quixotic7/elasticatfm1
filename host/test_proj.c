@@ -449,6 +449,28 @@ static void clear_projects(void)
     closedir(dp);
 }
 
+/* 0.6.35: SLOT's default was 1 until 0.6.32 (OFF since); a version 2 record left a slot-1 track's SLOT out, so a
+ * missing SLOT there is slot 1; a version 3 record keeps OFF */
+static void test_slot_default(void)
+{
+    static ec_project_t pr, back;
+    static uint8_t b[1u << 20];
+    int32_t n;
+    ec_project_init(&pr);
+    pr.pat[0].tr[2].v[EC_P_SLOT] = 5.0f;           /* T1 on 1 (written now), T2 OFF (left out), T3 on 5 */
+    n = ec_project_save(&pr, b, sizeof b);
+    CHECK(n > 16 && b[4] == EC_PROJECT_VERSION && b[5] == 0, "a save is version %d", EC_PROJECT_VERSION);
+    CHECK(ec_project_load(&back, b, (uint32_t)n) == 0 && back.pat[0].tr[0].v[EC_P_SLOT] == 1.0f &&
+              back.pat[0].tr[1].v[EC_P_SLOT] == 0.0f && back.pat[0].tr[2].v[EC_P_SLOT] == 5.0f,
+          "version 3: T1 slot 1, T2 OFF, T3 slot 5 (%g %g %g)", back.pat[0].tr[0].v[EC_P_SLOT],
+          back.pat[0].tr[1].v[EC_P_SLOT], back.pat[0].tr[2].v[EC_P_SLOT]);
+    b[4] = 2;                                      /* the same payload as a version 2 record (the sum covers the payload) */
+    CHECK(ec_project_load(&back, b, (uint32_t)n) == 0 && back.pat[0].tr[1].v[EC_P_SLOT] == 1.0f &&
+              back.pat[0].tr[2].v[EC_P_SLOT] == 5.0f,
+          "version 2: a missing SLOT is slot 1 (T2 %g, T3 %g)", back.pat[0].tr[1].v[EC_P_SLOT],
+          back.pat[0].tr[2].v[EC_P_SLOT]);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -467,6 +489,7 @@ int main(int argc, char **argv)
     test_browser_load();
     test_next_free();
     test_largest();
+    test_slot_default();
     C->shutdown();
     printf("test_proj: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

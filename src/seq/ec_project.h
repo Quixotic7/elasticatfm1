@@ -184,7 +184,8 @@ int32_t ec_project_check(const uint8_t *buf, uint32_t n);
 int ec_project_mtx_dropped(void);
 
 #define EC_PROJECT_MAGIC 0x4A504345u    /* "ECPJ" */
-#define EC_PROJECT_VERSION 2          /* 0.6.0: sparse params, 64 patterns, 128 slots, "ECRS" */
+#define EC_PROJECT_VERSION 3          /* 0.6.0: sparse params, 64 patterns, 128 slots, "ECRS"; 3 (0.6.35): as 2, but a
+                                       * missing SLOT is OFF (0.6.32's default); 1 in a version 2 record */
 #define EC_CHUNK_REC 0x53524345u      /* "ECRS": the record settings */
 
 #endif

@@ -1144,3 +1144,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - Changing track with SHIFT + PRESETS no longer shows the big TRACK takeover: it was hidden under SHIFT's screen and
   flashed up for the rest of its second when SHIFT closed. The SHIFT screen's track keys and the header show the
   track.
+
+## 31. 0.6.35: old projects keep their slot-1 tracks (2026-11-05)
+
+- A project file leaves out the params that equal their default. SLOT's default was 1 until 0.6.32 (OFF since), so
+  a project saved before 0.6.32 left out the SLOT of every track on slot 1, and 0.6.32-0.6.34 loaded those tracks as
+  OFF (silent, their keys previewing nothing). The project record is now version 3 (the same layout); in a version 2
+  record a missing SLOT is slot 1 again. A project 0.6.32-0.6.34 saved with a track OFF brings that track back on
+  slot 1 (set it OFF again). test_proj checks both versions.

@@ -310,6 +310,56 @@ static void test_pages_b11(void)
     A->step_page = 0;
 }
 
+/* 0.6.38: a LIVE loop-key gesture is one undo, recorded before its first press writes the region (each press and
+ * the release made an entry of its own, so one undo gave back the values the press had written: nothing changed) */
+static void undo_once(void)
+{
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_OCTDN, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    if (A->pn.shift_sticky)
+        press(FM1P_B_GLO, 40);
+}
+static void test_live_undo(void)
+{
+    float *v;
+    float s0, e0;
+    int n;
+    to(EC_CAT_SRC);
+    for (n = 0; n < 6; n++) {                        /* tap B1 until the LOOP page */
+        ec_page_t pg;
+        ec_app_page(A, &pg);
+        if (pg.title && !strcmp(pg.title, "LOOP") && pg.pic != EC_PIC_WAVE_RANGE)
+            break;
+        B(1, 40);
+    }
+    turn(FM1P_E_ALGO, -40);                          /* LIVE */
+    v = ec_project_track(&A->proj, A->track)->v;
+    s0 = v[EC_P_LOOP_START];
+    e0 = v[EC_P_LOOP_END];
+    wkey(13, 1);                                     /* W14 held past the coalescing window */
+    run(1500);
+    wkey(13, 0);
+    CHECK(v[EC_P_LOOP_START] != s0 || v[EC_P_LOOP_END] != e0, "W14: the region written (%g..%g)",
+          v[EC_P_LOOP_START], v[EC_P_LOOP_END]);
+    undo_once();
+    CHECK(v[EC_P_LOOP_START] == s0 && v[EC_P_LOOP_END] == e0, "one undo: the region back (%g..%g, was %g..%g)",
+          v[EC_P_LOOP_START], v[EC_P_LOOP_END], s0, e0);
+    wkey(2, 1);                                      /* W3, then W5 a while later: one gesture, one undo */
+    run(1200);
+    wkey(4, 1);
+    run(1200);
+    wkey(2, 0);
+    wkey(4, 0);
+    CHECK(v[EC_P_LOOP_START] == 16 && v[EC_P_LOOP_END] == 40, "W3 + W5: 16..40 (%g..%g)", v[EC_P_LOOP_START],
+          v[EC_P_LOOP_END]);
+    undo_once();
+    CHECK(v[EC_P_LOOP_START] == s0 && v[EC_P_LOOP_END] == e0, "one undo: the whole gesture back (%g..%g)",
+          v[EC_P_LOOP_START], v[EC_P_LOOP_END]);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -323,6 +373,7 @@ int main(int argc, char **argv)
     test_range();
     test_tracks();
     test_pages_b11();
+    test_live_undo();
     C->shutdown();
     printf("test_loopstep: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

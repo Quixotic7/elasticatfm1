@@ -36,6 +36,7 @@ static struct {
     uint32_t keys;        /* the LOOP entry's keys (bit i: white key i), still held */
     uint32_t span;        /* every key of the entry */
     int range;            /* the entry started on the RANGE page */
+    int undo;             /* 0.6.38: the entry's undo is recorded (once, before its first write) */
 } g;
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
@@ -225,10 +226,9 @@ static void write_entry(int lo, int hi, int say)
         const uint16_t m = ec_lp_page_mask(pg);
         if (!m)
             continue;
-        ec_undo_steps(&E->undo, &A->proj, A->track, pg, m, g.range ? "RANGE" : "REGION", 0xE00u + (uint32_t)pg,
-                      A->ms);
-        if (say)
-            E->undo.last_key = 0;
+        if (!g.undo)                               /* 0.6.38: the steps as they were before the entry's first press */
+            ec_undo_steps(&E->undo, &A->proj, A->track, pg, m, g.range ? "RANGE" : "REGION", 0xE00u + (uint32_t)pg,
+                          A->ms);
         for (i = 0; i < 16; i++) {
             ec_step_t *s;
             if (!(m >> i & 1u))
@@ -254,6 +254,7 @@ static void write_entry(int lo, int hi, int say)
             }
         }
     }
+    g.undo = 1;
     if (g.range)
         snprintf(b, sizeof b, "RANGE %d-%d > %d", lo + 1, hi + 1, n);
     else if (k0 == k1)
@@ -306,7 +307,8 @@ static void write_live(int lo, int hi, int say)   /* say: the header's message (
     if (g.range) {
         static const uint8_t ids[2] = {EC_P_RANGE_START, EC_P_RANGE_END};
         const float u = 128.0f / 16.0f;
-        ec_e5_edit_params(A->track, ids, 2, "RANGE");
+        if (!g.undo)                               /* 0.6.38: once, before the entry's first write */
+            ec_e5_edit_params(A->track, ids, 2, "RANGE");
         tv[EC_P_RANGE_START] = (float)lo * u;
         tv[EC_P_RANGE_END] = (float)(hi + 1) * u;
         snprintf(b, sizeof b, "RANGE %d-%d", lo + 1, hi + 1);
@@ -315,11 +317,13 @@ static void write_live(int lo, int hi, int say)   /* say: the header's message (
         const int div = clampi((iv(v, EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);
         const int k0 = clampi(lo + 1 + (div > 16 ? half : 0), 1, div), k1 = clampi(hi + 1 + (div > 16 ? half : 0), 1, div);
         const float u = 128.0f / (float)div;
-        ec_e5_edit_params(A->track, ids, 2, "LOOP");
+        if (!g.undo)
+            ec_e5_edit_params(A->track, ids, 2, "LOOP");
         tv[EC_P_LOOP_START] = (float)(k0 - 1) * u;
         tv[EC_P_LOOP_END] = (float)k1 * u;
         snprintf(b, sizeof b, k0 == k1 ? "LOOP %d" : "LOOP %d-%d", k0, k1);
     }
+    g.undo = 1;
     if (say)
         ec_app_message(b);
     ec_seq_touch(&A->seq, A->track);
@@ -346,8 +350,11 @@ void ec_lp_loop_note(int i, int down)
         g.b11_used = 1;                            /* (the reverse: B11 held over STEP latched) */
     if (down) {
         const uint32_t with = g.keys | (1u << i);
-        if (!g.keys)                               /* a new entry */
+        if (!g.keys) {                             /* a new entry: one undo gesture of its own (0.6.38) */
             g.range = on_range_page();
+            g.undo = 0;
+            E->undo.last_ok = 0;
+        }
         /* 0.6.21 (owner): a press refits the span to the keys held now (smaller or larger); a release keeps it.
          * 0.6.23 (owner): pressing a held key's direct neighbour again, when the span is already those keys, takes
          * the span back to the held keys alone (W1 held: W2 = 1-2, W2 again = 1, again = 1-2) */
@@ -376,6 +383,7 @@ void ec_lp_loop_note(int i, int down)
         write_entry(lo, hi, 1);                    /* (the same values again, with the message) */
     else
         write_live(lo, hi, 1);
+    E->undo.last_ok = 0;                           /* 0.6.38: the gesture ends: the next edit is an entry of its own */
     g.span = 0;
     A->redraw = 1;
 }

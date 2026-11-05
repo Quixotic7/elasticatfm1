@@ -1169,3 +1169,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   else a trig's SLICE lock or the track's SLICE). Muted pads no longer show faint, nor do idle pads dim.
 - The waveform does the same: with a step selected its slices are the cream blocks (as a sounding slice is LIVE), so
   scrolling ALGO through the steps shows each step's slices; LIVE it shows what sounds, as before.
+
+## 34. 0.6.38: a loop-key gesture is one undo (2026-11-05)
+
+- Since 0.6.23 the loop keys write at every press. Each press and the last release each made an undo entry of their
+  own (LIVE: the params entry never coalesced; with steps selected only within 1 s), so the last entry held the
+  values the presses had already written and SHIFT + F1 said UNDO LOOP but changed nothing. Now an entry's undo is
+  recorded once, at its first press, before anything is written, and the gesture closes on the last release: one
+  undo brings back the region / range (or the selected steps) as they were before the keys went down.
+  test_loopstep checks it (a key held past the coalescing window; a two-key span pressed slowly).

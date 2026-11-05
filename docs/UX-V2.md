@@ -1032,5 +1032,6 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 
 ## 15. 0.6.19: SLICE/SLICE (owner, 2026-11-04)
 
-- On a slice track (SLICE, S.POLY, RAZOR, R.POLY) the LOOP ENGINE header says SLICE/SLICE on the first page and
-  SLICE/MACHINE, SLICE/WARP, SLICE/RANGE on the others, and B1's label is SLICE, so the pages match the machine.
+- The LOOP ENGINE pages are named after the track's machine: the header's tag and the first page's title are the
+  machine's name (LOOP/LOOP, TRIG/TRIG, SLICE/SLICE, RAZOR/MACHINE, S.POLY/WARP, R.POLY/RANGE, NEIGH/.., INPUT/..)
+  and so is B1's label, so the pages match the machine.

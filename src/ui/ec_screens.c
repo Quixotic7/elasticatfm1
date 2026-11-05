@@ -136,10 +136,11 @@ static void right_info(const ec_app_t *a, char *out, size_t cap)
 static void title_of(const ec_app_t *a, const ec_page_t *pg, char *out, size_t cap)
 {
     const char *tag = ec_cat_tag(a->cat), *title = a->settings ? "SETUP" : pg->title;
-    if (a->cat == EC_CAT_SRC && !a->bus && is_slice(tv(a))) {   /* 0.6.19 (owner): a slice track's pages say SLICE */
-        tag = "SLICE";
+    if (a->cat == EC_CAT_SRC && !a->bus) {         /* 0.6.19 (owner): the pages are named after the track's machine:
+                                                    * LOOP/LOOP, SLICE/SLICE, RAZOR/MACHINE, S.POLY/WARP, NEIGH/.. */
+        tag = ec_machine_name(iv(tv(a), EC_P_MACHINE));
         if (title && !strcmp(title, "LOOP"))
-            title = "SLICE";
+            title = tag;
     }
     snprintf(out, cap, "%s/%s", tag, title);     /* 0.6.0: the tag */
 }

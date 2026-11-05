@@ -374,9 +374,8 @@ const char *ec_src_label(int mode, int key)
         ec_page_t pg;
         const int m = iv(ec_app_params(A), EC_P_MACHINE);
         ec_page_items(mode, p, ec_app_params(A), 0, &pg);
-        if (mode == EC_CAT_SRC && !A->bus && m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY && pg.title
-            && !strcmp(pg.title, "LOOP"))
-            return "SLICE";                        /* 0.6.19 (owner): a slice track's B1 page is SLICE */
+        if (mode == EC_CAT_SRC && !A->bus && pg.title && !strcmp(pg.title, "LOOP"))
+            return ec_machine_name(m);             /* 0.6.19 (owner): B1's page is named after the machine */
         snprintf(b, sizeof b, "%.10s", pg.title ? pg.title : "");
     }
     return b;

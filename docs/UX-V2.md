@@ -1073,3 +1073,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   the DSP's playing region. RANGE page, LIVE: the resolved range (the playing step's lock).
 - A selected step: both pages light its lock (the region or the range), keys held or not, since the entry is
   written into it at every press; the selected steps still blink.
+
+## 21. 0.6.26: a selected step's markers while keys are held (owner, 2026-11-04)
+
+- LOOP page, a step selected: the brackets and the bright span show the step's lock while the loop keys are held
+  (the entry is written into it at every press), drawn in the step's own range window. They showed the engine's
+  live span, which plays in the sounding step's range, so with per-step ranges they only matched after the release.

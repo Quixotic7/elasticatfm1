@@ -597,8 +597,9 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                 r1 = x, locked = 1;
             rs = vx(&w, sl->trim_start + (sl->trim_end - sl->trim_start) * r0 / 128.0f);
             re = vx(&w, sl->trim_start + (sl->trim_end - sl->trim_start) * r1 / 128.0f);
-        } else if (tst && !a->seq.tr[a->track].live_keys) {   /* a selected step, no loop key held: its region (a
-                                                    * lock, else the track's); a loop key held: live's, the same */
+        } else if (tst) {                          /* a selected step: its region (a lock, else the track's); 0.6.26:
+                                                    * keys held too: the entry is written into it at every press, and
+                                                    * the live span plays in another step's range */
             float l0 = v[EC_P_LOOP_START], l1 = v[EC_P_LOOP_END], x;
             if (ec_step_lock_get(tst, EC_P_LOOP_START, &x))
                 l0 = x, locked = 1;
@@ -620,12 +621,12 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                                                     * loop keys' span, a scrub); the brackets stay put */
             int ls = clampi(vx(&w, st.region_start), w.x0, w.x0 + w.cols);
             int le = clampi(vx(&w, st.region_end), w.x0, w.x0 + w.cols);
-            if (!st.reader_on && !a->seq.tr[a->track].live_keys)
+            if ((!st.reader_on && !a->seq.tr[a->track].live_keys) || tst)   /* (a selected step: its lock) */
                 ls = rs, le = re;
             if (le <= ls)
                 le = ls + 2;
-            if (a->seq.tr[a->track].live_keys && st.reader_on)   /* 0.6.17 (owner): the brackets follow the loop
-                                                                   * keys while they are held, not on release */
+            if (!tst && a->seq.tr[a->track].live_keys && st.reader_on)   /* 0.6.17 (owner): LIVE, the brackets
+                                                                   * follow the loop keys while they are held */
                 rs = ls, re = le;
             if (!grain_view(a, smp, &w, top, bot, ls, le))   /* 0.6.14: the grains too get the brackets below */
                 view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, ls, le);

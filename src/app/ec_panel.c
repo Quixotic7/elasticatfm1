@@ -365,12 +365,6 @@ void ec_pn_select_target(int i)      /* 0..5 tracks, 6 S1, 7 S2, 8 MST */
     A->redraw = 1;
 }
 
-static const char *target_name(int i)
-{
-    static const char *const N[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
-    return N[clampi(i, 0, 8)];
-}
-
 /* ------------------------------------------------------------------------------------------- SHIFT's layer --- */
 static void tap_tempo(void)
 {
@@ -1117,11 +1111,8 @@ static void knob(int r, int d)
         }
         if (r == EC_E_PRESETS) {
             const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-            ec_pn_select_target(cur + (d > 0 ? 1 : -1));
-            {
-                const int now = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-                ec_ux_takeover("TRACK", target_name(now), (float)now / 8.0f);
-            }
+            ec_pn_select_target(cur + (d > 0 ? 1 : -1));   /* 0.6.34 (owner): no TRACK takeover (it showed after
+                                                                * SHIFT closed); the track keys and header show it */
             return;
         }
     }

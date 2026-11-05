@@ -1138,3 +1138,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   K2 on the first LOOP page whatever the track's machine.
 - SHIFT does not snap SLOT: with SHIFT held the SLOT knob steps one slot a click, as without it, OFF included (it
   snapped through 0.5's 1, 2, 4, 8, 16, so SHIFT could never reach 0.6.32's OFF).
+
+## 30. 0.6.34: no TRACK pop-up from SHIFT + PRESETS (owner, 2026-11-05)
+
+- Changing track with SHIFT + PRESETS no longer shows the big TRACK takeover: it was hidden under SHIFT's screen and
+  flashed up for the rest of its second when SHIFT closed. The SHIFT screen's track keys and the header show the
+  track.

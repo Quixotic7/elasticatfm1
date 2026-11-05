@@ -1066,3 +1066,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - With steps selected the loop keys behave exactly as LIVE: every press writes the entry (the region or range lock
   and the trig) into the selected steps, so their cells, the markers and the LEDs follow at once; the last release
   writes it once more with the header's message and closes the undo gesture.
+
+## 20. 0.6.25: the loop keys' LEDs follow what plays (owner, 2026-11-04)
+
+- LOOP page, LIVE: the loop keys' LEDs light what plays now (each step's region as it fires, the held keys' span),
+  the DSP's playing region. RANGE page, LIVE: the resolved range (the playing step's lock).
+- A selected step: both pages light its lock (the region or the range), keys held or not, since the entry is
+  written into it at every press; the selected steps still blink.

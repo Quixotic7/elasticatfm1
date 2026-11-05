@@ -120,8 +120,18 @@ static void leds_loop(void)
         return;
     }
     ec_dsp_track_status(A->dsp, A->track, &st);
-    if (ec_lp_on_range()) {                        /* 0.6.21 (owner): the RANGE page: the range over the 16 keys */
-        const float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END];
+    if (ec_lp_on_range()) {                        /* 0.6.21 (owner): the RANGE page: the range over the 16 keys;
+                                                    * 0.6.25: the playing step's (the resolved value), a selected
+                                                    * step's lock while no key is held */
+        const int tgt = ec_app_target_step(A);
+        float r0 = ec_seq_value(&A->seq, A->track, EC_P_RANGE_START);
+        float r1 = ec_seq_value(&A->seq, A->track, EC_P_RANGE_END);
+        if (tgt >= 0) {                            /* (keys held too: the entry is written into it as they go) */
+            const ec_step_t *sp = &ec_project_track(&A->proj, A->track)->steps[tgt];
+            float x;
+            r0 = ec_step_lock_get(sp, EC_P_RANGE_START, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_RANGE_START];
+            r1 = ec_step_lock_get(sp, EC_P_RANGE_END, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_RANGE_END];
+        }
         for (i = 0; i < EC_NLOWER; i++) {
             const float ks = (float)i * 8.0f, ke = ks + 8.0f;
             uint8_t l = ke > r0 + 0.001f && ks < r1 - 0.001f ? EC_LED_LIT : EC_LED_OFF;
@@ -156,7 +166,8 @@ static void leds_loop(void)
         float le = ec_seq_value(&A->seq, A->track, EC_P_LOOP_END);
         const int tgt = ec_app_target_step(A);
         int ph = -1;
-        if (tgt >= 0 && !st.keys_held) {           /* 0.6.14 (owner): a selected step: its region (its lock) */
+        if (tgt >= 0) {                            /* 0.6.14 (owner): a selected step: its region (its lock; 0.6.25:
+                                                    * keys held too: the entry is written into it as they go) */
             const ec_step_t *sp = &ec_project_track(&A->proj, A->track)->steps[tgt];
             float x;
             ls = ec_step_lock_get(sp, EC_P_LOOP_START, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_LOOP_START];
@@ -169,7 +180,8 @@ static void leds_loop(void)
             const float hi2 = sl->trim_start + span * v[EC_P_RANGE_END] / 128.0f;
             if (st.reader_on && hi2 > lo)          /* the playhead in track space -> its key */
                 ph = (int)((st.pos_sample - lo) / (hi2 - lo) * 128.0f / units);
-            if (st.keys_held && hi2 > lo) {        /* 0.6.21 (owner): keys held: the live span lights, as it plays */
+            if (tgt < 0 && (st.keys_held || st.reader_on) && hi2 > lo) {   /* 0.6.21 / 0.6.25 (owner): LIVE: keys
+                                                    * held, or playing: what plays now (the step's region) */
                 ls = (st.region_start - lo) / (hi2 - lo) * 128.0f;
                 le = (st.region_end - lo) / (hi2 - lo) * 128.0f;
             }

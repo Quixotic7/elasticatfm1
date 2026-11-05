@@ -490,7 +490,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| PATTERN |  | 1 | PLAYING | NEXT | QUANT | LENGTH |
+| PATTERN |  | 1 | QUANT | LENGTH |  |  |
 | SETUP | hold | 1 | LNCH MODE | GLO LENGTH |  |  |
 
 ### Buses (S1, S2, MST: every mode but MIX, FILE, PATTERN LAUNCH and CROSSFADER shows the bus's page)
@@ -551,7 +551,7 @@ LOOP ENGINE (HOME, first; the power-on mode): the track's sound source - pitch, 
 
 | Item | Label | Name | What it does |
 |---|---|---|---|
-| `machine` | MACH | Machine | What the track plays: LOOP, TRIG, SLICE, RAZOR, S.POLY, R.POLY, NEIGH (the left track) or INPUT (the live input). A setting, not p-lockable. Changes only while stopped (0.6.16). |
+| `machine` | MACH | Machine | What the track plays: LOOP, TRIG, SLICE, RAZOR, S.POLY, R.POLY, NEIGH (the left track) or INPUT (the live input). A setting, not p-lockable. |
 | `sample_slot` | SLOT | Sample slot | Which of the 16 pool slots the track plays. Tracks sharing a slot share its sample and its file settings. |
 | `loop_start` | STRT | Loop start | Where the loop region starts, 0 to 128 across the Range. P-lockable (a step can play its own region). |
 | `loop_end` | END | Loop end | Where the loop region ends, 0 to 128 across the Range. P-lockable (a step can play its own region). |

@@ -486,7 +486,8 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
         const ec_slot_t *sl = &a->proj.slot[s];
         int rs, re, k, locked = 0;
         ec_dsp_track_status(a->dsp, a->track, &st);
-        if (is_slice(v)) {                         /* the slices divide the range (the view on LOOP ENGINE's pages);
+        if (is_slice(v) && !whole) {               /* the slices divide the range (the view on LOOP ENGINE's pages;
+                                                    * 0.6.28: the RANGE page is the loop track's code, exactly);
                                                     * 0.6.18 (owner): drawn as the SLICE editor draws them: the edges
                                                     * dark behind the wave, a sounding slice a cream block with the
                                                     * wave cut out, muted slices dim */
@@ -503,23 +504,6 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
                 if (st.voice_slice[k] >= 1 && st.voice_slice[k] <= 32)
                     on |= 1u << (st.voice_slice[k] - 1);
-            if (whole) {                               /* 0.6.19: the RANGE page as on a loop track: the whole file,
-                                                        * the range bracketed, the slices' edges inside it */
-                float x;
-                if (tst && ec_step_lock_get(tst, EC_P_RANGE_START, &x))
-                    locked = 1;
-                if (tst && ec_step_lock_get(tst, EC_P_RANGE_END, &x))
-                    locked = 1;
-                view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, sx0, sx1);   /* (0.6.21: no slice edges here) */
-                brackets(clampi(sx0, w.x0, w.x0 + w.cols), clampi(sx1, w.x0, w.x0 + w.cols), top, bot,
-                         locked ? EC_C_LOCK : EC_C_L12);
-                for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++) {
-                    const int px = vx(&w, st.voice_pos[k]);
-                    if (px >= w.x0 && px < w.x0 + w.cols)
-                        ec_kit_playhead(px, top - 1, bot + 1);
-                }
-                return;
-            }
             for (k = 0; k < cnt; k++)                  /* the sounding slices: cream blocks */
                 if (on >> k & 1u) {
                     int sx, ex;
@@ -589,8 +573,10 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             }
             return;
         }
-        if (whole) {                               /* RANGE: the range (the target's lock, else the track's) */
-            float r0 = v[EC_P_RANGE_START], r1 = v[EC_P_RANGE_END], x;
+        if (whole) {                               /* RANGE: the range (the target's lock, else the track's; 0.6.28:
+                                                    * LIVE, the resolved one: the playing step's lock shows) */
+            float r0 = tst ? v[EC_P_RANGE_START] : ec_seq_value(&a->seq, a->track, EC_P_RANGE_START);
+            float r1 = tst ? v[EC_P_RANGE_END] : ec_seq_value(&a->seq, a->track, EC_P_RANGE_END), x;
             if (tst && ec_step_lock_get(tst, EC_P_RANGE_START, &x))
                 r0 = x, locked = 1;
             if (tst && ec_step_lock_get(tst, EC_P_RANGE_END, &x))

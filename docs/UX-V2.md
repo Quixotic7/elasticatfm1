@@ -1085,3 +1085,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - LOOP page, LIVE, the transport running, no loop key held: the start / end brackets are hidden; the bright span
   still shows what plays. They appear while loop keys are held, and as before when stopped, with a step selected,
   and on the RANGE page.
+
+## 23. 0.6.28: the RANGE page on slice tracks = the loop track's (owner, 2026-11-04)
+
+- Slice tracks draw the RANGE page through the loop track's code, so it behaves exactly the same: a selected step's
+  lock, the keys' span while held, the playhead. LIVE, the range shown is the resolved one on every machine, so the
+  playing step's range lock highlights as the pattern runs.

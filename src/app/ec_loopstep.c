@@ -34,8 +34,6 @@ static struct {
     int b11_used;         /* something was done while B11 was down: not a quick click */
     uint32_t skeys;       /* the STEP layer's keys held now (a press with none held starts a new selection) */
     uint32_t keys;        /* the LOOP entry's keys (bit i: white key i), still held */
-    uint32_t prev_span;   /* 0.6.21: the span before the last key up that shrank it, and when (keys let go together) */
-    uint32_t prev_ms;
     uint32_t span;        /* every key of the entry */
     int range;            /* the entry started on the RANGE page */
 } g;
@@ -334,28 +332,18 @@ void ec_lp_loop_note(int i, int down)
     if (g.b11)
         g.b11_used = 1;                            /* (the reverse: B11 held over STEP latched) */
     if (down) {
-        if (!g.keys) {                             /* a new entry */
+        if (!g.keys)                               /* a new entry */
             g.range = on_range_page();
-            g.prev_span = 0;
-        }
         g.keys |= 1u << i;
-        g.span = g.keys;                           /* 0.6.21 (owner): the span is the keys held now */
-        g.prev_span = 0;
+        g.span = g.keys;                           /* 0.6.21 (owner): a press refits the span to the keys held now
+                                                    * (smaller or larger); a release keeps it */
         return;
     }
     if (!(g.keys >> i & 1u))
         return;
     g.keys &= ~(1u << i);
-    if (g.keys) {
-        g.prev_span = g.span;                      /* (a key up shrinks it; the last span is what gets written, unless
-                                                    * the rest is let go within 80 ms: keys let go together) */
-        g.prev_ms = A->ms;
-        g.span = g.keys;
-        A->redraw = 1;
+    if (g.keys)
         return;
-    }
-    if (g.prev_span && A->ms - g.prev_ms <= 80)
-        g.span = g.prev_span;
     for (lo = 0; lo < EC_NLOWER && !(g.span >> lo & 1u); lo++)
         ;
     for (hi = EC_NLOWER - 1; hi > 0 && !(g.span >> hi & 1u); hi--)

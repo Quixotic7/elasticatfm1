@@ -65,12 +65,16 @@ static void test_layers(void)
     wkey(11, 0);
     CHECK(lockv(2, EC_P_LOOP_START) == 64 && lockv(2, EC_P_LOOP_END) == 96 && lockv(4, EC_P_LOOP_END) == 96,
           "L9 + L12 let go together: 9..12 into both (%g..%g)", lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
-    wkey(8, 1);                                    /* 0.6.21 (owner): L12 let go well before L9: the span shrank to L9 */
+    wkey(8, 1);                                    /* 0.6.21 (owner): L12 let go, L9 held: the span is kept; L10
+                                                    * pressed: it refits to L9 + L10 */
     wkey(11, 1);
     wkey(11, 0);
     run(200);
+    CHECK(live_keys() != 0, "L9 still held");
+    wkey(9, 1);
+    wkey(9, 0);
     wkey(8, 0);
-    CHECK(lockv(2, EC_P_LOOP_START) == 64 && lockv(2, EC_P_LOOP_END) == 72, "L12 let go first: L9 alone (%g..%g)",
+    CHECK(lockv(2, EC_P_LOOP_START) == 64 && lockv(2, EC_P_LOOP_END) == 80, "a press refits the span: L9 + L10 (%g..%g)",
           lockv(2, EC_P_LOOP_START), lockv(2, EC_P_LOOP_END));
     CHECK(ec_lp_count() == 2, "nothing advances: still steps 3 and 5");
     /* a B11 hold with no key keeps the selection */

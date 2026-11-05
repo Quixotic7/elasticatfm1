@@ -162,13 +162,17 @@ static void leds_loop(void)
             ls = ec_step_lock_get(sp, EC_P_LOOP_START, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_LOOP_START];
             le = ec_step_lock_get(sp, EC_P_LOOP_END, &x) ? x : ec_project_track(&A->proj, A->track)->v[EC_P_LOOP_END];
         }
-        if (st.reader_on) {   /* the playhead in track space -> its key */
+        {
             const ec_slot_t *sl = &A->proj.slot[ec_app_track_slot(A, A->track)];
             const float span = sl->trim_end - sl->trim_start;
             const float lo = sl->trim_start + span * v[EC_P_RANGE_START] / 128.0f;
             const float hi2 = sl->trim_start + span * v[EC_P_RANGE_END] / 128.0f;
-            if (hi2 > lo)
+            if (st.reader_on && hi2 > lo)          /* the playhead in track space -> its key */
                 ph = (int)((st.pos_sample - lo) / (hi2 - lo) * 128.0f / units);
+            if (st.keys_held && hi2 > lo) {        /* 0.6.21 (owner): keys held: the live span lights, as it plays */
+                ls = (st.region_start - lo) / (hi2 - lo) * 128.0f;
+                le = (st.region_end - lo) / (hi2 - lo) * 128.0f;
+            }
         }
         for (i = 0; i < EC_NLOWER; i++) {
             const int key = i + hi, idx = A->step_page * 16 + i;

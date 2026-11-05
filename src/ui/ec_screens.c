@@ -491,13 +491,12 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                                                     * 0.6.18 (owner): drawn as the SLICE editor draws them: the edges
                                                     * dark behind the wave, a sounding slice a cream block with the
                                                     * wave cut out, muted slices dim */
-            const float span = sl->trim_end - sl->trim_start;
-            const float lo = sl->trim_start + span * v[EC_P_RANGE_START] / 128.0f;
-            const float hi = sl->trim_start + span * v[EC_P_RANGE_END] / 128.0f;
+            const float lo = w.wa, hi = w.wb;        /* 0.6.29 (owner): the slices chop the range, and the view IS
+                                                    * the range (the target's lock, else the resolved one) */
             const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
             const int razor = ec_razor_is_razor(iv(v, EC_P_MACHINE));
             const ec_razor_t *rz = &a->proj.razor[a->track];
-            const int sx0 = vx(&w, lo), sx1 = vx(&w, hi), scols = sx1 - sx0;
+            const int sx0 = w.x0, sx1 = w.x0 + w.cols, scols = sx1 - sx0;
             const int mid = (top + bot) / 2, half = (bot - top) / 2;
             uint32_t on = a->seq.tr[a->track].pads;
             int c;

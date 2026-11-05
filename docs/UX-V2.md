@@ -1091,3 +1091,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - Slice tracks draw the RANGE page through the loop track's code, so it behaves exactly the same: a selected step's
   lock, the keys' span while held, the playhead. LIVE, the range shown is the resolved one on every machine, so the
   playing step's range lock highlights as the pattern runs.
+
+## 24. 0.6.29: the slices drawn across the range (owner, 2026-11-04)
+
+- The chain is: the raw sample, trimmed (START / END); the range (R-START / R-END, per track, p-lockable) crops the
+  trimmed audio (a crop, not a repitch); the chopper (the loop region, the COUNT grid slices, the RAZOR table) works
+  only on the audio inside the range, in 0..128 of the range. The engine already mapped every chop that way
+  (ec_track_map: trim, then range); the slice view drew the slices across the trimmed file while the view was the
+  range window, so a range lock left only part of them visible. The slices now always span the view's range
+  (the target step's lock, else the resolved range), all COUNT of them.

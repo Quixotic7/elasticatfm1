@@ -424,8 +424,10 @@ static void brackets(int rs, int re, int top, int bot, int c)
 {
     R(c, rs - 2, top - 3, 2, bot - top + 6);       /* 0.6.1: 2 units */
     R(c, rs - 2, top - 3, 5, 2);
+    R(c, rs - 2, bot + 1, 5, 2);                   /* 0.6.17 (owner): a whole bracket: the bottom corner too */
     R(c, re, top - 3, 2, bot - top + 6);
     R(c, re - 3, top - 3, 5, 2);
+    R(c, re - 3, bot + 1, 5, 2);
 }
 
 /* the track's sample area: waveform with region / slices / playhead, or why there is none. whole: the RANGE page
@@ -542,6 +544,9 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
                 ls = rs, le = re;
             if (le <= ls)
                 le = ls + 2;
+            if (a->seq.tr[a->track].live_keys && st.reader_on)   /* 0.6.17 (owner): the brackets follow the loop
+                                                                   * keys while they are held, not on release */
+                rs = ls, re = le;
             if (!grain_view(a, smp, &w, top, bot, ls, le))   /* 0.6.14: the grains too get the brackets below */
                 view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, ls, le);
         }

@@ -1017,3 +1017,9 @@ Kept as designed (the report called them out): KEYBOARD's black keys with a targ
 advance (the E1 demo writes slice sequences that way: a note key is not needed); the recorder's setup targets the
 selected track's slot (E6: a resample; its SLOT row picks another); lowering COUNT keeps the table's edges (EVEN
 redistributes); CROSSFADER capture takes the values that differ from their default or that the other scene holds.
+
+## 13. 0.6.17: the loop brackets (owner, 2026-11-04)
+
+- The waveform's brackets follow the loop keys while they are held (they moved only on release, when the entry
+  became the track's region); a selected step's or the track's region shows as before when no key is held.
+- The bracket glyph is a whole square bracket: a corner at the bottom as well as the top.

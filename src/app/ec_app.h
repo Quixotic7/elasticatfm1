@@ -96,6 +96,7 @@ int ec_app_lock_held_set(int id, float value);   /* 0.6.14: the lock set on the 
 void ec_app_edit_slot(int id, int det, int mult);   /* 0.6.15: a slot field by det clicks (the EDITOR's ALGO) */
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int track);
 int ec_app_track_slot(const ec_app_t *a, int track);         /* 0-based pool slot */
+int ec_app_track_off(const ec_app_t *a, int track);          /* 0.6.32: the track's SLOT is OFF (it plays nothing) */
 int ec_app_stopped(const ec_app_t *a);
 float *ec_app_bus_params(ec_app_t *a, int id);              /* E4: the bus record holding param id, or NULL */
 /* 0.3.0 */

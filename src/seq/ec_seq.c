@@ -807,7 +807,7 @@ static void flush(ec_seq_t *s)
                 s->sink.sources(s->sink.ctx, t, live);
             ec_mtx_apply(v, live);
         }
-        sl = &s->proj->slot[ec_seq_track_slot(s, t) - 1];
+        sl = &s->proj->slot[clampi(ec_seq_track_slot(s, t), 1, EC_NSLOT) - 1];   /* (OFF: slot 1's meta, unused) */
         meta.trim_start = sl->trim_start;
         meta.trim_end = sl->trim_end;
         meta.steps = sl->steps;
@@ -1276,7 +1276,7 @@ int ec_seq_track_slot(const ec_seq_t *s, int t)
 {
     if (t < 0 || t >= EC_NTRACK)
         return 1;
-    return s->tr[t].slot_lock ? s->tr[t].slot_lock : clampi(iv(ptr(s, t)->v, EC_P_SLOT), 1, EC_NSLOT);
+    return s->tr[t].slot_lock ? s->tr[t].slot_lock : clampi(iv(ptr(s, t)->v, EC_P_SLOT), 0, EC_NSLOT);   /* 0 = OFF */
 }
 
 void ec_seq_audition_step(ec_seq_t *s, int t, int idx)

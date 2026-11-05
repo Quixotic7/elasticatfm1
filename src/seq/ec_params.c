@@ -62,7 +62,7 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_MUTE] = BIN("mute", "MUTE", 0, 0),
     [EC_P_MACHINE] = OPT("machine", "MACH", 1, 0, O_MACH),
     [EC_P_PITCH] = NUM("pitch", "P/T", -24, 24, 1, 0, EC_PF_PITCH, L),
-    [EC_P_SLOT] = NUM("sample_slot", "SLOT", 1, EC_NSLOT, 1, 1, EC_PF_INT, L),   /* (0.6.0: 16 -> 128; lockable: a trig plays the locked slot) */
+    [EC_P_SLOT] = NUM("sample_slot", "SLOT", 0, EC_NSLOT, 1, 0, EC_PF_INT, L),   /* (0.6.0: 16 -> 128; lockable: a trig plays the locked slot; 0.6.32 (owner): 0 = OFF, the default: a track plays nothing until its slot is set) */
     [EC_P_LOOP_START] = NUM("loop_start", "STRT", 0, 128, 1, 0, EC_PF_INT, L | EC_PF_REGION),
     [EC_P_LOOP_END] = NUM("loop_end", "END", 0, 128, 1, 128, EC_PF_INT, L | EC_PF_REGION),
     [EC_P_RANGE_START] = NUM("range_start", "R-ST", 0, 128, 1, 0, EC_PF_INT, L | EC_PF_REGION),
@@ -474,6 +474,10 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
 {
     const ec_param_def_t *d = &EC_PARAMS[id];
     char b[24];
+    if (id == EC_P_SLOT && x < 0.5f) {             /* 0.6.32: SLOT 0 = OFF */
+        snprintf(out, (size_t)cap, "OFF");
+        return;
+    }
     switch (d->fmt) {
     case EC_PF_OPT: {
         const int i = (int)(x + 0.5f) - 1;

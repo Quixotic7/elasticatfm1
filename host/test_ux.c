@@ -542,21 +542,22 @@ static void test_presets(void)
     tapkey(1, bkey(10), 40);
     run(800);
     s0 = ec_app_track_slot(A, A->track);
-    CHECK(s0 == 2 && A->slot[2].state == EC_SL_READY, "FILE: B10 loads into the next free slot (%d)", s0);
+    CHECK(s0 == 0 && A->slot[2].state == EC_SL_READY,
+          "FILE: B10 loads into the next free slot; the track stays on its own (0.6.32) (%d)", s0);
     to(EC_CAT_XFD);                                           /* (0.6.14: track pages: the page; MIX: the track) */
     turn(FM1P_E_PRESETS, 1);
     run(20);
-    CHECK(ec_app_track_slot(A, A->track) == 0 && A->ux.to_ms && A->ux.to_kind == EC_TO_SAMPLE,
-          "PRESETS: round to slot 1 (%d), the takeover", ec_app_track_slot(A, A->track));
+    CHECK(ec_app_track_slot(A, A->track) == 1 && A->ux.to_ms && A->ux.to_kind == EC_TO_SAMPLE,
+          "PRESETS: slot 2 (%d), the takeover", ec_app_track_slot(A, A->track));
     turn(FM1P_E_PRESETS, 1);
     run(20);
-    CHECK(ec_app_track_slot(A, A->track) == 1, "PRESETS: slot 2");
+    CHECK(ec_app_track_slot(A, A->track) == 2, "PRESETS: slot 3");
     turn(FM1P_E_PRESETS, -2);
     run(20);
-    CHECK(ec_app_track_slot(A, A->track) == 2, "PRESETS back twice: slot 3 (the empty ones skipped)");
+    CHECK(ec_app_track_slot(A, A->track) == 0, "PRESETS back twice: slot 1 (the empty ones skipped)");
     turn(FM1P_E_PRESETS, -2);
     run(400);
-    CHECK(ec_app_track_slot(A, A->track) == 0, "slot 1 again");
+    CHECK(ec_app_track_slot(A, A->track) == 1, "back twice more: slot 2 (round the three used slots)");
 }
 
 /* ------------------------------------------------------------------------------------------- §2 --- */

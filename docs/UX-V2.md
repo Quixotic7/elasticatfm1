@@ -1113,3 +1113,13 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The last project's name is also kept in the folder, /data/last.txt (data/elasticat/last.txt in the RemoteFM1
   folder), written at every save and load. Power-on reads the flash record first; a fresh flash (a new firmware
   version, another device, a reinstall) falls back to the file, so the last project comes back instead of a new one.
+
+## 27. 0.6.32: SLOT OFF, and slice voices that end (owner, 2026-11-05)
+
+- **SLOT has OFF** (0), the default: a track plays nothing until its slot is set. A new project's T1 starts on slot
+  1 (power-on still loads the folder's first file there); every other track is OFF. Nothing but the user changes a
+  track's SLOT: K2 on the LOOP page, PRESETS, POOL's ASSIGN. BROWSE's ADD only fills the pool (it set the selected
+  track's slot before, and every track started on its own slot, T1..T6 on 1..6, so adding a sample to the pool
+  started another track playing). The cells read OFF, the sample area says SLOT OFF.
+- **A slice voice ends**: with the amp release at its default (INF, for loops) a slice kept ringing for the 2 s
+  release clamp after a 1SHOT reached its end or a HOLD let go; INF now means a 20 ms release for slice voices.

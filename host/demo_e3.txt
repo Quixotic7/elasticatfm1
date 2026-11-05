@@ -63,6 +63,7 @@ press SAVE@7500
 upper 2@7650+60
 upper 9@7800+60
 press HOME@8000+60
+turn K2@8100:1        # (0.6.32: T2's SLOT is OFF until set: the LOOP page's SLOT knob, slot 1)
 upper 2@8200+60
 # domino
 press GLO@8400+450

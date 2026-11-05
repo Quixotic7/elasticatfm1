@@ -186,8 +186,8 @@ static void test_load(void)
     CHECK(!strcmp(A->proj.slot[1].path, "/audio/c_chords_bpm120.wav") && A->slot[1].state == EC_SL_READY &&
               A->slot[1].handle == h && !A->pn.pv_owned,
           "B10: slot 2 holds it, the preview's sample adopted (no second load) (%d %d)", A->slot[1].handle, h);
-    CHECK(ec_app_track_slot(A, A->track) == 1 && strstr(cursor_name(), "c_chords"),
-          "the track plays it, the cursor stays put (%s)", cursor_name());
+    CHECK(ec_app_track_slot(A, A->track) == 0 && strstr(cursor_name(), "c_chords"),
+          "the track stays on its slot (0.6.32), the cursor stays put (%s)", cursor_name());
     CHECK(fabsf(A->proj.slot[1].bpm - 120.0f) < 0.01f && A->proj.slot[1].steps == 32, "its BPM / steps (%g, %g)",
           A->proj.slot[1].bpm, A->proj.slot[1].steps);
     turn(FM1P_E_SELECT, 1);                        /* load, scroll, load .. */

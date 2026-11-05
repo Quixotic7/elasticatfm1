@@ -473,7 +473,7 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             fit(buf, sizeof buf, p[0] ? p : rt->err, 28);
             T(EC_C_L8, buf, W / 2, bot - 9, EC_AL_CENTER);
         } else
-            T2(EC_C_L5, "NO SAMPLE", W / 2, top + 8, EC_AL_CENTER);
+            T2(EC_C_L5, ec_app_track_off(a, a->track) ? "SLOT OFF" : "NO SAMPLE", W / 2, top + 8, EC_AL_CENTER);
         return;
     }
     if (rt->state == EC_SL_LOADING)

@@ -64,9 +64,15 @@ int ec_app_track_slot(const ec_app_t *a, int t)
 }
 int ec_app_stopped(const ec_app_t *a) { return !a->seq.playing; }
 
+int ec_app_track_off(const ec_app_t *a, int t)       /* 0.6.32: SLOT OFF */
+{
+    return iv(ec_project_track((ec_project_t *)&a->proj, t)->v, EC_P_SLOT) <= 0;
+}
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int t)
 {
     const ec_slotrt_t *r = &a->slot[ec_app_track_slot(a, t)];
+    if (ec_app_track_off(a, t))
+        return 0;
     return r->handle >= 0 ? ec_ss_ready(r->handle) : 0;
 }
 
@@ -437,8 +443,9 @@ static int make_builtin(void)
 static void engine_sample(int t)
 {
     {
-        const ec_slotrt_t *r = &A->slot[ec_seq_track_slot(&A->seq, t) - 1];
-        const int h = r->state == EC_SL_READY ? r->handle : -1;
+        const int sl = ec_seq_track_slot(&A->seq, t);   /* 0.6.32: 0 = OFF: no sample */
+        const ec_slotrt_t *r = &A->slot[sl > 0 ? sl - 1 : 0];
+        const int h = sl > 0 && r->state == EC_SL_READY ? r->handle : -1;
         if (h != A->assigned[t]) {
             const ec_ss_sample_t *x = h >= 0 ? ec_ss_ready(h) : 0;
             if (x) {

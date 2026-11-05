@@ -55,15 +55,13 @@ turn K2@7000:-20
 png 7100:10_mix_pan.png
 
 # ---- PRESETS = the track's pool slot: FILE (SAVE; it opens only while stopped: PLAY stops first), the cursor +1,
-# B10 loads b_bass into slot 2 (T1 plays it); PRESETS walks the used slots (slot 1, then 2 again), big; HOME: LOOP
-# ENGINE shows it (ALGO: the pop-up goes); PLAY again
+# B10 loads b_bass into slot 2 (0.6.32: the pool only; T1 stays on slot 1: a track's SLOT changes only when set,
+# with the LOOP page's SLOT knob, which this 0.4.0 layout has elsewhere); HOME: LOOP ENGINE; PLAY again
 press PLAY@7250
 press SAVE@7300+60
 turn SELECT@7500:1
 upper 9@7600+60
-turn PRESETS@8200:1
 png 8220:11_presets_sample.png
-turn PRESETS@8300:1
 press HOME@8700+60
 press PLAY@8780
 turn ALGO@8800:1
@@ -83,7 +81,7 @@ lower 0@10700+60
 press SEQ@11100+60
 png 12000:14_patterns.png
 
-# ---- SHIFT + F1 = undo (the last gesture: PRESETS' slot), SHIFT + F2 = redo
+# ---- SHIFT + F1 = undo (the last gesture: the SLOT knob), SHIFT + F2 = redo
 press GLO@12100+400
 press OCT-@12200+60
 png 12300:15_undo.png

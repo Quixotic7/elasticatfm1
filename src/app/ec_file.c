@@ -644,12 +644,8 @@ static void load(void)
         } else
             ec_app_load_file(s, path);
     }
-    if (!A->bus) {                                 /* the selected track plays it */
-        ec_e5_edit_param(A->track, EC_P_SLOT, 0);
-        ec_app_params(A)[EC_P_SLOT] = (float)(s + 1);
-        ec_seq_touch(&A->seq, A->track);
-    }
-    ec_app_mark_dirty();
+    ec_app_mark_dirty();                           /* 0.6.32 (owner): the pool only; a track's SLOT changes only when
+                                                    * the user sets it (K2 on the LOOP page, PRESETS, POOL's ASSIGN) */
     snprintf(m, sizeof m, k >= 0 ? "IN SLOT %d" : "LOADED > %d", s + 1);
     ec_app_message(m);
 }

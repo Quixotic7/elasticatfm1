@@ -179,7 +179,8 @@ void ec_project_init(ec_project_t *p)
     p->pat[0].used = 1;
     for (t = 0; t < EC_NTRACK; t++) {
         ec_params_default(p->pat[0].tr[t].v);
-        p->pat[0].tr[t].v[EC_P_SLOT] = (float)(t + 1);   /* (each track starts on its own pool slot) */
+        p->pat[0].tr[t].v[EC_P_SLOT] = t == 0 ? 1.0f : 0.0f;   /* 0.6.32 (owner): a new project: T1 on slot 1, the
+                                                            * rest OFF; nothing but the user sets a track's slot */
         ec_razor_init(&p->razor[t]);                     /* E3 */
     }
     for (i = 0; i < 3; i++)                /* E4 */
@@ -835,7 +836,7 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
         p->pat[p->current].used = 1;
         for (t = 0; t < EC_NTRACK; t++) {
             ec_params_default(p->pat[p->current].tr[t].v);
-            p->pat[p->current].tr[t].v[EC_P_SLOT] = (float)(t + 1);
+            p->pat[p->current].tr[t].v[EC_P_SLOT] = t == 0 ? 1.0f : 0.0f;
         }
     }
     return 0;

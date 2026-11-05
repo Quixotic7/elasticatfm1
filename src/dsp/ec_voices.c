@@ -198,7 +198,9 @@ void ec_voice_slice_on(ec_dsp_t *d, int track, const ec_event_t *ev)
         v->spec.dec = p->env_decay > 0.0001f ? p->env_decay : 0.0001f;
         v->spec.sus = ec_clampf(p->env_sustain, 0.f, 1.f);
     }
-    v->spec.rel = ec_clampf(p->env_release, 0.0001f, 2.f);
+    /* 0.6.32 (owner): an infinite amp release (the loop's default) is not for a slice voice: it would ring on for the
+     * 2 s clamp after a 1SHOT reached its end or a HOLD let go; a short release instead */
+    v->spec.rel = p->env_release >= EC_ENV_INF_SECONDS / 10.f ? 0.02f : ec_clampf(p->env_release, 0.0001f, 2.f);
     v->spec.hold = 0.f;
     ec_env_reset(&v->env);
     ec_env_trigger(&v->env, &v->spec, -1, 0, fs);

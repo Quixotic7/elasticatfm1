@@ -500,9 +500,12 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             const int mid = (top + bot) / 2, half = (bot - top) / 2;
             uint32_t on = a->seq.tr[a->track].pads;
             int c;
-            for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
-                if (st.voice_slice[k] >= 1 && st.voice_slice[k] <= 32)
-                    on |= 1u << (st.voice_slice[k] - 1);
+            if (tgt >= 0)                          /* 0.6.37 (owner): a selected step: its slices (and pads held) */
+                on |= ec_app_step_slices(a, a->track, tgt);
+            else                                   /* LIVE: what sounds */
+                for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
+                    if (st.voice_slice[k] >= 1 && st.voice_slice[k] <= 32)
+                        on |= 1u << (st.voice_slice[k] - 1);
             for (k = 0; k < cnt; k++)                  /* the sounding slices: cream blocks */
                 if (on >> k & 1u) {
                     int sx, ex;

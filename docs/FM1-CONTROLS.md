@@ -1051,8 +1051,9 @@ An FX machine changes at any time (a short fade, no click).
 - The screen shows the waveform; with the GRAIN warp each live grain is drawn on it (a block at its read position,
   as wide as the grain, shaded by its level). The other warps show the playhead.
 - On a bus the white keys do nothing.
-- LEDs: the loop's keys dim, the playhead's key mid, held keys bright; slice pads dim, sounding ones bright, muted
-  ones faint. 0.6.25: LIVE the loop keys light **what plays now** (each step's region as it fires, the held keys'
+- LEDs: the loop's keys dim, the playhead's key mid, held keys bright. Slice pads (0.6.37) are dark except the pads
+  held, LIVE the slices sounding, and with a step selected the slices that step plays (the waveform shows that
+  step's slices as cream blocks too, so ALGO walks through them). 0.6.25: LIVE the loop keys light **what plays now** (each step's region as it fires, the held keys'
   span); the RANGE page lights the resolved range.
 
 ### TRIG (HOME, second)

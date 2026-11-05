@@ -145,17 +145,19 @@ static void leds_loop(void)
     }
     if (is_slice_m(m)) {
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
-        const uint32_t mute = ec_e5_slices(&A->proj, A->track)->mute;
-        uint32_t sounding = A->seq.tr[A->track].pads;
+        /* 0.6.37 (owner): every pad dark but the slices held, LIVE the slices sounding, a selected step its slices */
+        const int tgt = ec_app_target_step(A);
+        uint32_t on = A->seq.tr[A->track].pads;
         int j;
-        for (j = 0; j < st.voices && j < EC_MAX_VOICES_TRACK; j++)
-            if (st.voice_slice[j] >= 1 && st.voice_slice[j] <= 32)
-                sounding |= 1u << (st.voice_slice[j] - 1);
+        if (tgt >= 0)
+            on |= ec_app_step_slices(A, A->track, tgt);
+        else
+            for (j = 0; j < st.voices && j < EC_MAX_VOICES_TRACK; j++)
+                if (st.voice_slice[j] >= 1 && st.voice_slice[j] <= 32)
+                    on |= 1u << (st.voice_slice[j] - 1);
         for (i = 0; i < EC_NLOWER; i++) {
             const int s = i + hi;
-            ec_plat_led_lower(i, s >= cnt ? EC_LED_OFF : (sounding >> s & 1u) ? EC_LED_LIT
-                                 : (mute >> s & 1u)                         ? EC_LED_FAINT
-                                                                            : EC_LED_DIM);
+            ec_plat_led_lower(i, s < cnt && (on >> s & 1u) ? EC_LED_LIT : EC_LED_OFF);
         }
         return;
     }
@@ -546,8 +548,8 @@ void ec_pn_leds(void)
     leds_white();
     leds_black();
     leds_buttons();
-    if (!A->fn)
-        ec_e5_leds();                              /* E5: muted pads faint */
+    /* 0.6.37 (owner): no faint muted pads (ec_e5_leds): a pad is lit only while it is held, sounding or on the
+     * selected step */
 }
 
 /* ------------------------------------------------------------------------------------------- labels --- */

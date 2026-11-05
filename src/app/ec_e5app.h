@@ -70,7 +70,6 @@ int ec_e5_item_value(const ec_item_t *it, float *x, int *locked);       /* a cel
 void ec_e5_item_format(const ec_item_t *it, float x, char *out, int cap);
 float ec_e5_item_frac(const ec_item_t *it, float x);
 int ec_e5_leds_lower(void);
-void ec_e5_leds(void);
 void ec_e5_ui_info(char *buf, uint32_t n);
 int ec_e5_loop_key(int k, int i, int down);             /* the loop key / pad 1..32 of white key i (the zoom) */
 int ec_e5_scene_layer(void);                             /* (0.6.0: always 0, the scene row is gone) */

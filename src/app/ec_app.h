@@ -97,6 +97,7 @@ void ec_app_edit_slot(int id, int det, int mult);   /* 0.6.15: a slot field by d
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int track);
 int ec_app_track_slot(const ec_app_t *a, int track);         /* 0-based pool slot */
 int ec_app_track_off(const ec_app_t *a, int track);          /* 0.6.32: the track's SLOT is OFF (it plays nothing) */
+uint32_t ec_app_step_slices(const ec_app_t *a, int track, int idx);   /* 0.6.37: the slices step idx plays (bit s-1) */
 int ec_app_stopped(const ec_app_t *a);
 float *ec_app_bus_params(ec_app_t *a, int id);              /* E4: the bus record holding param id, or NULL */
 /* 0.3.0 */

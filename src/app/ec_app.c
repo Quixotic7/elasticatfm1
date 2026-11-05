@@ -68,6 +68,25 @@ int ec_app_track_off(const ec_app_t *a, int t)       /* 0.6.32: SLOT OFF */
 {
     return iv(ec_project_track((ec_project_t *)&a->proj, t)->v, EC_P_SLOT) <= 0;
 }
+/* 0.6.37: the slices a step plays (bit s-1), as fire_slices picks them: its slice trigs, else a trig plays its
+ * SLICE lock (else the track's SLICE); 0 = none */
+uint32_t ec_app_step_slices(const ec_app_t *a, int t, int idx)
+{
+    const ec_ptrack_t *tr = ec_project_track((ec_project_t *)&a->proj, t);
+    const int cnt = clampi(iv(tr->v, EC_P_SLICE_COUNT), 1, 32);
+    const ec_step_t *s;
+    float x;
+    if (idx < 0 || idx >= EC_MAXSTEPS)
+        return 0;
+    s = &tr->steps[idx];
+    if (s->slices)
+        return s->slices;
+    if (!s->trig)
+        return 0;
+    if (!ec_step_lock_get(s, EC_P_SLICE_INDEX, &x))
+        x = tr->v[EC_P_SLICE_INDEX];
+    return 1u << (clampi((int)floorf(x + 0.5f), 1, cnt) - 1);
+}
 const ec_ss_sample_t *ec_app_track_sample(const ec_app_t *a, int t)
 {
     const ec_slotrt_t *r = &a->slot[ec_app_track_slot(a, t)];

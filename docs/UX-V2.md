@@ -1161,3 +1161,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   + SAVE) it reads the file back; if it differs, nothing is written and the header says **NOT SAVED: FILE CHANGED**.
   Autosaves keep refusing; the **next SHIFT + SAVE writes this instance's project as a new one** (the next free
   name), so both versions are kept. A missing or unreadable file is written as before. test_proj checks it.
+
+## 33. 0.6.37: slice pads' LEDs and a selected step's slices (owner, 2026-11-05)
+
+- On slice tracks' LOOP ENGINE pages the white keys' LEDs are all off, except: the pads held; LIVE, the slices
+  sounding; with a step selected (ALGO, or the selected steps' target), the slices that step plays (its slice trigs,
+  else a trig's SLICE lock or the track's SLICE). Muted pads no longer show faint, nor do idle pads dim.
+- The waveform does the same: with a step selected its slices are the cream blocks (as a sounding slice is LIVE), so
+  scrolling ALGO through the steps shows each step's slices; LIVE it shows what sounds, as before.

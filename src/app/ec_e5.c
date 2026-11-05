@@ -671,19 +671,6 @@ int ec_e5_leds_lower(void)
     return 0;
 }
 
-void ec_e5_leds(void)
-{
-    if (loop_layer() && !A->bus && !A->fn && !ec_e5_page_visible() && !E->naming &&
-        is_slice_m(iv(tv(), EC_P_MACHINE))) {     /* a muted pad shows faint */
-        const uint32_t mute = ec_e5_slices(&A->proj, A->track)->mute;
-        const uint32_t held = A->seq.tr[A->track].pads;
-        int i;
-        for (i = 0; i < EC_NLOWER; i++)
-            if ((mute >> i & 1u) && !(held >> i & 1u) && i < iv(tv(), EC_P_SLICE_COUNT))
-                ec_plat_led_lower(i, EC_LED_FAINT);
-    }
-}
-
 /* ------------------------------------------------------------------------------------------- ui_info --- */
 void ec_e5_ui_info(char *buf, uint32_t n)
 {

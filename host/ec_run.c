@@ -22,6 +22,9 @@
  *     --wav FILE          the whole run's audio (44.1 kHz 16-bit stereo)
  *     --png FILE          the screen at the end (240x240; --png-scale 2 for 480x480)
  *     --png-at MS:FILE    the screen at device ms MS; repeat
+ *     --png-every MS      video: the screen into --out's f00000.png, f00001.png, .. every MS device ms
+ *     --panel-log FILE    with --png-every: the panel at every frame (keys, buttons, the LEDs by key id), for a
+ *                         composer that draws the panel beside the screen (tools/promo)
  *     --info-at MS        ui_info printed at MS; repeat
  *     --rms-from MS       the RMS is measured from MS on (default 0)
  *     --min-rms X         fail when the RMS is below X (full scale 1.0)
@@ -107,6 +110,8 @@ static const char *ain_path;                  /* E6: --audio-in */
 static int ain_once;
 static uint32_t ain_latency, ain_off_at = UINT32_MAX, ain_on_at = 0;
 static struct { uint32_t at; char path[512]; } png_at[MAXPNG];
+static const char *plog_path;                 /* --panel-log: the panel's state at every --png-every frame */
+static uint32_t png_every;                    /* --png-every MS: the screen into out_dir/f%05d.png every MS */
 static uint32_t info_at[64], run_ms = 6000, rms_from;
 static int npng, ninfo, nexpect, nev, png_scale = 1;
 static double min_rms = -1;
@@ -130,6 +135,8 @@ static int option(const char *a, const char *v)
         ec_layout_use(!strcmp(v, "test") ? &EC_LAYOUT_TEST : NULL);
     else if (!strcmp(a, "out")) out_dir = strdup(v);
     else if (!strcmp(a, "png-scale")) png_scale = atoi(v);
+    else if (!strcmp(a, "png-every")) png_every = (uint32_t)strtoul(v, NULL, 10);
+    else if (!strcmp(a, "panel-log")) plog_path = strdup(v);
     else if (!strcmp(a, "rms-from")) rms_from = (uint32_t)strtoul(v, NULL, 10);
     else if (!strcmp(a, "min-rms")) min_rms = atof(v);
     else if (!strcmp(a, "expect-ui") && nexpect < 32) expect[nexpect++] = strdup(v);
@@ -314,7 +321,8 @@ int main(int argc, char **argv)
     int i, bad = 0;
     const fm1core_t *c;
     fm1panel_t *p;
-    FILE *wav = NULL;
+    FILE *wav = NULL, *plog = NULL;
+    unsigned nframes = 0;
     uint64_t frames_done = 0, rms_frames = 0;
     double sumsq = 0, peak = 0, t0, wall;
     uint32_t ms, last_frame = 0, lcd0;
@@ -358,6 +366,17 @@ int main(int argc, char **argv)
     }
     if (ain_path && !(ain = wav_read(ain_path, &ain_frames)))
         return 2;
+    if (plog_path) {
+        int b;
+        plog = fopen(plog_path, "w");
+        if (!plog)
+            return usage("cannot write the panel log");
+        fprintf(plog, "btn_id");                 /* FM1P_B_* label order -> matrix id; then one line per frame:
+                                                  * ms keys buttons play_green led[id 0..40] (14.. = note keys) */
+        for (b = 0; b < FM1P_NB; b++)
+            fprintf(plog, " %u", p->btn_id[b]);
+        fputc('\n', plog);
+    }
     t0 = now_s();
     for (ms = 0; ms < run_ms; ms++) {
         int k;
@@ -405,7 +424,27 @@ int main(int argc, char **argv)
             c->idle();
         for (k = 0; k < npng; k++)
             if (ms == png_at[k].at && ec_png_write_lcd(png_at[k].path, p->lcd, FM1P_LCD_W, FM1P_LCD_H, png_scale))
-                fprintf(stderr, "ec_run: %s not written\n", png_at[k].path);
+                fprintf(stderr, "ec_png: %s not written\n", png_at[k].path);
+        if (png_every && ms % png_every == 0) {       /* a video frame: the screen, and the panel's state */
+            char path[600];
+            snprintf(path, sizeof path, "%s/f%05u.png", out_dir ? out_dir : ".", nframes++);
+            if (ec_png_write_lcd(path, p->lcd, FM1P_LCD_W, FM1P_LCD_H, png_scale))
+                fprintf(stderr, "ec_run: %s not written\n", path);
+            if (plog) {
+                int id, r, col;
+                uint8_t lv[41] = {0};
+                for (r = 1; r <= FM1P_NLINE; r++)
+                    for (col = 0; col < FM1P_NCOL; col++) {
+                        id = c->keymap[r * FM1P_NCOL + col];
+                        if (id >= 0 && id < 41)
+                            lv[id] = p->led[col][r - 1];
+                    }
+                fprintf(plog, "%u %08x %04x %u", ms, p->keys, p->buttons, p->led_play_green);
+                for (id = 0; id < 41; id++)
+                    fprintf(plog, " %u", lv[id]);
+                fputc('\n', plog);
+            }
+        }
         if ((ain || ain_on_at) && !ain_live && ms >= ain_on_at && ms < ain_off_at) {   /* E6: the input on */
             fm1core_audio_in_info(1, ain_latency);
             ain_live = 1;
@@ -456,6 +495,8 @@ int main(int argc, char **argv)
         wav_header(wav, (uint32_t)frames_done);
         fclose(wav);
     }
+    if (plog)
+        fclose(plog);
     c->ui_info(info, sizeof info);
     if (png_path && ec_png_write_lcd(png_path, p->lcd, FM1P_LCD_W, FM1P_LCD_H, png_scale))
         fprintf(stderr, "ec_run: %s not written\n", png_path);

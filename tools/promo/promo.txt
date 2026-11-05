@@ -1,0 +1,263 @@
+# Elasticat FM-1 promo: three minutes of panel input (host/ec_run --script), device ms. The folder: audio/breaks
+# (hi_19, milagrosa, stoned, stoned_no_perc, ultrafunk) and audio/acid (acid_16ths_01, drone_1, italo_bass_1,
+# quirky_303_02); power-on loads the first file (acid_16ths_01) into slot 1 on T1.
+png-scale 1
+master 800@100
+
+# ---- 5.6 s: BROWSE (SAVE): into breaks/, down to stoned, ADD (B10): T1 plays slot 2
+press SAVE@5600
+turn SELECT@6400:1
+upper 1@7000
+turn SELECT@7800:1
+turn SELECT@8400:1
+upper 9@9200
+info 9800
+
+# ---- 10 s: LOOP ENGINE, PLAY, the loop keys
+press HOME@10000
+press PLAY@10400
+lower 0@11200+1400
+lower 4@12800+1000
+lower 8@14000+1500
+lower 9@14100+1400
+lower 12@15800+700
+lower 2@16800+250
+lower 3@17100+250
+lower 2@17400+250
+lower 3@17700+250
+lower 2@18000+120
+lower 3@18150+120
+lower 2@18300+120
+lower 3@18450+120
+lower 14@19000+900
+lower 15@19100+800
+lower 6@20200+1200
+info 22000
+
+# ---- 22.5 s: T2 (SHIFT + W2); BROWSE: up, into acid/, down to quirky, ADD: T2 plays the acid loop
+press GLO@22500+300
+lower 1@22600
+press SAVE@23000
+upper 0@23600
+turn SELECT@24200:-1
+upper 1@24800
+turn SELECT@25400:1
+turn SELECT@25900:1
+turn SELECT@26400:1
+upper 9@27200
+info 27800
+
+# ---- 28 s: FILTER on T2: cutoff down and up, resonance up
+press SEL@28000
+turn K2@28400:30
+turn K1@28800:-4
+turn K1@29000:-4
+turn K1@29200:-4
+turn K1@29400:-4
+turn K1@29600:-4
+turn K1@29800:-4
+turn K1@30000:-4
+turn K1@30200:-4
+turn K1@30400:-4
+turn K1@30600:-4
+turn K1@30800:-4
+turn K1@31000:-4
+turn K1@31200:-4
+turn K1@31400:-4
+turn K1@31600:-4
+turn K1@33000:3
+turn K1@33200:3
+turn K1@33400:3
+turn K1@33600:3
+turn K1@33800:3
+turn K1@34000:3
+turn K1@34200:3
+turn K1@34400:3
+turn K1@34600:3
+turn K1@34800:3
+turn K1@35000:3
+turn K1@35200:3
+turn K1@35400:3
+turn K1@35600:3
+turn K1@35800:3
+turn K1@36000:3
+turn K1@36200:3
+turn K1@36400:3
+turn K1@36600:3
+turn K1@36800:3
+# LFO 1 (B6 held) onto CUTOFF: one detent makes the route, more set the depth
+upper 5@37400+1600
+turn K1@37700:1
+turn K1@38000:30
+info 39500
+
+# ---- 40 s: KEYBOARD on T2 (HOME x3 from FILTER): a riff on the acid loop
+press HOME@40000
+press HOME@40400
+press HOME@40800
+lower 4@41500+350
+lower 4@42000+350
+lower 7@42500+350
+lower 4@43000+350
+lower 9@43500+700
+lower 6@44500+350
+lower 4@45000+350
+lower 2@45500+700
+lower 4@46500+350
+lower 4@47000+350
+lower 11@47500+350
+lower 9@48000+350
+lower 7@48500+700
+lower 6@49500+350
+lower 4@50000+350
+lower 2@50500+350
+lower 0@51000+1400
+lower 4@52500+350
+lower 7@53000+350
+lower 9@53500+1200
+info 54800
+
+# ---- 55 s: T1 again; stopped: LOOP SETUP (SHIFT + HOME): WARP MODE three detents on = GRAIN; PLAY
+press GLO@55000+300
+lower 0@55100
+press PLAY@55600
+press GLO@56000+600
+press HOME@56100+60
+turn SELECT@56800:1
+turn K1@57000:1
+turn K1@57200:1
+turn K1@57400:1
+press HOME@58000
+press HOME@58400     # (the settings closed on KEYBOARD: HOME once more = LOOP ENGINE)
+press PLAY@58800
+info 59000
+# the WARP page (B3): density, spread, size, rate; the loop keys through the grains
+upper 2@59200
+turn K1@59400:8
+turn K1@59700:8
+turn K1@60000:8
+turn K3@60600:10
+turn K3@60900:10
+turn K3@61200:10
+turn K3@61500:10
+turn K3@61800:10
+lower 0@62800+1200
+lower 4@64200+1200
+lower 8@65600+1200
+turn K2@67000:-5
+turn K2@67300:-5
+turn K2@67600:-5
+turn K4@68600:-10
+turn K4@69200:-10
+turn K4@69800:-10
+lower 12@70400+1500
+lower 13@70500+1400
+turn K4@72200:10
+turn K4@72500:10
+turn K4@72800:10
+lower 2@73400+900
+info 74800
+
+# ---- 75 s: FX on T1: INSERT 1 (B1 held + K1 3 = LOFI), BITS and RATE down; SENDS (B5): send 1 up
+press FX@75000
+upper 0@75600+800
+turn K1@75900:3
+turn K1@77000:-2
+turn K1@77300:-2
+turn K1@77600:-2
+turn K1@77900:-2
+turn K2@78600:-5
+turn K2@78900:-5
+turn K2@79200:-5
+turn K2@79500:-5
+turn K2@79800:-5
+turn K2@81200:5
+turn K2@81500:5
+turn K2@81800:5
+turn K2@82100:5
+turn K1@82800:2
+turn K1@83100:2
+upper 4@85000
+turn K3@85600:8
+turn K3@85900:8
+turn K3@86200:8
+turn K3@86500:8
+turn K3@86800:8
+turn K3@87100:8
+info 91500
+
+# ---- 92 s: T2: INSERT 2 (B2 held + K1 6 = ECHO), its mix up
+press GLO@92000+300
+lower 1@92100
+upper 1@92500          # (FX was on SENDS: B2 = the INSERT 2 page, then held = its type)
+upper 1@93000+800
+turn K1@93300:6
+turn K4@94200:5
+turn K4@94500:5
+turn K4@94800:5
+turn K4@95100:5
+turn K3@96000:4
+turn K3@96300:4
+turn K3@96600:4
+info 99500
+
+# ---- 100 s: MIX (EDIT): T1 muted (hold) and back, then the CAT (B11)
+press EDIT@100000
+lower 0@102000+700
+lower 0@105600+700
+upper 10@108000
+upper 10@118000
+
+# ---- 118 s: CROSSFADER (ARP) from FILTER on T2: A = cutoff low (B1 held + K1), B = cutoff high (B2 held + K1);
+# the fader keys glide
+press SEL@118200
+press ARP@118800
+upper 0@119400+700
+turn K1@119600:1
+turn K1@119700:-30
+upper 1@120400+700
+turn K1@120600:1
+turn K1@120700:35
+lower 11@121600+2500
+lower 0@124400+2500
+lower 5@127200+1500
+lower 11@129000+2000
+lower 0@131300+2500
+info 134500
+
+# ---- 135 s: TRIG on T1 (HOME x2 from ARP): trigs on 1 5 9 13 and 7 (held + K1 = a pitch lock), 3 ratchet
+press SEL@134800     # (FILTER first: in CROSSFADER, SHIFT + a key is the fader)
+press GLO@135000+300
+lower 0@135100
+press HOME@135600
+press HOME@136000
+lower 0@136600
+lower 4@137000
+lower 8@137400
+lower 12@137800
+lower 6@138600+1600
+turn K1@138900:1
+turn K1@139100:-11
+lower 14@140600+1600
+turn K1@140900:1
+turn K1@141100:7
+lower 2@142800
+lower 10@143200
+info 149500
+
+# ---- 150 s: KEYBOARD on T1 (HOME again): the break pitched
+press HOME@150000
+lower 2@150800+700
+lower 4@151700+700
+lower 7@152600+700
+lower 4@153500+700
+lower 0@154400+1400
+lower 9@156000+700
+lower 7@156900+700
+lower 4@157800+1400
+
+# ---- 160 s: MIX and the CAT for the finale; STOP at 172 s
+press EDIT@160000
+upper 10@160600
+press PLAY@172000
+info 173000

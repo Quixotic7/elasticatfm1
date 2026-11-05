@@ -1029,3 +1029,8 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - On slice tracks the LOOP ENGINE / TRIG waveform draws the slices as the SLICE editor does: the edges dark behind
   the wave (2 units), a sounding slice (a pad or a voice) a cream block with the wave cut out and its edges in front,
   muted slices dim, the playhead over it (before: dotted edges over a bright wave, a sounding slice a dark block).
+
+## 15. 0.6.19: SLICE/SLICE (owner, 2026-11-04)
+
+- On a slice track (SLICE, S.POLY, RAZOR, R.POLY) the LOOP ENGINE header says SLICE/SLICE on the first page and
+  SLICE/MACHINE, SLICE/WARP, SLICE/RANGE on the others, and B1's label is SLICE, so the pages match the machine.

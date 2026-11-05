@@ -135,7 +135,13 @@ static void right_info(const ec_app_t *a, char *out, size_t cap)
 
 static void title_of(const ec_app_t *a, const ec_page_t *pg, char *out, size_t cap)
 {
-    snprintf(out, cap, "%s/%s", ec_cat_tag(a->cat), a->settings ? "SETUP" : pg->title);   /* 0.6.0: the tag */
+    const char *tag = ec_cat_tag(a->cat), *title = a->settings ? "SETUP" : pg->title;
+    if (a->cat == EC_CAT_SRC && !a->bus && is_slice(tv(a))) {   /* 0.6.19 (owner): a slice track's pages say SLICE */
+        tag = "SLICE";
+        if (title && !strcmp(title, "LOOP"))
+            title = "SLICE";
+    }
+    snprintf(out, cap, "%s/%s", tag, title);     /* 0.6.0: the tag */
 }
 
 /* ------------------------------------------------------------------------------------------- cells --- */

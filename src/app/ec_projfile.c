@@ -82,8 +82,63 @@ static int flash_name(char *out)
     return 1;
 }
 
+/* 0.6.31 (owner): the last project's name also lives in the folder (/data/last.txt), so a host whose flash image
+ * is fresh (a new firmware version, another device) still comes back to the last project; the flash record is read
+ * first, the file when it says nothing */
+#define EC_PF_LAST "/data/last.txt"
+static void load_start(const char *name, int boot);
+static ec_fsreq_t g_nreq;
+static char g_last[EC_PF_NAME + 2], g_last_written[EC_PF_NAME + 2];
+static int g_last_write, g_last_read, g_last_wait;
+static uint32_t g_last_changed;
+
+static void last_tick(void)
+{
+    if (g_last_wait && (uint32_t)ec_fs_changed() != g_last_changed) {   /* no folder at power-on: read once one is there */
+        g_last_wait = 0;
+        g_last_read = 1;
+    }
+    if (!g_last_read && !g_last_write)
+        return;
+    if (g_nreq.state == EC_FSR_IDLE) {
+        if (g_last_read) {
+            memset(g_last, 0, sizeof g_last);
+            ec_fs_start(&g_nreq, FS_READ, EC_PF_LAST, 0, (uint8_t *)g_last, (int32_t)sizeof g_last - 1);
+        } else
+            ec_fs_start(&g_nreq, FS_WRITE, EC_PF_LAST, -1, (uint8_t *)g_last_written, (int32_t)strlen(g_last_written));
+    }
+    if (ec_fs_update(&g_nreq) != EC_FSR_DONE)
+        return;
+    g_nreq.state = EC_FSR_IDLE;
+    if (g_last_read) {
+        const int32_t r = g_nreq.result;
+        g_last_read = 0;
+        if (r == FS_ENOFOLDER) {
+            g_last_wait = 1;
+            g_last_changed = (uint32_t)ec_fs_changed();
+        } else if (r > 0) {
+            size_t n = (size_t)r < sizeof g_last - 1 ? (size_t)r : sizeof g_last - 1;
+            g_last[n] = 0;
+            while (n && (g_last[n - 1] == '\n' || g_last[n - 1] == '\r' || g_last[n - 1] == ' '))
+                g_last[--n] = 0;
+            if (n && n < EC_PF_NAME && g.ld == LD_IDLE && !g.name[0])
+                load_start(g_last, 1);
+        }
+    } else
+        g_last_write = 0;
+}
+
+static void last_set(const char *name)
+{
+    if (!strcmp(g_last_written, name))
+        return;
+    snprintf(g_last_written, sizeof g_last_written, "%s", name);
+    g_last_write = 1;
+}
+
 static void flash_set_name(const char *name)
 {
+    last_set(name);
     uint32_t size;
     uint8_t *r = ec_plat_record(&size);
     const uint32_t magic = NAME_MAGIC;
@@ -488,6 +543,7 @@ int ec_pf_boot(void)
         load_start(name, 1);
         return EC_PF_BOOT_FILE;
     }
+    g_last_read = 1;                                /* 0.6.31: the folder may know (it lands from ec_pf_tick) */
     return EC_PF_BOOT_NONE;
 }
 
@@ -496,6 +552,7 @@ void ec_pf_tick(void)
     list_tick();
     save_tick();
     load_tick();
+    last_tick();
     if (g.open_after && g.sv == SV_IDLE && g.ld == LD_IDLE) {
         g.open_after = 0;
         if (A->dirty)                               /* (edited again meanwhile) */
@@ -511,6 +568,9 @@ void ec_pf_shutdown(void)
 {
     ec_fs_cancel(&g.req);
     ec_fs_cancel(&g.lreq);
+    ec_fs_cancel(&g_nreq);
+    g_last_read = g_last_write = g_last_wait = 0;
+    g_last_written[0] = 0;
 }
 
 int ec_pf_saving(void) { return g.sv != SV_IDLE; }

@@ -1107,3 +1107,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   sequencer resolves the region params from the selected step: ec_seq_audition_step), so previewing slice 1 on a
   step whose range is locked plays slice 1 of that range, as the screen shows. Playing, the resolved values are
   the sequencer's as before (the locks apply as the steps fire).
+
+## 26. 0.6.31: the last project survives a firmware update (owner, 2026-11-04)
+
+- The last project's name is also kept in the folder, /data/last.txt (data/elasticat/last.txt in the RemoteFM1
+  folder), written at every save and load. Power-on reads the flash record first; a fresh flash (a new firmware
+  version, another device, a reinstall) falls back to the file, so the last project comes back instead of a new one.

@@ -107,7 +107,11 @@ static void reboot(void)
 }
 static void fresh_boot(void)
 {
+    char p[1024];
     C->shutdown();
+    snprintf(p, sizeof p, "%s/data/elasticat/last.txt", root);   /* 0.6.31: a fresh flash alone would come back to the
+                                                                   * folder's last project: a fresh boot forgets it too */
+    remove(p);
     boot(NULL, 0);
 }
 static int flash_magic(uint32_t m)

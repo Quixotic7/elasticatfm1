@@ -426,7 +426,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
 | LOOP · NEIGHBOR/INPUT | B1 | - | | | | |
-| LOOP · SLICE/RAZOR |  | 1 | P/T | PLAY | SLIC | SLOT |
+| LOOP · SLICE/RAZOR |  | 1 | P/T | SLOT | SLIC | PLAY |
 |  |  | 2 | CNT | CHOK | SMUT | SREV |
 | LOOP · otherwise |  | 1 | PITCH | SLOT | START | END |
 |  |  | 2 | XFADE | REVERSE |  |  |

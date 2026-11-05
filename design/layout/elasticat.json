@@ -74,7 +74,7 @@
             {
               "when": {"machine": ["slice", "razor"]},
               "lanes": [
-                ["pitch", "slice_play_mode", "slice_index", "sample_slot"],
+                ["pitch", "sample_slot", "slice_index", "slice_play_mode"],
                 ["slice_count", {"item": "e5.choke", "label": "CHOK"}, {"item": "e5.mute", "label": "SMUT"}, "slice_reverse"]
               ]
             }

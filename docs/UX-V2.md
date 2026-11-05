@@ -1131,3 +1131,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   the RANGE page as loop keys on every machine, the range as a crop of the trimmed, stretched sample, the slice view,
   a selected step's audition, SLOT OFF, LOAD filling the pool only, and last.txt. The parameter reference's SLOT,
   R-START / R-END, amp release and trim start texts (design/layout/descriptions.json) say the same.
+
+## 29. 0.6.33: SLOT on K2 on every machine; SHIFT reaches OFF (owner, 2026-11-05)
+
+- The LOOP page on slice machines (SLICE, RAZOR) is P/T · SLOT · SLIC · PLAY (SLOT and PLAY swapped), so SLOT is
+  K2 on the first LOOP page whatever the track's machine.
+- SHIFT does not snap SLOT: with SHIFT held the SLOT knob steps one slot a click, as without it, OFF included (it
+  snapped through 0.5's 1, 2, 4, 8, 16, so SHIFT could never reach 0.6.32's OFF).

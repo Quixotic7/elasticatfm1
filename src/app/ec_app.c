@@ -705,7 +705,7 @@ float ec_app_move_param(int id, float x, int det, int mult)
     if (EC_PARAMS[id].fmt == EC_PF_MDST)          /* 0.5.0: a matrix DST: the layout's order, SHIFT a category */
         return ec_mk_dst_step(x, det, A->fn);
     id = def_id(A, id);                           /* 0.6.1: INS 2's params move as the FX param they stand for */
-    if (A->fn)
+    if (A->fn && id != EC_P_SLOT)                 /* 0.6.33 (owner): SLOT steps the same with SHIFT (OFF included) */
         return ec_param_clamp(id, ec_param_snap(id, x, det));
     return ec_param_clamp(id, ec_param_nudge(id, x, EC_PARAMS[id].kind == EC_PK_NUM ? det * mult : det));
 }

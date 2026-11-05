@@ -449,6 +449,50 @@ static void clear_projects(void)
     closedir(dp);
 }
 
+/* 0.6.36: another instance (a second browser tab on the same folder) wrote the project's file: a save (auto or
+ * SHIFT + SAVE) leaves that file alone and says FILE CHANGED; the next SHIFT + SAVE writes a new project */
+static void test_changed_elsewhere(void)
+{
+    static ec_project_t other;
+    static uint8_t ob[EC_PF_PACK_MAX];
+    char name[EC_PF_NAME], name2[EC_PF_NAME];
+    uint32_t n, on;
+    int32_t r;
+    uint8_t *d;
+    edit(101, 3);
+    shift_save();
+    until_saved();
+    snprintf(name, sizeof name, "%s", ec_pf_name());
+    d = read_file(name, 0, &n);
+    CHECK(d && ec_project_load(&other, d, n) == 0, "%s saved (%u bytes)", name, n);
+    other.bpm = 77;                                /* the other tab's project */
+    r = ec_project_save(&other, ob, sizeof ob);
+    on = r > 0 ? (uint32_t)r : 0;
+    write_file(name, ob, on);
+    edit(102, 4);
+    ec_pf_save(1);                                 /* an autosave */
+    until_saved();
+    d = read_file(name, 0, &n);
+    CHECK(!strcmp(A->msg, "NOT SAVED: FILE CHANGED") && d && n == on && !memcmp(d, ob, on),
+          "autosave: the other tab's file kept, FILE CHANGED (%s)", A->msg);
+    ec_pf_save(1);
+    until_saved();
+    d = read_file(name, 0, &n);
+    CHECK(d && n == on && !memcmp(d, ob, on) && !strcmp(ec_pf_name(), name), "a second autosave refuses too");
+    shift_save();
+    until_saved();
+    snprintf(name2, sizeof name2, "%s", ec_pf_name());
+    d = read_file(name, 0, &n);
+    CHECK(strcmp(name2, name) && d && n == on && !memcmp(d, ob, on) && !strcmp(A->msg, "SAVED"),
+          "SHIFT + SAVE: a new project %s, %s untouched (%s)", name2, name, A->msg);
+    d = read_file(name2, 0, &n);
+    CHECK(d && ec_project_load(&other, d, n) == 0 && (int)other.bpm == 102, "%s holds this tab's project", name2);
+    edit(103, 5);                                  /* ours again: saves go on as before */
+    shift_save();
+    until_saved();
+    CHECK(!strcmp(ec_pf_name(), name2) && !strcmp(A->msg, "SAVED"), "the next save is plain (%s)", A->msg);
+}
+
 /* 0.6.35: SLOT's default was 1 until 0.6.32 (OFF since); a version 2 record left a slot-1 track's SLOT out, so a
  * missing SLOT there is slot 1; a version 3 record keeps OFF */
 static void test_slot_default(void)
@@ -490,6 +534,7 @@ int main(int argc, char **argv)
     test_next_free();
     test_largest();
     test_slot_default();
+    test_changed_elsewhere();
     C->shutdown();
     printf("test_proj: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

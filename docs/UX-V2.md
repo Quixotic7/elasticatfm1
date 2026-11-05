@@ -1152,3 +1152,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   OFF (silent, their keys previewing nothing). The project record is now version 3 (the same layout); in a version 2
   record a missing SLOT is slot 1 again. A project 0.6.32-0.6.34 saved with a track OFF brings that track back on
   slot 1 (set it OFF again). test_proj checks both versions.
+
+## 32. 0.6.36: a save never overwrites a file another tab wrote (owner, 2026-11-05)
+
+- Two player tabs on the same folder (every RemoteFM1 web tab on one address shares it, and the FM-1 drives each
+  connected tab) both save the current project; a stale tab's autosave overwrote the newer SHIFT + SAVE.
+- Each instance keeps a checksum of the project file as it last loaded or saved it. Before every save (auto or SHIFT
+  + SAVE) it reads the file back; if it differs, nothing is written and the header says **NOT SAVED: FILE CHANGED**.
+  Autosaves keep refusing; the **next SHIFT + SAVE writes this instance's project as a new one** (the next free
+  name), so both versions are kept. A missing or unreadable file is written as before. test_proj checks it.

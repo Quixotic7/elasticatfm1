@@ -17,8 +17,9 @@
 
 static uint8_t g_pack[EC_PF_PACK_MAX];  /* the packed project: a save's snapshot, a load's file */
 
-/* the save: MKDIR, (LIST: the next free name), WRITE the first copy, WRITE the second, DELETE the hidden one */
-enum { SV_IDLE, SV_MKDIR, SV_LIST, SV_WRITE, SV_DELETE };
+/* the save: MKDIR, (LIST: the next free name), (CHECK: NAME.ecp is still what this instance last read or wrote),
+ * WRITE the first copy, WRITE the second, DELETE the hidden one */
+enum { SV_IDLE, SV_MKDIR, SV_LIST, SV_CHECK, SV_WRITE, SV_DELETE };
 /* the load: READ NAME.ecp, else READ the hidden copy; WAIT: no folder yet (power-on before the folder is allowed) */
 enum { LD_IDLE, LD_READ, LD_WAIT };
 
@@ -45,7 +46,31 @@ static struct {
     int64_t lentry;
     uint32_t lgen;
     int lerr;
+    /* 0.6.36 (owner): what NAME.ecp holds as far as this instance knows (its last load or save), so a save never
+     * overwrites a file another instance (another browser tab on the same folder) wrote meanwhile */
+    int disk_known;
+    uint32_t disk_len, disk_sum;
+    uint32_t ck_at, ck_sum;
+    int conflict;                /* a save found NAME.ecp changed: the next SHIFT + SAVE writes a new project */
 } g;
+
+static uint8_t g_cbuf[16384];
+
+static uint32_t sum_more(uint32_t h, const uint8_t *p, uint32_t n)   /* FNV-1a, streamed */
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        h = (h ^ p[i]) * 16777619u;
+    return h;
+}
+#define SUM0 2166136261u
+
+static void disk_set(const uint8_t *p, uint32_t n)
+{
+    g.disk_known = 1;
+    g.disk_len = n;
+    g.disk_sum = sum_more(SUM0, p, n);
+}
 
 static uint8_t g_lbuf[16384];
 static char g_names[EC_PF_LIST_MAX][EC_PF_NAME];
@@ -263,6 +288,11 @@ void ec_pf_save(int quiet)
         return;
     }
     g.quiet = quiet;
+    if (g.conflict && !quiet && g.name[0]) {        /* 0.6.36: SHIFT + SAVE after FILE CHANGED: a new project */
+        g.name[0] = 0;
+        g.disk_known = 0;
+        g.conflict = 0;
+    }
     save_start();
 }
 
@@ -271,6 +301,8 @@ static void save_done(int ok, const char *err_what, int32_t err)
     g.sv = SV_IDLE;
     if (ok) {
         A->saves++;
+        disk_set(g_pack, g.len);                    /* 0.6.36: NAME.ecp is this save */
+        g.conflict = 0;
         if (!g.quiet)
             ec_app_message("SAVED");
         ec_pf_list_refresh();
@@ -327,7 +359,11 @@ static void save_tick(void)
             save_done(0, "NOT SAVED", g.req.result);
             return;
         }
-        if (g.name[0])
+        if (g.name[0] && g.disk_known && !g.tmp_good) {   /* 0.6.36: first check NAME.ecp is still ours */
+            g.sv = SV_CHECK;
+            g.ck_at = 0;
+            g.ck_sum = SUM0;
+        } else if (g.name[0])
             save_writes();
         else {
             g.sv = SV_LIST;
@@ -345,6 +381,29 @@ static void save_tick(void)
         next_free(g.name);
         g.tmp_good = 0;
         save_writes();
+        return;
+    case SV_CHECK:                                  /* 0.6.36: NAME.ecp read back (streamed) and compared */
+        if (g.req.state == EC_FSR_IDLE) {
+            path_of(path, sizeof path, g.name, 0);
+            ec_fs_start(&g.req, FS_READ, path, (int64_t)g.ck_at, g_cbuf, (int32_t)sizeof g_cbuf);
+        }
+        if (ec_fs_update(&g.req) != EC_FSR_DONE)
+            return;
+        g.req.state = EC_FSR_IDLE;
+        if (g.req.result > 0) {
+            g.ck_sum = sum_more(g.ck_sum, g_cbuf, (uint32_t)g.req.result);
+            g.ck_at += (uint32_t)g.req.result;
+            return;                                 /* (the rest; 0 = the end) */
+        }
+        if (g.req.result == 0 && (g.ck_at != g.disk_len || g.ck_sum != g.disk_sum)) {
+            g.conflict = 1;                         /* another instance wrote it: keep its file */
+            g.again = 0;
+            g.open_after = 0;
+            g.sv = SV_IDLE;
+            ec_app_alert("NOT SAVED: FILE CHANGED");
+            return;
+        }
+        save_writes();                              /* the same file, or gone, or unreadable (the write will say) */
         return;
     case SV_WRITE:
         if (g.req.state == EC_FSR_IDLE) {
@@ -441,6 +500,11 @@ static void load_done(uint32_t n)
     replace(n);
     snprintf(g.name, sizeof g.name, "%s", g.ld_name);
     g.tmp_good = g.ld_tmp;
+    g.conflict = 0;
+    if (g.ld_tmp)
+        g.disk_known = 0;                           /* (NAME.ecp is broken: the save rewrites it unchecked) */
+    else
+        disk_set(g_pack, n);                        /* 0.6.36: NAME.ecp as read */
     flash_set_name(g.name);
     snprintf(m, sizeof m, g.ld_tmp ? "%s (COPY)" : "%s LOADED", g.name);
     ec_app_message(m);

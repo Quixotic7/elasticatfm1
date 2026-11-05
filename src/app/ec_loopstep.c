@@ -210,8 +210,9 @@ void ec_lp_clear(void)
     ec_app_mark_dirty();
 }
 
-/* the entry written into every selected step: the span of keys lo..hi (0-based white keys) */
-static void write_entry(int lo, int hi)
+/* the entry written into every selected step: the span of keys lo..hi (0-based white keys); say: the header's
+ * message and a fresh undo gesture (the last release; 0.6.24: every press writes it quietly, as LIVE does) */
+static void write_entry(int lo, int hi, int say)
 {
     ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
     const float *v = ec_app_params(A);
@@ -226,7 +227,8 @@ static void write_entry(int lo, int hi)
             continue;
         ec_undo_steps(&E->undo, &A->proj, A->track, pg, m, g.range ? "RANGE" : "REGION", 0xE00u + (uint32_t)pg,
                       A->ms);
-        E->undo.last_key = 0;
+        if (say)
+            E->undo.last_key = 0;
         for (i = 0; i < 16; i++) {
             ec_step_t *s;
             if (!(m >> i & 1u))
@@ -258,7 +260,8 @@ static void write_entry(int lo, int hi)
         snprintf(b, sizeof b, "LOOP %d > %d STEP%s", k0, n, n == 1 ? "" : "S");
     else
         snprintf(b, sizeof b, "LOOP %d-%d > %d", k0, k1, n);
-    ec_app_message(b);
+    if (say)
+        ec_app_message(b);
     ec_seq_touch(&A->seq, A->track);
     ec_app_mark_dirty();
 }
@@ -353,11 +356,13 @@ void ec_lp_loop_note(int i, int down)
         else
             g.span = with;
         g.keys = with;
-        if (ec_lp_first() < 0) {                   /* LIVE: the region / range follows at once (the cells, the
-                                                    * markers and LEDs too), not only on the last release */
-            span_of(&lo, &hi);
+        span_of(&lo, &hi);                         /* the region / range follows at once (the cells, the markers and
+                                                    * LEDs too), not only on the last release: LIVE the track's,
+                                                    * 0.6.24: with steps selected theirs (the entry), the same way */
+        if (ec_lp_first() < 0)
             write_live(lo, hi, 0);                 /* (quietly: the header keeps its held-key text) */
-        }
+        else
+            write_entry(lo, hi, 0);
         A->redraw = 1;
         return;
     }
@@ -368,9 +373,9 @@ void ec_lp_loop_note(int i, int down)
         return;
     span_of(&lo, &hi);
     if (ec_lp_first() >= 0)
-        write_entry(lo, hi);
+        write_entry(lo, hi, 1);                    /* (the same values again, with the message) */
     else
-        write_live(lo, hi, 1);                     /* (the same values again, with the message) */
+        write_live(lo, hi, 1);
     g.span = 0;
     A->redraw = 1;
 }

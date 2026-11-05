@@ -1060,3 +1060,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   LEDs follow at once; the header's message comes on the last release as before.
 - The RANGE page's white keys are loop keys on every machine, editing R-START / R-END: the same span rules, LEDs
   and markers; they neither scrub the loop nor play pads there.
+
+## 19. 0.6.24: the entry follows every press too (owner, 2026-11-04)
+
+- With steps selected the loop keys behave exactly as LIVE: every press writes the entry (the region or range lock
+  and the trig) into the selected steps, so their cells, the markers and the LEDs follow at once; the last release
+  writes it once more with the header's message and closes the undo gesture.

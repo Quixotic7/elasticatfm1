@@ -1123,3 +1123,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   started another track playing). The cells read OFF, the sample area says SLOT OFF.
 - **A slice voice ends**: with the amp release at its default (INF, for loops) a slice kept ringing for the 2 s
   release clamp after a 1SHOT reached its end or a HOLD let go; INF now means a 20 ms release for slice voices.
+
+## 28. Docs: FM1-CONTROLS.md caught up to 0.6.32 (2026-11-05)
+
+- No code change (the cart stays 0.6.32). FM1-CONTROLS.md now describes the loop keys' span rules (press refits,
+  release keeps, the neighbour toggle, live writes, LEDs following what plays, brackets hidden while playing LIVE),
+  the RANGE page as loop keys on every machine, the range as a crop of the trimmed, stretched sample, the slice view,
+  a selected step's audition, SLOT OFF, LOAD filling the pool only, and last.txt. The parameter reference's SLOT,
+  R-START / R-END, amp release and trim start texts (design/layout/descriptions.json) say the same.

@@ -1,4 +1,4 @@
-# Elasticat on the FM-1: controls (0.6.10)
+# Elasticat on the FM-1: controls (0.6.32)
 
 The FM-1 is the panel; the sound runs in the RemoteFM1 host. Samples come from your `RemoteFM1/audio/` folder. Six
 tracks **T1-T6**, each with its own sample slot, machine, warp mode, filter, amp, insert FX, sends, mod matrix and
@@ -552,11 +552,11 @@ LOOP ENGINE (HOME, first; the power-on mode): the track's sound source - pitch, 
 | Item | Label | Name | What it does |
 |---|---|---|---|
 | `machine` | MACH | Machine | What the track plays: LOOP, TRIG, SLICE, RAZOR, S.POLY, R.POLY, NEIGH (the left track) or INPUT (the live input). A setting, not p-lockable. |
-| `sample_slot` | SLOT | Sample slot | Which of the 16 pool slots the track plays. Tracks sharing a slot share its sample and its file settings. |
+| `sample_slot` | SLOT | Sample slot | Which of the 128 pool slots the track plays; OFF (the default) plays nothing. Only you set it (here, PRESETS or POOL's ASSIGN): loading a file never does. Tracks sharing a slot share its sample and its file settings. |
 | `loop_start` | STRT | Loop start | Where the loop region starts, 0 to 128 across the Range. P-lockable (a step can play its own region). |
 | `loop_end` | END | Loop end | Where the loop region ends, 0 to 128 across the Range. P-lockable (a step can play its own region). |
-| `range_start` | R-ST | Range start | The start of the Range, the window inside the sample's trim that loop points, loop keys and slices map onto (0 to 128). P-lockable. |
-| `range_end` | R-EN | Range end | The end of the Range, the window inside the sample's trim that loop points, loop keys and slices map onto (0 to 128). P-lockable. |
+| `range_start` | R-ST | Range start | The start of the Range: a crop (never a repitch) of the trimmed, stretched sample; the loop points, loop keys and slices work in 0 to 128 of it. P-lockable. |
+| `range_end` | R-EN | Range end | The end of the Range: a crop (never a repitch) of the trimmed, stretched sample; the loop points, loop keys and slices work in 0 to 128 of it. P-lockable. |
 | `loop_reverse` | REV | Loop reverse | Plays the loop region backwards. In DOMINO it reverses the slice order. P-lockable. |
 | `xfade` | XFAD | Loop crossfade | Crossfade time at the loop seam and on region jumps, 0 to 250 ms; in WTBL, the fade when the region moves. Longer = smoother, softer edges. |
 | `mode` | WARP | Warp mode | How a loop machine reads its region: TAPE, VARI, DOMINO, GRAIN, OLA, PITCH, HARM, WTBL, FREEZE, FORMNT, GSTR, GSTR2 or CHOP. Changes only while stopped. |
@@ -633,7 +633,7 @@ AMP (ENV): the track's level, pan, velocity and sends, the amp envelope and the 
 | `env_attack` | ATCK | Amp attack | The amp envelope's fade-in, 0 up to the envelope range. P-lockable. |
 | `env_decay` | DECAY | Amp decay | ADSR: the time to fall to the sustain level, 0 up to the envelope range. P-lockable. |
 | `env_sustain` | SUST | Amp sustain | ADSR: the level held while the note lasts, 0 to full. P-lockable. |
-| `env_release` | REL | Amp release | The fade-out after the note ends (ADSR) or after the hold (AHR); the top is INF (no fade). P-lockable. |
+| `env_release` | REL | Amp release | The fade-out after the note ends (ADSR) or after the hold (AHR); the top is INF (no fade; on slice voices a 20 ms release when the slice ends). P-lockable. |
 | `env_hold` | HOLD | Amp hold | AHR: how long the sound stays at full before releasing; the top is INF (holds until the next trig). P-lockable. |
 | `env_range` | RANGE | Envelope range | The longest time the envelope knobs reach, 1 s to 1024 s (default 8 s). Applies to the amp, filter and mod envelopes. |
 | `send1_level` | SND1 | Send 1 level | How much of the track goes to the S1 bus, off to full. P-lockable: throw single steps into the effect. |
@@ -766,7 +766,7 @@ FILE (the SAVE button, first): the sample browser and the slot's file settings, 
 | `slot.bpm` | BPM | Sample BPM | The tempo the sample was played at, 20 to 300; changing it recalculates its length in steps. Tempo-fitting warp modes use it. |
 | `slot.steps` | STEP | Sample steps | How many sixteenth steps the trimmed sample spans, 1 to 512: the length tempo-fitting warp modes stretch it to. |
 | `slot.gain` | GAIN | Sample gain | The slot's level, 0 to 4x, times each track's volume. |
-| `slot.trim_start` | T-ST | Trim start | Where the sample starts, shown in seconds; everything (Range, loop, slices) lives inside the trim. SHIFT = finest step. |
+| `slot.trim_start` | T-ST | Trim start | Where the sample starts, shown in seconds; the trim is stretched to the slot's STEPS, and everything (Range, loop, slices) lives inside it. SHIFT = finest step. |
 | `slot.trim_end` | T-EN | Trim end | Where the sample ends, shown in seconds. SHIFT = finest step. |
 | `razor.start` | STRT | Slice start | RAZOR: the selected slice's start, 0 to 1 of the track's window, moved under the SNAP mode. |
 | `razor.end` | END | Slice end | RAZOR: the selected slice's end, 0 to 1 of the track's window, moved under the SNAP mode. |
@@ -880,7 +880,7 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 | SRC/LOOP | The main view: the track's waveform with pitch, loop start / end and sample slot (slice machines: play mode, slice, slice count, choke, slice mute). Empty for NEIGH and INPUT, which show their routing / input meters. |
 | SRC/MACHINE | The machine's own controls: loop reverse, crossfade and trig release for loop machines; slice, play mode, reverse, ratchet, clock sync and rate for slice machines. |
 | SRC/WARP | The warp mode's controls (each mode shows its own: grains, stretch, harmonies, wavetable ...) plus RATE, over the waveform. Empty for NEIGH and INPUT. |
-| SRC/RANGE | The Range: a narrower window inside the sample's trim that the loop points, loop keys and slices work within. |
+| SRC/RANGE | The Range: a crop of the trimmed, stretched sample that the loop points, loop keys and slices work within. The white keys set it as loop keys, on every machine. |
 | SRC/SETUP | The track's machine, warp mode (changes only while stopped), loop-key division and trig polyphony. |
 | FILT/FILTER | The filter machine's controls (cutoff, resonance and its own third / fourth knob) and the filter envelope depth, over the filter curve. |
 | FILT/FILTER ENV | The filter envelope's times (ADSR or AHR, per the setup) and its depth onto the cutoff. |
@@ -1009,8 +1009,9 @@ An FX machine changes at any time (a short fade, no click).
 
 - **Sequencing regions and ranges (0.6.9)**: **hold B11** and press step keys to select steps (as FIZZ: keys held
   together are one selection; once you let go of them, the next press starts a new one), then let go of B11: the white keys are loop keys again, and **they
-  play exactly as live**, but each entry (the keys held together, written when the last is let go) also goes into
-  **every selected step**: its region lock (one key: that division; several: first..last) and a trig. On the
+  play exactly as live**, but each entry (the keys held together) also goes into **every selected step**, written
+  at every press (0.6.24) and once more on the last release, which shows the message and closes the undo gesture:
+  its region lock (one key: that division; several: first..last) and a trig. On the
   **RANGE page** (B4) the entry is the steps' **range** (the 16 keys over the whole sample). The selection stays
   until you select again (holding B11 and pressing nothing keeps it); 0.6.11: it is **the track's own** (T2 has its
   own selection and target step; switching tracks never writes into another track's steps), and on the LOOP layer the
@@ -1019,21 +1020,40 @@ An FX machine changes at any time (a short fade, no click).
   for the loop keys, the reverse order); another quick click goes back to loop keys. **B11 + OCT-** clears the
   selected steps (trig and locks; SHIFT + F1 undoes). With steps selected **the knobs lock onto all of them** (the
   cells show the first one's; F1 + a knob clears their lock). **On the loop keys everything is as live** (0.6.10):
-  the ruler, the key LEDs, and the brackets while a loop key is held; with no key held the brackets show the first
-  selected step's region. The STEP layer shows the step strip (the selected steps capped, each step's lock as a
+  the ruler, the brackets and the bright span follow every press; since the entry is written into the selected step
+  at every press, the brackets, the span and the key LEDs show that step's lock, drawn in the step's own range window
+  (0.6.25 / 0.6.26), keys held or not (the selected steps still blink). The STEP layer shows the step strip (the selected steps capped, each step's lock as a
   small bar), its keys light the selected steps (trigs mid), and the header says SELECT STEPS.
-- **The loop keys** (the live scrub): hold one key to loop that part of the range, two or more to span them. Let go
-  and the playhead returns as RET MODE says (return / boomerang / reset). While stopped they audition.
-- **On slice machines** (SLICE, S.POLY, RAZOR, R.POLY) the white keys are **slice pads**, velocity sensitive.
+- **The loop keys** (the live scrub): hold one key to loop that part of the range, two or more to span them.
+  0.6.21 / 0.6.23: **a press refits the span to the keys held now**, smaller or larger; **a release keeps it** (let
+  one of two go and the loop stays while the other is held); **pressing a held key's direct neighbour again**, when
+  the span is just those two keys, drops back to the held key alone (W1 held: W2 = 1-2, W2 again = 1, again = 1-2).
+  LIVE, every press writes the track's region (RANGE page: its range), so the cells, markers and LEDs follow at once;
+  the header's message comes on the last release. Let go of all of them and the playhead returns as RET MODE says
+  (return / boomerang / reset). While stopped they audition; **stopped with a step selected, they (and the slice
+  pads) play through that step's region / range locks** (0.6.30), as the screen shows.
+- **The RANGE page (B4) is the same on every machine** (0.6.21-0.6.28): the white keys are loop keys editing R-START
+  / R-END over the 16 keys, with the same span rules, LEDs and markers (on slice tracks too: no pads there, and the
+  page is drawn by the loop track's code). The range is **a crop, never a repitch**: the trim is stretched to the
+  slot's STEPS, the range crops that, and the loop points or slices work in 0..128 of the range, so a sequence of
+  chops keeps playing while the range moves under it.
+- **On slice machines** (SLICE, S.POLY, RAZOR, R.POLY) the white keys are **slice pads**, velocity sensitive (RANGE
+  page excepted). The LOOP ENGINE / TRIG waveform draws the slices as the SLICE editor does (0.6.18): edges dark
+  behind the wave, a sounding slice a cream block, muted slices dim; all COUNT slices always span the view's range
+  (0.6.29). The pages are named after the machine (0.6.19: SLICE/SLICE, RAZOR/MACHINE ..). With the amp release
+  at INF a slice voice still ends: a 20 ms release when a 1SHOT reaches its end or a HOLD lets go (0.6.32).
 - **The waveform shows only the range (0.6.8)**: on LOOP, MACHINE and WARP the view is range start..end (the
   target step's range lock when it has one), so changing the range trims what you see; the RANGE page shows the
   whole sample with the range bracketed. **With a target step the brackets are that step's region** (its lock, in
-  the lock colour; else the track's), so scrolling ALGO through the steps moves them.
+  the lock colour; else the track's), so scrolling ALGO through the steps moves them. 0.6.27: **LIVE with the
+  transport running and no loop key held the brackets are hidden**; the bright span still shows what plays. LIVE,
+  the RANGE page shows the resolved range (the playing step's lock).
 - The screen shows the waveform; with the GRAIN warp each live grain is drawn on it (a block at its read position,
   as wide as the grain, shaded by its level). The other warps show the playhead.
 - On a bus the white keys do nothing.
 - LEDs: the loop's keys dim, the playhead's key mid, held keys bright; slice pads dim, sounding ones bright, muted
-  ones faint.
+  ones faint. 0.6.25: LIVE the loop keys light **what plays now** (each step's region as it fires, the held keys'
+  span); the RANGE page lights the resolved range.
 
 ### TRIG (HOME, second)
 
@@ -1234,6 +1254,10 @@ OK, F1 back, HOME closes.
 ## The sample pool
 
 - **128 slots.** A track plays its slot (PRESETS); a step can lock another slot (hold the step + PRESETS).
+- **SLOT OFF is the default** (0.6.32): a track plays nothing until you set its slot (K2 on the LOOP page, PRESETS'
+  pool walk, POOL's ASSIGN). A new project's T1 starts on slot 1 (power-on loads the folder's first file there);
+  T2-T6 are OFF. Loading a file only fills the pool. The cells read OFF, the sample area SLOT OFF. Projects saved
+  before 0.6.32 keep the slots they had.
 - **No per-sample length limit.** The samples share one memory arena of 200 MiB (about 19.8 minutes of stereo at
   44.1 kHz; 0.6.1 keeps 11 MiB for packing the project file).
 - Fill it from FILE (B10 LOAD, the next free slot) or the SAMPLER. Free slots with F2 in FILE's browser or POOL, or
@@ -1251,7 +1275,9 @@ OK, F1 back, HOME closes.
 - Saving never stops the sound: the header says **SAVING** until the file has landed, then SAVED. A failed write
   says why in the header (NOT SAVED: DISK FULL ..), and the last whole copy of the file stays (a hidden
   .PROJ-001.ecp is written first).
-- **Power-on loads the last project** (its name is kept in the cart's flash image, beside APP SETTINGS). A project
+- **Power-on loads the last project** (its name is kept in the cart's flash image, beside APP SETTINGS, and since
+  0.6.31 also in the folder, data/elasticat/last.txt, written at every save and load, so a fresh flash after a
+  firmware update comes back to it). A project
   saved by 0.6.0 or older (in the flash) loads once; the next save makes its file.
 - Open another project with FILE > B1 (up to the top level) > PROJECTS/ > B10 LOAD.
 
@@ -1372,7 +1398,8 @@ What the code does where the spec says otherwise (or says nothing):
 - **FILE while playing** opens BROWSE (0.6.11); tapping FILE again is the SAMPLER.
 - **FILE's pages are on B3 / B4 / B5** (BROWSE / EDITOR / RAZOR). In the EDITOR every black key is a zoom or scroll
   key, so **SEL** goes back to BROWSE.
-- **LOAD** also sets the selected track to the new slot, and a file already in the pool is not loaded again.
+- **LOAD** fills the pool only (0.6.32: it set the selected track's slot before), and a file already in the pool is
+  not loaded again.
 - **Purge** refuses while playing (STOP FIRST), which matters in the SAMPLER.
 - **The SAMPLER's length is on B1-B5** (FREE / 1 / 2 / 4 / 8 bars), not a settings row. It adds GAIN and MONITOR on
   the knobs.

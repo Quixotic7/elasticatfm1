@@ -21,7 +21,7 @@
     "SRC/LOOP": "The main view: the track's waveform with pitch, loop start / end and sample slot (slice machines: play mode, slice, slice count, choke, slice mute). Empty for NEIGH and INPUT, which show their routing / input meters.",
     "SRC/MACHINE": "The machine's own controls: loop reverse, crossfade and trig release for loop machines; slice, play mode, reverse, ratchet, clock sync and rate for slice machines.",
     "SRC/WARP": "The warp mode's controls (each mode shows its own: grains, stretch, harmonies, wavetable ...) plus RATE, over the waveform. Empty for NEIGH and INPUT.",
-    "SRC/RANGE": "The Range: a narrower window inside the sample's trim that the loop points, loop keys and slices work within.",
+    "SRC/RANGE": "The Range: a crop of the trimmed, stretched sample that the loop points, loop keys and slices work within. The white keys set it as loop keys, on every machine.",
     "SRC/SETUP": "The track's machine, warp mode (changes only while stopped), loop-key division and trig polyphony.",
     "FILT/FILTER": "The filter machine's controls (cutoff, resonance and its own third / fourth knob) and the filter envelope depth, over the filter curve.",
     "FILT/FILTER ENV": "The filter envelope's times (ADSR or AHR, per the setup) and its depth onto the cutoff.",
@@ -139,7 +139,7 @@
     },
     "sample_slot": {
       "name": "Sample slot",
-      "desc": "Which of the 16 pool slots the track plays. Tracks sharing a slot share its sample and its file settings."
+      "desc": "Which of the 128 pool slots the track plays; OFF (the default) plays nothing. Only you set it (here, PRESETS or POOL's ASSIGN): loading a file never does. Tracks sharing a slot share its sample and its file settings."
     },
     "loop_start": {
       "name": "Loop start",
@@ -151,11 +151,11 @@
     },
     "range_start": {
       "name": "Range start",
-      "desc": "The start of the Range, the window inside the sample's trim that loop points, loop keys and slices map onto (0 to 128). P-lockable."
+      "desc": "The start of the Range: a crop (never a repitch) of the trimmed, stretched sample; the loop points, loop keys and slices work in 0 to 128 of it. P-lockable."
     },
     "range_end": {
       "name": "Range end",
-      "desc": "The end of the Range, the window inside the sample's trim that loop points, loop keys and slices map onto (0 to 128). P-lockable."
+      "desc": "The end of the Range: a crop (never a repitch) of the trimmed, stretched sample; the loop points, loop keys and slices work in 0 to 128 of it. P-lockable."
     },
     "loop_reverse": {
       "name": "Loop reverse",
@@ -383,7 +383,7 @@
     },
     "env_release": {
       "name": "Amp release",
-      "desc": "The fade-out after the note ends (ADSR) or after the hold (AHR); the top is INF (no fade). P-lockable."
+      "desc": "The fade-out after the note ends (ADSR) or after the hold (AHR); the top is INF (no fade; on slice voices a 20 ms release when the slice ends). P-lockable."
     },
     "env_hold": {
       "name": "Amp hold",
@@ -975,7 +975,7 @@
     },
     "slot.trim_start": {
       "name": "Trim start",
-      "desc": "Where the sample starts, shown in seconds; everything (Range, loop, slices) lives inside the trim. SHIFT = finest step."
+      "desc": "Where the sample starts, shown in seconds; the trim is stretched to the slot's STEPS, and everything (Range, loop, slices) lives inside it. SHIFT = finest step."
     },
     "slot.trim_end": {
       "name": "Trim end",

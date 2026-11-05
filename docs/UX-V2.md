@@ -1023,3 +1023,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The waveform's brackets follow the loop keys while they are held (they moved only on release, when the entry
   became the track's region); a selected step's or the track's region shows as before when no key is held.
 - The bracket glyph is a whole square bracket: a corner at the bottom as well as the top.
+
+## 14. 0.6.18: the slice view on the track pages (owner, 2026-11-04)
+
+- On slice tracks the LOOP ENGINE / TRIG waveform draws the slices as the SLICE editor does: the edges dark behind
+  the wave (2 units), a sounding slice (a pad or a voice) a cream block with the wave cut out and its edges in front,
+  muted slices dim, the playhead over it (before: dotted edges over a bright wave, a sounding slice a dark block).

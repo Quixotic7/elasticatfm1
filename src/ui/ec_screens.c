@@ -479,29 +479,85 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
         const ec_slot_t *sl = &a->proj.slot[s];
         int rs, re, k, locked = 0;
         ec_dsp_track_status(a->dsp, a->track, &st);
-        if (is_slice(v)) {                         /* the slices divide the range (the view on LOOP ENGINE's pages) */
+        if (is_slice(v)) {                         /* the slices divide the range (the view on LOOP ENGINE's pages);
+                                                    * 0.6.18 (owner): drawn as the SLICE editor draws them: the edges
+                                                    * dark behind the wave, a sounding slice a cream block with the
+                                                    * wave cut out, muted slices dim */
             const float span = sl->trim_end - sl->trim_start;
             const float lo = sl->trim_start + span * v[EC_P_RANGE_START] / 128.0f;
             const float hi = sl->trim_start + span * v[EC_P_RANGE_END] / 128.0f;
             const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
-            const int sx0 = vx(&w, lo), sx1 = vx(&w, hi);
+            const int razor = ec_razor_is_razor(iv(v, EC_P_MACHINE));
+            const ec_razor_t *rz = &a->proj.razor[a->track];
+            const int sx0 = vx(&w, lo), sx1 = vx(&w, hi), scols = sx1 - sx0;
+            const int mid = (top + bot) / 2, half = (bot - top) / 2;
             uint32_t on = a->seq.tr[a->track].pads;
+            int c;
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
                 if (st.voice_slice[k] >= 1 && st.voice_slice[k] <= 32)
                     on |= 1u << (st.voice_slice[k] - 1);
-            for (k = 0; k < cnt; k++)
+            for (k = 0; k < cnt; k++)                  /* the sounding slices: cream blocks */
                 if (on >> k & 1u) {
                     int sx, ex;
-                    slice_cols(a, k, cnt, 0, 1, sx0, sx1 - sx0, &sx, &ex);
-                    R(EC_C_L3, sx, top - 2, ex - sx, bot - top + 4);
+                    slice_cols(a, k, cnt, 0, 1, sx0, scols, &sx, &ex);
+                    if (ex > sx)
+                        R(EC_C_L15, sx, top - 2, ex - sx, bot - top + 4);
                 }
-            view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, sx0, sx1);
-            for (k = 0; k < cnt; k++) {
+            for (k = 0; k < cnt; k++) {                /* the other slices' edges behind the wave, dark */
                 int sx, ex;
-                slice_cols(a, k, cnt, 0, 1, sx0, sx1 - sx0, &sx, &ex);
-                if (k > 0 || ec_razor_is_razor(iv(v, EC_P_MACHINE)))
-                    ec_gfx_dots_v(sx, top - 2, bot + 3, 2, EC_C_L8);
+                if (on >> k & 1u)
+                    continue;
+                slice_cols(a, k, cnt, 0, 1, sx0, scols, &sx, &ex);
+                if (k > 0 || razor)
+                    R(EC_C_L3, sx & ~1, top - 2, 2, bot - top + 6);
+                if (razor && k + 1 < cnt) {            /* a gap before the next slice: its end too */
+                    int nx, nex;
+                    slice_cols(a, k + 1, cnt, 0, 1, sx0, scols, &nx, &nex);
+                    if (nx - ex > 2)
+                        R(EC_C_L3, ex & ~1, top - 2, 2, bot - top + 6);
+                }
             }
+            if (smp->data && smp->frames_ready && scols > 2) {   /* the wave per 2-unit column, coloured by its slice */
+                const double f0 = lo * smp->frames, f1 = hi * smp->frames;
+                for (c = 0; c + 1 < scols; c += 2) {
+                    const double a0 = f0 + (f1 - f0) * c / scols, a1 = f0 + (f1 - f0) * (c + 2) / scols;
+                    const float x = 128.0f * ((float)c + 1.0f) / (float)scols;
+                    uint32_t i0 = a0 < 0 ? 0 : (uint32_t)a0, i1 = a1 < 0 ? 0 : (uint32_t)a1, i, step;
+                    int pk = 0, hh, sli = 0, col;
+                    if (razor) {
+                        for (k = 0; k < cnt; k++)
+                            if (x >= rz->start[k] && x < rz->end[k])
+                                sli = k + 1;
+                    } else
+                        sli = (int)(x / 128.0f * (float)cnt) + 1;
+                    if (i1 >= smp->frames)
+                        i1 = smp->frames - 1;
+                    if (i1 < i0)
+                        i1 = i0;
+                    step = (i1 - i0) / 24 + 1;
+                    for (i = i0; i <= i1; i += step) {
+                        int l = smp->data[2 * (size_t)i], rr = smp->data[2 * (size_t)i + 1];
+                        l = l < 0 ? -l : l;
+                        rr = rr < 0 ? -rr : rr;
+                        if (l > pk)
+                            pk = l;
+                        if (rr > pk)
+                            pk = rr;
+                    }
+                    hh = (int)((long)pk * (half - 1) / 32768);
+                    col = sli && (on >> (sli - 1) & 1u) ? EC_C_BG
+                        : !sli || (razor && rz->mute[sli - 1]) ? EC_C_L5 : EC_C_L12;
+                    R(col, sx0 + c, mid - hh, 2, 2 * hh + 2);
+                }
+            } else
+                view_wave(smp, &w, top, bot, EC_C_L12, EC_C_L5, sx0, sx1);
+            for (k = 0; k < cnt; k++)                  /* the sounding slices' edges, in front */
+                if (on >> k & 1u) {
+                    int sx, ex;
+                    slice_cols(a, k, cnt, 0, 1, sx0, scols, &sx, &ex);
+                    R(EC_C_L15, sx & ~1, top - 2, 2, bot - top + 6);
+                    R(EC_C_L15, (ex - 2) & ~1, top - 2, 2, bot - top + 6);
+                }
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++) {
                 const int px = vx(&w, st.voice_pos[k]);
                 if (px >= w.x0 && px < w.x0 + w.cols)

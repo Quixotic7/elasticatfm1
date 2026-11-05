@@ -1035,3 +1035,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The LOOP ENGINE pages are named after the track's machine: the header's tag and the first page's title are the
   machine's name (LOOP/LOOP, TRIG/TRIG, SLICE/SLICE, RAZOR/MACHINE, S.POLY/WARP, R.POLY/RANGE, NEIGH/.., INPUT/..)
   and so is B1's label, so the pages match the machine.
+
+## 16. 0.6.20: the RANGE page on slice tracks (owner, 2026-11-04)
+
+- Slice tracks draw the RANGE page as a loop track does: the whole file, the range bracketed (the lock colour for a
+  target step's range lock), dim outside it, with the slices' edges dark inside the range (0.6.18's slice view had
+  taken the page over and drew only the range).

@@ -503,6 +503,29 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++)
                 if (st.voice_slice[k] >= 1 && st.voice_slice[k] <= 32)
                     on |= 1u << (st.voice_slice[k] - 1);
+            if (whole) {                               /* 0.6.19: the RANGE page as on a loop track: the whole file,
+                                                        * the range bracketed, the slices' edges inside it */
+                float x;
+                if (tst && ec_step_lock_get(tst, EC_P_RANGE_START, &x))
+                    locked = 1;
+                if (tst && ec_step_lock_get(tst, EC_P_RANGE_END, &x))
+                    locked = 1;
+                view_wave(smp, &w, top, bot, EC_C_L12, EC_C_L5, sx0, sx1);
+                for (k = 0; k < cnt; k++) {
+                    int sx, ex;
+                    slice_cols(a, k, cnt, 0, 1, sx0, scols, &sx, &ex);
+                    if ((k > 0 || razor) && sx > sx0 + 1 && sx < sx1 - 1)
+                        R(EC_C_L3, sx & ~1, top - 2, 2, bot - top + 6);
+                }
+                brackets(clampi(sx0, w.x0, w.x0 + w.cols), clampi(sx1, w.x0, w.x0 + w.cols), top, bot,
+                         locked ? EC_C_LOCK : EC_C_L12);
+                for (k = 0; k < st.voices && k < EC_MAX_VOICES_TRACK; k++) {
+                    const int px = vx(&w, st.voice_pos[k]);
+                    if (px >= w.x0 && px < w.x0 + w.cols)
+                        ec_kit_playhead(px, top - 1, bot + 1);
+                }
+                return;
+            }
             for (k = 0; k < cnt; k++)                  /* the sounding slices: cream blocks */
                 if (on >> k & 1u) {
                     int sx, ex;

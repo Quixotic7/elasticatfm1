@@ -631,7 +631,9 @@ static void sample_area(const ec_app_t *a, int top, int bot, int whole)
             if (!grain_view(a, smp, &w, top, bot, ls, le))   /* 0.6.14: the grains too get the brackets below */
                 view_wave(smp, &w, top, bot, EC_C_L15, EC_C_L5, ls, le);
         }
-        brackets(rs, re, top, bot, locked ? EC_C_LOCK : EC_C_L12);
+        if (whole || tst || !st.reader_on || a->seq.tr[a->track].live_keys)   /* 0.6.27 (owner): LIVE, playing,
+                                                    * no key held: no brackets (the bright span says what plays) */
+            brackets(rs, re, top, bot, locked ? EC_C_LOCK : EC_C_L12);
         if (st.reader_on) {
             const int px = vx(&w, st.pos_sample);
             if (px >= w.x0 && px < w.x0 + w.cols)

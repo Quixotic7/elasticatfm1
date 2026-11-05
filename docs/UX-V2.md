@@ -1079,3 +1079,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - LOOP page, a step selected: the brackets and the bright span show the step's lock while the loop keys are held
   (the entry is written into it at every press), drawn in the step's own range window. They showed the engine's
   live span, which plays in the sounding step's range, so with per-step ranges they only matched after the release.
+
+## 22. 0.6.27: no brackets while playing LIVE with no key held (owner, 2026-11-04)
+
+- LOOP page, LIVE, the transport running, no loop key held: the start / end brackets are hidden; the bright span
+  still shows what plays. They appear while loop keys are held, and as before when stopped, with a step selected,
+  and on the RANGE page.

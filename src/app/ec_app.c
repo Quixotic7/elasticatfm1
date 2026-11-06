@@ -810,6 +810,42 @@ void ec_app_edit_param_f(int id, int det, int mult, int flags)
 void ec_app_edit_param(int id, int det, int mult) { ec_app_edit_param_f(id, det, mult, 0); }
 int ec_app_param_steps(int id) { return param_steps(id); }
 
+/* 0.6.50 (owner): what the track's params are now, modulation and all (the cells' bars and the FILTER / ENV pictures
+ * show it): the resolved values (the playing step's locks), the matrix's generic slots as the sequencer applies them,
+ * and the engine's fast buses (pitch, cutoff, reso, amp, pan) at the engine's own scales */
+void ec_app_mod_values(const ec_app_t *a, float *v)
+{
+    ec_track_status_t st;
+    float live[EC_MSRC_N];
+    int i;
+    for (i = 0; i < EC_NP; i++)
+        v[i] = ec_seq_value(&a->seq, a->track, i);
+    if (a->bus)
+        return;
+    if (ec_mtx_generic(v)) {
+        memset(live, 0, sizeof live);
+        ec_dsp_mod_sources(a->dsp, a->track, live);
+        ec_mtx_apply(v, live);
+    }
+    ec_dsp_track_status(a->dsp, a->track, &st);
+    {
+        static const int ID[EC_MOD_NDEST] = {EC_P_PITCH, EC_P_FILTER_CUTOFF, EC_P_FILTER_RES, EC_P_AMP, EC_P_PAN};
+        /* the engine: pitch +-12 st, cutoff +-120 st (its whole range), reso +-half, amp x(1 + m), pan +-half */
+        static const float K[EC_MOD_NDEST] = {12.0f, 1.0f, 0.5f, 0.0f, 0.5f};
+        int k;
+        for (k = 0; k < EC_MOD_NDEST; k++) {
+            const ec_param_def_t *d = &EC_PARAMS[ID[k]];
+            const float m = st.mod[k] < -1.0f ? -1.0f : st.mod[k] > 1.0f ? 1.0f : st.mod[k];
+            float x;
+            if (m == 0.0f)
+                continue;
+            x = k == EC_MOD_PITCH ? v[ID[k]] + m * K[k]
+                : k == EC_MOD_AMP ? v[ID[k]] * (1.0f + m) : v[ID[k]] + m * K[k] * (d->max - d->min);
+            v[ID[k]] = x < d->min ? d->min : x > d->max ? d->max : x;
+        }
+    }
+}
+
 /* 0.6.49 (owner): F1 held + SEL turned (the dice thrown): every param on the page shown gets a random value, as one
  * undo; the track's structure and what changes only while stopped are kept (machine, warp, slot, slices, length,
  * rate, loop division, the FX types, the volume) */
@@ -1316,6 +1352,16 @@ void ec_app_tick(const ec_input_t *in)
 {
     int t;
     A->ms = in->ms;
+    {   /* 0.6.50: a live matrix route on the track shown: its bars and pictures move, so the screen follows */
+        const float *tv0 = ec_project_track(&A->proj, A->track)->v;
+        int k;
+        for (k = 0; k < EC_MTX_SLOTS && !A->bus; k++)
+            if (ec_mtx_live(tv0, k)) {
+                if (A->ms % 33u == 0)
+                    A->redraw = 1;
+                break;
+            }
+    }
     for (t = 0; t < EC_NTRACK; t++)                /* 0.6.30: the selected step auditions in its own range (stopped) */
         ec_seq_audition_step(&A->seq, t, t == A->track && !A->bus ? ec_app_target_step(A) : -1);
     scan_tick();

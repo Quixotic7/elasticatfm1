@@ -190,6 +190,11 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
     static char lab[4][24], val[4][24], mk[4][12];
     ec_kit_cell_t c[4];
     int i;
+    /* 0.6.50 (owner): the bars move with the modulation (the value written stays the one set); a step held: its value */
+    static float mv[EC_NP];
+    const int modbars = !a->settings && !a->ux.f3 && !a->bus && ec_app_held_step(a) < 0;
+    if (modbars)
+        ec_app_mod_values(a, mv);
     memset(c, 0, sizeof c);
     for (i = 0; i < 4; i++) {
         const int ci = lane * 4 + i;
@@ -246,7 +251,9 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
             for (k = 0; k < EC_MTX_SLOTS; k++)        /* 0.6.1: a slot of the held source: its bar in SRC */
                 if (ec_mtx_depth_id(k) == it->id && held_src(a) && ec_mtx_src(tv(a), k) == held_src(a))
                     c[i].flags |= EC_KC_HOT;
-        } else
+        } else if (modbars && it->kind == EC_IT_PARAM && it->id < EC_NP && !locked)
+            c[i].frac = ec_app_item_frac(a, it, mv[it->id]);
+        else
             c[i].frac = ec_app_item_frac(a, it, v);
         /* the actual (resolved) value as a mark when it differs (BASE_VALUE_RESOLVER) */
         if (it->kind == EC_IT_PARAM && !a->bus && a->seq.playing && it->id != EC_P_LOOP_START &&
@@ -903,14 +910,21 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
 
 /* ------------------------------------------------------------------------------------------- generic pages --- */
 /* the actual (resolved) values, with a held step's locks: what the filter / envelope pictures draw */
+/* 0.6.50 (owner): what the FILTER / ENV pictures draw: as heard (modulated); a step held: that step's values, still
+ * (its locks, else the track's: no modulation, nothing of the step playing) */
 static void shown_values(const ec_app_t *a, float *v)
 {
     const int hs = ec_app_held_step(a);
     int i;
-    for (i = 0; i < EC_NP; i++)
-        v[i] = ec_seq_value(&a->seq, a->track, i);
-    if (hs >= 0) {
-        const ec_step_t *s = &a->proj.pat[a->proj.current].tr[a->track].steps[hs];
+    if (hs < 0) {
+        ec_app_mod_values(a, v);
+        return;
+    }
+    {
+        const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
+        const ec_step_t *s = &tr->steps[hs];
+        for (i = 0; i < EC_NP; i++)
+            v[i] = tr->v[i];
         for (i = 0; i < s->nlock; i++)
             if (s->lock_id[i] < EC_NP)
                 v[s->lock_id[i]] = s->lock_val[i];

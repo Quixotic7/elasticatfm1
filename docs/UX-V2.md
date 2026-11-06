@@ -1285,3 +1285,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   random value (options and switches too, integers whole), as one undo entry (EC_U_NV is 16 now: a page's four
   lanes). Kept: the machine, warp mode, slot, slice count / slice, length, rate, loop division, FX types, volume, mute
   and the stopped-only params. F1 let go before the throw cancels; the turns never make F1 sticky. test_ux checks it.
+
+## 46. 0.6.50: the bars and the FILTER / ENV pictures show the modulation (owner, 2026-11-06)
+
+- A param cell's bar shows the value as heard: the track value with the matrix's generic routes and the engine's
+  fast buses (PITCH, CUTOFF, RES, AMP, PAN) applied, from the engine's live sources (ec_app_mod_values). A step's
+  lock still shows as before; the knob's own value (the text) stays the value set.
+- The FILTER curve and the ENV shapes follow the same modulated values. While a step is held they hold still: that
+  step's locked value, or the track's value where it has no lock.
+- With a live route on the track shown the screen redraws about 30 times a second. test_ux checks LFO 1 -> CUTOFF.

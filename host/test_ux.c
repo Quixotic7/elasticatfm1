@@ -1179,6 +1179,51 @@ static void test_dice(void)
         press(FM1P_B_GLO, 40);
 }
 
+/* 0.6.50 (owner): the bars and the FILTER / ENV pictures show the params as heard (modulated); a step held shows
+ * that step's value, still */
+static void run_audio(int n)                       /* run, with the engine (its LFOs) going */
+{
+    int16_t out[FM1P_BLOCK * 2];
+    int b;
+    run(n);
+    for (b = 0; b < n * FM1P_FS / 1000 / FM1P_BLOCK + 1; b++)
+        C->audio(out, FM1P_BLOCK);
+}
+
+static void test_mod_display(void)
+{
+    float *v, mv[EC_NP], base, lo = 1e9f, hi = -1e9f;
+    int i;
+    to(EC_CAT_FILT);
+    v = ec_app_params(A);
+    base = v[EC_P_FILTER_CUTOFF] = 64;
+    v[ec_mtx_src_id(0)] = (float)(EC_MS_LFO1 + 1);           /* LFO 1 -> CUTOFF, full depth */
+    v[ec_mtx_dst_id(0)] = (float)(EC_P_FILTER_CUTOFF + 1);
+    v[ec_mtx_depth_id(0)] = 100;
+    v[EC_P_LFO1_DEPTH] = 128;                              /* (64: none) */
+    ec_seq_touch(&A->seq, A->track);
+    if (!A->seq.playing)
+        press(FM1P_B_PLAY, 40);
+    for (i = 0; i < 60; i++) {
+        run_audio(20);
+        ec_app_mod_values(A, mv);
+        lo = mv[EC_P_FILTER_CUTOFF] < lo ? mv[EC_P_FILTER_CUTOFF] : lo;
+        hi = mv[EC_P_FILTER_CUTOFF] > hi ? mv[EC_P_FILTER_CUTOFF] : hi;
+    }
+    CHECK(hi - lo > 4.0f && v[EC_P_FILTER_CUTOFF] == base, "LFO 1 -> CUTOFF: the value as heard moves (%g..%g), the set "
+          "value stays %g", lo, hi, v[EC_P_FILTER_CUTOFF]);
+    v[ec_mtx_depth_id(0)] = 0;
+    v[ec_mtx_src_id(0)] = 0;
+    v[ec_mtx_dst_id(0)] = 0;
+    v[EC_P_LFO1_DEPTH] = 64;
+    ec_seq_touch(&A->seq, A->track);
+    run_audio(100);
+    ec_app_mod_values(A, mv);
+    if (A->seq.playing)
+        press(FM1P_B_PLAY, 40);
+    CHECK(mv[EC_P_FILTER_CUTOFF] == base, "the route gone: as set (%g)", mv[EC_P_FILTER_CUTOFF]);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -1217,6 +1262,7 @@ int main(int argc, char **argv)
     test_patterns();
     test_labels();
     test_dice();
+    test_mod_display();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

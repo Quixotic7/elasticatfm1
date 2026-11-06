@@ -1227,7 +1227,7 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - PROJECTS: the white keys do nothing (they edited the track's steps) and are dark. B11 does nothing there either
   (the owner saw it open the slice editor; not reproduced in the harness or the player: watching).
 - The browser's header is FILE/SAMPLES (it said FILE/BROWSE).
-- The name keybed, RENAME and RANDOM are 0.6.46.
+- The name keybed, RENAME and RANDOM are 0.6.47.
 
 ## 40. 0.6.44: SAMPLES' OCT+ and B11 toggle the pool, B11 held previews (owner, 2026-11-05)
 
@@ -1247,3 +1247,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The list is by name, naturally: the numbers by their value, a name before its numbered copies (ZEBRA, ZEBRA 2,
   ZEBRA 3, ZEBRA 10, ZEBRAS), case aside; no file times read any more. SEL / ALGO move by the whole turn.
 - test_proj checks the order, DELETE and OVERWRITE.
+
+## 42. 0.6.46: PROJECTS' keys as SAMPLES', loading stays, the cat (owner, 2026-11-05)
+
+- Keys: B11 LOAD (as SAMPLES' B11; OCT+ too), B10 SAVE (another project under the cursor: OVERWRITE?), B9 SAVE AS
+  (+1), B6 DELETE (asked), B1 NEW, B2 RENAME, B3 RANDOM.
+- **The user drives mode changes**: a load (and NEW) stays in FILE/PROJECTS; it no longer jumps to LOOP ENGINE.
+- Loading (and NEW): a pop-up over the card, the dancing cat (MIX's CAT sprite, alone) at 10 fps, at least 1.2 s
+  and as long as the load lasts; the header LOADING, then NAME LOADED.

@@ -545,3 +545,21 @@ void ec_scr_cat(int frame, double beats, int playing, double t, int algo, uint32
         }
     ec_gfx_art(0);
 }
+
+/* 0.6.46 (owner): the cat alone (no fractal), its ground keyed out, at (x, y): PROJECTS' loading pop-up */
+void ec_kit_cat_frame(int frame, int x0, int y0)
+{
+    const uint8_t *spr;
+    int x, y;
+    frame %= EC_SPR_CAT_FRAMES;
+    frame = frame < 0 ? frame + EC_SPR_CAT_FRAMES : frame;
+    spr = ec_spr_cat[frame];
+    ec_gfx_art(1);
+    for (y = 0; y < EC_SPR_CAT_H; y++)
+        for (x = 0; x < EC_SPR_CAT_W; x++) {
+            const int c = cat_px(spr, x, y);
+            if (c != CAT_KEY)
+                ec_gfx_pixel(x0 + x, y0 + y, c == EC_C_BG ? EC_C_BLACK : c);
+        }
+    ec_gfx_art(0);
+}

@@ -590,7 +590,6 @@ static void replace(uint32_t n)
 static void load_done(uint32_t n)
 {
     char m[48];
-    const int boot = g.boot;
     g.ld = LD_IDLE;
     g.from_tmp = g.ld_tmp;
     replace(n);
@@ -603,9 +602,7 @@ static void load_done(uint32_t n)
         disk_set(g_pack, n);                        /* 0.6.36: NAME.ecp as read */
     flash_set_name(g.name);
     snprintf(m, sizeof m, g.ld_tmp ? "%s (COPY)" : "%s LOADED", g.name);
-    ec_app_message(m);
-    if (!boot)
-        ec_app_goto(EC_CAT_SRC, ec_src_loop_page());   /* 0.6.41: the LOOP page */
+    ec_app_message(m);                              /* 0.6.46 (owner): no mode change (the user drives them) */
 }
 
 static void load_fail(int32_t err)
@@ -758,6 +755,7 @@ static void delete_tick(void)
     ec_pf_list_refresh();
 }
 
+int ec_pf_busy_new(void) { return g.new_after || g.save_new || A->fresh; }   /* 0.6.46: NEW still landing */
 int ec_pf_dirty(void) { return A->dirty || g.sv != SV_IDLE; }
 
 /* a new project: the current one's edits saved first, then an empty project (the folder's first file on T1) under the
@@ -772,8 +770,7 @@ static void new_now(void)
     g.from_tmp = 0;
     ec_app_fresh_project();
     g.save_new = 1;
-    ec_app_message("NEW PROJECT");
-    ec_app_goto(EC_CAT_SRC, ec_src_loop_page());
+    ec_app_message("NEW PROJECT");               /* 0.6.46 (owner): no mode change: the user drives them */
 }
 
 void ec_pf_new(void)

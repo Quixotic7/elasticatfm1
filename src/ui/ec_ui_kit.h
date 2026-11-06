@@ -135,6 +135,7 @@ void ec_kit_track_keys(int y, int sel, uint16_t muted);
 #define EC_KIT_SPR_FPS 10
 int ec_scr_intro_frames(void);   /* 55 */
 int ec_scr_cat_frames(void);     /* 12 */
+void ec_kit_cat_frame(int frame, int x, int y);   /* 0.6.46: the cat alone (120 x 64), its ground keyed out */
 void ec_scr_intro(int frame);    /* frame clamped */
 #define EC_KIT_CAT_Y 26
 /* 0.6.3 (§10 "CAT fractals", src/ui/ec_cat_fractal.c): frame modulo the frames; beats: the transport's clock (the

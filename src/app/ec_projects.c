@@ -20,7 +20,29 @@ static struct {
     char target[EC_PF_NAME];
     char want[EC_PF_NAME];       /* 0.6.45: a name the cursor goes to once it is listed (SAVE +1's copy) */
     int want_gen;
+    uint32_t pop_ms;             /* 0.6.46 (owner): the loading pop-up's start (0: none) */
 } g;
+
+#define POP_MS 1200u             /* the pop-up's least time: the cat's 12 frames at 10 fps */
+
+static void popup(void)
+{
+    g.pop_ms = A->ms ? A->ms : 1;
+    ec_app_message("LOADING");
+    A->redraw = 1;
+}
+
+/* the pop-up's frame (0..), -1 when none: from the load's start, at least POP_MS and as long as it lasts */
+int ec_prj_popup_frame(void)
+{
+    if (!g.pop_ms)
+        return -1;
+    if (A->ms - g.pop_ms >= POP_MS && !ec_pf_loading() && !ec_pf_busy_new()) {
+        g.pop_ms = 0;
+        return -1;
+    }
+    return (int)((A->ms - g.pop_ms) / 100u);
+}
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
 
@@ -60,6 +82,8 @@ void ec_prj_tick(void)
         follow();
     if (g.sel[0])
         ec_pf_card_want(g.sel);
+    if (ec_prj_popup_frame() >= 0)
+        A->redraw = 1;                             /* (the cat dances) */
 }
 
 int ec_prj_cursor(void) { return g.cursor; }
@@ -95,8 +119,10 @@ static void load(void)
     }
     if (ec_pf_dirty())                             /* edits not written: asked first (yes: saved, then it opens) */
         ask(EC_PRJ_ASK_LOAD, g.sel);
-    else
+    else {
         ec_pf_open(g.sel);
+        popup();
+    }
 }
 
 static void save_plus(void)
@@ -128,13 +154,13 @@ void ec_prj_black(int key)
     case 1: ask(EC_PRJ_ASK_NEW, ""); break;
     case 2: ec_prj_rename(g.sel); break;
     case 3: ec_prj_random(g.sel); break;
-    case 7:                                        /* 0.6.45 (owner): DELETE, asked */
+    case 6:                                        /* 0.6.45 (owner): DELETE, asked (0.6.46: B6) */
         if (g.sel[0])
             ask(EC_PRJ_ASK_DELETE, g.sel);
         break;
-    case 8: save_plus(); break;
-    case 9: save(); break;
-    case 10: load(); break;
+    case 9: save_plus(); break;                    /* 0.6.46 (owner): B9 SAVE AS (+1), B10 SAVE, B11 LOAD (as SAMPLES) */
+    case 10: save(); break;
+    case 11: load(); break;
     default: break;
     }
 }
@@ -149,10 +175,13 @@ void ec_prj_oct(int up)
             ec_app_message("CANCELLED");
             return;
         }
-        if (was == EC_PRJ_ASK_LOAD)
+        if (was == EC_PRJ_ASK_LOAD) {
             ec_pf_open(g.target);
-        else if (was == EC_PRJ_ASK_NEW)
+            popup();
+        } else if (was == EC_PRJ_ASK_NEW) {
             ec_pf_new();
+            popup();
+        }
         else if (was == EC_PRJ_ASK_DELETE)
             ec_pf_delete(g.target);
         else if (was == EC_PRJ_ASK_OVERWRITE) {
@@ -168,7 +197,7 @@ void ec_prj_oct(int up)
         ec_pn_enter(EC_CAT_FILE);                  /* back: SAMPLES */
 }
 
-/* 0.6.46: the name keybed; until then a message */
+/* 0.6.47: the name keybed; until then a message */
 void ec_prj_rename(const char *name)
 {
     (void)name;

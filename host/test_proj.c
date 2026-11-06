@@ -349,8 +349,8 @@ static void test_browser_load(void)
     for (i = 0; i < 500 && (ec_pf_saving() || ec_pf_loading() || strcmp(ec_pf_name(), "PROJ-001")); i++)
         run(5);
     run(50);
-    CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm == 97 && mode() == EC_CAT_SRC,
-          "OCT+ yes: PROJ-001 open (bpm %g), LOOP ENGINE (mode %d)", A->proj.bpm, mode());
+    CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm == 97 && mode() == EC_MODE_PROJECTS,
+          "OCT+ yes: PROJ-001 open (bpm %g), still PROJECTS (0.6.46: mode %d)", A->proj.bpm, mode());
     reboot();
     CHECK(!strcmp(ec_pf_name(), "PROJ-001"), "the flash now names PROJ-001 (%s)", ec_pf_name());
     {
@@ -509,6 +509,7 @@ static void test_projects_sort(void)
     for (i = 0; i < 5; i++)
         write_file(MADE[i], d, n);
     ec_pn_enter(EC_MODE_PROJECTS);
+    ec_pf_list_refresh();                          /* (written behind the cart's back: read the folder again) */
     for (i = 0; i < 100 && ec_pf_list_busy(); i++)
         run(5);
     run(20);
@@ -519,8 +520,8 @@ static void test_projects_sort(void)
     turn(FM1P_E_SELECT, -40);
     for (i = 0; i < 60 && strcmp(ec_pf_list_name(ec_prj_cursor()), "ZEBRA 3"); i++)
         turn(FM1P_E_SELECT, 1);
-    B(7, 40);                                      /* DELETE: asked */
-    CHECK(ec_prj_ask() == EC_PRJ_ASK_DELETE && !strcmp(ec_prj_target(), "ZEBRA 3"), "B7: DELETE ZEBRA 3?");
+    B(6, 40);                                      /* DELETE (0.6.46: B6): asked */
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_DELETE && !strcmp(ec_prj_target(), "ZEBRA 3"), "B6: DELETE ZEBRA 3?");
     press(FM1P_B_OCTUP, 40);
     for (i = 0; i < 100 && (file_exists("ZEBRA 3", 0) || ec_pf_list_busy()); i++)
         run(5);
@@ -529,8 +530,8 @@ static void test_projects_sort(void)
     for (i = 0; i < 60 && strcmp(ec_pf_list_name(ec_prj_cursor()), "ZEBRAS"); i++)
         turn(FM1P_E_SELECT, 1);
     edit(111, 2);
-    B(9, 40);                                      /* SAVE on another: asked */
-    CHECK(ec_prj_ask() == EC_PRJ_ASK_OVERWRITE, "B9 on ZEBRAS: OVERWRITE ZEBRAS? (%d)", ec_prj_ask());
+    B(10, 40);                                     /* SAVE on another (0.6.46: B10): asked */
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_OVERWRITE, "B10 on ZEBRAS: OVERWRITE ZEBRAS? (%d)", ec_prj_ask());
     press(FM1P_B_OCTUP, 40);
     for (i = 0; i < 400 && (ec_pf_saving() || strcmp(ec_pf_name(), "ZEBRAS")); i++)
         run(5);
@@ -563,11 +564,11 @@ static void test_projects_mode(void)
     for (i = 0; i < 100 && ec_pf_list_busy(); i++)
         run(5);
     ec_pf_name_plus(was, plus);
-    B(8, 40);                                      /* SAVE +1 */
+    B(9, 40);                                      /* SAVE AS +1 (0.6.46: B9) */
     for (i = 0; i < 400 && ec_pf_saving(); i++)
         run(5);
     run(20);
-    CHECK(!strcmp(ec_pf_name(), plus) && file_exists(plus, 0), "B8 SAVE +1: %s written, now the project (%s)", plus,
+    CHECK(!strcmp(ec_pf_name(), plus) && file_exists(plus, 0), "B9 SAVE AS: %s written, now the project (%s)", plus,
           ec_pf_name());
     {
         uint8_t *d1 = read_file(was, 0, &n1);
@@ -582,8 +583,9 @@ static void test_projects_mode(void)
     for (i = 0; i < 600 && (!ec_pf_name()[0] || !strcmp(ec_pf_name(), plus)); i++)
         run(5);
     run(50);
-    CHECK(ec_pf_name()[0] && strcmp(ec_pf_name(), plus) && file_exists(ec_pf_name(), 0) && mode() == EC_CAT_SRC,
-          "OCT+ yes: a new project, its own file (%s), LOOP ENGINE", ec_pf_name());
+    CHECK(ec_pf_name()[0] && strcmp(ec_pf_name(), plus) && file_exists(ec_pf_name(), 0) &&
+              mode() == EC_MODE_PROJECTS,
+          "OCT+ yes: a new project, its own file (%s), still PROJECTS (0.6.46)", ec_pf_name());
 }
 
 /* 0.6.35: SLOT's default was 1 until 0.6.32 (OFF since); a version 2 record left a slot-1 track's SLOT out, so a

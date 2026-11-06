@@ -364,7 +364,7 @@ void ec_scr_record(const ec_app_t *a)
  * (the loaded one marked OPEN); the one under the cursor's card: its name big, its 64 patterns (a block each, written
  * cream, the one it opens on in the accent), its tempo and samples. A question waiting: the header asks it with the
  * back / OK arrows (OCT- no, OCT+ yes), the line under the card says what yes does */
-void ec_scr_projects(const ec_app_t *a)
+static void projects_body(const ec_app_t *a)
 {
     static const char *const TN[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
     const int n = ec_pf_list_count(), cur = ec_prj_cursor(), ask = ec_prj_ask();
@@ -447,5 +447,16 @@ void ec_scr_projects(const ec_app_t *a)
             snprintf(buf, sizeof buf, "%d SAMPLE%s", cd->samples, cd->samples == 1 ? "" : "S");
             T(EC_C_L8, buf, W - 2, 110, EC_AL_RIGHT);
         }
+    }
+}
+
+void ec_scr_projects(const ec_app_t *a)
+{
+    const int f = ec_prj_popup_frame();
+    projects_body(a);
+    if (f >= 0) {                                  /* 0.6.46 (owner): loading: the cat dances over the card */
+        R(EC_C_BG, 0, 52, W, EC_GH - 52);
+        R(EC_C_ACC, 0, 52, W, 2);
+        ec_kit_cat_frame(f, 0, EC_GH - 64);
     }
 }

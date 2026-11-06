@@ -457,7 +457,7 @@ void ec_src_down(int key)
         P->src_key = key;
         return;
     }
-    if (key == 11 && ec_lp_active()) {             /* 0.6.6 / 0.6.14: B11 held: the layers, the pages, K1 / K2 (every
+    if (key == 11 && ec_lp_sel_mode()) {             /* 0.6.6 / 0.6.14: B11 held: the layers, the pages, K1 / K2 (every
                                                     * track page); a quick click: the page's own B11 (ec_src_up) */
         ec_lp_b11(1);
         return;

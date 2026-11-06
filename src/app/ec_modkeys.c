@@ -273,6 +273,75 @@ uint32_t ec_mk_marks(int id)
     return m;
 }
 
+/* ------------------------------------------------------------------------------------------- a source's page --- */
+/* 0.6.51 (owner): LFO 1 / LFO 2 / MOD ENV / VEL show their routes one at a time: SEL steps through them (past the
+ * ends: the page, as MATRIX's rows), ALGO sets the shown route's depth */
+static int g_rsel[EC_MS_N];
+
+int ec_mk_route_src(void)
+{
+    ec_page_t pg;
+    if (A->bus || A->settings || A->ux.f3)
+        return 0;
+    ec_app_page(A, &pg);
+    switch (pg.pic) {
+    case EC_PIC_LFO1: return EC_MS_LFO1;
+    case EC_PIC_LFO2: return EC_MS_LFO2;
+    case EC_PIC_MENV: return EC_MS_ENV;
+    case EC_PIC_VEL: return EC_MS_VEL;
+    default: return 0;
+    }
+}
+
+int ec_mk_route(const float *v, int src, int *idx, int *n)
+{
+    int k, c = 0, sel, slot = -1;
+    for (k = 0; k < EC_MTX_SLOTS; k++)
+        if (ec_mtx_src(v, k) == src && ec_mtx_dst(v, k) >= 0)
+            c++;
+    sel = src > 0 && src < EC_MS_N ? clampi(g_rsel[src], 0, c > 0 ? c - 1 : 0) : 0;
+    for (k = 0, c = 0; k < EC_MTX_SLOTS; k++)
+        if (ec_mtx_src(v, k) == src && ec_mtx_dst(v, k) >= 0) {
+            if (c == sel)
+                slot = k;
+            c++;
+        }
+    if (idx)
+        *idx = sel;
+    if (n)
+        *n = c;
+    return slot;
+}
+
+int ec_mk_route_select(int d)
+{
+    const int src = ec_mk_route_src();
+    int idx, n;
+    if (!src)
+        return 0;
+    ec_mk_route(tv(), src, &idx, &n);
+    if (idx + d < 0 || idx + d >= n)
+        return 0;                                          /* (past the ends: the page turns) */
+    g_rsel[src] = idx + d;
+    A->redraw = 1;
+    return 1;
+}
+
+int ec_mk_route_depth(int d)
+{
+    const int src = ec_mk_route_src();
+    int k;
+    if (!src)
+        return 0;
+    k = ec_mk_route(tv(), src, 0, 0);
+    if (k < 0)
+        ec_app_message("NO ROUTE");
+    else
+        ec_app_edit_param(ec_mtx_depth_id(k), d, ec_ux_accel(EC_E_ALGO, ec_app_param_steps(ec_mtx_depth_id(k)), d));
+    A->redraw = 1;
+    return 1;
+}
+
 /* ------------------------------------------------------------------------------------------- the MATRIX page --- */
 int ec_mk_select(int d)
 {

@@ -236,24 +236,21 @@ static int depth_cells(float d, int half)
 static void routes(const ec_app_t *a, int src, int small)
 {
     const float *v = a->proj.pat[a->proj.current].tr[a->track].v;
-    char b[32], nm[16], dp[12];
-    int k, n = 0, first = -1;
-    for (k = 0; k < EC_MTX_SLOTS; k++)
-        if (ec_mtx_src(v, k) == src && ec_mtx_dst(v, k) >= 0) {
-            if (first < 0)
-                first = k;
-            n++;
-        }
+    char b[32], nm[16], dp[12], cnt[8] = "";
+    int n = 0, idx = 0;
+    /* 0.6.51 (owner): one route at a time, SEL's (its number of the source's routes at the right) */
+    const int first = ec_mk_route(v, src, &idx, &n);
     if (first < 0)
         snprintf(b, sizeof b, "> OFF");
     else {
         ec_mk_dst_name(v[ec_mtx_dst_id(first)], nm, sizeof nm);
         ec_param_format(ec_mtx_depth_id(first), v[ec_mtx_depth_id(first)], 3, dp, sizeof dp);
+        snprintf(b, sizeof b, "> %s %s", nm, dp);
         if (n > 1)
-            snprintf(b, sizeof b, "> %s %s +%d", nm, dp, n - 1);
-        else
-            snprintf(b, sizeof b, "> %s %s", nm, dp);
+            snprintf(cnt, sizeof cnt, "%d/%d", idx + 1, n);
     }
+    if (cnt[0])
+        T(EC_C_SRC, cnt, W - 10, small ? 13 : 23, EC_AL_RIGHT);
     if (small) {                                /* over the envelope bars: no meter */
         T(first < 0 ? EC_C_L5 : EC_C_L15, b, 2, 13, EC_AL_LEFT);
         return;
@@ -264,15 +261,14 @@ static void routes(const ec_app_t *a, int src, int small)
         float x;
         ec_dsp_track_status(a->dsp, a->track, &st);
         x = src >= EC_MS_LFO1 && src <= EC_MS_EXPR ? st.src[src - EC_MS_LFO1] : 0.0f;
-        {   /* a bipolar meter at the right */
-            const int mx = W - 6, top = VT - 8, bot = VB, mid = (top + bot) / 2;
-            const int h = (int)(clampf(x, -1, 1) * (bot - top) / 2);
+        {   /* 0.6.51: a unipolar meter at the right (from the bottom; a negative level hangs from the top) */
+            const int mx = W - 6, top = VT - 8, bot = VB;
+            const int h = (int)(clampf(x, -1, 1) * (bot - top));
             R(EC_C_L3, mx, top, 2, bot - top);
             if (h > 0)
-                R(EC_C_ACC, mx, mid - h - 1, 2, h + 1);
+                R(EC_C_ACC, mx, bot - h, 2, h);
             else if (h < 0)
-                R(EC_C_ACC, mx, mid, 2, -h + 1);
-            R(EC_C_L8, mx - 2, mid - 1, 6, 2);         /* the centre: 2 units (0.6.1) */
+                R(EC_C_ACC, mx, top, 2, -h);
         }
     }
 }
@@ -285,15 +281,16 @@ static void lfo_page(const ec_app_t *a, int k)
     const int spd = opt(a, k ? EC_P_LFO2_SPEED : EC_P_LFO1_SPEED);
     const float cyc = mode == 3 ? 1.0f : clampf(powf(2.0f, (spd - 4) * 0.5f) * 2, 1, 6);
     float y[104];
-    const float mid = (VT - 6 + VB) / 2.0f, hh = (VB - VT + 6) / 2.0f;
+    /* 0.6.51 (owner): the LFO is unipolar: the wave rises from the bottom line (a negative level: hangs from the top) */
+    const float base = d >= 0 ? (float)(VB - 2) : (float)(VT - 4), span = (float)(VB - VT + 2);
     int i;
     routes(a, k ? EC_MS_LFO2 : EC_MS_LFO1, 0);
     for (i = 0; i < 104; i++) {
         const float x = (float)i / 103 * cyc, ph = x - floorf(x);
         const float w = mode == 3 && x >= 1 ? wave_at(wave, 1.0f) : wave_at(wave, mode == 3 ? x : ph);
-        y[i] = mid - w * d * hh;
+        y[i] = base - (w * 0.5f + 0.5f) * d * span;
     }
-    ec_gfx_dots_h(VX0, VX1, (int)mid, 2, EC_C_L3);
+    ec_gfx_dots_h(VX0, VX1, (int)base, 2, EC_C_L3);
     if (mode == 2 || mode == 3)                 /* TRIG / ONE: the reset at the note */
         R(EC_C_L8, VX0, VT - 6, 2, VB - VT + 6);
     trace(y, 104, VX0, VX1, d == 0 ? EC_C_L5 : EC_C_L12);

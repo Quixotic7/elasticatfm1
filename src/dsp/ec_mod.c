@@ -127,7 +127,8 @@ void ec_mod_tick(ec_mod_t *m, const ec_mod_params_t *p, float bpm, float fs, con
     float src[1 + EC_MSRC_N + 4];
     src[0] = 0.f;
     for (int i = 0; i < 2; ++i)
-        src[1 + EC_MSRC_LFO1 + i] = lfo_value(m, p, i) * ec_clampf(p->lfo[i].depth, -1.f, 1.f);
+        src[1 + EC_MSRC_LFO1 + i] = (lfo_value(m, p, i) * 0.5f + 0.5f)   /* 0.6.51 (owner): unipolar 0..1 */
+                                    * ec_clampf(p->lfo[i].depth, -1.f, 1.f);
     ec_envspec_t sp;
     menv_spec(p, &sp);
     float ev = 0.f;

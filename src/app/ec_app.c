@@ -101,7 +101,7 @@ int ec_app_target_step(const ec_app_t *a)
 {
     const int m = a->scr ? a->scr : a->cat;
     if (a != &ec_app || a->step_held || a->bus || a->settings ||
-        (!ec_src_mode(m) && m != EC_MODE_KEYBOARD))   /* 0.6.14: every track page and KEYBOARD */
+        (m != EC_CAT_SRC && m != EC_CAT_TRIG && m != EC_MODE_KEYBOARD))   /* 0.6.51 (owner): LOOP and KEYBOARD only */
         return -1;
     return ec_lp_first();                          /* 0.6.9: the first selected step */
 }
@@ -846,6 +846,55 @@ void ec_app_mod_values(const ec_app_t *a, float *v)
     }
 }
 
+/* 0.6.51 (owner): what the bars and the FILTER / ENV pictures show. A step held: that step's values (its locks, else
+ * the track's). A source key held (mapping a mod): the track's values each moved by that source's routes at their
+ * full amount (depth x the source's level), still. Playing: the values as heard (ec_app_mod_values). Stopped: the
+ * values set. */
+static void mod_amount(float *v, int id, float m)
+{
+    const ec_param_def_t *d = &EC_PARAMS[id];
+    const int bus = ec_mtx_bus(id);
+    float x;
+    if (bus == EC_MOD_PITCH)
+        x = v[id] + m * 12.0f;
+    else if (bus == EC_MOD_AMP)
+        x = v[id] * (1.0f + m);
+    else
+        x = v[id] + m * (bus == EC_MOD_RES || bus == EC_MOD_PAN ? 0.5f : 1.0f) * (d->max - d->min);
+    v[id] = x < d->min ? d->min : x > d->max ? d->max : x;
+}
+
+void ec_app_shown_values(const ec_app_t *a, float *v)
+{
+    const int hs = ec_app_held_step(a);
+    const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
+    int i, k, src;
+    if (a->bus) {
+        ec_app_mod_values(a, v);
+        return;
+    }
+    for (i = 0; i < EC_NP; i++)
+        v[i] = tr->v[i];
+    if (hs >= 0) {
+        const ec_step_t *s = &tr->steps[hs];
+        for (i = 0; i < s->nlock; i++)
+            if (s->lock_id[i] < EC_NP)
+                v[s->lock_id[i]] = s->lock_val[i];
+        return;
+    }
+    src = a == &ec_app && a->mk.held >= 0 ? ec_mk_src_of_key(a->mk.held) : 0;
+    if (src) {
+        const int lv = ec_mtx_level_id(src);
+        const float level = lv >= 0 ? (tr->v[lv] - 64.0f) / 64.0f : 1.0f;
+        for (k = 0; k < EC_MTX_SLOTS; k++)
+            if (ec_mtx_src(tr->v, k) == src && ec_mtx_dst(tr->v, k) >= 0)
+                mod_amount(v, ec_mtx_dst(tr->v, k), ec_mtx_depth(tr->v, k) * level);
+        return;
+    }
+    if (a->seq.playing)
+        ec_app_mod_values(a, v);
+}
+
 /* 0.6.49 (owner): F1 held + SEL turned (the dice thrown): every param on the page shown gets a random value, as one
  * undo; the track's structure and what changes only while stopped are kept (machine, warp, slot, slices, length,
  * rate, loop division, the FX types, the volume) */
@@ -1160,6 +1209,30 @@ static void clear_mod(int id)
 
 /* a cell turned (the page's, or F3's): its lane, the knob's speed; a source key held routes it, F1 clears its locks,
  * F2 its modulation; the takeover */
+static int g_last_id = -1;                           /* 0.6.51: the param a knob turned last */
+
+/* 0.6.51 (owner): a step held + F1: that step's lock on the param a knob turned last, cleared, if that param is on the
+ * page shown (another page's param: not, said so). 0: no param to clear (F1 acts as it does) */
+int ec_app_clear_held_lock(void)
+{
+    ec_page_t pg;
+    int i;
+    if (g_last_id < 0 || !A->step_held || A->bus || A->settings || UX->f3)
+        return 0;
+    ec_app_page(A, &pg);
+    for (i = 0; i < pg.n; i++) {
+        ec_item_t it;
+        ec_mk_item(&pg.it[i], &it);
+        if (it.kind == EC_IT_PARAM && it.id == g_last_id) {
+            ec_app_clear_lock(g_last_id);
+            A->redraw = 1;
+            return 1;
+        }
+    }
+    message("NOT ON THIS PAGE");
+    return 1;
+}
+
 static void turn_cell(const ec_page_t *pg, int cell, int role, int det)
 {
     const ec_item_t *it;
@@ -1185,7 +1258,10 @@ static void turn_cell(const ec_page_t *pg, int cell, int role, int det)
     mult = ec_ux_accel(role, item_steps(it), det);
     if (!ec_e5_knob_cell(it, det, mult)) {        /* E5: scene / slice edits, E5 cells */
         switch (it->kind) {
-        case EC_IT_PARAM: ec_app_edit_param_f(it->id, det, mult, it->flags); break;
+        case EC_IT_PARAM:
+            ec_app_edit_param_f(it->id, det, mult, it->flags);
+            g_last_id = it->id;
+            break;
         case EC_IT_UX: ec_pn_item_edit(it->id, det); break;
         case EC_IT_GLOBAL: ec_app_edit_global(it->id, det, mult); break;
         case EC_IT_SLOT: edit_slot(it->id, det, mult); break;
@@ -1355,7 +1431,7 @@ void ec_app_tick(const ec_input_t *in)
     {   /* 0.6.50: a live matrix route on the track shown: its bars and pictures move, so the screen follows */
         const float *tv0 = ec_project_track(&A->proj, A->track)->v;
         int k;
-        for (k = 0; k < EC_MTX_SLOTS && !A->bus; k++)
+        for (k = 0; k < EC_MTX_SLOTS && !A->bus && A->seq.playing; k++)   /* 0.6.51: only while playing */
             if (ec_mtx_live(tv0, k)) {
                 if (A->ms % 33u == 0)
                     A->redraw = 1;

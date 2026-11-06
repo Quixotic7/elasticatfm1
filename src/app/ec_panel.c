@@ -534,6 +534,8 @@ static void button_down(int b)
             ec_lp_clear();                         /* the selected steps */
         } else if (b == EC_B_OCTUP && !A->fn && ec_lp_b11_held()) {   /* 0.6.14: B11 held + F2 = LIVE */
             ec_lp_live();
+        } else if (b == EC_B_OCTDN && !A->fn && A->step_held && ec_app_clear_held_lock()) {
+            ;                                      /* 0.6.51 (owner): a step held + F1: the last knob's lock */
         } else if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
@@ -767,7 +769,7 @@ static void white_down(int k, int i, int vel, int lean)
             ec_pn_select_target(i);                /* W1..W9: T1..T6 S1 S2 MST */
         return;
     }
-    if (!A->settings && ec_lp_active() && ec_lp_white(k, i, 1, vel)) {   /* 0.6.9 / 0.6.14: B11's STEP layer selects
+    if (!A->settings && ec_lp_sel_mode() && ec_lp_white(k, i, 1, vel)) {   /* 0.6.9 / 0.6.14: B11's STEP layer selects
                                                     * steps in LOOP ENGINE, TRIG and KEYBOARD */
         A->key_role[k] = R_LP;
         return;
@@ -1101,6 +1103,8 @@ static void select_knob(int d)
         ec_file_pool_select(d);                    /* 0.6.1: POOL: the slot */
     } else if (mode == EC_CAT_FILE) {
         ec_nav_sel(d > 0 ? 1 : -1);                /* 0.6.1: EDITOR, RAZOR: one page a turn */
+    } else if (ec_mk_route_select(d)) {
+        ;                                          /* 0.6.51 (owner): an LFO's page: its routes, then the pages */
     } else if (!A->bus && ec_page_pic(A->cat, A->page[A->cat], 0) == EC_PIC_MATRIX) {
         const int row = A->mk.row;
         if (!ec_mk_select(d) && !ec_nav_sel(d > 0 ? 1 : -1))   /* 0.5.0: the rows, then on to the next page */
@@ -1237,8 +1241,10 @@ static void knob(int r, int d)
             ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
         else if (ec_fx_on_sends())
             ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
-        else if (ec_lp_active())
-            ec_lp_algo(d);                         /* 0.6.9 / 0.6.14: the step modes: the page's step, below 1 LIVE */
+        else if (ec_lp_sel_mode())
+            ec_lp_algo(d); 
+        else if (ec_mk_route_depth(d))
+            ;                                      /* 0.6.51 (owner): an LFO's page: the shown route's depth */                        /* 0.6.9 / 0.6.14: the step modes: the page's step, below 1 LIVE */
         else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE)
             ec_file_algo(d);                       /* 0.6.15: the browser: CW adds to the pool, CCW removes */
         else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR)   /* 0.6.15: the EDITOR: the selected marker */

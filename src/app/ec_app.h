@@ -122,7 +122,9 @@ void ec_app_mark_dirty(void);
 /* 0.6.0: the model for the panel (src/app/ec_panel.c ..) */
 void ec_app_edit_param_f(int id, int det, int mult, int flags);   /* flags: the item's (EC_IF_STOPPED) */
 void ec_app_clear_lock(int id);
-void ec_app_mod_values(const ec_app_t *a, float *v);   /* 0.6.50: the params as heard (EC_NP, modulated) */
+void ec_app_mod_values(const ec_app_t *a, float *v);
+int ec_app_clear_held_lock(void);   /* 0.6.51: step held + F1: the last knob's lock (if on the page) */
+void ec_app_shown_values(const ec_app_t *a, float *v); /* 0.6.51: the bars / pictures: held step, mod key, playing, set */   /* 0.6.50: the params as heard (EC_NP, modulated) */
 int ec_app_page_randomizable(void);          /* 0.6.49: the page shown has params the dice may set */
 int ec_app_randomize_page(uint32_t *rng);    /* 0.6.49: they get random values, one undo; their count */                              /* F1 + a knob */
 void ec_app_edit_global(int id, int det, int mult);   /* SHIFT held: to the next snap value */

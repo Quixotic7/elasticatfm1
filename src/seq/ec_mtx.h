@@ -3,7 +3,7 @@
  * EC_P_MTX1_SRC .. EC_P_MTX8_DEPTH (ec_params.h).
  *
  *   SRC   option 1..12 = OFF, LFO 1, LFO 2, ENV (the mod envelope), VEL, AT (aftertouch), MW (CC 1), EXPR (CC 11),
- *         M1..M4. The LFOs are bipolar, the rest unipolar; LFO 1 / LFO 2 / ENV / VEL keep their own DEPTH param as
+ *         M1..M4. All unipolar (0.6.51: the LFOs too, 0..1); LFO 1 / LFO 2 / ENV / VEL keep their own DEPTH param as
  *         the source's level.
  *   DST   0 OFF, else the destination param id + 1 (ec_param_mod_dest: every continuous track param). PITCH, CUT,
  *         RES, AMP and PAN ride the engine's fast mod buses (ec_mod.h); every other one is a generic destination.

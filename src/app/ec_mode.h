@@ -280,6 +280,7 @@ void ec_kb_target(int det);                   /* ALGO */
 void ec_kb_bank_next(void);                   /* 0.6.14: B11's quick click on a slice track: the next bank */
 /* 0.6.6 / 0.6.9: LOOP ENGINE step entry (ec_loopstep.c): B11 switches the white keys between LOOP and STEP layers;
  * the selected steps get the loop keys' regions / ranges and the knobs' locks */
+int ec_lp_sel_mode(void);                     /* 0.6.51: LOOP / TRIG / KEYBOARD: steps can be selected */
 int ec_lp_active(void);                       /* LOOP ENGINE shown (a track, no settings) */
 int ec_lp_on_range(void);                     /* 0.6.21: the RANGE page is shown (its keys set the range on every machine) */
 void ec_lp_track(int from, int to);           /* 0.6.11: the selected track changed: its own selection / target */

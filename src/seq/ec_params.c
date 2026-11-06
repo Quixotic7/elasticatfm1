@@ -257,28 +257,28 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     /* 0.5.0: the mod matrix (ec_mtx.h): SRC / DST not lockable, never morphed; DEPTH lockable and morphed */
     [EC_P_MTX1_SRC] = OPT("mtx1_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX1_DST] = MDST("mtx1_dst", "DST"),
-    [EC_P_MTX1_DEPTH] = NUM("mtx1_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX1_DEPTH] = NUM("mtx1_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX2_SRC] = OPT("mtx2_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX2_DST] = MDST("mtx2_dst", "DST"),
-    [EC_P_MTX2_DEPTH] = NUM("mtx2_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX2_DEPTH] = NUM("mtx2_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX3_SRC] = OPT("mtx3_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX3_DST] = MDST("mtx3_dst", "DST"),
-    [EC_P_MTX3_DEPTH] = NUM("mtx3_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX3_DEPTH] = NUM("mtx3_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX4_SRC] = OPT("mtx4_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX4_DST] = MDST("mtx4_dst", "DST"),
-    [EC_P_MTX4_DEPTH] = NUM("mtx4_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX4_DEPTH] = NUM("mtx4_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX5_SRC] = OPT("mtx5_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX5_DST] = MDST("mtx5_dst", "DST"),
-    [EC_P_MTX5_DEPTH] = NUM("mtx5_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX5_DEPTH] = NUM("mtx5_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX6_SRC] = OPT("mtx6_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX6_DST] = MDST("mtx6_dst", "DST"),
-    [EC_P_MTX6_DEPTH] = NUM("mtx6_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX6_DEPTH] = NUM("mtx6_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX7_SRC] = OPT("mtx7_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX7_DST] = MDST("mtx7_dst", "DST"),
-    [EC_P_MTX7_DEPTH] = NUM("mtx7_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX7_DEPTH] = NUM("mtx7_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     [EC_P_MTX8_SRC] = OPT("mtx8_src", "SRC", 1, 0, O_MSRC),
     [EC_P_MTX8_DST] = MDST("mtx8_dst", "DST"),
-    [EC_P_MTX8_DEPTH] = NUM("mtx8_depth", "DPTH", -100, 100, 1, 0, EC_PF_MDEP, L),
+    [EC_P_MTX8_DEPTH] = NUM("mtx8_depth", "DPTH", -100, 100, 0.1f, 0, EC_PF_MDEP, L),
     /* 0.6.0: micro timing (sequencer domain: never sent to the engine, never morphed or modulated) */
     [EC_P_MICRO] = NUM("micro_timing", "MICRO", -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2, 1, 0, EC_PF_MICRO, L | EC_PF_SEQ),
     /* 0.6.1: the K4 MIX of the machines without a blend (INS 1 / a bus), the second insert (ec_params.h). INS 2's
@@ -343,24 +343,11 @@ float ec_param_clamp(int id, float x)
     return x;
 }
 
-/* 0.5.0: a matrix DEPTH's step at magnitude a (fine near 0, ChoralRoot's AMT) */
-static float mdep_step(float a) { return a < 5.0f ? 0.5f : a < 20.0f ? 1.0f : a < 50.0f ? 2.0f : 5.0f; }
-
+/* 0.6.51 (owner): a matrix DEPTH moves in 0.1 steps (the knob's speed-up makes the bigger moves) */
 float ec_mdep_nudge(float x, int det)
 {
-    const int dir = det > 0 ? 1 : -1;
-    int n = det < 0 ? -det : det;
-    for (; n > 0; n--) {
-        /* away from 0: the step where x is; towards it: the step just inside */
-        const int away = x == 0 || (x > 0) == (dir > 0);
-        const float st = mdep_step(away ? fabsf(x) : fabsf(x) - 1e-3f);
-        x = floorf((x + (float)dir * st) / st + 0.5f) * st;
-        if (x > 100)
-            x = 100;
-        if (x < -100)
-            x = -100;
-    }
-    return x;
+    x = floorf((x + (float)det * 0.1f) * 10.0f + 0.5f) / 10.0f;
+    return x > 100 ? 100 : x < -100 ? -100 : x;
 }
 
 /* 0.5.0: a matrix DST stepped through the ids that can be one (the app steps the layout's order instead) */
@@ -558,13 +545,8 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
         const int t = (int)floorf(x + 0.5f) - 1;
         snprintf(out, (size_t)cap, "%s", t < 0 || t >= EC_NP ? "OFF" : t == EC_P_PITCH ? "PITCH" : EC_PARAMS[t].label);
     } break;
-    case EC_PF_MDEP:
-        if (x == 0)
-            snprintf(out, (size_t)cap, "0");
-        else if (fabsf(x) < 9.95f && fabsf(x - floorf(x + 0.5f)) > 0.01f)
-            snprintf(out, (size_t)cap, "%+.1f%%", (double)x);
-        else
-            snprintf(out, (size_t)cap, "%+d%%", (int)floorf(x + (x < 0 ? -0.5f : 0.5f)));
+    case EC_PF_MDEP:                                                    /* 0.6.51 (owner): always one decimal */
+        snprintf(out, (size_t)cap, "%.1f", (double)(fabsf(x) < 0.05f ? 0.0f : x));
         break;
     default: snprintf(out, (size_t)cap, "%d", (int)floorf(x + 0.5f)); break;
     }

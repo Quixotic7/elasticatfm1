@@ -507,7 +507,7 @@ static void leds_black(void)
             break;
         }
     }
-    if (ec_lp_active() && !A->fn)                  /* 0.6.9: LOOP ENGINE's B11: lit on the STEP layer */
+    if (ec_lp_sel_mode() && !A->fn)                /* 0.6.9: LOOP ENGINE's B11: lit on the STEP layer */
         l[10] = ec_lp_step_layer() ? EC_LED_LIT : ec_lp_first() >= 0 ? EC_LED_MID : EC_LED_DIM;
     for (i = 0; i < EC_NBKEY; i++)
         ec_plat_led_upper(i, l[i]);
@@ -639,8 +639,8 @@ static void knob_labels(void)
         lane = ec_app_lane(A, &pg);
         L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : ec_rzui_active(A) ? "SLICE" : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE ? "+/- POOL"
                                                     : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR ? "MARKER"
-                                                    : mode == EC_CAT_FILE ? "" : mode == EC_MODE_KEYBOARD || ec_lp_active() ? "TARGET"
-                                                    : ec_fx_on_sends() ? "SEND MODE" : "STEP PG");
+                                                    : mode == EC_CAT_FILE ? "" : mode == EC_MODE_KEYBOARD || ec_lp_sel_mode() ? "TARGET"
+                                                    : ec_fx_on_sends() ? "SEND MODE" : ec_mk_route_src() ? "DEPTH" : "STEP PG");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : mode == EC_CAT_FILE && (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) ? "PREVIEW" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");

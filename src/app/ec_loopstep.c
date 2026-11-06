@@ -66,6 +66,9 @@ static int step_mode(void)
     const int m = ec_app_mode();
     return m == EC_CAT_SRC || m == EC_CAT_TRIG || m == EC_MODE_KEYBOARD;
 }
+/* 0.6.51 (owner): the selected steps (ALGO's step / LIVE, B11's STEP layer) are LOOP's (and KEYBOARD's target) only;
+ * on the other param pages a lock is a step key held + a knob turned */
+int ec_lp_sel_mode(void) { return ec_lp_active() && step_mode(); }
 #define SEL (g.sel[A->track])
 int ec_lp_is_sel(int idx) { return idx >= 0 && idx < EC_MAXSTEPS && (SEL[idx / 32] >> (idx % 32) & 1u); }
 static void sel_set(int idx, int on)
@@ -123,9 +126,9 @@ static void sync_target(void)
     P->target = f >= 0 ? f + 1 : 0;
     A->redraw = 1;
 }
-int ec_lp_target(void) { return ec_lp_active() && ec_lp_first() >= 0 ? ec_lp_first() + 1 : 0; }
-int ec_lp_step_layer(void) { return ec_lp_active() && (g.latched ^ g.b11); }
-int ec_lp_b11_held(void) { return g.b11 && ec_lp_active(); }
+int ec_lp_target(void) { return ec_lp_sel_mode() && ec_lp_first() >= 0 ? ec_lp_first() + 1 : 0; }
+int ec_lp_step_layer(void) { return ec_lp_sel_mode() && (g.latched ^ g.b11); }
+int ec_lp_b11_held(void) { return g.b11 && ec_lp_sel_mode(); }
 void ec_lp_b11_used(void) { g.b11_used = 1; }
 uint32_t ec_lp_keys(void) { return g.keys; }
 

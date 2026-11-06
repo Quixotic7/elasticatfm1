@@ -194,7 +194,7 @@ static void cells(const ec_app_t *a, const ec_page_t *pg)
     static float mv[EC_NP];
     const int modbars = !a->settings && !a->ux.f3 && !a->bus && ec_app_held_step(a) < 0;
     if (modbars)
-        ec_app_mod_values(a, mv);
+        ec_app_shown_values(a, mv);                /* 0.6.51: moving only while playing */
     memset(c, 0, sizeof c);
     for (i = 0; i < 4; i++) {
         const int ci = lane * 4 + i;
@@ -799,7 +799,7 @@ static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
             held = i;
     }
     ec_kit_steps(top, bot, trigs, ghosts, locks, beyond, held, pl);
-    if (a == &ec_app && ec_lp_active())            /* 0.6.14 (owner): the selected steps (white caps), each trig's
+    if (a == &ec_app && ec_lp_sel_mode())          /* 0.6.14 (owner): the selected steps (white caps), each trig's
                                                     * VELOCITY lock as its block's height, a PITCH lock as a blue
                                                     * mark (above the middle: up, below: down) */
         for (i = 0; i < 16; i++) {
@@ -912,24 +912,7 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
 /* the actual (resolved) values, with a held step's locks: what the filter / envelope pictures draw */
 /* 0.6.50 (owner): what the FILTER / ENV pictures draw: as heard (modulated); a step held: that step's values, still
  * (its locks, else the track's: no modulation, nothing of the step playing) */
-static void shown_values(const ec_app_t *a, float *v)
-{
-    const int hs = ec_app_held_step(a);
-    int i;
-    if (hs < 0) {
-        ec_app_mod_values(a, v);
-        return;
-    }
-    {
-        const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
-        const ec_step_t *s = &tr->steps[hs];
-        for (i = 0; i < EC_NP; i++)
-            v[i] = tr->v[i];
-        for (i = 0; i < s->nlock; i++)
-            if (s->lock_id[i] < EC_NP)
-                v[s->lock_id[i]] = s->lock_val[i];
-    }
-}
+static void shown_values(const ec_app_t *a, float *v) { ec_app_shown_values(a, v); }
 
 static void filter_bars(const ec_app_t *a, int top, int bot)
 {

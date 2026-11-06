@@ -507,7 +507,41 @@ static void test_steps(void)
     btn(FM1P_B_OCTDN, 0);
     run(20);
     CHECK(!ec_step_lock_get(step(2), EC_P_FILTER_CUTOFF, &x) && !A->pn.f_sticky, "F1 + K1: the locks cleared, no sticky");
-    /* 0.6.14: PRESETS turns the step page on every track page; ALGO selects the page's step (full left: LIVE) */
+    /* 0.6.51 (owner): a step held + F1: that step's lock of the last knob turned, cleared (the others kept) */
+    key(0, wkey(3), 1);
+    run(300);
+    turn(FM1P_E_K1, 3);
+    run(20);
+    key(0, wkey(4), 1);
+    run(20);
+    turn(FM1P_E_K1, 3);
+    run(20);
+    key(0, wkey(4), 0);
+    run(20);
+    btn(FM1P_B_OCTDN, 1);
+    run(20);
+    btn(FM1P_B_OCTDN, 0);
+    run(20);
+    key(0, wkey(3), 0);
+    run(20);
+    CHECK(!ec_step_lock_get(step(2), EC_P_FILTER_CUTOFF, &x) && ec_step_lock_get(step(3), EC_P_FILTER_CUTOFF, &x) &&
+              !A->pn.f_sticky && !A->pn.f_held, "W3 held + F1: W3's cutoff lock cleared, W4's kept");
+    {   /* the param not on the page shown (AMP): nothing cleared */
+        const int pg0 = A->page[EC_CAT_FILT];
+        to(EC_CAT_AMP);
+        key(0, wkey(4), 1);
+        run(300);
+        btn(FM1P_B_OCTDN, 1);
+        run(20);
+        btn(FM1P_B_OCTDN, 0);
+        run(20);
+        key(0, wkey(4), 0);
+        run(20);
+        CHECK(ec_step_lock_get(step(3), EC_P_FILTER_CUTOFF, &x), "AMP: W4 held + F1 left the cutoff lock");
+        to(EC_CAT_FILT);
+        ec_app_set_page(EC_CAT_FILT, pg0);
+    }
+    /* 0.6.14: PRESETS turns the step page on every track page; 0.6.51 (owner): ALGO selects a step in LOOP only */
     ec_app_params(A)[EC_P_PATTERN_STEPS] = 32;
     ec_seq_timing_changed(&A->seq);
     turn(FM1P_E_PRESETS, 1);
@@ -518,7 +552,7 @@ static void test_steps(void)
     CHECK(A->step_page == 1, "PRESETS clamps at the last page");
     turn(FM1P_E_ALGO, 2);
     run(20);
-    CHECK(A->pn.target == 18 && ec_app_target_step(A) == 17, "ALGO +2 on page 2: step 18 selected (%d)", A->pn.target);
+    CHECK(A->pn.target == 0 && ec_app_target_step(A) < 0, "FILTER: ALGO selects no step (%d)", A->pn.target);
     turn(FM1P_E_ALGO, -20);
     turn(FM1P_E_PRESETS, -1);
     run(20);
@@ -1199,7 +1233,7 @@ static void test_mod_display(void)
     base = v[EC_P_FILTER_CUTOFF] = 64;
     v[ec_mtx_src_id(0)] = (float)(EC_MS_LFO1 + 1);           /* LFO 1 -> CUTOFF, full depth */
     v[ec_mtx_dst_id(0)] = (float)(EC_P_FILTER_CUTOFF + 1);
-    v[ec_mtx_depth_id(0)] = 100;
+    v[ec_mtx_depth_id(0)] = 20;
     v[EC_P_LFO1_DEPTH] = 128;                              /* (64: none) */
     ec_seq_touch(&A->seq, A->track);
     if (!A->seq.playing)
@@ -1212,6 +1246,53 @@ static void test_mod_display(void)
     }
     CHECK(hi - lo > 4.0f && v[EC_P_FILTER_CUTOFF] == base, "LFO 1 -> CUTOFF: the value as heard moves (%g..%g), the set "
           "value stays %g", lo, hi, v[EC_P_FILTER_CUTOFF]);
+    CHECK(lo >= base - 0.01f, "0.6.51: the LFO is unipolar: never below the set value (%g)", lo);
+    press(FM1P_B_PLAY, 40);                                 /* stopped: the pictures as set */
+    run_audio(40);
+    ec_app_shown_values(A, mv);
+    CHECK(!A->seq.playing && mv[EC_P_FILTER_CUTOFF] == base, "stopped: shown as set (%g)", mv[EC_P_FILTER_CUTOFF]);
+    A->mk.held = EC_MK_LFO1;                                /* a source key held: the set value + the full amount */
+    ec_app_shown_values(A, mv);
+    {
+        const ec_param_def_t *d = &EC_PARAMS[EC_P_FILTER_CUTOFF];
+        const float want = base + 0.2f * (d->max - d->min);
+        CHECK(fabsf(mv[EC_P_FILTER_CUTOFF] - (want > d->max ? d->max : want)) < 0.01f,
+              "LFO 1 held: base + depth (%g, want %g)", mv[EC_P_FILTER_CUTOFF], want);
+    }
+    A->mk.held = -1;
+    {   /* 0.6.51 (owner): LFO 1's page: SEL steps through its routes, ALGO sets the shown one's depth */
+        ec_page_t pg;
+        int p, k;
+        v[ec_mtx_src_id(1)] = (float)(EC_MS_LFO1 + 1);       /* a second route: LFO 1 -> RES */
+        v[ec_mtx_dst_id(1)] = (float)(EC_P_FILTER_RES + 1);
+        v[ec_mtx_depth_id(1)] = 0;
+        to(EC_CAT_MOD);
+        for (p = 0; p < 12; p++) {
+            ec_app_set_page(EC_CAT_MOD, p);
+            ec_app_page(A, &pg);
+            if (pg.pic == EC_PIC_LFO1)
+                break;
+        }
+        A->redraw = 1;
+        run(20);
+        CHECK(ec_mk_route_src() == EC_MS_LFO1 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "DEPTH"), "LFO 1 page: ALGO %s",
+              L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
+        turn(FM1P_E_ALGO, 1);
+        run(200);
+        CHECK(fabsf(v[ec_mtx_depth_id(0)] - 20.1f) < 0.01f, "ALGO: the first route's depth 20.1 (%g)", v[ec_mtx_depth_id(0)]);
+        turn(FM1P_E_SELECT, 1);
+        run(200);
+        turn(FM1P_E_ALGO, -1);
+        run(200);
+        k = ec_mk_route(v, EC_MS_LFO1, &p, 0);
+        CHECK(k == 1 && p == 1 && fabsf(v[ec_mtx_depth_id(1)] + 0.1f) < 0.01f && fabsf(v[ec_mtx_depth_id(0)] - 20.1f) < 0.01f,
+              "SEL: route 2 (RES), ALGO -1: -0.1 (%g)", v[ec_mtx_depth_id(1)]);
+        turn(FM1P_E_SELECT, -1);
+        run(200);
+        v[ec_mtx_src_id(1)] = 0;
+        v[ec_mtx_dst_id(1)] = 0;
+        v[ec_mtx_depth_id(1)] = 0;
+    }
     v[ec_mtx_depth_id(0)] = 0;
     v[ec_mtx_src_id(0)] = 0;
     v[ec_mtx_dst_id(0)] = 0;
@@ -1219,8 +1300,6 @@ static void test_mod_display(void)
     ec_seq_touch(&A->seq, A->track);
     run_audio(100);
     ec_app_mod_values(A, mv);
-    if (A->seq.playing)
-        press(FM1P_B_PLAY, 40);
     CHECK(mv[EC_P_FILTER_CUTOFF] == base, "the route gone: as set (%g)", mv[EC_P_FILTER_CUTOFF]);
 }
 

@@ -138,7 +138,7 @@ static void keyboard_screen(const ec_app_t *a)
                                                     * white (its PITCH lock) */
             const int lo = ec_key_lower(k), up = ec_key_upper(k);
             int c = -1, j;
-            if (a == &ec_app && ec_lp_active() && ec_lp_first() >= 0)
+            if (a == &ec_app && ec_lp_sel_mode() && ec_lp_first() >= 0)
                 for (j = 0; j < len && c < 0; j++)
                     if (ec_lp_is_sel(j)) {
                         float x1;

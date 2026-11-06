@@ -187,14 +187,19 @@ static void test_resolve_unit(void)
     CHECK(!ec_param_mod_dest(EC_P_FILTER_TYPE) && !ec_param_mod_dest(EC_P_MACRO_DEPTH) &&
               !ec_param_mod_dest(EC_P_MTX1_DEPTH) && ec_param_mod_dest(EC_P_AMP) && ec_param_mod_dest(EC_P_PITCH),
           "destinations: no options, retired or matrix params; AMP and PITCH are");
-    {   /* DEPTH: fine near 0, SHIFT snaps */
+    {   /* DEPTH: 0.1 a detent (0.6.51), SHIFT snaps */
         float x = 0;
+        char f[12];
         x = ec_param_nudge(EC_P_MTX1_DEPTH, x, 1);
-        CHECK(x == 0.5f, "DEPTH 0 + 1 = 0.5 (%g)", x);
+        CHECK(x == 0.1f, "DEPTH 0 + 1 = 0.1 (%g)", x);
         x = ec_param_nudge(EC_P_MTX1_DEPTH, 60, 1);
-        CHECK(x == 65, "DEPTH 60 + 1 = 65 (%g)", x);
+        CHECK(x == 60.1f, "DEPTH 60 + 1 = 60.1 (%g)", x);
         x = ec_param_nudge(EC_P_MTX1_DEPTH, 0.5f, -2);
-        CHECK(x == -0.5f, "DEPTH 0.5 - 2 = -0.5 (%g)", x);
+        CHECK(x == 0.3f, "DEPTH 0.5 - 2 = 0.3 (%g)", x);
+        ec_param_format(EC_P_MTX1_DEPTH, 1, 3, f, sizeof f);
+        CHECK(!strcmp(f, "1.0"), "DEPTH 1 reads 1.0 (%s)", f);
+        ec_param_format(EC_P_MTX1_DEPTH, -100, 3, f, sizeof f);
+        CHECK(!strcmp(f, "-100.0"), "DEPTH -100 reads -100.0 (%s)", f);
         CHECK(ec_param_snap(EC_P_MTX1_DEPTH, 3, 1) == 25 && ec_param_snap(EC_P_MTX1_DEPTH, 60, 1) == 100 &&
                   ec_param_snap(EC_P_MTX1_DEPTH, 0, -1) == -25,
               "DEPTH snaps 0 / 25 / 50 / 100");
@@ -430,7 +435,7 @@ static void test_matrix_page(void)
     tv()[ec_mtx_dst_id(2)] = EC_P_FILTER_CUTOFF + 1;
     CHECK(tv()[EC_P_LFO1_DEPTH] == 128, "a silent LFO1 got its level (%g)", tv()[EC_P_LFO1_DEPTH]);
     turns(FM1P_E_K3, 3);
-    CHECK(tv()[ec_mtx_depth_id(2)] == 1.5f, "K3 x3: DEPTH 1.5 %% (%g)", tv()[ec_mtx_depth_id(2)]);
+    CHECK(tv()[ec_mtx_depth_id(2)] == 0.3f, "K3 x3: DEPTH 0.3 (%g)", tv()[ec_mtx_depth_id(2)]);
     btn(FM1P_B_GLO, 1);
     run(20);
     turns(FM1P_E_K3, 1);
@@ -475,7 +480,7 @@ static void test_modkeys(void)
     CHECK(tv()[EC_P_LFO2_DEPTH] == 128, "LFO 2's level up from 0");
     CHECK(tv()[EC_P_FILTER_CUTOFF] == 127, "the cutoff itself never moved (%g)", tv()[EC_P_FILTER_CUTOFF]);
     turns(FM1P_E_K1, 4);
-    CHECK(tv()[ec_mtx_depth_id(0)] == 2, "4 more: DEPTH 2 %% (%g)", tv()[ec_mtx_depth_id(0)]);
+    CHECK(tv()[ec_mtx_depth_id(0)] == 0.4f, "4 more: DEPTH 0.4 (%g)", tv()[ec_mtx_depth_id(0)]);
     CHECK(!strncmp(L(FM1CORE_LBL_KNOB0 + FM1P_E_K1), "LFO2 ", 5), "K1 label while held: %s",
           L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
     png("source_held.png");
@@ -531,8 +536,8 @@ static void test_modkeys(void)
     {
         float x = 0;
         CHECK(k >= 0 && tv()[ec_mtx_depth_id(k)] == 0 &&
-                  ec_step_lock_get(&ec_project_track(&A->proj, A->track)->steps[2], ec_mtx_depth_id(k), &x) && x == 1,
-              "step 3 held: its DEPTH lock 1 %% (%g), the slot kept at 0", x);
+                  ec_step_lock_get(&ec_project_track(&A->proj, A->track)->steps[2], ec_mtx_depth_id(k), &x) && x == 0.2f,
+              "step 3 held: its DEPTH lock 0.2 (%g), the slot kept at 0", x);
     }
 
     /* FULL */

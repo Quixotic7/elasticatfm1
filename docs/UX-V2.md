@@ -1294,3 +1294,19 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The FILTER curve and the ENV shapes follow the same modulated values. While a step is held they hold still: that
   step's locked value, or the track's value where it has no lock.
 - With a live route on the track shown the screen redraws about 30 times a second. test_ux checks LFO 1 -> CUTOFF.
+
+## 47. 0.6.51: modulation shown as set / heard, unipolar LFOs, 0.1 depths, ALGO on LOOP only, F1 on a held step, LFO routes (owner, 2026-11-06)
+
+- The bars and the FILTER / ENV pictures move with the modulation only while playing; stopped they show the values
+  set. A source key held (mapping a mod): the set value moved by that source's routes at their full amount (depth x
+  the source's level), still. A step held: that step's value (its lock, else the track's), as before.
+- The LFOs are unipolar (0..1 x their level): a positive depth only ever adds. The LFO page draws the wave rising
+  from a bottom line, its meter from the bottom.
+- A matrix DEPTH moves 0.1 a detent (the knob's speed-up makes the bigger moves; SHIFT still snaps 0 / 25 / 50 / 100)
+  and always reads with one decimal: 1.0, -12.5, 100.0.
+- ALGO selects a step (and LIVE) in LOOP (its pages, TRIG) and KEYBOARD only, as B11's STEP layer; on FILTER, AMP,
+  FX, MOD... the white keys are the steps: hold one and turn a knob to lock. ALGO there turns the step page.
+- A step held + F1: that step's lock of the param a knob turned last is cleared, when that param is on the page
+  shown ("NOT ON THIS PAGE" otherwise). F1 held + a knob still clears every lock of that param.
+- LFO 1 / LFO 2 / MOD ENV / VEL pages: the header shows one route at a time with its number (1/3); SEL steps through
+  the source's routes (past the ends: the pages), ALGO (DEPTH) sets the shown route's depth.

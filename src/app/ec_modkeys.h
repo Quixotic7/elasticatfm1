@@ -33,6 +33,12 @@ int ec_mk_release(void);                     /* it came up: 1 = a tap (no knob t
 void ec_mk_off(void);                        /* (a mode change: the hold ends, no tap) */
 /* a cell turned while a source key is held: 1 = taken (mapped / refused / cleared) */
 int ec_mk_turn(const ec_item_t *it, int role, int det);
+/* 0.6.51: a source's own page (LFO 1, LFO 2, MOD ENV, VEL): its EC_MS_* (0 another page); the route shown (its
+ * slot, -1 none; *idx of *n); SEL through the routes (0 past the ends), ALGO the route's depth (1 = taken) */
+int ec_mk_route_src(void);
+int ec_mk_route(const float *v, int src, int *idx, int *n);
+int ec_mk_route_select(int d);
+int ec_mk_route_depth(int d);
 /* SELECT on the MATRIX page: 1 = taken (the row; past the ends the caller steps the page) */
 int ec_mk_select(int d);
 /* an EC_IT_MTX item -> the selected row's param item (other kinds copied) */

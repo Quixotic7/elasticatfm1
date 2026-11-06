@@ -615,6 +615,117 @@ static void scr_file_browser(void)
     cells(c, 0, 0);
 }
 
+/* ------------------------------------------------------------------------- 0.6.42 design: PROJECTS --- */
+/* (owner, 2026-11-05) FILE's two halves: SAMPLES (the browser, rooted at AUDIO/, an UP row on top) and PROJECTS (every
+ * Elasticat project in data/elasticat/projects/: load, save, save +1, rename, a random name; the name keybed is FIZZ's) */
+static void projects(int confirm)
+{
+    static const char *const N[5] = {"ACID LAKE", "SPICY WALRUS", "SPICY WALRUS 2", "COSMIC TRAM", "PROJ-007"};
+    static const char *const AGE[5] = {"NOW", "2H", "1D", "3D", "6D"};
+    static const char used[64 + 1] = "xxxxxx..xx......xxx.............x...............................";
+    int i;
+    if (confirm)                                     /* a question waits: the arrows are OCT- (no) and OCT+ (yes) */
+        header("T1", "LOAD COSMIC TRAM?", 0, "", 0, 1);
+    else
+        header("T1", "FILE/PROJECTS", "", "2/14", 0, 0);
+    TL(PX_L5, "NOW", 2, 13);                         /* the project you work on, and whether it is saved */
+    TL(PX_L15, "ACID LAKE", 18, 13);
+    TR(PX_ACC, "EDITED", W - 2, 13);
+    for (i = 0; i < 5; i++) {                        /* newest first */
+        const int y = 22 + i * 8, cur = i == (confirm ? 3 : 1);
+        if (cur)
+            R(PX_L15, 0, y - 1, W, 7);
+        TL(cur ? PX_BG : PX_L8, N[i], 6, y);
+        TR(cur ? PX_BG : i == 0 ? PX_ACC : PX_L5, AGE[i], W - 2, y);
+        if (i == 0)
+            R(PX_ACC, 2, y + 1, 2, 3);               /* the one loaded */
+    }
+    R(PX_L3, 0, 63, W, 1);
+    /* the selected project's card: its name big, its 64 patterns (a bubble each one written), its tempo and pool */
+    T(confirm ? PX_ACTION : PX_L15, confirm ? "COSMIC TRAM" : "SPICY WALRUS", 2, 67, 2, EC_AL_LEFT);
+    for (i = 0; i < 64; i++) {
+        const int x = 3 + (i % 16) * 7, y = 82 + (i / 16) * 7;
+        if (used[i] == 'x')
+            R(i == 0 ? PX_ACC : PX_L12, x, y, 5, 5);
+        else
+            FR(PX_L3, x, y, 5, 5);
+    }
+    if (confirm) {                                   /* what yes does to the project you leave */
+        TL(PX_ACC, "ACID LAKE SAVED FIRST", 2, 112);
+        return;
+    }
+    TL(PX_L8, "128 BPM", 2, 112);
+    TR(PX_L8, "9 SAMPLES", W - 2, 112);
+}
+static void scr_projects(void) { projects(0); }
+static void scr_projects_confirm(void) { projects(1); }
+
+/* the name keybed (FIZZ's typewriter): B1..B11 = A..K, W1..W16 = L..Z and SPACE; the rolled name starts selected */
+static void scr_project_name(void)
+{
+    static const int BK[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};   /* the white key each black key follows */
+    int i;
+    header("T1", "PROJECT NAME", 0, "", 0, 1);
+    R(PX_L15, 2, 17, 98, 14);                        /* the suggested name, selected: the first key replaces it */
+    T(PX_BG, "SPICY WALRUS", 4, 19, 2, EC_AL_LEFT);
+    R(PX_SPECIAL, 104, 17, 14, 14);                  /* the die it rolled with */
+    R(PX_BG, 106, 19, 2, 2), R(PX_BG, 114, 19, 2, 2), R(PX_BG, 110, 23, 2, 2);
+    R(PX_BG, 106, 27, 2, 2), R(PX_BG, 114, 27, 2, 2);
+    for (i = 0; i < 10; i++)                         /* the last ten names: where you are among them */
+        R(i == 9 ? PX_L15 : PX_L5, 2 + i * 6, 36, 4, 2);
+    TL(PX_L5, "12/16", 2, 42);
+    for (i = 0; i < 16; i++) {                       /* the keybed: whites L..Z and SPACE */
+        const int x = 4 + i * 7;
+        char b[2] = {(char)(i < 15 ? 'L' + i : 0), 0};
+        R(i == 6 ? PX_ACC : PX_L12, x, 60, 6, 56);
+        if (i < 15)
+            T(PX_BG, b, x + 3, 108, 1, EC_AL_CENTER);
+        else
+            R(PX_BG, x + 1, 110, 4, 1);              /* SPACE */
+    }
+    for (i = 0; i < 11; i++) {                       /* blacks A..K over them */
+        const int x = 4 + BK[i] * 7 + 4;
+        char b[2] = {(char)('A' + i), 0};
+        R(PX_BG, x - 1, 59, 8, 32);
+        R(PX_L3, x, 60, 6, 30);
+        T(PX_L15, b, x + 3, 82, 1, EC_AL_CENTER);
+    }
+}
+
+/* SAMPLES: the browser rooted at AUDIO/ (the RemoteFM1 folder above it is out of reach), an UP row on top */
+static void scr_samples_browser(void)
+{
+    static const char *const F[5] = {"UP", "JUNGLE/", "AMEN_170.WAV", "THINK_96.WAV", "FUNKY_DRUMMER.WAV"};
+    static const char *const L[5] = {"", "", "2.1S", "4.0S", "3.2S"};
+    static const cell_t c[4] = {{"SLOT", "38", 0.3f, 0, 0}, {"LENGTH", "4.0S", 0.2f, 0, 0},
+                                {"BPM", "96", 0.4f, 0, 0}, {"FREE", "13M", 0.59f, 0, 0}};
+    int i;
+    header("T1", "FILE/SAMPLES", "", "4/13", 0, 0);
+    TL(PX_L5, "AUDIO/BREAKS/", 2, 13);
+    TR(PX_L8, "SLOT 38", W - 2, 13);
+    for (i = 0; i < 5; i++) {
+        const int y = 21 + i * 8, cur = i == 3;
+        if (cur)
+            R(PX_L15, 0, y - 1, W, 7);
+        if (i == 0) {                                /* UP: an arrow, the folder above */
+            R(PX_L12, 3, y, 1, 1), R(PX_L12, 2, y + 1, 3, 1), R(PX_L12, 3, y + 2, 1, 3);
+            TL(PX_L12, "UP", 8, y);
+            TR(PX_L5, "AUDIO/", W - 2, y);
+            continue;
+        }
+        TL(cur ? PX_BG : i == 1 ? PX_L12 : PX_L8, F[i], 6, y);
+        TR(cur ? PX_BG : PX_L5, L[i], W - 2, y);
+        if (i == 2)
+            R(PX_ACC, 2, y + 1, 2, 3);
+    }
+    TL(PX_L8, "POOL 37/128", 2, 61);
+    TR(PX_L8, "41%", W - 2, 61);
+    R(PX_L3, 2, 68, 116, 4);
+    R(PX_L12, 2, 68, 46, 4);
+    R(PX_ACC, 46, 68, 2, 4);
+    cells(c, 0, 0);
+}
+
 static void scr_file_editor(void)
 {
     static const cell_t c[4] = {{"START", "0.12S", 0.03f, 0, 0}, {"END", "3.80S", 0.95f, 0, 0},
@@ -887,6 +998,10 @@ static const mmode_t MODES[] = {
     {"Keyboard", "KEYBOARD", "SLICE 4", "AAAAAAAAAAX", 3, scr_keyboard},
     {"FileBrowser", "FILE", "BROWSE", "AAPPPOOOOAX", -1, scr_file_browser},
     {"FileEditor", "FILE", "EDITOR 4X", "APPPPPPPPPA", 3, scr_file_editor},
+    {"Projects", "PROJECTS", "LOAD SAVE", "AAAOOOOAAAO", -1, scr_projects},   /* 0.6.42 design */
+    {"ProjectsConfirm", 0, 0, 0, 0, scr_projects_confirm},
+    {"ProjectName", 0, 0, 0, 0, scr_project_name},
+    {"SamplesBrowser", "SAMPLES", "BROWSE", "AAPPPOOOOAX", -1, scr_samples_browser},
     {"Sampler", "SAMPLER", "2 BARS", "AAAAAOOOOOX", 2, scr_sampler},
     {"Crossfader", "CROSSFADER", "GLIDE MED", "XXOOOOOOOOX", -1, scr_crossfader},
     {"Patterns", "PATTERNS", "BANK A", "PPPPOOOOOOO", 0, scr_patterns},

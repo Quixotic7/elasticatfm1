@@ -7,7 +7,7 @@
 <meta name="description" content="Elasticat FM-1: the norns loop mangler rebuilt for the M-VAVE FM-1 panel. Six tracks of loops, slices and grains, 13 warp modes, p-locks, scenes and a sampler. Free and open source; runs in RemoteFM1 in your browser, on iPhone, iPad and Android.">
 <meta property="og:title" content="Elasticat FM-1">
 <meta property="og:description" content="The norns loop mangler, rebuilt for the FM-1.">
-<meta property="og:image" content="https://quixotic7.github.io/elasticatfm1/img/cat1.png">
+<meta property="og:image" content="https://quixotic7.github.io/elasticatfm1/media/hero-screen.jpg">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="img/cat1.png">
 <script>
@@ -79,10 +79,7 @@ header nav a:hover{color:var(--l15)}
 .hero .ctas{display:flex;flex-wrap:wrap;gap:10px}
 .hero .note{margin-top:18px;color:var(--l8);font-size:13px}
 .lcd{border:2px solid var(--l5);background:#000;padding:10px}
-.lcd .scr{display:grid}
-.lcd .scr img{grid-area:1/1}
-.lcd .scr img:nth-child(2){animation:flip2 1s steps(1) infinite}
-.lcd .scr img:nth-child(3){animation:flip3 4s steps(1) infinite}
+.lcd .scr video{display:block;width:100%;height:auto;aspect-ratio:1;background:#000}
 .strip{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;margin-top:10px}
 .strip i{height:14px;background:var(--l3)}
 .strip i.trig{background:var(--l8)}
@@ -166,8 +163,6 @@ footer{border-top:2px solid var(--l3);padding:36px 0 56px;color:var(--l8);font-s
 footer .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
 
 @keyframes blink{50%{opacity:0}}
-@keyframes flip2{0%{opacity:0}50%{opacity:1}}
-@keyframes flip3{0%{opacity:0}75%{opacity:1}87.5%{opacity:0}}
 @keyframes range{from{transform:translateX(0)}to{transform:translateX(440px)}}
 .range{animation:range 8s steps(22) infinite alternate}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
@@ -201,7 +196,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-con
       <div class="note">In your browser, on iPhone, iPad and Android. With an FM-1 or the on-screen panel.</div>
     </div>
     <div class="lcd">
-      <div class="scr"><img class="px" src="img/cat1.png" alt="Elasticat's dancing cat on the FM-1 screen" width="480" height="480"><img class="px" src="img/cat2.png" alt="" width="480" height="480"><img class="px" src="img/cat3.png" alt="" width="480" height="480"></div>
+      <div class="scr"><video id="herovid" src="media/hero-screen.mp4" poster="media/hero-screen.jpg" width="480" height="480" autoplay muted loop playsinline aria-label="Elasticat's screen while playing a TB-303 loop: LOOP, then GRAIN"></video></div>
       <div class="strip" id="strip"></div>
       <div class="lcdfoot lbl"><span>T1 · A1</span><span id="stepno">STEP 01</span><span>120.0 BPM</span></div>
     </div>
@@ -346,6 +341,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-con
 
 <script>
 var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (still) { var hv = document.getElementById("herovid"); hv.removeAttribute("autoplay"); hv.pause(); }
 
 // The firmware's 3x5 font (src/ui/ec_gfx.c FONT, ASCII 32..95): 5 rows of 3 bits, the top-left pixel bit 14.
 var FONT = [0x0000,0x2482,0x0000,0x5F7D,0x0000,0x52A5,0x2AAB,0x2400,0x1491,0x4494,0x0AA8,0x05D0,0x0014,0x01C0,0x0002,0x12A4,

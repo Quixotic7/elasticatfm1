@@ -45,6 +45,12 @@ static uint8_t *read_file(const char *name, int hidden, uint32_t *n)
     *n = d ? (uint32_t)sz : 0;
     return d;
 }
+static void remove_project(const char *name)
+{
+    char p[1024];
+    snprintf(p, sizeof p, "%s/data/elasticat/projects/%s.ecp", root, name);
+    remove(p);
+}
 static int file_exists(const char *name, int hidden)
 {
     uint32_t n;
@@ -493,6 +499,55 @@ static void test_changed_elsewhere(void)
     CHECK(!strcmp(ec_pf_name(), name2) && !strcmp(A->msg, "SAVED"), "the next save is plain (%s)", A->msg);
 }
 
+/* 0.6.45 (owner): the list by name with the numbers in order (a name, then 2, 3 .. 10), DELETE and OVERWRITE asked */
+static void test_projects_sort(void)
+{
+    static const char *const MADE[5] = {"ZEBRA 10", "ZEBRA 2", "ZEBRA", "ZEBRA 3", "ZEBRAS"};
+    uint32_t n;
+    uint8_t *d = read_file(ec_pf_name(), 0, &n);
+    int i, a, b, c, e, z;
+    for (i = 0; i < 5; i++)
+        write_file(MADE[i], d, n);
+    ec_pn_enter(EC_MODE_PROJECTS);
+    for (i = 0; i < 100 && ec_pf_list_busy(); i++)
+        run(5);
+    run(20);
+    z = ec_pf_list_find("ZEBRA"), a = ec_pf_list_find("ZEBRA 2"), b = ec_pf_list_find("ZEBRA 3");
+    c = ec_pf_list_find("ZEBRA 10"), e = ec_pf_list_find("ZEBRAS");
+    CHECK(z >= 0 && z + 1 == a && a + 1 == b && b + 1 == c && c + 1 == e,
+          "ZEBRA, ZEBRA 2, ZEBRA 3, ZEBRA 10, ZEBRAS in a row (%d %d %d %d %d)", z, a, b, c, e);
+    turn(FM1P_E_SELECT, -40);
+    for (i = 0; i < 60 && strcmp(ec_pf_list_name(ec_prj_cursor()), "ZEBRA 3"); i++)
+        turn(FM1P_E_SELECT, 1);
+    B(7, 40);                                      /* DELETE: asked */
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_DELETE && !strcmp(ec_prj_target(), "ZEBRA 3"), "B7: DELETE ZEBRA 3?");
+    press(FM1P_B_OCTUP, 40);
+    for (i = 0; i < 100 && (file_exists("ZEBRA 3", 0) || ec_pf_list_busy()); i++)
+        run(5);
+    run(20);
+    CHECK(!file_exists("ZEBRA 3", 0) && ec_pf_list_find("ZEBRA 3") < 0, "OCT+ yes: ZEBRA 3 gone");
+    for (i = 0; i < 60 && strcmp(ec_pf_list_name(ec_prj_cursor()), "ZEBRAS"); i++)
+        turn(FM1P_E_SELECT, 1);
+    edit(111, 2);
+    B(9, 40);                                      /* SAVE on another: asked */
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_OVERWRITE, "B9 on ZEBRAS: OVERWRITE ZEBRAS? (%d)", ec_prj_ask());
+    press(FM1P_B_OCTUP, 40);
+    for (i = 0; i < 400 && (ec_pf_saving() || strcmp(ec_pf_name(), "ZEBRAS")); i++)
+        run(5);
+    run(20);
+    {
+        static ec_project_t q;
+        uint32_t m;
+        uint8_t *dz = read_file("ZEBRAS", 0, &m);
+        CHECK(dz && ec_project_load(&q, dz, m) == 0 && (int)q.bpm == 111 && !strcmp(ec_pf_name(), "ZEBRAS") &&
+                  !strcmp(A->msg, "SAVED OVER IT"),
+              "OCT+ yes: this project written over ZEBRAS, now its own (%s)", A->msg);
+    }
+    for (i = 0; i < 5; i++)
+        if (i != 3)
+            remove_project(MADE[i]);
+}
+
 /* 0.6.42 (owner): PROJECTS' SAVE +1 (B8) and NEW (B1, asked: OCT+ yes) */
 static void test_projects_mode(void)
 {
@@ -574,6 +629,7 @@ int main(int argc, char **argv)
     test_slot_default();
     test_changed_elsewhere();
     test_projects_mode();
+    test_projects_sort();
     C->shutdown();
     printf("test_proj: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

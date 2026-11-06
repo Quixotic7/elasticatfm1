@@ -1227,7 +1227,7 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - PROJECTS: the white keys do nothing (they edited the track's steps) and are dark. B11 does nothing there either
   (the owner saw it open the slice editor; not reproduced in the harness or the player: watching).
 - The browser's header is FILE/SAMPLES (it said FILE/BROWSE).
-- The name keybed, RENAME and RANDOM are 0.6.45.
+- The name keybed, RENAME and RANDOM are 0.6.46.
 
 ## 40. 0.6.44: SAMPLES' OCT+ and B11 toggle the pool, B11 held previews (owner, 2026-11-05)
 
@@ -1236,3 +1236,14 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - B11: a quick click does the same as OCT+; held (300 ms), the file under the cursor previews until B11 is let go.
   With AUTO-PREVIEW off (PRESETS), hold B11 to hear a file and click it to take it: the fast way through a folder.
 - The labels: B11 and OCT+ on a file +/- POOL. test_file checks hold, click and OCT+.
+
+## 41. 0.6.45: PROJECTS: DELETE, OVERWRITE asked, SAVE +1 shown, by name (owner, 2026-11-05)
+
+- B7 DELETE: asked (DELETE X?, GONE FOR GOOD in ALERT); yes deletes the file and its hidden copy. The open project
+  deleted stays open, unsaved (EDITED); its next save makes a new file.
+- B9 SAVE with another project under the cursor asks (OVERWRITE X?, THIS PROJECT REPLACES IT): yes writes this
+  project over that file, which is the project from then on (SAVED OVER IT). On the open project: a plain save.
+- B8 SAVE +1: the cursor goes to the copy once listed, the header says SAVED +1.
+- The list is by name, naturally: the numbers by their value, a name before its numbered copies (ZEBRA, ZEBRA 2,
+  ZEBRA 3, ZEBRA 10, ZEBRAS), case aside; no file times read any more. SEL / ALGO move by the whole turn.
+- test_proj checks the order, DELETE and OVERWRITE.

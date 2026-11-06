@@ -463,7 +463,7 @@ static void leds_black(void)
         case EC_MODE_PROJECTS:                     /* 0.6.42: the actions; a question waits: dark (OCT- / OCT+) */
             if (!ec_prj_ask()) {
                 l[0] = l[1] = l[2] = EC_LED_40;
-                l[7] = l[8] = EC_LED_40;
+                l[6] = l[7] = l[8] = EC_LED_40;    /* (0.6.45: B7 DELETE) */
                 l[9] = EC_LED_LIT;                 /* LOAD */
             }
             break;
@@ -917,7 +917,7 @@ static void black_labels(void)
                     s = i == 9 ? "ASSIGN" : i == 10 ? "PREVIEW" : "";
             } break;
             case EC_MODE_PROJECTS: {               /* 0.6.42 */
-                static const char *const PK[11] = {"NEW", "RENAME", "RANDOM", "", "", "", "", "SAVE+1", "SAVE",
+                static const char *const PK[11] = {"NEW", "RENAME", "RANDOM", "", "", "", "DELETE", "SAVE+1", "SAVE",
                                                    "LOAD", ""};
                 s = PK[i];
             } break;

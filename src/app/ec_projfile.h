@@ -48,11 +48,12 @@ void ec_pf_list_refresh(void);
 int ec_pf_list_count(void);
 const char *ec_pf_list_name(int i);
 int ec_pf_list_busy(void);
-/* 0.6.42 (owner): PROJECTS' list is newest first (each file's time, FS_STAT); the actions; the card */
-uint32_t ec_pf_list_mtime(int i);
+/* 0.6.42 (owner): PROJECTS' list (0.6.45: by name, the numbers naturally); the actions; the card */
 int ec_pf_list_find(const char *name);           /* its row, -1 */
-void ec_pf_save_as(const char *name);           /* SAVE +1: the current project written as a new file, now its own */
+void ec_pf_save_as(const char *name, const char *done);   /* SAVE +1 / over another: the project written as that file,
+                                                             * now its own; done: the header's message */
 void ec_pf_name_plus(const char *base, char *out);   /* "NAME 2", "NAME 3" ..: the first one not in the list */
+void ec_pf_delete(const char *name);           /* 0.6.45: the file and its hidden copy */
 void ec_pf_new(void);                           /* a new project (saved first: the current one's edits) */
 int ec_pf_dirty(void);                          /* edits not written yet (or a save in flight) */
 void ec_pf_card_want(const char *name);         /* read that file's card (ec_project_peek) */

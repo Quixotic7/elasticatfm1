@@ -373,7 +373,8 @@ void ec_scr_projects(const ec_app_t *a)
     char buf[48], r[16];
     int i;
     if (ask) {
-        snprintf(buf, sizeof buf, ask == EC_PRJ_ASK_NEW ? "NEW PROJECT?" : "LOAD %s?", ec_prj_target());
+        snprintf(buf, sizeof buf, ask == EC_PRJ_ASK_NEW ? "NEW PROJECT?" : ask == EC_PRJ_ASK_DELETE ? "DELETE %s?"
+                                  : ask == EC_PRJ_ASK_OVERWRITE ? "OVERWRITE %s?" : "LOAD %s?", ec_prj_target());
         fit(r, sizeof r, buf, 15);
         ec_kit_header(TN[a->bus ? EC_NTRACK - 1 + a->bus : a->track], r, "", "", 0, 1);
     } else {
@@ -429,7 +430,11 @@ void ec_scr_projects(const ec_app_t *a)
             const int used = cd && cd->patterns_known && (cd->used >> i & 1u);
             R(!cd ? EC_C_L3 : used && i == cd->current ? EC_C_ACC : used ? EC_C_L12 : EC_C_L3, x, y, 4, 4);
         }
-        if (ask) {                             /* what yes does to the project you leave */
+        if (ask == EC_PRJ_ASK_DELETE)          /* 0.6.45: what yes does */
+            T(EC_C_ALERT, "GONE FOR GOOD", 2, 110, EC_AL_LEFT);
+        else if (ask == EC_PRJ_ASK_OVERWRITE)
+            T(EC_C_ACC, "THIS PROJECT REPLACES IT", 2, 110, EC_AL_LEFT);
+        else if (ask) {                        /* what yes does to the project you leave */
             if (ec_pf_dirty()) {
                 fit(buf, sizeof buf, open[0] ? open : "THIS ONE", 14);
                 snprintf(r, sizeof r, "%.14s", buf);

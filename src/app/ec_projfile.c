@@ -52,16 +52,19 @@ static struct {
     uint32_t disk_len, disk_sum;
     uint32_t ck_at, ck_sum;
     int conflict;                /* a save found NAME.ecp changed: the next SHIFT + SAVE writes a new project */
-    /* 0.6.42: the list's times (FS_STAT, one a tick), NEW waiting for a save, the card being read */
-    int lstat, lstat_i;
+    /* 0.6.42: NEW waiting for a save, the card being read */
     int new_after, save_new;
+    int as;                      /* 0.6.45: the save is a save-as: its own message (SAVED +1, SAVED OVER IT) */
+    char as_msg[20];
+    ec_fsreq_t dreq;             /* 0.6.45: a delete: NAME.ecp, then its hidden copy */
+    int dstep;
+    char dname[EC_PF_NAME];
     ec_fsreq_t kreq;
     int kstate;                  /* 0 idle, 1 reading, 2 read */
     uint32_t kat;
     char kname[EC_PF_NAME], kwant[EC_PF_NAME];
     ec_project_card_t card;
 } g;
-static uint32_t g_mtime[EC_PF_LIST_MAX], g_lmtime[EC_PF_LIST_MAX];
 static uint8_t g_kbuf[64 * 1024];
 
 static uint8_t g_cbuf[16384];
@@ -208,13 +211,9 @@ int ec_pf_list_count(void) { return g_nnames; }
 const char *ec_pf_list_name(int i) { return i >= 0 && i < g_nnames ? g_names[i] : ""; }
 int ec_pf_list_busy(void) { return g.lwant || g.lrun; }
 
-static void stat_tick(void);
+static void list_publish(void);
 static void list_tick(void)
 {
-    if (g.lstat) {
-        stat_tick();
-        return;
-    }
     if (!g.lrun) {
         if (!g.lwant)
             return;
@@ -251,59 +250,63 @@ static void list_tick(void)
             return;                                 /* (the next entries) */
         }
         g.lerr = r < 0 && r != FS_ENOENT ? r : 0;   /* (no folder /data/projects yet: no projects) */
-        g.lstat = 1;                                /* 0.6.42: each file's time next */
-        g.lstat_i = 0;
+        list_publish();                             /* 0.6.45 (owner): by name, naturally */
     }
 }
 
-/* 0.6.42: the list's times, a file a tick, then the list newest first (the same second: the higher name first) */
+/* 0.6.45 (owner): the list by name, naturally: the numbers by their value, a name before its numbered copies
+ * ("SPICY WALRUS", "SPICY WALRUS 2" .. "SPICY WALRUS 10"; plain alphabetical puts 10 before 2), case aside */
+static int natcmp(const char *a, const char *b)
+{
+    while (*a && *b) {
+        if (*a >= '0' && *a <= '9' && *b >= '0' && *b <= '9') {
+            const char *a0, *b0;
+            size_t la, lb;
+            while (*a == '0' && a[1] >= '0' && a[1] <= '9')
+                a++;
+            while (*b == '0' && b[1] >= '0' && b[1] <= '9')
+                b++;
+            for (a0 = a; *a >= '0' && *a <= '9'; a++)
+                ;
+            for (b0 = b; *b >= '0' && *b <= '9'; b++)
+                ;
+            la = (size_t)(a - a0), lb = (size_t)(b - b0);
+            if (la != lb)
+                return la < lb ? -1 : 1;
+            {
+                const int c = strncmp(a0, b0, la);
+                if (c)
+                    return c;
+            }
+            continue;
+        }
+        {
+            const int ca = toupper((unsigned char)*a), cb = toupper((unsigned char)*b);
+            if (ca != cb)
+                return ca < cb ? -1 : 1;
+        }
+        a++, b++;
+    }
+    return *a ? 1 : *b ? -1 : 0;
+}
+
 static void list_publish(void)
 {
     int i, j;
     for (i = 1; i < g_nl; i++)                      /* (insertion sort: a few hundred at most) */
-        for (j = i; j > 0 && (g_lmtime[j] > g_lmtime[j - 1] ||
-                              (g_lmtime[j] == g_lmtime[j - 1] && strcmp(g_lnames[j], g_lnames[j - 1]) > 0)); j--) {
+        for (j = i; j > 0 && natcmp(g_lnames[j], g_lnames[j - 1]) < 0; j--) {
             char t[EC_PF_NAME];
-            const uint32_t m = g_lmtime[j];
             memcpy(t, g_lnames[j], sizeof t);
             memcpy(g_lnames[j], g_lnames[j - 1], sizeof t);
             memcpy(g_lnames[j - 1], t, sizeof t);
-            g_lmtime[j] = g_lmtime[j - 1];
-            g_lmtime[j - 1] = m;
         }
     memcpy(g_names, g_lnames, sizeof g_lnames[0] * (size_t)g_nl);
-    memcpy(g_mtime, g_lmtime, sizeof g_lmtime[0] * (size_t)g_nl);
     g_nnames = g_nl;
-    g.lstat = 0;
     g.lrun = 0;
     g.lgen++;
     A->redraw = 1;
 }
 
-static void stat_tick(void)
-{
-    static uint8_t st[16];
-    char path[96];
-    if (!g.lstat)
-        return;
-    if (g.lstat_i >= g_nl) {
-        list_publish();
-        return;
-    }
-    if (g.lreq.state == EC_FSR_IDLE) {
-        snprintf(path, sizeof path, "%s/%s%s", EC_PF_DIR, g_lnames[g.lstat_i], EC_PF_EXT);
-        memset(st, 0, sizeof st);
-        ec_fs_start(&g.lreq, FS_STAT, path, 0, st, (int32_t)sizeof st);
-    }
-    if (ec_fs_update(&g.lreq) != EC_FSR_DONE)
-        return;
-    g.lreq.state = EC_FSR_IDLE;
-    g_lmtime[g.lstat_i++] = g.lreq.result >= 12 ? (uint32_t)st[8] | (uint32_t)st[9] << 8 | (uint32_t)st[10] << 16 |
-                                                      (uint32_t)st[11] << 24
-                                                : 0;
-}
-
-uint32_t ec_pf_list_mtime(int i) { return i >= 0 && i < g_nnames ? g_mtime[i] : 0; }
 int ec_pf_list_find(const char *name)
 {
     int i;
@@ -393,8 +396,11 @@ static void save_done(int ok, const char *err_what, int32_t err)
         A->saves++;
         disk_set(g_pack, g.len);                    /* 0.6.36: NAME.ecp is this save */
         g.conflict = 0;
-        if (!g.quiet)
+        if (g.as)                                   /* 0.6.45: what kind of save it was (the name: NOW, the cursor) */
+            ec_app_message(g.as_msg);
+        else if (!g.quiet)
             ec_app_message("SAVED");
+        g.as = 0;
         ec_pf_list_refresh();
     } else {
         say_error(err_what, err);
@@ -684,7 +690,7 @@ void ec_pf_open(const char *name)
 /* ------------------------------------------------------------------------------------------- the app --- */
 /* ------------------------------------------------------------------------------------------- PROJECTS --- */
 /* 0.6.42 (owner): SAVE +1: the current project written under a new name and from now on that file's */
-void ec_pf_save_as(const char *name)
+void ec_pf_save_as(const char *name, const char *done)
 {
     if (!name || !name[0])
         return;
@@ -693,10 +699,63 @@ void ec_pf_save_as(const char *name)
         return;
     }
     snprintf(g.name, sizeof g.name, "%s", name);
-    g.disk_known = 0;                               /* (a new file: nothing of ours there to check against) */
+    snprintf(g.as_msg, sizeof g.as_msg, "%s", done ? done : "SAVED");
+    g.as = 1;
+    g.disk_known = 0;                               /* (a new file, or one the user chose to write over) */
     g.conflict = 0;
     g.tmp_good = 0;
     ec_pf_save(0);
+}
+
+/* 0.6.45 (owner): PROJECTS' DELETE: NAME.ecp and its hidden copy; the open project deleted stays open, unsaved (its
+ * next save makes a new file) */
+void ec_pf_delete(const char *name)
+{
+    if (!name || !name[0])
+        return;
+    if (g.dstep || g.sv != SV_IDLE || g.ld != LD_IDLE) {
+        ec_app_alert("BUSY: TRY AGAIN");
+        return;
+    }
+    snprintf(g.dname, sizeof g.dname, "%s", name);
+    g.dstep = 1;
+    if (!strcmp(name, g.name)) {
+        g.name[0] = 0;
+        g.disk_known = 0;
+        g.conflict = 0;
+        g.tmp_good = 0;
+        A->dirty = 1;                               /* (EDITED: not in any file now) */
+    }
+}
+
+static void delete_tick(void)
+{
+    char path[96];
+    if (!g.dstep)
+        return;
+    if (g.dreq.state == EC_FSR_IDLE) {
+        path_of(path, sizeof path, g.dname, g.dstep == 2);
+        ec_fs_start(&g.dreq, FS_DELETE, path, 0, 0, 0);
+    }
+    if (ec_fs_update(&g.dreq) != EC_FSR_DONE)
+        return;
+    g.dreq.state = EC_FSR_IDLE;
+    if (g.dstep == 1 && g.dreq.result < 0 && g.dreq.result != FS_ENOENT) {
+        say_error("NOT DELETED", g.dreq.result);
+        g.dstep = 0;
+        return;
+    }
+    if (g.dstep == 1) {
+        g.dstep = 2;                                /* (the hidden copy next: gone or never there, either is fine) */
+        return;
+    }
+    g.dstep = 0;
+    {
+        char m[48];
+        snprintf(m, sizeof m, "DELETED %s", g.dname);
+        ec_app_message(m);
+    }
+    ec_pf_list_refresh();
 }
 
 int ec_pf_dirty(void) { return A->dirty || g.sv != SV_IDLE; }
@@ -799,6 +858,7 @@ void ec_pf_tick(void)
     load_tick();
     last_tick();
     card_tick();
+    delete_tick();
     if (g.new_after && g.sv == SV_IDLE && g.ld == LD_IDLE) {   /* 0.6.42: NEW, after the edits' save */
         g.new_after = 0;
         new_now();
@@ -824,6 +884,7 @@ void ec_pf_shutdown(void)
     ec_fs_cancel(&g.lreq);
     ec_fs_cancel(&g_nreq);
     ec_fs_cancel(&g.kreq);
+    ec_fs_cancel(&g.dreq);
     g_last_read = g_last_write = g_last_wait = 0;
     g_last_written[0] = 0;
 }

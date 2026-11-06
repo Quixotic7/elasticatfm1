@@ -1150,7 +1150,7 @@ static void knob(int r, int d)
     }
     if (ec_app_mode() == EC_MODE_PROJECTS && !A->settings) {   /* 0.6.42: SEL / ALGO the list; nothing else */
         if (r == EC_E_SELECT || r == EC_E_ALGO)
-            ec_prj_select(d > 0 ? 1 : -1);
+            ec_prj_select(d);
         return;
     }
     switch (r) {
@@ -1360,7 +1360,7 @@ const char *ec_pn_roles(int mode, int *cur)
             *cur = ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) - 1;
     } break;
     case EC_MODE_PROJECTS:                         /* 0.6.42: B1-B3, B8-B10 */
-        r[0] = r[1] = r[2] = r[7] = r[8] = r[9] = 'A';
+        r[0] = r[1] = r[2] = r[6] = r[7] = r[8] = r[9] = 'A';   /* (0.6.45: B7 DELETE) */
         break;
     case EC_MODE_SAMPLER:                          /* B1..B5 the length, B11 arm / stop */
         memset(r, 'A', 5);

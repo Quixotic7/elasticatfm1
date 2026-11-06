@@ -1295,13 +1295,14 @@ OK, F1 back, HOME closes.
 
 | Control | Does |
 |---|---|
-| SEL / ALGO | the cursor: every project in /data/projects, **newest first**; the loaded one says OPEN |
+| SEL / ALGO | the cursor: every project in /data/projects **by name** (0.6.45: the numbers in order: SPICY WALRUS, SPICY WALRUS 2 .. SPICY WALRUS 10); the loaded one says OPEN |
 | OCT+ or B10 | **LOAD** the project under the cursor; with unsaved edits it **asks** (LOAD X? in the header, the back / OK arrows): **OCT+ yes** (the edits saved, then it opens), **OCT- no** |
 | OCT- | back to SAMPLES (a question waiting: no) |
-| B9 | **SAVE** the current project (as SHIFT + FILE anywhere) |
-| B8 | **SAVE +1**: the current project saved as a new file, its name plus the next free number (PROJ-001 2), which is now the project; the old file stays |
+| B9 | **SAVE** the current project (as SHIFT + FILE anywhere); 0.6.45: with **another project under the cursor it asks** (OVERWRITE X?): yes writes this project over that file, which is the project from then on (SAVED OVER IT) |
+| B8 | **SAVE +1**: the current project saved as a new file, its name plus the next free number (PROJ-001 2), which is now the project; the old file stays; 0.6.45: the cursor goes to the copy, the header says SAVED +1 |
 | B1 | **NEW**: asks (NEW PROJECT?); yes: the edits saved, an empty project (the folder's first file on T1) under the next free name |
-| B2 / B3 | RENAME / a RANDOM name (0.6.43) |
+| B7 | 0.6.45: **DELETE** the project under the cursor: asked (DELETE X?, GONE FOR GOOD); the open project deleted stays open, unsaved (EDITED; its next save makes a new file) |
+| B2 / B3 | RENAME / a RANDOM name (0.6.46) |
 
   The top line: the project you work on and EDITED / SAVED. The lower half: the project under the cursor, its name
   big, its 64 patterns as blocks (written cream, the one it opens on in the accent), its tempo and samples.

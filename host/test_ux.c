@@ -1141,6 +1141,44 @@ static void test_labels(void)
     }
 }
 
+/* 0.6.49 (owner): F1 held + SEL: the dice; enough turns throw them and the page's params are randomized (one undo);
+ * F1 let go before: nothing */
+static void test_dice(void)
+{
+    float *v, c0, r0;
+    int lv, f0, f1;
+    uint32_t t;
+    to(EC_CAT_FILT);
+    v = ec_app_params(A);
+    c0 = v[EC_P_FILTER_CUTOFF], r0 = v[EC_P_FILTER_RES];
+    btn(FM1P_B_OCTDN, 1);
+    run(30);
+    turn(FM1P_E_SELECT, 3);
+    CHECK(ec_pn_dice(&lv, &t, &f0, &f1) == 1 && lv == 3, "F1 + SEL 3: the dice shake (%d)", lv);
+    btn(FM1P_B_OCTDN, 0);
+    run(30);
+    CHECK(!ec_pn_dice(&lv, &t, &f0, &f1) && v[EC_P_FILTER_CUTOFF] == c0 && v[EC_P_FILTER_RES] == r0 && !A->pn.f_sticky,
+          "F1 let go: no dice, nothing changed, no sticky F1");
+    btn(FM1P_B_OCTDN, 1);
+    run(30);
+    turn(FM1P_E_SELECT, 6);
+    turn(FM1P_E_SELECT, 6);
+    CHECK(ec_pn_dice(&lv, &t, &f0, &f1) == 2, "12 turns: thrown");
+    run(600);
+    btn(FM1P_B_OCTDN, 0);
+    run(30);
+    CHECK(v[EC_P_FILTER_CUTOFF] != c0 || v[EC_P_FILTER_RES] != r0, "landed: the page's params rolled (%g %g)",
+          v[EC_P_FILTER_CUTOFF], v[EC_P_FILTER_RES]);
+    btn(FM1P_B_GLO, 1);
+    run(20);
+    press(FM1P_B_OCTDN, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    CHECK(v[EC_P_FILTER_CUTOFF] == c0 && v[EC_P_FILTER_RES] == r0, "SHIFT + F1: one undo brings them back");
+    if (A->pn.shift_sticky)
+        press(FM1P_B_GLO, 40);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -1178,6 +1216,7 @@ int main(int argc, char **argv)
     test_file_keys();
     test_patterns();
     test_labels();
+    test_dice();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

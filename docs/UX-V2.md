@@ -1277,3 +1277,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   whole); an older, longer name scrolls with the cursor.
 - The die is ACTION blue, under the name beside the count, and tumbles each roll (faces flipping, a hop) for 0.6 s
   before it lands on a face.
+
+## 45. 0.6.49: F1 + SEL rolls the page's params (owner, 2026-11-06)
+
+- F1 held, SEL turned on any page with params: two dice on a card (ACTION blue, the accent frame) shake, harder with
+  every detent; at 10 they are thrown (they tumble across, 0.45 s) and as they land every param on the page gets a
+  random value (options and switches too, integers whole), as one undo entry (EC_U_NV is 16 now: a page's four
+  lanes). Kept: the machine, warp mode, slot, slice count / slice, length, rate, loop division, FX types, volume, mute
+  and the stopped-only params. F1 let go before the throw cancels; the turns never make F1 sticky. test_ux checks it.

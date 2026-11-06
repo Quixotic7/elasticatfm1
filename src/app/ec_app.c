@@ -810,6 +810,88 @@ void ec_app_edit_param_f(int id, int det, int mult, int flags)
 void ec_app_edit_param(int id, int det, int mult) { ec_app_edit_param_f(id, det, mult, 0); }
 int ec_app_param_steps(int id) { return param_steps(id); }
 
+/* 0.6.49 (owner): F1 held + SEL turned (the dice thrown): every param on the page shown gets a random value, as one
+ * undo; the track's structure and what changes only while stopped are kept (machine, warp, slot, slices, length,
+ * rate, loop division, the FX types, the volume) */
+static int rnd_keep(int id, int flags)
+{
+    if (flags & EC_IF_STOPPED)
+        return 1;
+    switch (id) {
+    case EC_P_MACHINE:
+    case EC_P_MODE:
+    case EC_P_SLOT:
+    case EC_P_SLICE_COUNT:
+    case EC_P_SLICE_INDEX:
+    case EC_P_PATTERN_STEPS:
+    case EC_P_LOOP_DIVISION:
+    case EC_P_RATE:
+    case EC_P_FX_MACHINE:
+    case EC_P_INS2_MACHINE:
+    case EC_P_AMP:
+    case EC_P_MUTE: return 1;
+    default: return (EC_PARAMS[id].flags & EC_PF_MOMENT) != 0;
+    }
+}
+
+int ec_app_page_randomizable(void)
+{
+    const int m = ec_app_mode();
+    ec_page_t pg;
+    int i;
+    if (A->bus || A->settings || m >= EC_NCAT || m == EC_CAT_FILE || m == EC_CAT_PAT || m == EC_CAT_XFD)
+        return 0;
+    ec_app_page(A, &pg);
+    for (i = 0; i < pg.n; i++)
+        if (pg.it[i].kind == EC_IT_PARAM && !rnd_keep(pg.it[i].id, pg.it[i].flags))
+            return 1;
+    return 0;
+}
+
+int ec_app_randomize_page(uint32_t *rng)
+{
+    ec_page_t pg;
+    uint8_t ids[EC_U_NV];
+    float *v = ec_app_params(A);
+    int i, n = 0;
+    if (!ec_app_page_randomizable())
+        return 0;
+    ec_app_page(A, &pg);
+    for (i = 0; i < pg.n && n < EC_U_NV; i++) {
+        const int id = pg.it[i].id;
+        int k;
+        if (pg.it[i].kind != EC_IT_PARAM || rnd_keep(id, pg.it[i].flags))
+            continue;
+        for (k = 0; k < n && ids[k] != id; k++)
+            ;
+        if (k == n)
+            ids[n++] = (uint8_t)id;
+    }
+    if (!n)
+        return 0;
+    ec_e5_edit_params(A->track, ids, n, "RANDOM");
+    for (i = 0; i < n; i++) {
+        const ec_param_def_t *d = &EC_PARAMS[ids[i]];
+        float x;
+        *rng ^= *rng << 13, *rng ^= *rng >> 17, *rng ^= *rng << 5;
+        if (d->kind == EC_PK_OPT)
+            x = (float)(1 + (int)(*rng % (uint32_t)(d->nopt ? d->nopt : 1)));
+        else if (d->kind == EC_PK_BIN)
+            x = (float)(*rng & 1u);
+        else {
+            x = d->min + (d->max - d->min) * ((float)(*rng >> 8) / 16777216.0f);
+            if (d->flags & EC_PF_INT)
+                x = floorf(x + 0.5f);
+        }
+        v[ids[i]] = ec_param_clamp(ids[i], x);
+        ec_seq_param_edited(&A->seq, A->track, ids[i]);
+    }
+    ec_seq_touch(&A->seq, A->track);
+    mark_dirty();
+    A->redraw = 1;
+    return n;
+}
+
 /* 0.6.0: F1 + a knob: clear that param's lock on the held steps (nothing held: on every step of the track) */
 void ec_app_clear_lock(int id)
 {

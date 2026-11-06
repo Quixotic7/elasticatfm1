@@ -476,3 +476,15 @@ void ec_scr_intro(int frame)
     ec_kit_sprite(ec_spr_intro[frame], EC_SPR_INTRO_W, EC_SPR_INTRO_H, (W - EC_SPR_INTRO_W) / 2, 28);
 }
 
+
+/* 0.6.49: a die, 14 x 14 at (x, y), face 1..6, its pips 2 x 2 on a 3 x 3 grid (the keybed's and the dice's) */
+void ec_kit_die(int x, int y, int face, int colour)
+{
+    static const uint16_t PIPS[7] = {0, 0x10, 0x44, 0x54, 0x145, 0x155, 0x16d};
+    int p;
+    face = face < 1 ? 1 : face > 6 ? 6 : face;
+    R(colour, x, y, 14, 14);
+    for (p = 0; p < 9; p++)
+        if (PIPS[face] >> p & 1u)
+            R(EC_C_BG, x + 2 + (p % 3) * 4, y + 2 + (p / 3) * 4, 2, 2);
+}

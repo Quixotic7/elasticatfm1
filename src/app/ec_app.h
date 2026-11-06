@@ -121,7 +121,9 @@ void ec_app_message(const char *s);
 void ec_app_mark_dirty(void);
 /* 0.6.0: the model for the panel (src/app/ec_panel.c ..) */
 void ec_app_edit_param_f(int id, int det, int mult, int flags);   /* flags: the item's (EC_IF_STOPPED) */
-void ec_app_clear_lock(int id);                              /* F1 + a knob */
+void ec_app_clear_lock(int id);
+int ec_app_page_randomizable(void);          /* 0.6.49: the page shown has params the dice may set */
+int ec_app_randomize_page(uint32_t *rng);    /* 0.6.49: they get random values, one undo; their count */                              /* F1 + a knob */
 void ec_app_edit_global(int id, int det, int mult);   /* SHIFT held: to the next snap value */
 void ec_app_edit_global_f(int id, int det, int mult, int snap);
 void ec_app_knob_cell(int k, int det);                       /* K1..K4 (k 0..3) on the page shown, F3's */

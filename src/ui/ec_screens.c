@@ -1191,6 +1191,46 @@ static void draw_main(const ec_app_t *a)
 /* E3: the shared pieces for src/ui/ec_scr_e3.c */
 void ec_scr_header(const ec_app_t *a, const char *title, int page, const char *right) { header(a, title, page, right); }
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg) { cells(a, pg); }
+
+/* 0.6.49 (owner): F1 held + SEL: two dice on a card, shaking harder as SEL turns; thrown, they tumble across, land
+ * (the params set then) and rest a moment. ACTION blue, the card's frame in the accent; on the 2-unit lattice */
+static void dice_overlay(const ec_app_t *a)
+{
+    int level, f0, f1, x0 = 44, x1 = 62, y = 44;
+    uint32_t t;
+    const int st = ec_pn_dice(&level, &t, &f0, &f1);
+    if (!st)
+        return;
+    R(EC_C_ACC, 30, 32, 60, 34);
+    R(EC_C_BG, 32, 34, 56, 30);
+    if (st == 1) {                                 /* shaking: the jitter grows with the turns */
+        const uint32_t k = a->ms / 50u;
+        const int amp = 2 * (1 + level / 4);
+        const int j0 = (int)(k * 2654435761u >> 28) % (amp + 1), j1 = (int)((k + 7u) * 2246822519u >> 28) % (amp + 1);
+        x0 += ((j0 & 1) ? j0 : -j0) & ~1;
+        x1 += ((j1 & 1) ? -j1 : j1) & ~1;
+        y += (((int)k & 1) ? amp : -amp) / 2 & ~1;
+        f0 = 1 + (int)(k % 6u);
+        f1 = 1 + (int)((k + 3u) % 6u);
+    } else if (t < 450u) {                         /* thrown: tumbling across, hopping */
+        const int s = (int)(t / 60u);
+        x0 = 34 + s * 2 * 2, x1 = 50 + s * 2 * 2;
+        if (x1 > 72)
+            x1 = 72, x0 = 54;
+        y = 40 + ((s & 1) ? -4 : 2);
+        f0 = 1 + (s * 5) % 6;
+        f1 = 1 + (s * 4 + 2) % 6;
+    } else {                                       /* landed: the faces it threw */
+        x0 = 54, x1 = 72, y = 44;
+    }
+    if (y < 34)
+        y = 34;
+    if (y > 48)
+        y = 48;
+    ec_kit_die(x0, y, f0, EC_C_ACTION);
+    ec_kit_die(x1, y, f1, EC_C_ACTION);
+}
+
 void ec_screens_draw(const ec_app_t *a)
 {
     ec_gfx_fill(EC_C_BG);
@@ -1210,5 +1250,6 @@ void ec_screens_draw(const ec_app_t *a)
         draw_main(a);
     ec_scr_e5_overlay(a);                         /* E5: the pattern's name (0.6.1: no toasts) */
     ec_scr_ux_overlay(a);                         /* 0.3.0: the takeover, SHIFT's screen */
+    dice_overlay(a);                              /* 0.6.49: F1 + SEL's dice */
     ec_gfx_present();                             /* the canvas through the theme to the LCD at 2x */
 }

@@ -89,7 +89,7 @@ enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1
        EC_U_SLOTS /* 0.6.1: two pool slots swapped (FILE / POOL MOVE) with every reference */,
        EC_U_FXSWAP /* 0.6.3: INSERT 1 / 2 of a track, or SEND 1 / 2, swapped (FX SENDS: a held key) */,
        EC_U_RAZOR /* 0.6.16: a track's slice table with its COUNT (the SLICE editor, the CNT knob) */ };
-#define EC_U_NV 10              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8) */
+#define EC_U_NV 16              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8; 0.6.49: a whole page) */
 typedef struct {
     uint8_t kind;
     int8_t track, pat;

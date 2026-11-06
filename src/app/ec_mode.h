@@ -370,6 +370,7 @@ void ec_file_select(int d);                   /* SEL in the browser */
 int ec_file_page(void);                       /* FILE's page: its picture (EC_PIC_FILE / EDITOR / RAZOR / POOL) */
 int ec_file_key_page(int key);                /* the FILE page black key 1..11 opens, -1 */
 int ec_file_count(void);                      /* the browser's rows in this folder */
+int ec_pn_dice(int *level, uint32_t *t, int *f0, int *f1);   /* 0.6.49: F1 + SEL's dice: 0 none, 1 shaking, 2 thrown */
 /* 0.6.42 (owner): PROJECTS (ec_projects.c) */
 enum { EC_PRJ_ASK_NONE, EC_PRJ_ASK_LOAD, EC_PRJ_ASK_NEW, EC_PRJ_ASK_DELETE, EC_PRJ_ASK_OVERWRITE };   /* (0.6.45: the last two) */
 void ec_prj_enter(void);

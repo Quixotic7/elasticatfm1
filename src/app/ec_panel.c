@@ -1109,11 +1109,81 @@ static void select_knob(int d)
         ec_nav_sel(d);
 }
 
+/* 0.6.49 (owner): F1 held + SEL turned on a page with params: the dice shake, harder as it turns; DICE_THROW detents
+ * and they are thrown; as they land the page's params get random values (one undo). F1 let go before: nothing */
+#define DICE_THROW 10
+#define DICE_LAND_MS 450u
+#define DICE_GONE_MS 1000u
+static struct {
+    int acc, applied, n, f0, f1;
+    uint32_t throw_ms;
+    uint32_t rng;
+} g_dice;
+
+static void dice_turn(int d)
+{
+    P->f_used |= 1;                                /* (F1 used: no sticky toggle on release) */
+    if (g_dice.throw_ms)
+        return;
+    g_dice.acc += d < 0 ? -d : d;
+    g_dice.rng ^= A->ms * 2654435761u + 0x2545f491u;
+    if (g_dice.acc >= DICE_THROW) {
+        g_dice.throw_ms = A->ms ? A->ms : 1;
+        g_dice.applied = 0;
+        g_dice.f0 = 1 + (int)(g_dice.rng % 6u);
+        g_dice.f1 = 1 + (int)((g_dice.rng >> 8) % 6u);
+    }
+    A->redraw = 1;
+}
+
+static void dice_tick(void)
+{
+    if (g_dice.throw_ms) {
+        const uint32_t t = A->ms - g_dice.throw_ms;
+        if (!g_dice.applied && t >= DICE_LAND_MS) {
+            char m[20];
+            g_dice.applied = 1;
+            g_dice.n = ec_app_randomize_page(&g_dice.rng);
+            snprintf(m, sizeof m, "RANDOM %d", g_dice.n);
+            ec_app_message(g_dice.n ? m : "NOTHING TO ROLL");
+        }
+        if (t >= DICE_GONE_MS) {
+            g_dice.throw_ms = 0;
+            g_dice.acc = 0;
+        }
+        A->redraw = 1;
+    } else if (g_dice.acc) {
+        if (!(P->f_held & 1)) {
+            g_dice.acc = 0;                        /* F1 let go before the throw: nothing */
+            A->redraw = 1;
+        } else
+            A->redraw = 1;                         /* (the shaking) */
+    }
+}
+
+/* the dice for the screen: 0 none, 1 shaking (*level 1..DICE_THROW), 2 thrown (*t ms since) */
+int ec_pn_dice(int *level, uint32_t *t, int *f0, int *f1)
+{
+    *f0 = g_dice.f0, *f1 = g_dice.f1;
+    if (g_dice.throw_ms) {
+        *t = A->ms - g_dice.throw_ms;
+        *level = DICE_THROW;
+        return 2;
+    }
+    *level = g_dice.acc;
+    *t = 0;
+    return g_dice.acc > 0;
+}
+
 static void knob(int r, int d)
 {
     const int mode = ec_app_mode();
     if (ec_e5_knob(r, d))                          /* E5: naming */
         return;
+    if (r == EC_E_SELECT && (P->f_held & 1) && !A->fn && ec_app_page_randomizable()) {
+        dice_turn(d);                              /* 0.6.49: F1 + SEL: the dice */
+        return;
+    }
     if (P->as_open) {
         ec_as_knob(r, d);
         return;
@@ -1200,6 +1270,7 @@ static void knob(int r, int d)
 static void holds_tick(void)
 {
     int i;
+    dice_tick();
     if (P->rec_down && !P->rec_used && A->ms - P->rec_ms >= EC_HOLD_MS) {
         P->rec_used = 1;
         if (ec_app_mode() == EC_MODE_SAMPLER)

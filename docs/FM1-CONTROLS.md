@@ -124,6 +124,11 @@ These hold in every mode unless the mode says otherwise.
   sticky.
 - **F1 on:** turn a knob = **clear every step lock of that param** on the selected track (with steps held: only on
   those steps). The white keys **copy / paste steps** (below). The knob labels say CLR.
+- 0.6.49 (owner): **F1 held + SEL turned = the dice.** On any page with params (FX, FILTER, AMP, MOD, MIX, LOOP
+  ENGINE, TRIG) two blue dice appear on a card and shake, harder as SEL turns; at 10 detents they are thrown, tumble
+  and land, and **every param on the page gets a random value** (one undo: SHIFT + F1). Kept as they are: the machine,
+  the warp mode, the slot, the slice count and slice, the length, the rate, the loop division, the FX types, the volume,
+  and what changes only while stopped. F1 let go before the throw: nothing changes.
 - **F2 on:** turn a knob = **clear every modulation of that param** (the matrix slots aimed at it). The white keys
   **cut / paste steps**. The knob labels say UNMOD.
 - **F1 + F2 together = F3** (below).

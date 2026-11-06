@@ -818,6 +818,17 @@ void ec_app_clear_lock(int id)
     int i, n = 0;
     if (A->bus || !(EC_PARAMS[id].flags & EC_PF_LOCKABLE))
         return;
+    if (A->seq.tr[A->track].pads && !A->step_held) {   /* 0.6.39: pads held: their slices' locks of id */
+        ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
+        const uint32_t pads = A->seq.tr[A->track].pads;
+        for (i = 1; i <= 32; i++)
+            if (pads >> (i - 1) & 1u)
+                n += ec_slice_lock_clear(m, i, id);
+        message(n ? "LOCK CLEARED" : "NO LOCK");
+        ec_seq_touch(&A->seq, A->track);
+        mark_dirty();
+        return;
+    }
     if (A->step_held) {
         ec_e5_steps_edit(A->step_held, "UNLOCK", 0xA00u + (uint32_t)id);
         for (i = 0; i < EC_NLOWER; i++)
@@ -853,6 +864,8 @@ void ec_app_clear_lock(int id)
                 if (mask >> i & 1u)
                     n += ec_step_lock_clear(&tr->steps[pg * 16 + i], id);
         }
+        for (i = 1; i <= 32; i++)                  /* 0.6.39: and every slice's lock of id (nothing held) */
+            n += ec_slice_lock_clear(ec_e5_slices(&A->proj, A->track), i, id);
     }
     message(n ? "LOCK CLEARED" : "NO LOCK");
     ec_seq_touch(&A->seq, A->track);

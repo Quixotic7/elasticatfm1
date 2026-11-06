@@ -145,7 +145,8 @@ static void leds_loop(void)
     }
     if (is_slice_m(m)) {
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
-        /* 0.6.37 (owner): every pad dark but the slices held, LIVE the slices sounding, a selected step its slices */
+        /* 0.6.37 (owner): bright: the slices held, LIVE the slices sounding, a selected step its slices; 0.6.39
+         * (owner): every other key with a slice dim (so COUNT shows), the keys past COUNT dark */
         const int tgt = ec_app_target_step(A);
         uint32_t on = A->seq.tr[A->track].pads;
         int j;
@@ -157,7 +158,7 @@ static void leds_loop(void)
                     on |= 1u << (st.voice_slice[j] - 1);
         for (i = 0; i < EC_NLOWER; i++) {
             const int s = i + hi;
-            ec_plat_led_lower(i, s < cnt && (on >> s & 1u) ? EC_LED_LIT : EC_LED_OFF);
+            ec_plat_led_lower(i, s >= cnt ? EC_LED_OFF : (on >> s & 1u) ? EC_LED_LIT : EC_LED_DIM);
         }
         return;
     }

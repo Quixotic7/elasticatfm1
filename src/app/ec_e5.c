@@ -554,7 +554,11 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
     }
     {
         const uint32_t pads = pads_held();
-        if (pads && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE) && !(EC_PARAMS[it->id].flags & EC_PF_REGION)) {
+        const int whole = it->id == EC_P_SLICE_COUNT || it->id == EC_P_SLICE_INDEX || it->id == EC_P_SLOT ||
+                          it->id == EC_P_PATTERN_STEPS || it->id == EC_P_LOOP_DIVISION || it->id == EC_P_RATE;
+        /* 0.6.39 (owner): the track's structure (COUNT, the slice, the slot, length, LDIV, rate) is never a slice's
+         * lock: with a pad held the knob edits the track as usual */
+        if (pads && !whole && (EC_PARAMS[it->id].flags & EC_PF_LOCKABLE) && !(EC_PARAMS[it->id].flags & EC_PF_REGION)) {
             ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
             const int id = it->id;
             int s;

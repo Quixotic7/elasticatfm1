@@ -360,6 +360,23 @@ static void test_live_undo(void)
           v[EC_P_LOOP_START], v[EC_P_LOOP_END]);
 }
 
+/* 0.6.39: a slice's lock of a param is cleared by F1 + the knob with nothing held (a COUNT turned with a pad held
+ * made one, and F1 + K1 said NO LOCK); COUNT is never a slice's lock */
+static void test_slice_lock_clear(void)
+{
+    ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
+    float x;
+    turn(FM1P_E_ALGO, -40);                          /* LIVE, nothing held */
+    ec_slice_lock_set(m, 1, EC_P_SLICE_COUNT, 10);
+    ec_slice_lock_set(m, 3, EC_P_FILTER_CUTOFF, 50);
+    ec_app_clear_lock(EC_P_SLICE_COUNT);
+    CHECK(!ec_slice_lock_get(m, 1, EC_P_SLICE_COUNT, &x) && !strcmp(A->msg, "LOCK CLEARED"),
+          "F1 + COUNT: slice 1's COUNT lock cleared (%s)", A->msg);
+    CHECK(ec_slice_lock_get(m, 3, EC_P_FILTER_CUTOFF, &x) && x == 50, "slice 3's CUTOFF lock kept");
+    ec_app_clear_lock(EC_P_FILTER_CUTOFF);
+    CHECK(!ec_slice_lock_get(m, 3, EC_P_FILTER_CUTOFF, &x), "F1 + CUTOFF: slice 3's lock cleared");
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -374,6 +391,7 @@ int main(int argc, char **argv)
     test_tracks();
     test_pages_b11();
     test_live_undo();
+    test_slice_lock_clear();
     C->shutdown();
     printf("test_loopstep: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

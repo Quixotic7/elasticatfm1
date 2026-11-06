@@ -1178,3 +1178,13 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   recorded once, at its first press, before anything is written, and the gesture closes on the last release: one
   undo brings back the region / range (or the selected steps) as they were before the keys went down.
   test_loopstep checks it (a key held past the coalescing window; a two-key span pressed slowly).
+
+## 35. 0.6.39: slice keys dim, COUNT is never a slice's lock (owner, 2026-11-05)
+
+- Slice tracks' LOOP ENGINE keys: every key with a slice (1..COUNT) is dim, so the count shows; held / sounding (LIVE)
+  / the selected step's slices bright; the keys past COUNT dark.
+- A pad held + a knob locks that param on the slice (its program). COUNT, SLICE, SLOT, LENGTH, LDIV and RATE are the
+  track's structure: with a pad held they now edit the track as usual (COUNT turned with a pad held made a slice lock
+  that F1 + K1 could not find: NO LOCK).
+- F1 + a knob clears slice locks too: with pads held, those slices' lock of that param; with nothing held, every
+  step's and every slice's. test_loopstep checks it.

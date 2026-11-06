@@ -31,6 +31,7 @@ int ec_e5_page_in_loop(const ec_project_t *p, int t, int page, int pages);
 static inline ec_slicemap_t *ec_e5_slices(ec_project_t *p, int t) { return &p->pe5[p->current].slices[t]; }
 int ec_slice_lock_get(const ec_slicemap_t *m, int slice, int id, float *val);    /* slice 1..32 */
 int ec_slice_lock_set(ec_slicemap_t *m, int slice, int id, float val);           /* 0 ok, -1 full */
+int ec_slice_lock_clear(ec_slicemap_t *m, int slice, int id);                    /* 0.6.39: 1 = there was one */
 void ec_slice_clear(ec_slicemap_t *m, int slice);                                /* locks, choke, mute */
 int ec_slice_has_program(const ec_slicemap_t *m, int slice);
 

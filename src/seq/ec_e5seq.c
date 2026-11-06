@@ -326,6 +326,21 @@ int ec_slice_lock_set(ec_slicemap_t *m, int slice, int id, float val)
     return 0;
 }
 
+int ec_slice_lock_clear(ec_slicemap_t *m, int slice, int id)
+{
+    int k, s = slice - 1;
+    if (slice < 1 || slice > 32)
+        return 0;
+    for (k = 0; k < m->nlock[s]; k++)
+        if (m->lock_id[s][k] == id) {
+            m->nlock[s]--;
+            m->lock_id[s][k] = m->lock_id[s][m->nlock[s]];
+            m->lock_val[s][k] = m->lock_val[s][m->nlock[s]];
+            return 1;
+        }
+    return 0;
+}
+
 void ec_slice_clear(ec_slicemap_t *m, int slice)
 {
     if (slice < 1 || slice > 32)

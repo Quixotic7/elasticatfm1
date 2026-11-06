@@ -1,9 +1,9 @@
-name: Publish the user guide
+name: Publish the site (landing page + user guide)
 
 on:
   push:
     branches: [main]
-    paths: ['docs/guide/**', '.github/workflows/pages.yml']
+    paths: ['docs/site/**', 'docs/guide/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,8 +24,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # the landing page at the root, the guide under /guide/ (the landing page forwards old /#anchor links there)
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/guide
+          cp -R docs/site/. _site/
+          cp -R docs/guide/. _site/guide/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/guide
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

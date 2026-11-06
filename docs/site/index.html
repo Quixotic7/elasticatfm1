@@ -227,7 +227,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-con
     <div class="flow"><span>TRIM</span><i></i><span>STRETCH</span><i></i><span class="on">RANGE</span><i></i><span>CHOP</span></div>
     <div class="box chainbox">
       <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="LOOP/RANGE"></span><span class="pt pg" data-t="P01"></span></div>
-      <div class="inner"><svg id="wave" viewBox="0 0 800 200" role="img" aria-label="A waveform with a moving range window and its eight chops"></svg></div>
+      <div class="inner"><div class="lbl" style="display:flex;justify-content:space-between;margin-bottom:12px;color:var(--l12)"><span>16ths_TB303_03.wav</span><span>2.0 s</span></div><svg id="wave" viewBox="0 0 800 200" role="img" aria-label="16ths_TB303_03.wav with a moving range window and its eight chops"></svg></div>
       <div class="cells" style="border-left:0">
         <div class="cell" style="border-bottom:0"><div class="lbl"><span>Trim</span><span>K1</span></div><span class="pt" data-t="0.20S"></span></div>
         <div class="cell" style="border-bottom:0"><div class="lbl"><span>Stretch</span><span>K2</span></div><span class="pt" data-t="1.00X"></span></div>
@@ -386,10 +386,13 @@ document.querySelectorAll(".pt[data-t]").forEach(function (el) {
 (function () {
   var NS = "http://www.w3.org/2000/svg", svg = document.getElementById("wave");
   function el(n, a) { var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; }
-  var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
-  var N = 100, W = 8;
+  // the peaks of 16ths_TB303_03.wav (2.0 s, 100 bins of 20 ms, 0..100 of its loudest)
+  var PK = [87,84,90,87,92,87,95,100,98,99,23,1,77,88,88,86,62,2,81,89,87,87,87,91,97,97,98,99,83,6,2,86,85,88,87,27,2,
+    74,86,88,87,70,2,38,87,86,84,83,4,2,84,84,89,82,4,2,76,86,84,86,26,3,66,85,88,87,55,2,40,88,87,82,79,3,2,82,88,86,
+    84,5,2,77,87,84,87,16,2,81,85,87,87,37,3,41,77,87,85,67,4,1];
+  var N = PK.length, W = 8;
   for (var i = 0; i < N; i++) {
-    var env = Math.exp(-(i % 12) / 3.5), h = Math.round((8 + 70 * env * (0.6 + 0.4 * rnd()) + 8 * rnd()) / 4) * 4;
+    var h = Math.max(2, Math.round(PK[i] * 0.88 / 4) * 4);
     var trimmed = i < 5 || i >= 95;
     svg.appendChild(el("rect", { x: i * W + 1, y: 100 - h, width: W - 2, height: 2 * h, fill: trimmed ? "#34332e" : "#cfcbbe" }));
   }

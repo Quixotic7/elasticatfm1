@@ -3,43 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="../img/cat1.png">
 <title>Elasticat FM-1 Guide</title>
 <meta name="description" content="How to use Elasticat, the norns loop mangler as a Fantasy CFW cart for RemoteFM1: the panel, the modes, loading sounds, sequencing, editing and saving.">
 <style>
-:root{--bg:#f6f3e8;--ink:#1c1b18;--mute:#6e6a5c;--line:#d9d4c3;--card:#fffdf6;--acc:#ff6a1f;--blue:#3f8cff;--red:#ff3b30;--yellow:#e0b020;--lock:#ff6a1f;--code:#efe9d6}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15150f;--ink:#f1ecdc;--mute:#a09b8a;--line:#34332e;--card:#1e1d17;--code:#2a281f;--yellow:#ffd23f}}
-:root[data-theme="dark"]{--bg:#15150f;--ink:#f1ecdc;--mute:#a09b8a;--line:#34332e;--card:#1e1d17;--code:#2a281f;--yellow:#ffd23f}
-*{box-sizing:border-box}
+:root{--bg:#000;--ink:#cfcbbe;--hi:#f6f3e8;--mute:#9a978b;--line:#34332e;--l5:#5e5c54;--card:#000;--acc:#ff6a1f;--blue:#3f8cff;--red:#ff3b30;--yellow:#ffd23f;--lock:#ff6a1f;--code:#151512;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+*{box-sizing:border-box;border-radius:0}
 html{scroll-behavior:smooth;scroll-padding-top:16px}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-.wrap{display:grid;grid-template-columns:240px minmax(0,1fr);gap:0;max-width:1180px;margin:0 auto}
-nav{position:sticky;top:0;height:100vh;overflow:auto;padding:24px 16px;border-right:1px solid var(--line);font-size:14px}
-nav h1{font-size:18px;margin:0 0 4px}
-nav .v{color:var(--mute);margin:0 0 16px;font-size:13px}
-nav a{display:block;color:var(--ink);text-decoration:none;padding:4px 8px;border-radius:6px}
-nav a:hover{background:var(--card)}
-nav a.sub{padding-left:20px;color:var(--mute)}
-main{padding:24px 16px 80px;min-width:0}
-section{margin:0 0 48px}
-h2{font-size:26px;margin:32px 0 8px;letter-spacing:-.01em}
-h3{font-size:19px;margin:28px 0 6px}
-h4{font-size:16px;margin:20px 0 4px}
-p{margin:8px 0}
-.lead{font-size:18px;color:var(--mute)}
-kbd{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:3px 6px;white-space:nowrap}
-code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:4px}
-table{border-collapse:collapse;width:100%;margin:10px 0 14px;font-size:14.5px}
-th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line)}
-th{color:var(--mute);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
-td:first-child{white-space:nowrap}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.7 var(--mono);-webkit-font-smoothing:antialiased}
+a{color:var(--hi)}
+strong{color:var(--hi)}
+.wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;max-width:1220px;margin:0 auto}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:22px 16px;border-right:2px solid var(--line);font-size:12px}
+nav .home{display:inline-block;color:var(--mute);text-decoration:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:18px}
+nav .home:hover{color:var(--hi)}
+nav h1{margin:0 0 8px;line-height:0;--u:3px}
+nav .v{color:var(--mute);margin:0 0 18px;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+nav a{display:block;color:var(--ink);text-decoration:none;padding:5px 8px;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+nav a:hover{background:var(--hi);color:#000}
+nav a.sub{padding-left:22px;color:var(--mute);font-weight:500}
+main{padding:28px 28px 80px;min-width:0}
+section{margin:0 0 56px;padding-top:8px}
+h2{margin:40px 0 18px;line-height:0;--u:6px}
+h2 svg,nav h1 svg{display:block;max-width:100%;height:auto;shape-rendering:crispEdges}
+h2 path,nav h1 path{fill:var(--hi)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+h3{margin:34px 0 12px;background:#cfcbbe;color:#000;font:700 13px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:9px 10px}
+h4{margin:0 0 8px;font:700 12px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--hi)}
+p{margin:10px 0}
+.lead{font-size:15px;color:var(--mute)}
+kbd{font:700 11.5px/1 var(--mono);background:#000;color:var(--hi);border:1px solid var(--l5);padding:3px 6px;white-space:nowrap;letter-spacing:.04em}
+code{font:13px var(--mono);color:var(--acc);background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:12px 0 16px;font-size:13.5px;border:2px solid var(--line)}
+th,td{text-align:left;vertical-align:top;padding:8px 11px;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.14em;background:#0b0b0a}
+td:first-child{white-space:nowrap;color:var(--hi);font-weight:600}
+.card{background:var(--card);border:2px solid var(--line);padding:16px 18px;margin:14px 0}
 .tip{border-left:4px solid var(--acc)}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-figure{margin:8px 0;display:inline-block;vertical-align:top;margin-right:12px}
-figure img{image-rendering:pixelated;border-radius:8px;border:1px solid var(--line);background:#000;max-width:100%;height:auto}
-figcaption{font-size:12.5px;color:var(--mute);max-width:240px}
-.legend span{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
-ol.steps li{margin:6px 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+figure{margin:8px 14px 8px 0;display:inline-block;vertical-align:top}
+figure img{image-rendering:pixelated;border:2px solid var(--line);background:#000;max-width:100%;height:auto;display:block}
+figcaption{font-size:11.5px;color:var(--mute);max-width:240px;margin-top:6px}
+.legend span{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:8px}
+ol.steps{padding-left:20px}
+ol.steps li{margin:7px 0}
 .panel{width:100%;max-width:900px;height:auto;display:block;margin:12px 0}
 .panel text{font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#fff}
 .panel .kl{font-size:13px;font-weight:700}
@@ -48,13 +57,14 @@ ol.steps li{margin:6px 0}
 .panel .pr{font-size:7px;font-weight:700;fill:#cfcfcf}
 .panel .kn{font-size:10px;font-weight:700;fill:#9a9a9a}
 .panel .kf{font-size:7.5px;font-weight:700;fill:#d0d0d0}
-@media (max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:2px solid var(--line)}main{padding:20px 16px 60px}h2{--u:4px}table{display:block;overflow-x:auto}td:first-child{white-space:normal;min-width:90px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <nav>
-<h1>Elasticat FM-1</h1>
+<a class="home" href="../">← Elasticat FM-1</a>
+<h1 data-t="ELASTICAT">Elasticat FM-1</h1>
 <p class="v">User guide, 0.6.48</p>
 <a href="#what">What it is</a>
 <a href="#setup">Setting up</a>
@@ -66,7 +76,7 @@ ol.steps li{margin:6px 0}
 <a href="#panel-colours" class="sub">Colours and LEDs</a>
 <a href="#quick">Quick start</a>
 <a href="#sounds">Getting sounds in</a>
-<a href="#sounds-browse" class="sub">BROWSE and the pool</a>
+<a href="#sounds-browse" class="sub">Browser and pool</a>
 <a href="#sounds-editor" class="sub">Trim EDITOR</a>
 <a href="#sounds-slice" class="sub">SLICE editor</a>
 <a href="#sounds-sampler" class="sub">SAMPLER</a>
@@ -93,7 +103,7 @@ ol.steps li{margin:6px 0}
 <h2>Elasticat FM-1</h2>
 <p class="lead">A loop mangler for the FM-1 panel: six tracks of loops, slices and grains, a 128-step sequencer with parameter locks, a 128-slot sample pool, effects, modulation and scenes. It is a rewrite of the norns script Elasticat.</p>
 <p>Elasticat is a <strong>Fantasy CFW</strong>: it runs in the RemoteFM1 hosts (the web player, the iOS and Android apps, the FM1VST plug-in), never on an FM-1 by itself. The FM-1 is its panel. It needs more memory than the hardware has and it reads your samples from the RemoteFM1 folder.</p>
-<div class="card tip">Everything here describes version 0.6.15. Names in <kbd>CAPS</kbd> are what the panel's labels and the screen say.</div>
+<div class="card tip">Everything here describes version 0.6.48. Names in <kbd>CAPS</kbd> are what the panel's labels and the screen say.</div>
 </section>
 
 <section id="setup">
@@ -590,5 +600,27 @@ ol.steps li{margin:6px 0}
 </section>
 </main>
 </div>
+<script>
+// headings in the firmware's 3x5 font (src/ui/ec_gfx.c FONT, ASCII 32..95; the top-left pixel bit 14), as on the landing page
+(function () {
+  var F = [0x0000,0x2482,0x0000,0x5F7D,0x0000,0x52A5,0x2AAB,0x2400,0x1491,0x4494,0x0AA8,0x05D0,0x0014,0x01C0,0x0002,0x12A4,
+    0x7B6F,0x2C97,0x73E7,0x72CF,0x5BC9,0x79CF,0x79EF,0x7292,0x7BEF,0x7BCF,0x0410,0x0000,0x1511,0x0E38,0x4454,0x6282,
+    0x0000,0x2BED,0x6BAE,0x3923,0x6B6E,0x79A7,0x79A4,0x396B,0x5BED,0x7497,0x126A,0x5BAD,0x4927,0x5FED,0x6B6D,0x2B6A,
+    0x6BA4,0x2B73,0x6BAD,0x388E,0x7492,0x5B6F,0x5B6A,0x5BFD,0x5AAD,0x5A92,0x72A7,0x3493,0x0000,0x6496,0x2A00,0x0007];
+  function svg(t) {
+    var d = "", x = 0;
+    for (var i = 0; i < t.length; i++, x += 4) {
+      var u = t.toUpperCase().charCodeAt(i), g = u >= 32 && u < 96 ? F[u - 32] : 0;
+      for (var r = 0; r < 5; r++) for (var c = 0; c < 3; c++) if (g & (1 << (14 - r * 3 - c))) d += "M" + (x + c) + " " + r + "h1v1h-1z";
+    }
+    var w = Math.max(1, t.length * 4 - 1);
+    return '<svg viewBox="0 0 ' + w + ' 5" style="width:calc(var(--u) * ' + w + ')" aria-hidden="true"><path d="' + d + '"/></svg>';
+  }
+  document.querySelectorAll("main h2, nav h1").forEach(function (h) {
+    var label = h.textContent, t = (h.getAttribute("data-t") || label).replace(/[–—]/g, "-").replace(/[^ -_a-z]/gi, "");
+    h.innerHTML = svg(t) + '<span class="sr">' + label + "</span>";
+  });
+})();
+</script>
 </body>
 </html>

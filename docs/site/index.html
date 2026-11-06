@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elasticat FM-1: the loop mangler for RemoteFM1</title>
+<meta name="description" content="Elasticat FM-1: the norns loop mangler rebuilt for the M-VAVE FM-1 panel. Six tracks of loops, slices and grains, 13 warp modes, p-locks, scenes and a sampler. Free and open source; runs in RemoteFM1 in your browser, on iPhone, iPad and Android.">
+<meta property="og:title" content="Elasticat FM-1">
+<meta property="og:description" content="The norns loop mangler, rebuilt for the FM-1.">
+<meta property="og:image" content="https://quixotic7.github.io/elasticatfm1/media/hero-screen.jpg">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="img/cat1.png">
+<script>
+  // Old guide links (quixotic7.github.io/elasticatfm1/#quick) now live under guide/: forward them.
+  (function () {
+    var id = decodeURIComponent(location.hash.slice(1));
+    var landing = ["top", "features", "chain", "get", "apps", "learn"];
+    if (id && landing.indexOf(id) < 0) location.replace("guide/" + location.hash);
+  })();
+</script>
+<style>
+/* The firmware's CREAM theme (src/ui/ec_gfx.c) and the Elasticat skin's LED red */
+:root{
+  --bg:#000;--l3:#34332e;--l5:#5e5c54;--l8:#9a978b;--l12:#cfcbbe;--l15:#f6f3e8;--acc:#ff6a1f;--blue:#3f8cff;--led:#ff2a12;
+  --u:6px;          /* one pixel of the pixel font in headings */
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box;border-radius:0}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--l12);font:15px/1.65 var(--mono);-webkit-font-smoothing:antialiased}
+a{color:var(--l15)}
+img.px{image-rendering:pixelated;display:block;width:100%;height:auto}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.lbl{font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--l8)}
+
+/* pixel-font text (drawn by the script from the firmware's 3x5 glyphs) */
+.pt{display:block;margin:0;line-height:0}
+.pt svg{display:block;height:calc(var(--s,1) * var(--u) * 5);width:auto;shape-rendering:crispEdges;overflow:visible}
+.pt svg + svg{margin-top:calc(var(--s,1) * var(--u) * 2)}
+.pt path{fill:var(--l15)}
+.pt[data-c=acc] path,.head svg:nth-of-type(2) path{fill:var(--acc)}
+.tbar .pt path{fill:#000}
+.tbar .tk path{fill:var(--l15)}
+.pt .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* the screen's title bar: cream strip, black pixel text, the page on the right */
+.tbar{display:flex;align-items:center;gap:12px;background:var(--l12);color:#000;padding:8px 10px;--u:3px}
+.tbar .tk{background:#000;color:var(--l15);padding:3px 5px}
+.tbar .pg{margin-left:auto}
+.tbar.acc{background:var(--acc)}
+
+.box{border:2px solid var(--l3);background:#000}
+
+/* top bar */
+header.bar{position:sticky;top:0;z-index:20;background:#000;border-bottom:2px solid var(--l3)}
+header.bar .wrap{display:flex;align-items:center;gap:16px;height:60px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;--u:3px}
+.led{width:10px;height:10px;background:var(--led);animation:blink 1s steps(1) infinite}
+header nav{margin-left:auto;display:flex;align-items:center;gap:2px}
+header nav a{text-decoration:none;color:var(--l8);font:600 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:10px 12px}
+header nav a:hover{color:var(--l15)}
+@media (max-width:720px){header nav a.opt{display:none}}
+@media (max-width:480px){.logo{--u:2px;gap:8px}header.bar .wrap{padding:0 14px;gap:8px}header nav a{padding:10px 8px}}
+
+/* buttons: square keys */
+.key{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font:700 13px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:15px 20px;border:2px solid var(--l12);color:var(--l15);background:#000}
+.key:hover{background:var(--l15);color:#000}
+.key.go{background:var(--acc);border-color:var(--acc);color:#000}
+.key.go:hover{background:var(--l15);border-color:var(--l15)}
+.key.sm{padding:10px 14px;font-size:12px}
+.key .tri{width:0;height:0;border-left:9px solid currentColor;border-top:6px solid transparent;border-bottom:6px solid transparent}
+
+/* hero */
+.hero{padding:72px 0 64px;border-bottom:2px solid var(--l3)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:56px;align-items:center}
+.hero h1{--u:13px}
+.hero .fm1{--u:13px;margin-top:calc(var(--u) * 2)}
+.hero p.lead{font-size:17px;color:var(--l12);max-width:470px;margin:34px 0 30px}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:10px}
+.hero .note{margin-top:18px;color:var(--l8);font-size:13px}
+.lcd{border:2px solid var(--l5);background:#000;padding:10px}
+.lcd .scr video{display:block;width:100%;height:auto;aspect-ratio:1;background:#000}
+.strip{display:grid;grid-template-columns:repeat(16,1fr);gap:4px;margin-top:10px}
+.strip i{height:14px;background:var(--l3)}
+.strip i.trig{background:var(--l8)}
+.strip i.play{background:var(--acc)}
+.lcdfoot{display:flex;justify-content:space-between;margin-top:10px}
+@media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero h1,.hero .fm1{--u:9px}}
+@media (max-width:420px){.hero h1,.hero .fm1{--u:7px}}
+
+/* the numbers: the screen's parameter cells */
+.cells{display:grid;grid-template-columns:repeat(7,1fr);border-left:2px solid var(--l3)}
+.cell{border-right:2px solid var(--l3);border-bottom:2px solid var(--l3);padding:12px 12px 10px;--u:6px}
+.cell .lbl{display:flex;justify-content:space-between;margin-bottom:12px}
+.cell .bar{height:4px;background:var(--l3);margin-top:12px}
+.cell .bar b{display:block;height:100%;background:var(--l12)}
+@media (max-width:900px){.cells{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:520px){.cells{grid-template-columns:repeat(2,1fr)}}
+
+section{padding:88px 0;border-bottom:2px solid var(--l3)}
+.head{--u:8px;margin-bottom:20px}
+.sub{color:var(--l8);max-width:620px;margin:0 0 40px}
+@media (max-width:600px){.head{--u:5px}}
+
+/* the chain */
+.chainbox{border:2px solid var(--l5);background:#000;padding:14px;display:flex;justify-content:center}
+#lcdchain{display:block;image-rendering:pixelated;max-width:100%}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:0;margin-bottom:24px}
+.flow span{font:700 13px/1 var(--mono);letter-spacing:.14em;padding:12px 16px;border:2px solid var(--l5);color:var(--l12)}
+.flow span.on{background:var(--acc);border-color:var(--acc);color:#000}
+.flow i{width:24px;height:2px;background:var(--l5)}
+
+/* features */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.card .body{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:22px;padding:20px;align-items:start}
+.card p{margin:0 0 16px}
+.card .shots{display:grid;gap:12px}
+.card .shot{border:2px solid var(--l3)}
+.card.wide{grid-column:1 / -1}
+.card.wide .body{grid-template-columns:minmax(0,1fr) 240px 240px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font:600 11px/1 var(--mono);letter-spacing:.1em;padding:6px 8px;border:1px solid var(--l5);color:var(--l12)}
+.tags span.a{border-color:var(--acc);color:var(--acc)}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+@media (max-width:600px){.card .body,.card.wide .body{grid-template-columns:1fr}.card .shot{max-width:240px}}
+
+/* a list like the firmware's menus: one row selected, stepping */
+.menu{list-style:none;margin:0;padding:0;--u:3px;border:2px solid var(--l3);max-width:240px}
+.menu li{padding:6px 10px;color:var(--l8)}
+.menu li path{fill:var(--l8)}
+.menu li.sel{background:var(--l3)}
+.menu li.sel path{fill:var(--l15)}
+
+
+/* get it */
+.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding:0;margin:0;list-style:none}
+.how li .in{padding:20px}
+.how h3{margin:0 0 10px;font:700 14px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--l15)}
+.how p{margin:0 0 16px}
+.how code{color:var(--acc);font:inherit}
+@media (max-width:860px){.how{grid-template-columns:1fr}}
+.apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:40px;border-left:2px solid var(--l3);border-top:2px solid var(--l3)}
+.app{display:block;text-decoration:none;padding:18px;border-right:2px solid var(--l3);border-bottom:2px solid var(--l3);color:var(--l12)}
+.app:hover{background:var(--l15);color:#000}
+.app:hover .lbl{color:#000}
+.app b{display:block;font:700 14px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;margin:10px 0 4px}
+.app span{font-size:13px}
+.app.soon{color:var(--l5)}
+@media (max-width:860px){.apps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* guide: an inverted screen */
+#learn{border-bottom:0}
+.inv{background:var(--l15);color:#000;padding:40px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;align-items:end;--u:8px}
+.inv .pt path{fill:#000}
+.inv .links{display:flex;flex-wrap:wrap;gap:6px;margin-top:26px}
+.inv .links a{color:#000;text-decoration:none;font:600 12px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:9px 11px;border:2px solid #000}
+.inv .links a:hover{background:#000;color:var(--l15)}
+.inv .key{border-color:#000;background:#000;color:var(--l15)}
+.inv .key:hover{background:var(--acc);border-color:var(--acc);color:#000}
+@media (max-width:760px){.inv{grid-template-columns:1fr;padding:26px;--u:5px}}
+
+footer{border-top:2px solid var(--l3);padding:36px 0 56px;color:var(--l8);font-size:13px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body id="top">
+
+<header class="bar">
+  <div class="wrap">
+    <a class="logo" href="#top"><span class="led"></span><span class="pt" data-t="ELASTICAT FM-1"></span></a>
+    <nav>
+      <a class="opt" href="#features">Features</a>
+      <a class="opt" href="#get">Get it</a>
+      <a href="guide/">Guide</a>
+      <a class="key go sm" href="https://remotefm1.com/?fw=elasticat" target="_blank" rel="noopener"><span class="tri"></span>Launch</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <div class="lbl" style="margin-bottom:28px">Free · Open source · A RemoteFM1 cart</div>
+      <h1 class="pt" data-t="ELASTICAT"></h1>
+      <div class="pt fm1" data-t="FM-1" data-c="acc" aria-hidden="true"></div>
+      <p class="lead">The norns loop mangler, rebuilt for the FM-1. Six tracks of loops, slices and grains under sixteen keys.</p>
+      <div class="ctas">
+        <a class="key go" href="https://remotefm1.com/?fw=elasticat" target="_blank" rel="noopener"><span class="tri"></span>Launch in RemoteFM1</a>
+        <a class="key" href="guide/">Read the guide</a>
+      </div>
+      <div class="note">In your browser, on iPhone, iPad and Android. With an FM-1 or the on-screen panel.</div>
+    </div>
+    <div class="lcd">
+      <div class="scr"><video id="herovid" src="media/hero-screen.mp4" poster="media/hero-screen.jpg" width="480" height="480" autoplay muted loop playsinline aria-label="Elasticat's screen while playing a TB-303 loop: LOOP, then GRAIN"></video></div>
+      <div class="strip" id="strip"></div>
+      <div class="lcdfoot lbl"><span>T1 · A1</span><span id="stepno">STEP 01</span><span>120.0 BPM</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-top:0">
+  <div class="cells">
+    <div class="cell"><div class="lbl"><span>Tracks</span><span>K1</span></div><span class="pt" data-t="6"></span><div class="bar"><b style="width:100%"></b></div></div>
+    <div class="cell"><div class="lbl"><span>Machines</span><span>K2</span></div><span class="pt" data-t="8"></span><div class="bar"><b style="width:62%"></b></div></div>
+    <div class="cell"><div class="lbl"><span>Warps</span><span>K3</span></div><span class="pt" data-t="13"></span><div class="bar"><b style="width:80%"></b></div></div>
+    <div class="cell"><div class="lbl"><span>Effects</span><span>K4</span></div><span class="pt" data-t="17"></span><div class="bar"><b style="width:45%"></b></div></div>
+    <div class="cell"><div class="lbl"><span>Patterns</span><span>K1</span></div><span class="pt" data-t="64"></span><div class="bar"><b style="width:70%"></b></div></div>
+    <div class="cell"><div class="lbl"><span>Steps</span><span>K2</span></div><span class="pt" data-t="128" data-c="acc"></span><div class="bar"><b style="width:100%;background:var(--acc)"></b></div></div>
+    <div class="cell"><div class="lbl"><span>Slots</span><span>K3</span></div><span class="pt" data-t="128"></span><div class="bar"><b style="width:50%"></b></div></div>
+  </div>
+</div>
+
+<section id="chain" style="border-bottom:0">
+  <div class="wrap">
+    <div class="pt head" data-t="SAME CHOPS.|NEW AUDIO."></div>
+    <p class="sub">Every chopper works on a range of the loop. Move the range and the pattern you made lands on fresh sound.</p>
+    <div class="flow"><span>TRIM</span><i></i><span>STRETCH</span><i></i><span class="on">RANGE</span><i></i><span>CHOP</span></div>
+    <div class="chainbox"><canvas id="lcdchain" role="img" aria-label="Elasticat's LOOP/RANGE screen on 16ths_TB303_03.wav: the range jumps every eighth note and a chop plays every sixteenth"></canvas></div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="pt head" data-t="BUILT TO MANGLE."></div>
+    <p class="sub">A studio of loop tools on sixteen keys and a handful of knobs.</p>
+    <div class="grid">
+      <div class="box card">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="MACHINES"></span><span class="pt pg" data-t="8"></span></div>
+        <div class="body"><div><p>Loop it, trig it, slice it, play it like a synth.</p>
+          <div class="tags"><span class="a">LOOP</span><span>TRIG</span><span>SLICE</span><span>RAZOR</span><span>S.POLY</span><span>R.POLY</span><span>NEIGH</span><span>INPUT</span></div></div>
+          <div class="shot"><img class="px" src="img/loop_page.png" alt="The LOOP page playing 16ths_TB303_03.wav: the waveform, the playhead and the trigs" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="WARP MODE"></span><span class="pt pg" data-t="13"></span></div>
+        <div class="body"><div><p>Tape, grains, overlap-add, spectral freezes. Tempo and pitch apart.</p>
+          <div class="tags"><span>TAPE</span><span>VARI</span><span>DOMINO</span><span class="a">GRAIN</span><span>OLA</span><span>PITCH</span><span>HARM</span><span>WTBL</span><span>FREEZE</span><span>FORMNT</span><span>GSTR</span><span>GSTR2</span><span>CHOP</span></div></div>
+          <div class="shot"><img class="px" src="img/warp_modes.png" alt="Picking a warp mode" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card">
+        <div class="tbar acc"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="STEP 3"></span><span class="pt pg" data-t="LOCK"></span></div>
+        <div class="body"><div><p>Any parameter on any step. Conditions, chance, ratchets, FILL. Up to 128 steps a track.</p>
+          <div class="tags"><span class="a">P-LOCK</span><span>CHANCE</span><span>RATCHET</span><span>1:2</span><span>FILL</span></div></div>
+          <div class="shot"><img class="px" src="img/lock_held.png" alt="A step held: its locked parameter" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="KEYBOARD"></span><span class="pt pg" data-t="LIVE"></span></div>
+        <div class="body"><div><p>Sixteen keys scrub, stutter and jump through the loop. Or play it chromatically.</p>
+          <div class="tags"><span>LOOP KEYS</span><span>SLICE PADS</span><span>KEYBOARD</span><span class="a">LIVE REC</span></div></div>
+          <div class="shot"><img class="px" src="img/keyboard_held.png" alt="The KEYBOARD page with a held note" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="FX/SENDS"></span><span class="pt pg" data-t="P04"></span></div>
+        <div class="body"><div><p>Six filters, two inserts per track, two send buses, a master.</p>
+          <ul class="menu" id="fxmenu" aria-label="Some of the effects"></ul></div>
+          <div class="shot"><img class="px" src="img/fx_sends.png" alt="The FX routing: inserts and sends" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="MOD/MATRIX"></span><span class="pt pg" data-t="P01"></span></div>
+        <div class="body"><div><p>Two LFOs, a mod envelope, velocity and a matrix that reaches anything.</p>
+          <div class="tags"><span class="a">LFO 1</span><span>LFO 2</span><span>MOD ENV</span><span>VELOCITY</span><span>MATRIX</span></div></div>
+          <div class="shot"><img class="px" src="img/mod_screen.png" alt="The modulation matrix" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card wide">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="CROSSFADER"></span><span class="pt pg" data-t="A B"></span></div>
+        <div class="body"><div><p>Two scenes on a crossfader with glides. Four banks of sixteen patterns, launched from the keys.</p>
+          <div class="tags"><span>SCENE A</span><span>SCENE B</span><span>GLIDE</span><span class="a">64 PATTERNS</span><span>UNDO</span></div></div>
+          <div class="shot"><img class="px" src="img/crossfader_screen.png" alt="The crossfader between scenes A and B" loading="lazy" width="480" height="480"></div>
+          <div class="shot"><img class="px" src="img/patterns_screen.png" alt="PATTERN LAUNCH: a bank of 16 patterns" loading="lazy" width="480" height="480"></div></div>
+      </div>
+      <div class="box card wide">
+        <div class="tbar"><span class="pt tk" data-t="T1"></span><span class="pt" data-t="FILE/EDIT"></span><span class="pt pg" data-t="128"></span></div>
+        <div class="body"><div><p>Your WAVs in a 128-slot pool, a trim editor, and REC: sample the input or the master straight into a slot. Projects are files.</p>
+          <div class="tags"><span>WAV</span><span>AIFF</span><span>TRIM</span><span class="a">REC</span><span>RESAMPLE</span><span>PROJECTS</span></div></div>
+          <div class="shot"><img class="px" src="img/fileeditor_screen.png" alt="The trim editor on 16ths_TB303_03.wav, zoomed in" loading="lazy" width="480" height="480"></div>
+          <div class="shot"><img class="px" src="img/rec_armed.png" alt="REC armed for the next bar, the input on the meters" loading="lazy" width="480" height="480"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="get">
+  <div class="wrap">
+    <div class="pt head" data-t="GET IT RUNNING."></div>
+    <p class="sub">Elasticat is a Fantasy CFW: it runs in RemoteFM1, never on the FM-1 itself. Your FM-1 stays as it is.</p>
+    <ol class="how">
+      <li class="box"><div class="tbar"><span class="pt tk" data-t="1"></span><span class="pt" data-t="LOOPS"></span></div><div class="in">
+        <h3>Fill a folder</h3><p>Make <code>RemoteFM1/audio/</code> and drop WAV or AIFF loops in. A tempo in the name (<code>bpm120</code>) syncs them.</p></div></li>
+      <li class="box"><div class="tbar acc"><span class="pt tk" data-t="2"></span><span class="pt" data-t="LAUNCH"></span></div><div class="in">
+        <h3>Open Elasticat</h3><p>In the RemoteFM1 web player, or from an app's firmware list.</p>
+        <a class="key go sm" href="https://remotefm1.com/?fw=elasticat" target="_blank" rel="noopener"><span class="tri"></span>Launch</a></div></li>
+      <li class="box"><div class="tbar"><span class="pt tk" data-t="3"></span><span class="pt" data-t="PLAY"></span></div><div class="in">
+        <h3>Pick the folder</h3><p>Point it at <code>RemoteFM1/</code> and press PLAY. An FM-1 running RemoteFM1 gives you the real knobs and keys.</p>
+        <a class="key sm" href="https://remotefm1.com/installer/" target="_blank" rel="noopener">RemoteFM1 on an FM-1</a></div></li>
+    </ol>
+    <div class="apps" id="apps">
+      <a class="app" href="https://remotefm1.com/?fw=elasticat" target="_blank" rel="noopener"><div class="lbl">Browser</div><b>Web player</b><span>Chrome, Edge, Safari, Firefox</span></a>
+      <a class="app" href="https://testflight.apple.com/join/e6A47Xap" target="_blank" rel="noopener"><div class="lbl">iOS · AUv3</div><b>iPhone &amp; iPad</b><span>RemoteFM1 on TestFlight</span></a>
+      <a class="app" href="https://github.com/Quixotic7/RemoteFM1Android/releases/latest" target="_blank" rel="noopener"><div class="lbl">Android</div><b>Android</b><span>RemoteFM1 APK</span></a>
+      <!-- TODO(owner): FM1VST's Fantasy CFW support (commit cb25cd6) is not in a release yet (latest is v0.6.2). Drop "soon" when it ships. -->
+      <a class="app soon" href="https://github.com/Quixotic7/FM1VST/releases/latest" target="_blank" rel="noopener"><div class="lbl">VST3 · AU</div><b>FM1VST plug-in</b><span>Coming soon</span></a>
+    </div>
+  </div>
+</section>
+
+<section id="learn">
+  <div class="wrap">
+    <div class="inv">
+      <div>
+        <div class="pt" data-t="THE GUIDE."></div>
+        <div class="links">
+          <a href="guide/#quick">Quick start</a><a href="guide/#panel">The panel</a><a href="guide/#sounds">Sounds in</a>
+          <a href="guide/#seq">Sequencing</a><a href="guide/#sound">Shaping</a><a href="guide/#arrange">Arranging</a>
+        </div>
+      </div>
+      <a class="key" href="guide/">Open the guide →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>Elasticat FM-1 by Quixotic7 · GPL-3.0<br>Based on <a href="https://github.com/Quixotic7/Elasticat">Elasticat for norns</a></div>
+    <div><a href="https://github.com/Quixotic7/elasticatfm1">Source</a> · <a href="guide/">Guide</a> · <a href="https://github.com/Quixotic7/RemoteFM1FW">RemoteFM1 catalog</a> · <a href="https://remotefm1.com/">RemoteFM1</a></div>
+  </div>
+</footer>
+
+<script>
+var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (still) { var hv = document.getElementById("herovid"); hv.removeAttribute("autoplay"); hv.pause(); }
+
+// The firmware's 3x5 font (src/ui/ec_gfx.c FONT, ASCII 32..95): 5 rows of 3 bits, the top-left pixel bit 14.
+var FONT = [0x0000,0x2482,0x0000,0x5F7D,0x0000,0x52A5,0x2AAB,0x2400,0x1491,0x4494,0x0AA8,0x05D0,0x0014,0x01C0,0x0002,0x12A4,
+  0x7B6F,0x2C97,0x73E7,0x72CF,0x5BC9,0x79CF,0x79EF,0x7292,0x7BEF,0x7BCF,0x0410,0x0000,0x1511,0x0E38,0x4454,0x6282,
+  0x0000,0x2BED,0x6BAE,0x3923,0x6B6E,0x79A7,0x79A4,0x396B,0x5BED,0x7497,0x126A,0x5BAD,0x4927,0x5FED,0x6B6D,0x2B6A,
+  0x6BA4,0x2B73,0x6BAD,0x388E,0x7492,0x5B6F,0x5B6A,0x5BFD,0x5AAD,0x5A92,0x72A7,0x3493,0x0000,0x6496,0x2A00,0x0007];
+function glyph(ch) { var u = ch.toUpperCase().charCodeAt(0); return u >= 32 && u < 96 ? FONT[u - 32] : 0; }
+function pixelLine(s, fill) {
+  var d = "", x = 0;
+  for (var i = 0; i < s.length; i++, x += 4) {
+    var g = glyph(s[i]);
+    for (var r = 0; r < 5; r++) for (var c = 0; c < 3; c++)
+      if (g & (1 << (14 - r * 3 - c))) d += "M" + (x + c) + " " + r + "h1v1h-1z";
+  }
+  var w = Math.max(1, s.length * 4 - 1);
+  return '<svg viewBox="0 0 ' + w + ' 5" aria-hidden="true"><path d="' + d + '"/></svg>';
+}
+document.querySelectorAll(".pt[data-t]").forEach(function (el) {
+  var t = el.getAttribute("data-t");
+  el.innerHTML = t.split("|").map(function (l) { return pixelLine(l); }).join("") + '<span class="sr">' + t.replace("|", " ") + "</span>";
+});
+
+// the step strip under the screen: a playhead over a pattern
+(function () {
+  var strip = document.getElementById("strip"), no = document.getElementById("stepno");
+  var pat = [1,0,0,1,0,0,1,0,1,0,1,0,0,1,1,0], els = [];
+  for (var i = 0; i < 16; i++) { var k = document.createElement("i"); if (pat[i]) k.className = "trig"; strip.appendChild(k); els.push(k); }
+  els[0].classList.add("play");
+  if (still) return;
+  var s = 0;
+  setInterval(function () {
+    els[s].classList.remove("play"); s = (s + 1) % 16; els[s].classList.add("play");
+    no.textContent = "STEP " + (s < 9 ? "0" : "") + (s + 1);
+  }, 125);
+})();
+
+// the chain, drawn like Elasticat's own screen (a 240 x 120 pixel canvas in the CREAM theme, the firmware's 3x5 font):
+// 16ths_TB303_03.wav's peaks, trimmed; the RANGE jumps to a random spot every 1/8 note at 120 BPM, and every 1/16 a
+// chop of the range lights and plays, so the same chop pattern lands on new audio
+(function () {
+  var cv = document.getElementById("lcdchain"), g = cv.getContext("2d");
+  var W = 240, H = 120;
+  var C = { bg: "#000", l3: "#34332e", l5: "#5e5c54", l8: "#9a978b", l12: "#cfcbbe", l15: "#f6f3e8", acc: "#ff6a1f", src: "#3f8cff" };
+  // 960 peaks of 16ths_TB303_03.wav (2.0 s, 2 ms each, 0..35)
+  var PK = "5aspganusinli8ttmoondmvqhqrhnurjnurcotnnwtgmupdqun9rrknusbksodxsghvodnzqdpukkymihuigryj6qsekzmf5b741111111100000000000001755rpnboni7vulopndsvooppinusgsumcppb76542100111111000011000028snlcomgmvulolk9qupoqqhnurhruoattknvreotpeswjlttfvvmdusimytilvoeyypdtrkkym9huigyyjdssfkzgfhtdcml6222221100011110000000002cssicnutjnnj9sulopofmvrhpulftthnuoa9963111111111000111000011nkd9otshmlj8uumonmbmvqfttjntrjnuqcmof765421000111110000110002dcspnfnkh7vumooncquonrshmtrhntnbstigdc73111111110000111000001pnkepjf5ttlolkaotnnppfnvshqulcttlkfc621221111000011110000001gcbrgcmuujnomctuooqqhmtrhotl9uuintob8964211111111000111000001knd9ossimnlatunonndmvrfrskaushnvoejic432221110000000000000002ectppfonk8uvnonmdpvqfpsjmtsjnsocnsha8853111111111000111000005tqmeolh7uvnolkcouplqrhnusiorl9tunlgd731221111000011110000001hecrjf5ttmnmldouqopqimusgnqmcuulopla56532100111111000110000067shc8utkmlkbqtooppgmurioskasulnusddc952111111110000110000011e98orrinnlbsuoommemushnql8utjnsndmme654321100011110", N = PK.length, P = [];
+  for (var i = 0; i < N; i++) P.push(parseInt(PK[i], 36) / 35);
+  var T0 = 96, T1 = 864;                     // the trim: 0.20 s .. 1.80 s (in bins)
+  var CH = 8;                                // chops in the range
+  var ORDER = [0, 5, 2, 7, 1, 3, 6, 4, 0, 2, 5, 3, 7, 6, 1, 4];   // the chop each 1/16 plays
+  var range = { a: 300, len: 192 }, step = 0, t0 = performance.now(), seed = 3;
+  function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  function peak(b0, b1) { var m = 0; b0 = Math.max(0, Math.floor(b0) - 1); b1 = Math.min(N, Math.ceil(b1) + 1); for (var i = b0; i < b1; i++) if (P[i] > m) m = P[i]; return m; }
+  function rect(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  function text(s, x, y, c, sc, right) {
+    sc = sc || 1; s = String(s).toUpperCase();
+    if (right) x -= s.length * 4 * sc - sc;
+    g.fillStyle = c;
+    for (var k = 0; k < s.length; k++, x += 4 * sc) {
+      var gl = glyph(s[k]);
+      for (var r = 0; r < 5; r++) for (var q = 0; q < 3; q++) if (gl & (1 << (14 - r * 3 - q))) g.fillRect(x + q * sc, y + r * sc, sc, sc);
+    }
+  }
+  function newRange() {
+    var lens = [144, 192, 240];
+    range.len = lens[Math.floor(rnd() * lens.length)];
+    range.a = T0 + Math.floor(rnd() * (T1 - T0 - range.len) / 12) * 12;
+  }
+  function draw(now) {
+    var phase = Math.min(1, (now - t0) / 125), chop = ORDER[step % 16];
+    rect(0, 0, W, H, C.bg);
+    // header: the track, the mode's title bar, the page
+    text("T1", 2, 2, C.l15);
+    rect(12, 1, 1, 7, C.l5);
+    text("S1", 15, 2, C.l15);
+    rect(25, 0, 196, 9, C.l12);
+    text("LOOP/RANGE", 28, 2, C.bg);
+    text("P01", 218, 2, C.bg, 1, true);
+    text("P1", 238, 2, C.l15, 1, true);
+    text("16THS_TB303_03.WAV", 2, 12, C.l15);
+    text("120", 238, 12, C.l15, 1, true);
+    // overview: the whole file, the trimmed ends dark, the range box
+    var oy = 20, oh = 12, ox = 2, ow = 236;
+    for (var x = 0; x < ow; x++) {
+      var b0 = x * N / ow, b1 = (x + 1) * N / ow, h = Math.max(1, Math.round(peak(b0, b1) * oh / 2)) ;
+      var inR = b0 >= range.a && b1 <= range.a + range.len + 1, trimmed = b1 <= T0 || b0 >= T1;
+      rect(ox + x, oy + oh / 2 - h, 1, 2 * h, trimmed ? C.l3 : inR ? C.l12 : C.l5);
+    }
+    var rx = ox + Math.round(range.a * ow / N), rw = Math.round(range.len * ow / N);
+    rect(rx - 1, oy - 2, rw + 2, 1, C.acc); rect(rx - 1, oy + oh + 1, rw + 2, 1, C.acc);
+    rect(rx - 1, oy - 2, 1, oh + 4, C.acc); rect(rx + rw, oy - 2, 1, oh + 4, C.acc);
+    rect(ox + Math.round(T0 * ow / N), oy - 2, 1, oh + 4, C.l8); rect(ox + Math.round(T1 * ow / N), oy - 2, 1, oh + 4, C.l8);
+    // the range, stretched across the screen, cut into chops; the playing chop bright, the playhead orange
+    var my = 37, mh = 44, mx = 2, mw = 236, cw = mw / CH;
+    for (x = 0; x < mw; x++) {
+      var c = Math.floor(x / cw), bb0 = range.a + x * range.len / mw, bb1 = range.a + (x + 1) * range.len / mw;
+      var hh = Math.max(1, Math.round(peak(bb0, bb1) * mh / 2));
+      rect(mx + x, my + mh / 2 - hh, 1, 2 * hh, c === chop ? C.l15 : C.l5);
+    }
+    for (c = 1; c < CH; c++) for (var y = my; y < my + mh; y += 2) rect(mx + Math.round(c * cw), y, 1, 1, C.l8);
+    rect(mx + Math.round(chop * cw), my - 3, Math.round(cw), 2, C.acc);
+    rect(mx + Math.round(chop * cw + phase * (cw - 1)), my, 1, mh, C.acc);
+    // the step strip: LIVE blue, the playing step orange
+    for (var s = 0; s < 16; s++) rect(2 + s * 14.75, 85, 12, 3, s === step % 16 ? C.acc : C.src);
+    // the cells: TRIM, STRETCH, RANGE (moving), CHOP
+    rect(0, 91, W, 1, C.l3);
+    var cells = [["TRIM", "K1", "0.20S", C.l15], ["STRETCH", "K2", "1.00X", C.l15],
+                 ["RANGE", "K3", (range.a * 2 / N).toFixed(2) + "S", C.acc], ["CHOP", "K4", (chop + 1) + "/8", C.l15]];
+    for (var k = 0; k < 4; k++) {
+      var cx = k * 60;
+      if (k) rect(cx, 92, 1, 28, C.l3);
+      text(cells[k][0], cx + 3, 95, C.l8);
+      text(cells[k][1], cx + 57, 95, C.l5, 1, true);
+      text(cells[k][2], cx + 3, 103, cells[k][3], 2);
+      rect(cx + 3, 116, 54, 1, C.l3);
+    }
+    rect(123, 116, Math.round(54 * (range.a - T0) / (T1 - T0 - range.len)), 1, C.acc);
+  }
+  function fit() {   // whole-pixel scaling: the canvas is a multiple of 240 x 120
+    var w = cv.parentNode.clientWidth, sc = Math.max(1, Math.floor(w / W));
+    cv.style.width = W * sc + "px"; cv.style.height = H * sc + "px";
+    if (w < W * 2) { cv.style.width = "100%"; cv.style.height = "auto"; }
+  }
+  cv.width = W; cv.height = H; fit(); addEventListener("resize", fit);
+  draw(t0);
+  if (still) return;
+  setInterval(function () {   // a timer, not animation frames: the 1/16 clock keeps time on any screen
+    var now = performance.now();
+    if (now - t0 > 1000) t0 = now - 125;   // back from a hidden tab: no catch-up burst
+    while (now - t0 >= 125) { t0 += 125; step++; if (step % 2 === 0) newRange(); }
+    draw(now);
+  }, 30);
+})();
+
+// the FX card's menu: the effects, the selection stepping down like the INSERT TYPE list
+(function () {
+  var fx = ["LOFI", "COMP", "DESTROY", "ECHO", "BLACKHOLE", "CHORUS", "TAPE ECHO", "RINGS", "CASSETTE"], ul = document.getElementById("fxmenu"), li = [];
+  fx.forEach(function (f) { var e = document.createElement("li"); e.innerHTML = pixelLine(f); e.setAttribute("aria-label", f); e.className = "pt"; ul.appendChild(e); li.push(e); });
+  var s = 4; li[s].classList.add("sel");
+  if (still) return;
+  setInterval(function () { li[s].classList.remove("sel"); s = (s + 1) % li.length; li[s].classList.add("sel"); }, 900);
+})();
+</script>
+</body>
+</html>

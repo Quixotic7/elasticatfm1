@@ -304,6 +304,7 @@ int ec_scr_modes_full(const ec_app_t *a)
     switch (a->scr) {
     case EC_MODE_PAGES: pages_screen(a); return 1;
     case EC_MODE_KEYBOARD: keyboard_screen(a); return 1;
+    case EC_MODE_PROJECTS: ec_scr_projects(a); return 1;   /* 0.6.42 */
     case EC_MODE_SAMPLER:                          /* (FILE held: the recorder's setup, 0.4's REC pop-up) */
         if (a->rec.open)
             ec_scr_rec(a);

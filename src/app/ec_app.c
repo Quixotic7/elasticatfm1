@@ -1250,6 +1250,7 @@ void ec_app_tick(const ec_input_t *in)
     ec_liverec_tick();                             /* 0.6.0: live REC (FIXED's end) */
     ec_e5_tick();                                  /* E5: prompts, the preview */
     ec_pf_tick();                                  /* 0.6.1: the project file's save / load */
+    ec_prj_tick();                                 /* 0.6.42: PROJECTS follows the list, wants the card */
     /* autosave: stopped, dirty, quiet for a moment */
     if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
         ec_app_save(1);

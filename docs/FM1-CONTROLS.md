@@ -321,7 +321,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | LFO | MODULATION |
 | EDIT | MIX → PAGES (a fixed screen) |
 | HOME | LOOP ENGINE → TRIG → KEYBOARD (a fixed screen) |
-| FILE | FILE → SAMPLER (a fixed screen) |
+| FILE | FILE → PROJECTS (a fixed screen) → SAMPLER (a fixed screen) |
 | ARP | CROSSFADER |
 | SEQ | PATTERN LAUNCH |
 
@@ -1098,8 +1098,8 @@ An FX machine changes at any time (a short fade, no click).
 - 0.6.11: **FILE opens while playing** (BROWSE, POOL, the SAMPLER; loads and previews too). Only the **EDITOR and
   RAZOR** (B4 / B5), **FREE**, **MOVE** and **purge** say STOP FIRST. Inside FILE, PLAY starts and stops (from the
   EDITOR / RAZOR it goes to BROWSE first: "BROWSE: PLAY AGAIN"); REC does nothing.
-- Pages: **BROWSE (B3)** and **POOL (B6)**. 0.6.15: **the FILE button cycles BROWSE > EDITOR > SLICE (RAZOR) > SAMPLER**
-  (playing, the editors are skipped); the editors have no page keys, so their black keys are all theirs (the zoom).
+- Pages: **BROWSE (B3)** and **POOL (B6)**. 0.6.15: **the FILE button cycles BROWSE (SAMPLES) > PROJECTS (0.6.42) > EDITOR >
+  SLICE (RAZOR) > SAMPLER** (playing, the editors are skipped); FILE held: the five on B1-B5; the editors have no page keys, so their black keys are all theirs (the zoom).
 - **SEL turns the page on EDITOR and RAZOR**, both ways (lane by lane: EDITOR and RAZOR have two lanes each, then the
   next page): BROWSE < EDITOR < RAZOR < POOL. On **BROWSE and POOL, SEL is the list's cursor**; their way out is a page
   key (B3 B4 B5 B6). The EDITOR's black keys are all zoom keys, so **SEL** leaves it (back to BROWSE, on to RAZOR).
@@ -1110,14 +1110,14 @@ An FX machine changes at any time (a short fade, no click).
 | Control | Does |
 |---|---|
 | SEL | the cursor: the folder's subfolders first, then its files |
-| B1 / B2 | **up a folder / into the folder** under the cursor. Up from /audio is the top level: **AUDIO/** and **PROJECTS/** (/data/projects, the saved projects) |
-| B10 | **LOAD**: the file goes into **the next free pool slot** (0.6.32: the pool only: a track plays it once its SLOT is set, with K2 on the LOOP page, PRESETS or POOL's ASSIGN). The cursor stays put. A file already in the pool isn't loaded twice (IN SLOT n). A full pool says FULL. **On a project file (PROJECTS/), LOAD opens that project** (unsaved edits of the current one are saved first), and the mode is LOOP ENGINE |
+| B1 / B2 | **up a folder / into the folder** under the cursor. 0.6.42: **AUDIO/ is the top** (nothing above it; the projects are PROJECTS'); below it the first row is **UP** (an arrow, the folder it goes to on the right) |
+| OCT+ / OCT- | 0.6.42: **open** the row under the cursor (UP: up, a folder: into it, a file: LOAD) / **up** |
+| B10 | **LOAD**: the file goes into **the next free pool slot** (0.6.32: the pool only: a track plays it once its SLOT is set, with K2 on the LOOP page, PRESETS or POOL's ASSIGN). The cursor stays put. A file already in the pool isn't loaded twice (IN SLOT n). A full pool says FULL |
 | B11 | **preview** play / stop |
-| F2 | **free the pool slot** of the file under the cursor (its tracks fall silent) |
+| B9 | **free the pool slot** of the file under the cursor (its tracks fall silent; 0.6.42: was F2) |
 | SHIFT + B11 | **purge**: free every slot no pattern uses and compact the memory (not while playing) |
 
-- Every cursor move **previews** the file (APP SETTINGS > AUTO-PREVIEW); project files have no preview. The open
-  project has the accent mark in PROJECTS/. The preview plays on the main output and
+- Every cursor move **previews** the file (APP SETTINGS > AUTO-PREVIEW). The preview plays on the main output and
   stops when you leave FILE. LOAD of the previewed file reuses its memory (no second load).
 - Knobs: SLOT (the one LOAD fills), LENGTH, BPM, FREE (MiB). **The pool meter** shows the memory used / free and the
   slots used of 128.
@@ -1291,7 +1291,20 @@ OK, F1 back, HOME closes.
   0.6.31 also in the folder, data/elasticat/last.txt, written at every save and load, so a fresh flash after a
   firmware update comes back to it). A project
   saved by 0.6.0 or older (in the flash) loads once; the next save makes its file.
-- Open another project with FILE > B1 (up to the top level) > PROJECTS/ > B10 LOAD.
+- Open another project in **PROJECTS** (0.6.42: FILE tapped twice, or FILE held + B2):
+
+| Control | Does |
+|---|---|
+| SEL / ALGO | the cursor: every project in /data/projects, **newest first**; the loaded one says OPEN |
+| OCT+ or B10 | **LOAD** the project under the cursor; with unsaved edits it **asks** (LOAD X? in the header, the back / OK arrows): **OCT+ yes** (the edits saved, then it opens), **OCT- no** |
+| OCT- | back to SAMPLES (a question waiting: no) |
+| B9 | **SAVE** the current project (as SHIFT + FILE anywhere) |
+| B8 | **SAVE +1**: the current project saved as a new file, its name plus the next free number (PROJ-001 2), which is now the project; the old file stays |
+| B1 | **NEW**: asks (NEW PROJECT?); yes: the edits saved, an empty project (the folder's first file on T1) under the next free name |
+| B2 / B3 | RENAME / a RANDOM name (0.6.43) |
+
+  The top line: the project you work on and EDITED / SAVED. The lower half: the project under the cursor, its name
+  big, its 64 patterns as blocks (written cream, the one it opens on in the accent), its tempo and samples.
 
 ## APP SETTINGS (SHIFT + HOME)
 

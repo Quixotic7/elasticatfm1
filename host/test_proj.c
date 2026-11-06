@@ -324,27 +324,27 @@ static void test_browser_load(void)
     int i;
     /* the current project: the last one test_old_flash saved (bpm 88); PROJ-001 has bpm 97 */
     snprintf(other, sizeof other, "%s", ec_pf_name());
-    edit(150, 11);                                 /* unsaved edits: LOAD saves them first */
+    edit(150, 11);                                 /* unsaved edits: LOAD asks, then saves them first */
     to(EC_CAT_FILE);
-    ec_app_set_page(EC_CAT_FILE, 0);
-    A->pn.fdir[0] = 0;
-    run(20);
-    B(1, 40);                                      /* up from /audio: the top level */
-    CHECK(!strcmp(A->pn.fdir, "/") && ec_file_count() == 2, "B1: the top level (%s)", A->pn.fdir);
-    cursor_to("PROJECTS/");
-    B(2, 40);                                      /* into PROJECTS/ */
-    for (i = 0; i < 50 && ec_pf_list_busy(); i++)
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42 (owner): FILE again: PROJECTS */
+    for (i = 0; i < 100 && ec_pf_list_busy(); i++)
         run(5);
-    CHECK(!strcmp(A->pn.fdir, EC_PF_DIR) && find_row("PROJ-001") >= 0 && find_row(other) >= 0,
-          "B2: /data/projects lists the project files (%d: %s ..)", ec_file_count(), ec_file_entry(0, 0, 0));
-    cursor_to("PROJ-001");
-    CHECK(!A->pn.pv_play, "no preview on a project file");
-    B(10, 40);                                     /* LOAD */
+    run(20);
+    CHECK(mode() == EC_MODE_PROJECTS && ec_pf_list_find("PROJ-001") >= 0 && ec_pf_list_find(other) >= 0,
+          "FILE, FILE: PROJECTS lists the project files (mode %d, %d: %s ..)", mode(), ec_pf_list_count(),
+          ec_pf_list_name(0));
+    turn(FM1P_E_SELECT, -40);
+    for (i = 0; i < 40 && strcmp(ec_pf_list_name(ec_prj_cursor()), "PROJ-001"); i++)
+        turn(FM1P_E_SELECT, 1);
+    press(FM1P_B_OCTUP, 40);                       /* OCT+ = LOAD: edits not saved, so it asks */
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_LOAD && !strcmp(ec_prj_target(), "PROJ-001"), "OCT+: LOAD PROJ-001? (%d %s)",
+          ec_prj_ask(), ec_prj_target());
+    press(FM1P_B_OCTUP, 40);                       /* yes */
     for (i = 0; i < 500 && (ec_pf_saving() || ec_pf_loading() || strcmp(ec_pf_name(), "PROJ-001")); i++)
         run(5);
     run(50);
     CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm == 97 && mode() == EC_CAT_SRC,
-          "B10 LOAD: PROJ-001 open (bpm %g), LOOP ENGINE (mode %d)", A->proj.bpm, mode());
+          "OCT+ yes: PROJ-001 open (bpm %g), LOOP ENGINE (mode %d)", A->proj.bpm, mode());
     reboot();
     CHECK(!strcmp(ec_pf_name(), "PROJ-001"), "the flash now names PROJ-001 (%s)", ec_pf_name());
     {
@@ -493,6 +493,44 @@ static void test_changed_elsewhere(void)
     CHECK(!strcmp(ec_pf_name(), name2) && !strcmp(A->msg, "SAVED"), "the next save is plain (%s)", A->msg);
 }
 
+/* 0.6.42 (owner): PROJECTS' SAVE +1 (B8) and NEW (B1, asked: OCT+ yes) */
+static void test_projects_mode(void)
+{
+    char was[EC_PF_NAME], plus[EC_PF_NAME];
+    uint32_t n0, n1;
+    uint8_t *d0;
+    int i;
+    for (i = 0; i < 400 && (ec_pf_saving() || ec_pf_loading()); i++)
+        run(5);
+    snprintf(was, sizeof was, "%s", ec_pf_name());
+    d0 = read_file(was, 0, &n0);
+    ec_pn_enter(EC_MODE_PROJECTS);
+    for (i = 0; i < 100 && ec_pf_list_busy(); i++)
+        run(5);
+    ec_pf_name_plus(was, plus);
+    B(8, 40);                                      /* SAVE +1 */
+    for (i = 0; i < 400 && ec_pf_saving(); i++)
+        run(5);
+    run(20);
+    CHECK(!strcmp(ec_pf_name(), plus) && file_exists(plus, 0), "B8 SAVE +1: %s written, now the project (%s)", plus,
+          ec_pf_name());
+    {
+        uint8_t *d1 = read_file(was, 0, &n1);
+        CHECK(d0 && d1 && n0 == n1 && !memcmp(d0, d1, n0), "%s untouched", was);
+    }
+    B(1, 40);                                      /* NEW: asked */
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_NEW, "B1: NEW PROJECT? (%d)", ec_prj_ask());
+    press(FM1P_B_OCTDN, 40);
+    CHECK(!ec_prj_ask() && !strcmp(ec_pf_name(), plus), "OCT-: no, the project kept");
+    B(1, 40);
+    press(FM1P_B_OCTUP, 40);
+    for (i = 0; i < 600 && (!ec_pf_name()[0] || !strcmp(ec_pf_name(), plus)); i++)
+        run(5);
+    run(50);
+    CHECK(ec_pf_name()[0] && strcmp(ec_pf_name(), plus) && file_exists(ec_pf_name(), 0) && mode() == EC_CAT_SRC,
+          "OCT+ yes: a new project, its own file (%s), LOOP ENGINE", ec_pf_name());
+}
+
 /* 0.6.35: SLOT's default was 1 until 0.6.32 (OFF since); a version 2 record left a slot-1 track's SLOT out, so a
  * missing SLOT there is slot 1; a version 3 record keeps OFF */
 static void test_slot_default(void)
@@ -535,6 +573,7 @@ int main(int argc, char **argv)
     test_largest();
     test_slot_default();
     test_changed_elsewhere();
+    test_projects_mode();
     C->shutdown();
     printf("test_proj: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

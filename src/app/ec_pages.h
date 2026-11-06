@@ -23,7 +23,8 @@ enum { EC_CAT_TRIG,     /* TRIG (HOME, second) */
 /* 0.6.0: the modes = the categories, then the fixed screens (modes without params of their own) */
 enum { EC_MODE_KEYBOARD = EC_NCAT,   /* HOME, third */
        EC_MODE_PAGES,                /* EDIT, second */
-       EC_MODE_SAMPLER,              /* FILE, second */
+       EC_MODE_SAMPLER,              /* FILE, third (0.6.42) */
+       EC_MODE_PROJECTS,             /* 0.6.42 (owner): FILE, second: every project, load / save / save +1 / new */
        EC_NMODE };
 #define EC_NSCREEN (EC_NMODE - EC_NCAT)
 /* the FM-1 buttons a mode sits on (by their printed names; FILE is printed SAVE) */

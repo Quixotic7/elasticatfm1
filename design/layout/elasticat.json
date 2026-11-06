@@ -781,6 +781,11 @@
     {
       "mode": "SAMPLER",
       "button": "FILE",
+      "order": 3
+    },
+    {
+      "mode": "PROJECTS",
+      "button": "FILE",
       "order": 2
     }
   ]

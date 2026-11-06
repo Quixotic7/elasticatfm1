@@ -55,8 +55,10 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
     else
         r[0] = 0;
     ec_scr_header(a, t, 1, r);
-    snprintf(buf, sizeof buf, "%s/",
-             !a->pn.fdir[0] ? "/audio" : strcmp(a->pn.fdir, "/") ? a->pn.fdir : "");   /* (0.6.1: "/" the top) */
+    {   /* 0.6.42: rooted at AUDIO/: "AUDIO/BREAKS/" (no leading slash, upper case by the font) */
+        const char *d = a->pn.fdir[0] && !strncmp(a->pn.fdir, "/audio", 6) ? a->pn.fdir : "/audio";
+        snprintf(buf, sizeof buf, "%s/", d + 1);
+    }
     {
         char f[32];
         const int l = (int)strlen(buf);
@@ -82,9 +84,32 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
             int isd, f;
             const char *name = ec_file_entry(idx, &isd, &f);
             const char *path = !isd && f >= 0 ? ec_browse_path(f) : 0;
-            const int pooled = path ? ec_file_pooled(path) >= 0      /* (0.6.1: in PROJECTS/, the open project) */
-                                    : !isd && !strcmp(a->pn.fdir, EC_PF_DIR) && !strcmp(name, ec_pf_name());
+            const int pooled = path && ec_file_pooled(path) >= 0;
             const float sec = path ? known_len(a, path) : 0;
+            if (f == EC_FILE_UP) {                 /* 0.6.42 (owner): UP, an arrow, where it goes on the right */
+                const int c = cur ? EC_C_BG : EC_C_L12;
+                char par[24];
+                const char *d = a->pn.fdir, *sl = strrchr(d, '/');
+                int l = sl ? (int)(sl - d) : 0;
+                const char *ps = l > 0 ? d : "/audio";
+                const char *pl = ps;
+                if (l <= 0)
+                    l = 6;
+                {   /* the parent's own name: the last component before the folder shown */
+                    int k;
+                    for (k = l - 1; k > 0 && ps[k - 1] != '/'; k--)
+                        ;
+                    pl = ps + k;
+                    l -= k;
+                }
+                snprintf(par, sizeof par, "%.*s/", l > 18 ? 18 : l, pl);
+                if (cur)
+                    R(EC_C_L15, 0, y - 2, W, 9);
+                R(c, 2, y - 1, 2, 2), R(c, 0, y + 1, 6, 2), R(c, 2, y + 3, 2, 3);   /* (2-unit lattice) */
+                T(c, "UP", 8, y, EC_AL_LEFT);
+                T(cur ? EC_C_BG : EC_C_L5, par, W - 2, y, EC_AL_RIGHT);
+                continue;
+            }
             fit(buf, sizeof buf, name, sec > 0 ? 20 : 26);
             if (cur)                               /* 0.6.1: 2 units round the name */
                 R(EC_C_L15, 0, y - 2, W, 9);
@@ -99,7 +124,7 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
                 R(EC_C_ACC, 0, y - 2, 2, 9);       /* previewing */
         }
     } else
-        T2(EC_C_L5, a->scanning || (!strcmp(a->pn.fdir, EC_PF_DIR) && ec_pf_list_busy()) ? "SCANNING"
+        T2(EC_C_L5, a->scanning ? "SCANNING"
                     : a->no_folder ? "NO FOLDER" : "NO FILES", W / 2, 32, EC_AL_CENTER);
     if (a->load_slot >= 0) {                       /* a slot loading, else the pool meter */
         const int pm = (int)ec_load_permille();
@@ -331,4 +356,90 @@ void ec_scr_record(const ec_app_t *a)
     }
     ec_scr_header(a, "REC/SETUP", 0, "");
     ec_kit_list(rows, EC_RS_NROW, a->pn.rs_row, 12, EC_GH, 0);   /* 0.6.1: a list menu */
+}
+
+/* ------------------------------------------------------------------------------------------- PROJECTS --- */
+/* 0.6.42 (owner, docs/PROJECTS-DESIGN.md): the project you work on and whether it is saved; every project, newest first
+ * (the loaded one marked OPEN); the one under the cursor's card: its name big, its 64 patterns (a block each, written
+ * cream, the one it opens on in the accent), its tempo and samples. A question waiting: the header asks it with the
+ * back / OK arrows (OCT- no, OCT+ yes), the line under the card says what yes does */
+void ec_scr_projects(const ec_app_t *a)
+{
+    static const char *const TN[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
+    const int n = ec_pf_list_count(), cur = ec_prj_cursor(), ask = ec_prj_ask();
+    const char *open = ec_pf_name();
+    const char *sel = ec_pf_list_name(cur);
+    char buf[48], r[16];
+    int i;
+    if (ask) {
+        snprintf(buf, sizeof buf, ask == EC_PRJ_ASK_NEW ? "NEW PROJECT?" : "LOAD %s?", ec_prj_target());
+        fit(r, sizeof r, buf, 15);
+        ec_kit_header(TN[a->bus ? EC_NTRACK - 1 + a->bus : a->track], r, "", "", 0, 1);
+    } else {
+        if (n > 0)
+            snprintf(r, sizeof r, "%d/%d", cur + 1, n);
+        else
+            r[0] = 0;
+        ec_scr_header(a, "FILE/PROJECTS", 0, r);
+    }
+    T(EC_C_L5, "NOW", 2, 13, EC_AL_LEFT);
+    fit(buf, sizeof buf, open[0] ? open : "NOT SAVED YET", 16);
+    T(EC_C_L15, buf, 18, 13, EC_AL_LEFT);
+    if (ec_pf_saving())
+        T(EC_C_L8, "SAVING", W - 2, 13, EC_AL_RIGHT);
+    else if (ec_pf_dirty())
+        T(EC_C_ACC, "EDITED", W - 2, 13, EC_AL_RIGHT);
+    else
+        T(EC_C_L5, "SAVED", W - 2, 13, EC_AL_RIGHT);
+    if (n > 0) {
+        int first = cur - 2;
+        if (first > n - 5)
+            first = n - 5;
+        if (first < 0)
+            first = 0;
+        for (i = 0; i < 5 && first + i < n; i++) {
+            const int idx = first + i, y = 22 + i * 8, c = idx == cur;
+            const char *nm = ec_pf_list_name(idx);
+            const int isopen = !strcmp(nm, open);
+            fit(buf, sizeof buf, nm, 22);
+            if (c)
+                R(EC_C_L15, 0, y - 2, W, 9);
+            T(c ? EC_C_BG : EC_C_L8, buf, 6, y, EC_AL_LEFT);
+            if (isopen) {
+                R(c ? EC_C_BG : EC_C_ACC, 2, y, 2, 4);
+                T(c ? EC_C_BG : EC_C_ACC, "OPEN", W - 2, y, EC_AL_RIGHT);
+            }
+        }
+    } else
+        T2(EC_C_L5, ec_pf_list_busy() ? "READING" : "NO PROJECTS", W / 2, 34, EC_AL_CENTER);
+    R(EC_C_L3, 0, 62, W, 2);
+    if (n <= 0)
+        return;
+    {   /* the card */
+        const ec_project_card_t *cd = ec_pf_card(sel);
+        const int big = (int)strlen(sel) <= 13;
+        fit(buf, sizeof buf, sel, big ? 13 : 28);
+        if (big)
+            T2(ask ? EC_C_ACTION : EC_C_L15, buf, 2, 67, EC_AL_LEFT);
+        else
+            T(ask ? EC_C_ACTION : EC_C_L15, buf, 2, 70, EC_AL_LEFT);
+        for (i = 0; i < 64; i++) {             /* the patterns: 16 x 4 blocks of 4, 2 apart (the 2-unit lattice) */
+            const int x = 12 + (i % 16) * 6, y = 80 + (i / 16) * 6;
+            const int used = cd && cd->patterns_known && (cd->used >> i & 1u);
+            R(!cd ? EC_C_L3 : used && i == cd->current ? EC_C_ACC : used ? EC_C_L12 : EC_C_L3, x, y, 4, 4);
+        }
+        if (ask) {                             /* what yes does to the project you leave */
+            if (ec_pf_dirty()) {
+                fit(buf, sizeof buf, open[0] ? open : "THIS ONE", 14);
+                snprintf(r, sizeof r, "%.14s", buf);
+                snprintf(buf, sizeof buf, "%s SAVED FIRST", r);
+                T(EC_C_ACC, buf, 2, 110, EC_AL_LEFT);
+            }
+        } else if (cd) {
+            snprintf(buf, sizeof buf, "%d BPM", (int)(cd->bpm + 0.5f));
+            T(EC_C_L8, buf, 2, 110, EC_AL_LEFT);
+            snprintf(buf, sizeof buf, "%d SAMPLE%s", cd->samples, cd->samples == 1 ? "" : "S");
+            T(EC_C_L8, buf, W - 2, 110, EC_AL_RIGHT);
+        }
+    }
 }

@@ -370,6 +370,21 @@ void ec_file_select(int d);                   /* SEL in the browser */
 int ec_file_page(void);                       /* FILE's page: its picture (EC_PIC_FILE / EDITOR / RAZOR / POOL) */
 int ec_file_key_page(int key);                /* the FILE page black key 1..11 opens, -1 */
 int ec_file_count(void);                      /* the browser's rows in this folder */
+/* 0.6.42 (owner): PROJECTS (ec_projects.c) */
+enum { EC_PRJ_ASK_NONE, EC_PRJ_ASK_LOAD, EC_PRJ_ASK_NEW };
+void ec_prj_enter(void);
+void ec_prj_tick(void);
+int ec_prj_cursor(void);
+int ec_prj_ask(void);                         /* a question waits (EC_PRJ_ASK_*): OCT- no, OCT+ yes */
+const char *ec_prj_target(void);
+void ec_prj_select(int d);
+void ec_prj_black(int key);
+void ec_prj_oct(int up);
+void ec_prj_rename(const char *name);         /* 0.6.43: the name keybed */
+void ec_prj_random(const char *name);
+#define EC_FILE_UP (-2)                       /* 0.6.42: ec_file_entry's file for the UP row */
+void ec_file_open(void);                      /* 0.6.42: OCT+: the row under the cursor (UP, a folder, a file) */
+void ec_file_up(void);                        /* 0.6.42: OCT-: up (AUDIO/ is the top) */
 const char *ec_file_entry(int i, int *is_dir, int *file);   /* row i's name, a folder?, its file (ec_browse index) */
 int ec_file_pooled(const char *path);         /* the pool slot (0-based) holding that file, -1 */
 int ec_file_next_free(void);                  /* the next free pool slot, -1 full */

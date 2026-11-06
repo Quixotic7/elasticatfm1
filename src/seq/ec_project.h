@@ -177,6 +177,15 @@ int32_t ec_project_save_v1(const ec_project_t *p, uint8_t *buf, uint32_t cap);
  * version: then p is a fresh project). Versions 1 and 2; a version 1 record's 16 patterns land in bank A (0..15) and
  * its 16 slots in slots 1..16 */
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n);
+/* 0.6.42: a project file's card (PROJECTS), read without a project: its tempo, the patterns written (bit i), the one
+ * it opens on, the pool slots holding a sample. A partial file (the first bytes only) gives what it reaches:
+ * patterns_known 0 when the walk stopped short. 0 ok, -1 not a project */
+typedef struct {
+    float bpm;
+    uint64_t used;
+    int current, samples, patterns_known;
+} ec_project_card_t;
+int ec_project_peek(const uint8_t *buf, uint32_t n, ec_project_card_t *out);
 /* 0.6.1: a record's header (magic, a known version) and checksum hold: its whole length (header + payload), else -1.
  * Nothing is parsed: a project file is checked before the project it replaces is let go */
 int32_t ec_project_check(const uint8_t *buf, uint32_t n);

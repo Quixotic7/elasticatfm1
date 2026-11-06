@@ -881,6 +881,6 @@ const ec_layout_t EC_LAYOUT_SHIPPED = {
         {40, 1, -1, "CROSSFADER", "CROSSFADER", 8, 1},   /* XFD */
     },
     {41, 43, 45}, {42, 44, 46}, 47, 48, {3, 4, 0},
-    {{"KEYBOARD", 6, 3}, {"PAGES", 5, 2}, {"SAMPLER", 7, 2}},
+    {{"KEYBOARD", 6, 3}, {"PAGES", 5, 2}, {"SAMPLER", 7, 3}, {"PROJECTS", 7, 2}},
     ec_layout_shipped_page, ec_layout_shipped_var, ec_layout_shipped_item, 49, 146, 661,
 };

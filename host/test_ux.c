@@ -200,6 +200,8 @@ static void test_modes(void)
     press(FM1P_B_SAVE, 40);
     CHECK(mode() == EC_CAT_FILE, "FILE");
     press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_MODE_PROJECTS, "FILE again: PROJECTS (0.6.42)");
+    press(FM1P_B_SAVE, 40);
     press(FM1P_B_SAVE, 40);
     press(FM1P_B_SAVE, 40);                        /* 0.6.15: the EDITOR, RAZOR, then the SAMPLER */
     CHECK(mode() == EC_MODE_SAMPLER && !A->rec.open, "FILE again x3: SAMPLER");
@@ -1067,7 +1069,10 @@ static void test_file_keys(void)
     tapkey(1, bkey(5), 40);
     CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "FILE B5: nothing (no page key)");
     press(FM1P_B_SAVE, 40);
-    CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_EDITOR, "FILE again: the editor");
+    CHECK(mode() == EC_MODE_PROJECTS, "FILE again: PROJECTS (0.6.42)");
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_EDITOR,
+          "FILE again: the editor");
     press(FM1P_B_SAVE, 40);
     CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_RAZOR, "FILE again: RAZOR");
     turn(FM1P_E_SELECT, -1);

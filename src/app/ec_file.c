@@ -31,7 +31,6 @@
 #define P (&ec_app.pn)
 
 #define ROOT "/audio"
-#define TOP "/"                /* 0.6.1: the top level: AUDIO/ and PROJECTS/ (B1 from /audio or /data/projects) */
 #define PREVIEW_GAIN 0.8f
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
@@ -185,11 +184,14 @@ static int g_nent = -1;
 static char g_key[sizeof P->fdir];
 static int g_key_n = -1, g_key_scan = -1;
 
-static const char *dir(void) { return P->fdir[0] ? P->fdir : ROOT; }
-static int at_top(void) { return !strcmp(dir(), TOP); }
-static int at_projects(void) { return !strcmp(dir(), EC_PF_DIR); }
-static const char *const TOP_ROW[2] = {"AUDIO/", "PROJECTS/"};
-static const char *const TOP_DIR[2] = {ROOT, EC_PF_DIR};
+/* 0.6.42 (owner): SAMPLES' root is /audio: nothing above it (the projects are PROJECTS' own mode) */
+static const char *dir(void)
+{
+    const size_t rl = strlen(ROOT);
+    return P->fdir[0] && !strncmp(P->fdir, ROOT, rl) && (P->fdir[rl] == '/' || !P->fdir[rl]) ? P->fdir : ROOT;
+}
+static int at_root(void) { return !strcmp(dir(), ROOT); }
+static int up_row(void) { return !at_root(); }   /* 0.6.42 (owner): an UP row on top below the root */
 
 /* the path's component right below the folder (its length), or 0 when the path is not below it; *is_file */
 static int below(const char *path, const char *d, int *is_file)
@@ -239,24 +241,22 @@ static void build(void)
 
 int ec_file_count(void)
 {
-    if (at_top())
-        return 2;
-    if (at_projects())
-        return ec_pf_list_count();
     build();
-    return g_nent;
+    return g_nent + up_row();
 }
 
 const char *ec_file_entry(int i, int *is_dir, int *file)
 {
     static char b[EC_SS_NAME + 2];
-    if (at_top() || at_projects()) {               /* 0.6.1: the top level's two folders, the project files */
-        const int n = ec_file_count();
-        if (is_dir)
-            *is_dir = at_top() && i >= 0 && i < n;
-        if (file)
-            *file = -1;
-        return i < 0 || i >= n ? "" : at_top() ? TOP_ROW[i] : ec_pf_list_name(i);
+    if (up_row()) {                                /* 0.6.42: row 0 is UP (file -2) */
+        if (i == 0) {
+            if (is_dir)
+                *is_dir = 1;
+            if (file)
+                *file = EC_FILE_UP;
+            return "UP";
+        }
+        i--;
     }
     build();
     if (i < 0 || i >= g_nent) {
@@ -561,18 +561,12 @@ static void folder_up(void)
     char *sl;
     char was[sizeof P->fdir];
     int i, n;
-    if (at_top()) {
-        ec_app_message("TOP FOLDER");
-        return;
-    }
-    if (!strcmp(dir(), ROOT) || at_projects()) {   /* 0.6.1: up to the top level, the cursor on where we were */
-        A->cursor = at_projects();
-        snprintf(P->fdir, sizeof P->fdir, "%s", TOP);
-        ec_app_message(TOP);
-        moved();
+    if (at_root()) {                               /* 0.6.42: AUDIO/ is the top */
+        ec_app_message("AUDIO");
         return;
     }
     snprintf(was, sizeof was, "%s", dir());
+    snprintf(P->fdir, sizeof P->fdir, "%s", was);
     sl = strrchr(P->fdir, '/');
     if (sl)
         *sl = 0;
@@ -599,13 +593,8 @@ static void folder_in(void)
         ec_app_message("NOT A FOLDER");
         return;
     }
-    if (at_top()) {                                /* 0.6.1: AUDIO/ or PROJECTS/ */
-        snprintf(P->fdir, sizeof P->fdir, "%s", TOP_DIR[A->cursor ? 1 : 0]);
-        if (at_projects())
-            ec_pf_list_refresh();
-        A->cursor = 0;
-        ec_app_message(name);
-        moved();
+    if (f == EC_FILE_UP) {                         /* 0.6.42: the UP row */
+        folder_up();
         return;
     }
     snprintf(d, sizeof d, "%s/%.*s", dir(), (int)strlen(name) - 1, name);
@@ -620,11 +609,8 @@ static void load(void)
     const char *path = cursor_path();
     int s, k;
     char m[24];
-    if (at_projects()) {                           /* 0.6.1: LOAD on a project file opens it */
-        if (A->cursor >= 0 && A->cursor < ec_pf_list_count())
-            ec_pf_open(ec_pf_list_name(A->cursor));
-        else
-            ec_app_message("NO PROJECTS");
+    if (up_row() && A->cursor == 0) {              /* 0.6.42: LOAD on UP goes up */
+        folder_up();
         return;
     }
     if (!path) {
@@ -649,6 +635,19 @@ static void load(void)
     snprintf(m, sizeof m, k >= 0 ? "IN SLOT %d" : "LOADED > %d", s + 1);
     ec_app_message(m);
 }
+
+/* 0.6.42 (owner): OCT+ = yes / open: the row under the cursor (UP: up, a folder: into it, a file: LOAD into the
+ * pool); OCT- = no / back: up */
+void ec_file_open(void)
+{
+    int isd, f;
+    ec_file_entry(A->cursor, &isd, &f);
+    if (isd)
+        folder_in();
+    else
+        load();
+}
+void ec_file_up(void) { folder_up(); }
 
 /* 0.6.11: PLAY inside FILE: 1 = the EDITOR / RAZOR was shown, now BROWSE (the press is used up; play from there) */
 int ec_file_play_leave(void)

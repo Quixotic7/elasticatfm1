@@ -672,6 +672,79 @@ int32_t ec_project_check(const uint8_t *buf, uint32_t n)
     return (int32_t)(HDR + len);
 }
 
+/* 0.6.42: the card (ec_project.h): the load's walk, nothing kept but the counts; no checksum (a partial read) */
+int ec_project_peek(const uint8_t *buf, uint32_t n, ec_project_card_t *out)
+{
+    io_t o;
+    uint32_t i, t, k, s, nslot, npat, ntr, len;
+    int ver;
+    memset(out, 0, sizeof *out);
+    if (!buf || n < HDR)
+        return -1;
+    memset(&o, 0, sizeof o);
+    o.r = buf;
+    o.cap = n;
+    if (r32(&o) != EC_PROJECT_MAGIC)
+        return -1;
+    ver = (int)r16(&o);
+    if (ver < 1 || ver > EC_PROJECT_VERSION)
+        return -1;
+    (void)r16(&o);
+    len = r32(&o);
+    (void)r32(&o);
+    if (HDR + len < o.cap)
+        o.cap = HDR + len;
+    out->bpm = clampf(rf(&o), 20, 300);
+    (void)rf(&o);
+    (void)r16(&o);
+    (void)r8(&o);
+    (void)r8(&o);
+    out->current = (int)r8(&o);
+    nslot = r8(&o);
+    for (i = 0; i < nslot && !o.bad; i++) {
+        const uint32_t pl = r8(&o);
+        for (k = 0; k < pl; k++)
+            (void)r8(&o);
+        for (k = 0; k < 5; k++)
+            (void)rf(&o);
+        out->samples += pl > 0;
+    }
+    if (o.bad)
+        return 0;
+    npat = r8(&o);
+    ntr = r8(&o);
+    for (i = 0; i < npat && !o.bad; i++) {
+        if (!r8(&o))
+            continue;
+        if (i < 64)
+            out->used |= 1ull << i;
+        for (t = 0; t < ntr && !o.bad; t++) {
+            const uint32_t np = r8(&o);
+            uint32_t nsteps;
+            for (k = 0; k < np; k++)
+                (void)r8(&o), (void)rv(&o, ver);
+            nsteps = r16(&o);
+            for (k = 0; k < nsteps && !o.bad; k++) {
+                uint32_t nl;
+                if (ver < 2) {
+                    (void)r16(&o), (void)r8(&o), (void)r32(&o);
+                } else {
+                    const uint32_t fl = ((void)r8(&o), r8(&o));
+                    if (fl & 2u)
+                        (void)r32(&o);
+                }
+                nl = r8(&o);
+                for (s = 0; s < nl; s++)
+                    (void)r8(&o), (void)rv(&o, ver);
+            }
+        }
+    }
+    out->patterns_known = !o.bad;
+    if (!out->patterns_known)
+        out->used = 0;
+    return 0;
+}
+
 int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
 {
     uint32_t migrated = 0;

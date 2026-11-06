@@ -34,8 +34,8 @@ MODE_DEFAULT = {"TRIG": ("TRIG", "TRIG", "HOME", 2), "SRC": ("LOOP ENGINE", "LOO
                 "FILE": ("FILE", "FILE", "FILE", 1), "PAT": ("PATTERN LAUNCH", "PATTERNS", "SEQ", 1),
                 "XFD": ("CROSSFADER", "CROSSFADER", "ARP", 1)}
 # the fixed screens: modes without params of their own (EC_MODE_KEYBOARD ..), in this order
-SCREENS = ["KEYBOARD", "PAGES", "SAMPLER"]
-SCREEN_DEFAULT = {"KEYBOARD": ("HOME", 3), "PAGES": ("EDIT", 2), "SAMPLER": ("FILE", 2)}
+SCREENS = ["KEYBOARD", "PAGES", "SAMPLER", "PROJECTS"]   # (0.6.42: PROJECTS, FILE second)
+SCREEN_DEFAULT = {"KEYBOARD": ("HOME", 3), "PAGES": ("EDIT", 2), "SAMPLER": ("FILE", 3), "PROJECTS": ("FILE", 2)}
 # the black keys B1..B11 (a page's "key", 0 = none); the source template's modes: pages 1..5 = B1..B5 when the design
 # names no key in that category; MOD: MATRIX B1, MACRO n B(n+1), MACROS B11; FX's buses S1 S2 MST: B3 B4 B5
 NBKEY = 11

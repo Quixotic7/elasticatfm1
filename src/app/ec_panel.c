@@ -181,6 +181,8 @@ void ec_pn_enter(int mode)
         P->xf_from = ec_src_mode(was) ? was : EC_CAT_FILT;
     if (mode == EC_MODE_SAMPLER && was != EC_MODE_SAMPLER)
         ec_sampler_enter(1);
+    if (mode == EC_MODE_PROJECTS && was != EC_MODE_PROJECTS)
+        ec_prj_enter();                            /* 0.6.42: the list read again, the cursor on this project */
     if (mode != was && A->rec.open)                /* (the recorder's setup belongs to the mode it opened in) */
         ec_rec_close();
     if (mode != was) {
@@ -236,14 +238,21 @@ static void mode_tap(int b)
         ec_pn_enter(P->last[mb] >= 0 ? P->last[mb] : modes[0]);
         return;
     }
-    if (mb == EC_MB_FILE && cur == EC_CAT_FILE && !A->bus) {   /* 0.6.15 (owner): FILE's sub-modes on its button:
-                                                    * BROWSE / POOL -> the EDITOR -> RAZOR -> the SAMPLER -> BROWSE;
-                                                    * playing, the editors are skipped (they need a stop) */
-        const int pic = ec_file_page();
+    if (mb == EC_MB_FILE && (cur == EC_CAT_FILE || cur == EC_MODE_PROJECTS) && !A->bus) {   /* 0.6.15 (owner): FILE's
+                                                    * sub-modes on its button: BROWSE / POOL -> 0.6.42 PROJECTS -> the
+                                                    * EDITOR -> RAZOR -> the SAMPLER -> BROWSE; playing, the editors are
+                                                    * skipped (they need a stop) */
+        const int pic = cur == EC_MODE_PROJECTS ? -1 : ec_file_page();
         const int playing = A->seq.playing || ec_seq_counting_in(&A->seq);
         int want = pic == EC_PIC_EDITOR ? EC_PIC_RAZOR : pic == EC_PIC_RAZOR ? -1 : EC_PIC_EDITOR, p;
+        if (cur == EC_CAT_FILE && (pic == EC_PIC_FILE || pic == EC_PIC_POOL)) {
+            ec_pn_enter(EC_MODE_PROJECTS);
+            return;
+        }
         if (playing)
             want = -1;
+        if (cur == EC_MODE_PROJECTS && want >= 0)
+            ec_pn_enter(EC_CAT_FILE);              /* (into FILE first: the editor is its page) */
         if (want >= 0) {
             for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)
                 if (ec_page_pic(EC_CAT_FILE, p, 0) == want) {
@@ -294,6 +303,13 @@ int ec_pn_pick_list(int b, int *modes, int *pages, int max)
         if (n < max) {
             modes[n] = EC_MODE_SAMPLER;
             pages[n++] = -1;
+        }
+        if (n > 1 && n < max) {                    /* 0.6.42 (owner): PROJECTS second: BROWSE, PROJECTS, EDITOR .. */
+            memmove(modes + 2, modes + 1, sizeof modes[0] * (size_t)(n - 1));
+            memmove(pages + 2, pages + 1, sizeof pages[0] * (size_t)(n - 1));
+            modes[1] = EC_MODE_PROJECTS;
+            pages[1] = -1;
+            n++;
         }
         return n;
     }
@@ -493,8 +509,13 @@ static void button_down(int b)
     if (b == EC_B_OCTDN || b == EC_B_OCTUP) {
         const int bit = b == EC_B_OCTDN ? 1 : 2;
         const int fpic = !A->fn && ec_app_mode() == EC_CAT_FILE && !A->settings ? ec_file_page() : -1;
-        if (fpic == EC_PIC_FILE && b == EC_B_OCTUP) {   /* FILE: F2 on a pool file frees its slot */
-            ec_file_f2();
+        if (!A->fn && ec_app_mode() == EC_MODE_PROJECTS) {   /* 0.6.42: OCT+ yes / LOAD, OCT- no / back */
+            ec_prj_oct(b == EC_B_OCTUP);
+        } else if (fpic == EC_PIC_FILE) {          /* 0.6.42 (owner): OCT+ yes / open, OCT- no / up (FREE: B9) */
+            if (b == EC_B_OCTUP)
+                ec_file_open();
+            else
+                ec_file_up();
         } else if (fpic == EC_PIC_EDITOR) {        /* 0.6.1: the EDITOR: F1 START, F2 END (what a white key places) */
             ec_file_ed_point(b == EC_B_OCTUP);
         } else if (fpic == EC_PIC_POOL) {          /* 0.6.1: POOL: F2 FREE; 0.6.15: the move is B11 held */
@@ -912,6 +933,10 @@ static void black_down(int k, int key, int vel)
         ec_file_black(key, 1);
         A->key_role[k] = R_FILEB;
         break;
+    case EC_MODE_PROJECTS:                         /* 0.6.42: NEW, RENAME, RANDOM .. SAVE +1, SAVE, LOAD */
+        ec_prj_black(key);
+        A->key_role[k] = R_SWALLOW;
+        break;
     default:
         if (ec_src_mode(mode)) {
             ec_src_down(key);
@@ -1122,6 +1147,11 @@ static void knob(int r, int d)
         ec_file_pool_select(d);
         return;
     }
+    if (ec_app_mode() == EC_MODE_PROJECTS && !A->settings) {   /* 0.6.42: SEL / ALGO the list; nothing else */
+        if (r == EC_E_SELECT || r == EC_E_ALGO)
+            ec_prj_select(d > 0 ? 1 : -1);
+        return;
+    }
     switch (r) {
     case EC_E_SELECT: select_knob(d); break;
     case EC_E_ALGO:
@@ -1328,6 +1358,9 @@ const char *ec_pn_roles(int mode, int *cur)
         } else if (ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) > 0)
             *cur = ec_cat_page_key(EC_CAT_FILE, A->page[EC_CAT_FILE]) - 1;
     } break;
+    case EC_MODE_PROJECTS:                         /* 0.6.42: B1-B3, B8-B10 */
+        r[0] = r[1] = r[2] = r[7] = r[8] = r[9] = 'A';
+        break;
     case EC_MODE_SAMPLER:                          /* B1..B5 the length, B11 arm / stop */
         memset(r, 'A', 5);
         r[10] = 'X';

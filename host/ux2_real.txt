@@ -215,10 +215,12 @@ png 81500:Crossfader_screen.png
 # BARS); armed (B11): the next bar
 press SAVE@82400
 press SAVE@82600
+press SAVE@82700   # (0.6.42: past PROJECTS)
 upper 2@82800
 press SEL@83200
 press SAVE@83600
 press SAVE@83800
+press SAVE@83950
 upper 10@84200
 png 85250:Sampler_screen.png
 
@@ -232,12 +234,14 @@ press HOME@95600
 png 96400:AppSettings_screen.png
 press HOME@97000
 
-# ======== stopped: FILE (SAVE: BROWSE, always): /audio/kit (SEL, B2) loaded file by file (B10, SEL), up
+# ======== stopped: FILE (SAVE: BROWSE, always): /audio/kit (SEL, B2) loaded file by file (B10, SEL; 0.6.42: past the
+# UP row first), up
 # (B1), into /audio/breaks (SEL, B2), three loads; the EDITOR (B4) at 4X (B4), the trim (W2 START, F2, W15 END, F1)
 press PLAY@97600
 press SAVE@98000
 turn SELECT@99000:1
 upper 1@99200
+turn SELECT@99400:1
 upper 9@99600
 turn SELECT@99800:1
 upper 9@100000
@@ -302,7 +306,7 @@ upper 9@111600
 upper 0@112200
 turn SELECT@113000:-1
 upper 1@113200
-turn SELECT@114200:1
+turn SELECT@114200:2
 upper 9@114400
 turn SELECT@114800:1
 upper 9@115000
@@ -311,6 +315,7 @@ upper 9@115600
 turn SELECT@116000:-2
 png 117400:FileBrowser_screen.png
 press SAVE@117800
+press SAVE@118000   # (0.6.42: past PROJECTS)
 turn K4@118200:1
 turn K4@118300:1
 lower 1@118600
@@ -378,6 +383,7 @@ press OCT-@141000
 # ---- FILE (SAVE: BROWSE; SAVE again: the EDITOR, still 4X): F1 START + W3, F2 END + W13: the header says END
 press SAVE@142000
 press SAVE@142200
+press SAVE@142400   # (0.6.42: past PROJECTS)
 press OCT-@142600
 lower 2@142800
 press OCT+@143200

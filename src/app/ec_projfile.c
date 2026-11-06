@@ -52,7 +52,17 @@ static struct {
     uint32_t disk_len, disk_sum;
     uint32_t ck_at, ck_sum;
     int conflict;                /* a save found NAME.ecp changed: the next SHIFT + SAVE writes a new project */
+    /* 0.6.42: the list's times (FS_STAT, one a tick), NEW waiting for a save, the card being read */
+    int lstat, lstat_i;
+    int new_after, save_new;
+    ec_fsreq_t kreq;
+    int kstate;                  /* 0 idle, 1 reading, 2 read */
+    uint32_t kat;
+    char kname[EC_PF_NAME], kwant[EC_PF_NAME];
+    ec_project_card_t card;
 } g;
+static uint32_t g_mtime[EC_PF_LIST_MAX], g_lmtime[EC_PF_LIST_MAX];
+static uint8_t g_kbuf[64 * 1024];
 
 static uint8_t g_cbuf[16384];
 
@@ -198,8 +208,13 @@ int ec_pf_list_count(void) { return g_nnames; }
 const char *ec_pf_list_name(int i) { return i >= 0 && i < g_nnames ? g_names[i] : ""; }
 int ec_pf_list_busy(void) { return g.lwant || g.lrun; }
 
+static void stat_tick(void);
 static void list_tick(void)
 {
+    if (g.lstat) {
+        stat_tick();
+        return;
+    }
     if (!g.lrun) {
         if (!g.lwant)
             return;
@@ -236,11 +251,86 @@ static void list_tick(void)
             return;                                 /* (the next entries) */
         }
         g.lerr = r < 0 && r != FS_ENOENT ? r : 0;   /* (no folder /data/projects yet: no projects) */
-        memcpy(g_names, g_lnames, sizeof g_lnames[0] * (size_t)g_nl);
-        g_nnames = g_nl;
-        g.lrun = 0;
-        g.lgen++;
-        A->redraw = 1;
+        g.lstat = 1;                                /* 0.6.42: each file's time next */
+        g.lstat_i = 0;
+    }
+}
+
+/* 0.6.42: the list's times, a file a tick, then the list newest first (the same second: the higher name first) */
+static void list_publish(void)
+{
+    int i, j;
+    for (i = 1; i < g_nl; i++)                      /* (insertion sort: a few hundred at most) */
+        for (j = i; j > 0 && (g_lmtime[j] > g_lmtime[j - 1] ||
+                              (g_lmtime[j] == g_lmtime[j - 1] && strcmp(g_lnames[j], g_lnames[j - 1]) > 0)); j--) {
+            char t[EC_PF_NAME];
+            const uint32_t m = g_lmtime[j];
+            memcpy(t, g_lnames[j], sizeof t);
+            memcpy(g_lnames[j], g_lnames[j - 1], sizeof t);
+            memcpy(g_lnames[j - 1], t, sizeof t);
+            g_lmtime[j] = g_lmtime[j - 1];
+            g_lmtime[j - 1] = m;
+        }
+    memcpy(g_names, g_lnames, sizeof g_lnames[0] * (size_t)g_nl);
+    memcpy(g_mtime, g_lmtime, sizeof g_lmtime[0] * (size_t)g_nl);
+    g_nnames = g_nl;
+    g.lstat = 0;
+    g.lrun = 0;
+    g.lgen++;
+    A->redraw = 1;
+}
+
+static void stat_tick(void)
+{
+    static uint8_t st[16];
+    char path[96];
+    if (!g.lstat)
+        return;
+    if (g.lstat_i >= g_nl) {
+        list_publish();
+        return;
+    }
+    if (g.lreq.state == EC_FSR_IDLE) {
+        snprintf(path, sizeof path, "%s/%s%s", EC_PF_DIR, g_lnames[g.lstat_i], EC_PF_EXT);
+        memset(st, 0, sizeof st);
+        ec_fs_start(&g.lreq, FS_STAT, path, 0, st, (int32_t)sizeof st);
+    }
+    if (ec_fs_update(&g.lreq) != EC_FSR_DONE)
+        return;
+    g.lreq.state = EC_FSR_IDLE;
+    g_lmtime[g.lstat_i++] = g.lreq.result >= 12 ? (uint32_t)st[8] | (uint32_t)st[9] << 8 | (uint32_t)st[10] << 16 |
+                                                      (uint32_t)st[11] << 24
+                                                : 0;
+}
+
+uint32_t ec_pf_list_mtime(int i) { return i >= 0 && i < g_nnames ? g_mtime[i] : 0; }
+int ec_pf_list_find(const char *name)
+{
+    int i;
+    for (i = 0; name && i < g_nnames; i++)
+        if (!strcmp(g_names[i], name))
+            return i;
+    return -1;
+}
+
+void ec_pf_name_plus(const char *base, char *out)
+{
+    char b[EC_PF_NAME];
+    int l, n;
+    snprintf(b, sizeof b, "%s", base && base[0] ? base : "PROJ");
+    l = (int)strlen(b);                             /* "SPICY WALRUS 2" -> "SPICY WALRUS" */
+    while (l > 0 && b[l - 1] >= '0' && b[l - 1] <= '9')
+        l--;
+    if (l > 0 && l < (int)strlen(b) && b[l - 1] == ' ')
+        b[l - 1] = 0;
+    for (n = 2; n < 1000; n++) {
+        char num[8];
+        int keep;
+        snprintf(num, sizeof num, " %d", n);
+        keep = 16 - (int)strlen(num);              /* (16: the names' room, EC_NAME - 1) */
+        snprintf(out, EC_PF_NAME, "%.*s%s", keep, b, num);
+        if (ec_pf_list_find(out) < 0)
+            return;
     }
 }
 
@@ -592,6 +682,97 @@ void ec_pf_open(const char *name)
 }
 
 /* ------------------------------------------------------------------------------------------- the app --- */
+/* ------------------------------------------------------------------------------------------- PROJECTS --- */
+/* 0.6.42 (owner): SAVE +1: the current project written under a new name and from now on that file's */
+void ec_pf_save_as(const char *name)
+{
+    if (!name || !name[0])
+        return;
+    if (g.sv != SV_IDLE || g.ld != LD_IDLE) {
+        ec_app_alert("BUSY: TRY AGAIN");
+        return;
+    }
+    snprintf(g.name, sizeof g.name, "%s", name);
+    g.disk_known = 0;                               /* (a new file: nothing of ours there to check against) */
+    g.conflict = 0;
+    g.tmp_good = 0;
+    ec_pf_save(0);
+}
+
+int ec_pf_dirty(void) { return A->dirty || g.sv != SV_IDLE; }
+
+/* a new project: the current one's edits saved first, then an empty project (the folder's first file on T1) under the
+ * next free name, written as soon as that sample has landed */
+static void new_now(void)
+{
+    replace(0);                                     /* (n 0: the load fails, so an empty project) */
+    g.name[0] = 0;
+    g.disk_known = 0;
+    g.conflict = 0;
+    g.tmp_good = 0;
+    g.from_tmp = 0;
+    ec_app_fresh_project();
+    g.save_new = 1;
+    ec_app_message("NEW PROJECT");
+    ec_app_goto(EC_CAT_SRC, ec_src_loop_page());
+}
+
+void ec_pf_new(void)
+{
+    if (g.ld != LD_IDLE || ec_rec_busy()) {
+        ec_app_alert("BUSY: TRY AGAIN");
+        return;
+    }
+    if (A->dirty)
+        ec_pf_save(1);
+    if (g.sv != SV_IDLE)
+        g.new_after = 1;                            /* (after the save, ec_pf_tick) */
+    else
+        new_now();
+}
+
+/* the card: the file's first 64 KB read (a project is ~7 KB), ec_project_peek */
+void ec_pf_card_want(const char *name)
+{
+    if (!name || !strcmp(name, g.kwant))
+        return;
+    snprintf(g.kwant, sizeof g.kwant, "%s", name);
+}
+
+const ec_project_card_t *ec_pf_card(const char *name)
+{
+    return g.kstate == 2 && name && !strcmp(name, g.kname) ? &g.card : 0;
+}
+
+static void card_tick(void)
+{
+    char path[96];
+    if (g.kstate != 1) {
+        if (!g.kwant[0] || (g.kstate == 2 && !strcmp(g.kwant, g.kname)))
+            return;
+        snprintf(g.kname, sizeof g.kname, "%s", g.kwant);
+        g.kstate = 1;
+        g.kat = 0;
+    }
+    if (g.kreq.state == EC_FSR_IDLE) {
+        snprintf(path, sizeof path, "%s/%s%s", EC_PF_DIR, g.kname, EC_PF_EXT);
+        ec_fs_start(&g.kreq, FS_READ, path, (int64_t)g.kat, g_kbuf + g.kat, (int32_t)(sizeof g_kbuf - g.kat));
+    }
+    if (ec_fs_update(&g.kreq) != EC_FSR_DONE)
+        return;
+    g.kreq.state = EC_FSR_IDLE;
+    if (g.kreq.result > 0 && g.kat + (uint32_t)g.kreq.result < sizeof g_kbuf) {
+        g.kat += (uint32_t)g.kreq.result;
+        return;                                     /* (the rest; 0 = the end) */
+    }
+    if (g.kreq.result > 0)
+        g.kat += (uint32_t)g.kreq.result;
+    if (ec_project_peek(g_kbuf, g.kat, &g.card) != 0)
+        memset(&g.card, 0, sizeof g.card);
+    g.kstate = 2;
+    A->redraw = 1;
+}
+
 int ec_pf_boot(void)
 {
     uint32_t size, magic;
@@ -617,6 +798,15 @@ void ec_pf_tick(void)
     save_tick();
     load_tick();
     last_tick();
+    card_tick();
+    if (g.new_after && g.sv == SV_IDLE && g.ld == LD_IDLE) {   /* 0.6.42: NEW, after the edits' save */
+        g.new_after = 0;
+        new_now();
+    }
+    if (g.save_new && !A->fresh && !A->scanning && A->load_slot < 0 && g.sv == SV_IDLE) {   /* the new project's file */
+        g.save_new = 0;
+        ec_pf_save(1);
+    }
     if (g.open_after && g.sv == SV_IDLE && g.ld == LD_IDLE) {
         g.open_after = 0;
         if (A->dirty)                               /* (edited again meanwhile) */
@@ -633,6 +823,7 @@ void ec_pf_shutdown(void)
     ec_fs_cancel(&g.req);
     ec_fs_cancel(&g.lreq);
     ec_fs_cancel(&g_nreq);
+    ec_fs_cancel(&g.kreq);
     g_last_read = g_last_write = g_last_wait = 0;
     g_last_written[0] = 0;
 }

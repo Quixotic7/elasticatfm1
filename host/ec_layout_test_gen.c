@@ -841,6 +841,6 @@ const ec_layout_t EC_LAYOUT_TEST = {
         {29, 1, -1, "CROSSFADER", "CROSSFADER", 8, 1},   /* XFD */
     },
     {35, 37, 39}, {36, 38, 40}, 41, 42, {3, 4, 5},
-    {{"KEYBOARD", 6, 3}, {"PAGES", 5, 2}, {"SAMPLER", 7, 2}},
+    {{"KEYBOARD", 6, 3}, {"PAGES", 5, 2}, {"SAMPLER", 7, 3}, {"PROJECTS", 7, 2}},
     ec_layout_test_page, ec_layout_test_var, ec_layout_test_item, 43, 139, 634,
 };

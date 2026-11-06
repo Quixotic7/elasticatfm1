@@ -1208,3 +1208,16 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   full. Slice tracks' keys with a slice ~10 % (were ~16 %).
 - B11 held on a slice track: a bar under the waveform spans the slices of the pads' bank (1-16 / 17-32, in the
   layer's colour), so B11 + PRESETS shows where the bank went.
+
+## 38. 0.6.42: FILE split: SAMPLES and PROJECTS (owner, 2026-11-05; docs/PROJECTS-DESIGN.md)
+
+- **SAMPLES** (the browser): rooted at AUDIO/, nothing above it; below it an **UP row** on top (an arrow, where it
+  goes). **OCT+ opens** the row (UP: up, a folder: in, a file: LOAD), **OCT- goes up**; FREE is B9 (it was F2).
+- **PROJECTS**, FILE's second mode (FILE: SAMPLES > PROJECTS > EDITOR > SLICE > SAMPLER; FILE held: B1-B5): every
+  project in /data/projects, newest first (each file's time; the same second: the higher name first), the loaded one
+  OPEN; the cursor's card (ec_project_peek: its name, its 64 patterns, tempo, samples, from the file's first 64 KB).
+  **OCT+ / B10 LOAD** (asks with unsaved edits: LOAD X?, OCT+ yes / OCT- no), **OCT- back**, **B9 SAVE**, **B8 SAVE
+  +1** (name + the next free number, now the project), **B1 NEW** (asks). B2 RENAME / B3 RANDOM come with the name
+  keybed (0.6.43). The header asks with the back / OK arrows: OCT- / OCT+ are no / yes in the browsers.
+- Tests: test_file (the root, UP, OCT), test_proj (LOAD through PROJECTS with the question, SAVE +1, NEW), the
+  scripts' FILE taps one more (past PROJECTS).

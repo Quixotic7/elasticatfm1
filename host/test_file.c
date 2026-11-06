@@ -58,10 +58,12 @@ static void test_gating(void)
     press(FM1P_B_SAVE, 40);
     CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE && A->seq.playing,
           "FILE while playing: BROWSE opens, still playing (%d)", mode());
-    press(FM1P_B_OCTUP, 40);
-    CHECK(!strcmp(A->msg, "STOP FIRST"), "F2 (FREE) while playing: refused (%s)", A->msg);
+    B(9, 40);                                      /* 0.6.42: FREE is B9 (OCT+ opens) */
+    CHECK(!strcmp(A->msg, "STOP FIRST"), "B9 (FREE) while playing: refused (%s)", A->msg);
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_MODE_SAMPLER, "FILE again: the SAMPLER (%d)", mode());
+    CHECK(mode() == EC_MODE_PROJECTS, "FILE again: PROJECTS (0.6.42; %d)", mode());
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_MODE_SAMPLER, "FILE again, playing: the SAMPLER, past the editors (%d)", mode());
     press(FM1P_B_PLAY, 40);                        /* PLAY works in the SAMPLER */
     CHECK(!A->seq.playing, "stopped from the SAMPLER");
     to(EC_CAT_SRC);
@@ -73,7 +75,9 @@ static void test_gating(void)
     press(FM1P_B_PLAY, 40);
     CHECK(!A->seq.playing, "and stops");
     press(FM1P_B_SAVE, 40);
-    CHECK(ec_file_page() == EC_PIC_EDITOR, "stopped: FILE again opens the EDITOR (0.6.15)");
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR,
+          "stopped: FILE again (past PROJECTS) opens the EDITOR (0.6.15)");
     press(FM1P_B_PLAY, 40);
     CHECK(!A->seq.playing && ec_file_page() == EC_PIC_FILE, "PLAY on the EDITOR: back to BROWSE, not playing (%s)",
           A->msg);
@@ -105,11 +109,17 @@ static void test_folders(void)
     CHECK(A->cursor == 0, "the cursor on the folder");
     B(2, 40);                                      /* B2: into the folder */
     CHECK(!strcmp(A->pn.fdir, "/audio/breaks") && A->cursor == 0, "B2: into /audio/breaks (%s)", A->pn.fdir);
-    CHECK(ec_file_count() == 2 && !strcmp(ec_file_entry(0, 0, 0), "deep/") &&
-              !strcmp(ec_file_entry(1, 0, 0), "think_bpm96.wav"),
-          "breaks: deep/ then think (%d: %s)", ec_file_count(), ec_file_entry(0, 0, 0));
+    {
+        int d, f;
+        ec_file_entry(0, &d, &f);
+        CHECK(ec_file_count() == 3 && !strcmp(ec_file_entry(0, 0, 0), "UP") && d && f == EC_FILE_UP &&
+                  !strcmp(ec_file_entry(1, 0, 0), "deep/") && !strcmp(ec_file_entry(2, 0, 0), "think_bpm96.wav"),
+              "breaks (0.6.42): UP, deep/, think (%d: %s)", ec_file_count(), ec_file_entry(0, 0, 0));
+    }
+    turn(FM1P_E_SELECT, 1);                        /* past UP, on deep/ */
     B(2, 40);
-    CHECK(!strcmp(A->pn.fdir, "/audio/breaks/deep") && ec_file_count() == 1, "B2 again: the subfolder's subfolder");
+    CHECK(!strcmp(A->pn.fdir, "/audio/breaks/deep") && ec_file_count() == 2, "B2 again: the subfolder's subfolder");
+    turn(FM1P_E_SELECT, 1);                        /* (past UP) onto its file */
     settle(100);
     snprintf(want, sizeof want, "/audio/breaks/deep/hit.wav");
     CHECK(!strcmp(A->pn.pv_path, want) && A->pn.pv_state == EC_PV_READY, "the move into it previews its file (%s %d)",
@@ -119,14 +129,17 @@ static void test_folders(void)
           A->pn.fdir, cursor_name());
     B(1, 40);
     CHECK(!strcmp(A->pn.fdir, "/audio") && !strcmp(cursor_name(), "breaks/"), "B1: up to /audio, on breaks/");
-    B(1, 40);                                      /* 0.6.1: up from /audio: the top level, AUDIO/ and PROJECTS/ */
-    CHECK(!strcmp(A->pn.fdir, "/") && ec_file_count() == 2 && !strcmp(cursor_name(), "AUDIO/") &&
-              !strcmp(ec_file_entry(1, 0, 0), "PROJECTS/"),
-          "B1 at /audio: the top level, on AUDIO/ (%s %d %s)", A->pn.fdir, ec_file_count(), cursor_name());
-    B(1, 40);
-    CHECK(!strcmp(A->pn.fdir, "/") && !strcmp(A->msg, "TOP FOLDER"), "B1 at the top: stays (%s)", A->msg);
-    B(2, 40);
-    CHECK(!strcmp(A->pn.fdir, "/audio") && A->cursor == 0, "B2 on AUDIO/: back in /audio (%s)", A->pn.fdir);
+    B(1, 40);                                      /* 0.6.42 (owner): AUDIO/ is the top: nothing above it */
+    CHECK(!strcmp(A->pn.fdir, "/audio") && !strcmp(A->msg, "AUDIO") && ec_file_count() == 5,
+          "B1 at /audio: stays, AUDIO is the top (%s %s %d)", A->pn.fdir, A->msg, ec_file_count());
+    B(2, 40);                                      /* OCT- up and OCT+ open, as B1 / B2; OCT+ on UP goes up */
+    press(FM1P_B_OCTDN, 40);
+    CHECK(!strcmp(A->pn.fdir, "/audio") && !strcmp(cursor_name(), "breaks/"), "OCT-: up, on breaks/ (%s)", A->pn.fdir);
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!strcmp(A->pn.fdir, "/audio/breaks") && A->cursor == 0, "OCT+ on breaks/: into it (%s)", A->pn.fdir);
+    press(FM1P_B_OCTUP, 40);
+    CHECK(!strcmp(A->pn.fdir, "/audio") && !strcmp(cursor_name(), "breaks/"), "OCT+ on UP: up (%s)", A->pn.fdir);
+    turn(FM1P_E_SELECT, -20);
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "UP") && lbl(FM1CORE_LBL_BLACK0 + 1, "INTO") &&
               lbl(FM1CORE_LBL_BLACK0 + 9, "ADD") && lbl(FM1CORE_LBL_BLACK0 + 8, "REMOVE") &&
               lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") && lbl(FM1CORE_LBL_BLACK0 + 3, "") &&
@@ -235,12 +248,12 @@ static void test_free_purge(void)
     cursor_to("d_perc16_bpm120.wav");
     settle(200);
     CHECK(ec_file_pooled("/audio/d_perc16_bpm120.wav") == 2, "d_perc16 in slot 3");
-    press(FM1P_B_OCTUP, 40);                       /* F2: free its slot */
+    B(9, 40);                                      /* B9 (0.6.42: F2 opens): free its slot */
     CHECK(ec_file_pooled("/audio/d_perc16_bpm120.wav") < 0 && A->slot[2].state == EC_SL_EMPTY &&
               !strcmp(A->msg, "SLOT 3 FREED") && !A->pn.f_sticky,
-          "F2 on a pool file: its slot freed (%s)", A->msg);
-    press(FM1P_B_OCTUP, 40);
-    CHECK(!strcmp(A->msg, "NOT IN THE POOL"), "F2 again: not in the pool (%s)", A->msg);
+          "B9 on a pool file: its slot freed (%s)", A->msg);
+    B(9, 40);
+    CHECK(!strcmp(A->msg, "NOT IN THE POOL"), "B9 again: not in the pool (%s)", A->msg);
     /* purge: T1 on slot 2 (chords), slot 1 (drums) locked on a step of pattern A3, slot 4 (bass) used by nothing */
     trk(0)->v[EC_P_SLOT] = 2;
     for (i = 1; i < EC_NTRACK; i++)
@@ -290,6 +303,7 @@ static void test_editor(void)
     ec_slot_t *sl;
     to(EC_CAT_FILE);
     A->track = 0;
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42: past PROJECTS */
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "FILE again: the editor");
     sl = &A->proj.slot[ec_app_track_slot(A, 0)];
@@ -429,6 +443,7 @@ static void test_file_pages(void)
     B(7, 40);
     CHECK(ec_file_page() == EC_PIC_FILE, "POOL: B7 leaves for BROWSE (0.6.15)");
     B(6, 40);
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42: past PROJECTS */
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR (0.6.15)");
     press(FM1P_B_SAVE, 40);
@@ -438,6 +453,7 @@ static void test_file_pages(void)
     press(FM1P_B_SAVE, 40);                        /* the SAMPLER */
     press(FM1P_B_SAVE, 40);                        /* BROWSE */
     B(6, 40);
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42: past PROJECTS */
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "POOL: FILE again = the EDITOR");
     turn(FM1P_E_SELECT, 1);                        /* EDITOR's second lane; 0.6.15: SEL stays on the editor's page */
@@ -758,6 +774,7 @@ static void test_razor_keys(void)
     const int t = A->track, m0 = rz->mute[1];
     to(EC_CAT_SRC);
     to(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42: past PROJECTS */
     press(FM1P_B_SAVE, 40);
     press(FM1P_B_SAVE, 40);
     CHECK(ec_rzui_active(A), "FILE twice from BROWSE: RAZOR");
@@ -785,6 +802,7 @@ static void test_qa616(void)
     /* the slice editor: EVEN 4 -> UNDO = the 16 before; COUNT -12 -> UNDO = 16 again, the edges as they were */
     to(EC_CAT_SRC);
     to(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42: past PROJECTS */
     press(FM1P_B_SAVE, 40);
     press(FM1P_B_SAVE, 40);
     CHECK(ec_rzui_active(A), "QA: the slice editor");
@@ -813,6 +831,7 @@ static void test_qa616(void)
           "QA: UNDO CNT: 16 slices, slice 6 as it was (%d, %g..%g, %s)", ec_rzui_count(A), rz->start[5], rz->end[5], A->msg);
     /* the trim editor: K1 then K2 within a second = two undos */
     to(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);                        /* 0.6.42: past PROJECTS */
     press(FM1P_B_SAVE, 40);
     CHECK(ec_file_page() == EC_PIC_EDITOR, "QA: the trim editor");
     sl = &A->proj.slot[ec_app_track_slot(A, A->track)];

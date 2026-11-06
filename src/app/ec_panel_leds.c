@@ -337,6 +337,7 @@ static const char *pick_name(int mode, int page)
     case EC_CAT_MASTER: return "MIX";
     case EC_MODE_PAGES: return "PAGES";
     case EC_MODE_SAMPLER: return "SAMPLER";
+    case EC_MODE_PROJECTS: return "PROJECTS";
     default: return ec_mode_name(mode);
     }
 }
@@ -454,6 +455,13 @@ static void leds_black(void)
                 l[10] = ec_file_pool_carrying() ? (blink(200) ? EC_LED_LIT : EC_LED_MID) : EC_LED_MID;
             }
         } break;
+        case EC_MODE_PROJECTS:                     /* 0.6.42: the actions; a question waits: dark (OCT- / OCT+) */
+            if (!ec_prj_ask()) {
+                l[0] = l[1] = l[2] = EC_LED_40;
+                l[7] = l[8] = EC_LED_40;
+                l[9] = EC_LED_LIT;                 /* LOAD */
+            }
+            break;
         case EC_MODE_SAMPLER: {
             static const int K[6] = {0, 1, 2, 3, 4, 4};
             for (i = 0; i < 5; i++)
@@ -536,6 +544,11 @@ static void leds_buttons(void)
     } else if (ec_rzui_active(A)) {
         ec_plat_led_button(EC_B_OCTDN, EC_LED_LIT);
         ec_plat_led_button(EC_B_OCTUP, EC_LED_LIT);
+    } else if (ec_app_mode() == EC_MODE_PROJECTS ||
+               (ec_app_mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE)) {   /* 0.6.42 / 0.6.42: no / yes */
+        ec_plat_led_button(EC_B_OCTDN, EC_LED_MID);
+        ec_plat_led_button(EC_B_OCTUP, ec_prj_ask() && ec_app_mode() == EC_MODE_PROJECTS && blink(300) ? EC_LED_DIM
+                                                                                                         : EC_LED_LIT);
     } else {
         const int on = P->f_held | P->f_sticky;
         ec_plat_led_button(EC_B_OCTDN, on & 1 ? (P->f_sticky & 1 && blink(400) ? EC_LED_MID : EC_LED_LIT)
@@ -571,6 +584,14 @@ static void knob_labels(void)
         L(EC_LBL_KNOB0 + EC_E_PRESETS, "");
         for (k = 0; k < 4; k++)
             L(EC_LBL_KNOB0 + EC_E_K1 + k, NK[k]);
+        return;
+    }
+    if (mode == EC_MODE_PROJECTS && !A->fn && !A->settings) {   /* 0.6.42: SEL / ALGO the list, nothing else */
+        L(EC_LBL_KNOB0 + EC_E_SELECT, "PROJECT");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, "PROJECT");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, "");
+        for (k = 0; k < 4; k++)
+            L(EC_LBL_KNOB0 + EC_E_K1 + k, "");
         return;
     }
     if ((ec_lp_b11_held() || mode == EC_MODE_PAGES) && !A->bus && !A->settings) {   /* 0.6.14: B11 held (PAGES:
@@ -678,8 +699,9 @@ static const char *button_name(int mb)
                     return "EDITOR";
                 if (cur == EC_CAT_FILE && ec_file_page() == EC_PIC_RAZOR)
                     return "SLICE";
-                return "FILE";
+                return "SAMPLES";          /* 0.6.42: FILE's halves: SAMPLES / PROJECTS */
             case EC_MODE_SAMPLER: return "SAMPLER";
+            case EC_MODE_PROJECTS: return "PROJECTS";
             default: break;
             }
         }
@@ -717,9 +739,12 @@ static void button_labels(void)
     } else if (mode == EC_MODE_KEYBOARD) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "OCT-");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "OCT+");
-    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {
-        L(EC_LBL_BTN0 + EC_B_OCTDN, "COPY");
-        L(EC_LBL_BTN0 + EC_B_OCTUP, "FREE SLOT");
+    } else if (mode == EC_MODE_PROJECTS) {         /* 0.6.42: OCT- no / back, OCT+ yes / LOAD */
+        L(EC_LBL_BTN0 + EC_B_OCTDN, ec_prj_ask() ? "NO" : "BACK");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, ec_prj_ask() ? "YES" : "LOAD");
+    } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {   /* 0.6.42: OCT- up, OCT+ open */
+        L(EC_LBL_BTN0 + EC_B_OCTDN, "UP");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, "OPEN");
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR) {   /* 0.6.1: the point the keys place */
         L(EC_LBL_BTN0 + EC_B_OCTDN, "START");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "END");
@@ -883,6 +908,11 @@ static void black_labels(void)
                     s = BR[i];
                 else if (pic == EC_PIC_POOL)
                     s = i == 9 ? "ASSIGN" : i == 10 ? "PREVIEW" : "";
+            } break;
+            case EC_MODE_PROJECTS: {               /* 0.6.42 */
+                static const char *const PK[11] = {"NEW", "RENAME", "RANDOM", "", "", "", "", "SAVE+1", "SAVE",
+                                                   "LOAD", ""};
+                s = PK[i];
             } break;
             case EC_MODE_SAMPLER: {
                 static const char *const SL[5] = {"FREE", "1 BAR", "2 BARS", "4 BARS", "8 BARS"};

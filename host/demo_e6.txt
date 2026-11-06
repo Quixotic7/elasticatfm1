@@ -11,6 +11,7 @@ press PLAY@1200
 #      slot (SLOT 2), the VU
 press SAVE@1400
 press SAVE@1550
+press SAVE@1620   # (0.6.42: past PROJECTS)
 png 1700:01_rec_idle.png
 # B2: 1 BAR
 upper 1@1800+60
@@ -41,6 +42,7 @@ png 7700:07_input_none.png
 #      source (resample); F1 closes it
 press SAVE@7900
 press SAVE@8050
+press SAVE@8120   # (0.6.42: past PROJECTS)
 png 8200:08_rec_no_input.png
 press REC@8300+500   # (0.6.15: REC held in the SAMPLER = the recorder's setup)
 turn K1@8900:1

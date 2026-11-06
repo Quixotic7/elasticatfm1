@@ -243,9 +243,14 @@ static void test_messages(void)
     press(FM1P_B_OCTDN, 40);
     to(EC_CAT_SRC);                                           /* an alert: FILE while playing */
     press(FM1P_B_PLAY, 40);
-    press(FM1P_B_SAVE, 40);                                   /* (0.6.11: FILE opens playing; 0.6.15: F2 FREE is refused) */
+    press(FM1P_B_SAVE, 40);                                   /* (0.6.11: FILE opens playing; purge is refused) */
     run(100);
-    press(FM1P_B_OCTUP, 40);
+    btn(FM1P_B_GLO, 1);                                       /* SHIFT + B11 (0.6.42: was F2 FREE, F2 opens now) */
+    run(20);
+    bk(11, 1);
+    run(40);
+    bk(11, 0);
+    btn(FM1P_B_GLO, 0);
     run(30);
     CHECK(!strcmp(hdr(&bar), "STOP FIRST") && bar == EC_C_ALERT && px(14, 0) == EC_C_ALERT,
           "an alert: STOP FIRST on the ALERT bar (%s %d)", hdr(0), bar);

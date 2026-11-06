@@ -1249,8 +1249,9 @@ static void knob(int r, int d)
             ec_file_algo(d);                       /* 0.6.15: the browser: CW adds to the pool, CCW removes */
         else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR)   /* 0.6.15: the EDITOR: the selected marker */
             ec_app_edit_slot(P->ed_point ? EC_S_TRIM_END : EC_S_TRIM_START, d, ec_ux_accel(r, 200, d));
-        else if (mode == EC_CAT_FILE)
-            ;                                      /* (the other FILE pages: no step page) */
+        else if (mode == EC_CAT_FILE || ec_lp_active())
+            ;                                      /* (the other FILE pages; 0.6.52 (owner): the track pages, where
+                                                    * PRESETS turns the step page: nothing) */
         else {                                     /* the step page */
             const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
             const int p = clampi(A->step_page + (d > 0 ? 1 : -1), 0, pages - 1);

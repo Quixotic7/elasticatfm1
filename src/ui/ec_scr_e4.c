@@ -236,21 +236,16 @@ static int depth_cells(float d, int half)
 static void routes(const ec_app_t *a, int src, int small)
 {
     const float *v = a->proj.pat[a->proj.current].tr[a->track].v;
-    char b[32], nm[16], dp[12], cnt[8] = "";
-    int n = 0, idx = 0;
-    /* 0.6.51 (owner): one route at a time, SEL's (its number of the source's routes at the right) */
-    const int first = ec_mk_route(v, src, &idx, &n);
+    char b[32], nm[16], dp[12];
+    /* 0.6.51 (owner): one route at a time, SEL's (0.6.52: no count) */
+    const int first = ec_mk_route(v, src, 0, 0);
     if (first < 0)
         snprintf(b, sizeof b, "> OFF");
     else {
         ec_mk_dst_name(v[ec_mtx_dst_id(first)], nm, sizeof nm);
         ec_param_format(ec_mtx_depth_id(first), v[ec_mtx_depth_id(first)], 3, dp, sizeof dp);
         snprintf(b, sizeof b, "> %s %s", nm, dp);
-        if (n > 1)
-            snprintf(cnt, sizeof cnt, "%d/%d", idx + 1, n);
     }
-    if (cnt[0])
-        T(EC_C_SRC, cnt, W - 10, small ? 13 : 23, EC_AL_RIGHT);
     if (small) {                                /* over the envelope bars: no meter */
         T(first < 0 ? EC_C_L5 : EC_C_L15, b, 2, 13, EC_AL_LEFT);
         return;

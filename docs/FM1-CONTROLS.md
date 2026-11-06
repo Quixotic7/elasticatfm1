@@ -53,7 +53,7 @@ The other controls:
 | Black keys | per mode |
 | MASTER | master volume |
 | SEL | the mode's page list, both ways, stopping at its ends (lists, the browser, the MATRIX row: see the modes) |
-| ALGO | the step page (1-16, 17-32 ...); LOOP ENGINE (0.6.14; 0.6.51: LOOP and TRIG only, not FILTER / AMP / FX / MOD): the step on the shown page, full left = LIVE; KEYBOARD: the target step; LFO 1 / LFO 2 / MOD ENV / VEL (0.6.51): the shown route's DEPTH (SEL steps through the routes) |
+| ALGO | the step page (1-16, 17-32 ...); LOOP ENGINE (0.6.14; 0.6.51: LOOP and TRIG only, not FILTER / AMP / FX / MOD): the step on the shown page, full left = LIVE; KEYBOARD: the target step; FILTER / AMP / FX / MOD (0.6.52): nothing (PRESETS turns the step page); LFO 1 / LFO 2 / MOD ENV / VEL (0.6.51): the shown route's DEPTH (SEL steps through the routes) |
 | PRESETS | the track's pool slot; LOOP ENGINE and TRIG (0.6.14): the step page (the slot is the SLOT param) |
 | K1-K4 | the page's four values |
 | F1 / F2 | copy / cut and clear (below); in a pop-up: back / OK |

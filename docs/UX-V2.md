@@ -1310,3 +1310,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   shown ("NOT ON THIS PAGE" otherwise). F1 held + a knob still clears every lock of that param.
 - LFO 1 / LFO 2 / MOD ENV / VEL pages: the header shows one route at a time with its number (1/3); SEL steps through
   the source's routes (past the ends: the pages), ALGO (DEPTH) sets the shown route's depth.
+
+## 48. 0.6.52: no route count, ALGO idle on the track pages (owner, 2026-11-06)
+
+- The LFO / MOD ENV / VEL header shows the route without its number (the 2/2 is gone).
+- On FILTER, AMP, FX, MOD (the track pages outside LOOP) ALGO does nothing (no label): PRESETS turns the step page.
+  On the LFO / MOD ENV / VEL pages it stays the route's DEPTH.

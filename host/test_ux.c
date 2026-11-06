@@ -552,7 +552,8 @@ static void test_steps(void)
     CHECK(A->step_page == 1, "PRESETS clamps at the last page");
     turn(FM1P_E_ALGO, 2);
     run(20);
-    CHECK(A->pn.target == 0 && ec_app_target_step(A) < 0, "FILTER: ALGO selects no step (%d)", A->pn.target);
+    CHECK(A->pn.target == 0 && ec_app_target_step(A) < 0 && A->step_page == 1 &&
+              lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, ""), "FILTER: ALGO selects no step, turns no page (%d)", A->pn.target);
     turn(FM1P_E_ALGO, -20);
     turn(FM1P_E_PRESETS, -1);
     run(20);

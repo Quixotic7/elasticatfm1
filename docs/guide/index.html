@@ -56,6 +56,8 @@ ol.steps li{margin:7px 0}
 .panel .bt{font-size:13px;font-weight:700;fill:#f4f4f4;letter-spacing:.03em}
 .panel .pr{font-size:7px;font-weight:700;fill:#cfcfcf}
 .panel .kn{font-size:10px;font-weight:700;fill:#9a9a9a}
+.panel .kL{font-size:22px;font-weight:800;fill:#fff}
+.panel .kS{font-size:9px;font-weight:800;fill:#fff}
 .panel .kf{font-size:7.5px;font-weight:700;fill:#d0d0d0}
 @media (max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:2px solid var(--line)}main{padding:20px 16px 60px}h2{--u:4px}table{display:block;overflow-x:auto}td:first-child{white-space:normal;min-width:90px}}
 </style>
@@ -71,7 +73,7 @@ ol.steps li{margin:7px 0}
 <a href="#panel">The panel</a>
 <a href="#panel-buttons" class="sub">Buttons and modes</a>
 <a href="#panel-knobs" class="sub">Knobs</a>
-<a href="#panel-shift" class="sub">SHIFT, COPY, CUT</a>
+<a href="#panel-shift" class="sub">SHIFT, F1, F2</a>
 <a href="#panel-b11" class="sub">B11 and the pages</a>
 <a href="#panel-colours" class="sub">Colours and LEDs</a>
 <a href="#quick">Quick start</a>
@@ -80,7 +82,8 @@ ol.steps li{margin:7px 0}
 <a href="#sounds-editor" class="sub">Trim EDITOR</a>
 <a href="#sounds-slice" class="sub">SLICE editor</a>
 <a href="#sounds-sampler" class="sub">SAMPLER</a>
-<a href="#sounds-projects" class="sub">PROJECTS and names</a>
+<a href="#sounds-projects" class="sub">PROJECTS</a>
+<a href="#sounds-names" class="sub">Naming</a>
 <a href="#seq">Sequencing</a>
 <a href="#seq-loop" class="sub">LOOP ENGINE</a>
 <a href="#seq-trig" class="sub">TRIG</a>
@@ -119,8 +122,8 @@ ol.steps li{margin:7px 0}
 
 <section id="panel">
 <h2>The panel</h2>
-<p>This is the panel as RemoteFM1 draws it for Elasticat (the web player, the iOS and Android apps; an FM-1 running RemoteFM1 has the same controls). The guide uses the names RemoteFM1 shows: the knobs <kbd>VOL</kbd>, <kbd>LANE</kbd>, <kbd>PAGE</kbd>, <kbd>TARGET</kbd> and <kbd>K1</kbd>…<kbd>K4</kbd>, the keys <kbd>COPY</kbd> (<strong>F1</strong>) and <kbd>CUT</kbd> (<strong>F2</strong>), the menu buttons as labelled, black keys <kbd>B1</kbd>…<kbd>B11</kbd> and white keys <kbd>W1</kbd>…<kbd>W16</kbd>. Labels follow the mode (LANE reads LANE 1, PAGE or ROW; PAGE reads SLOT or PREVIEW; COPY / CUT read BACK / OK in a pop-up; the black keys name their pages), so the guide calls each control by its usual label. On the FM-1's print: VOL is MASTER, LANE is SELECT, PAGE is PRESETS, TARGET is ALGORITHM, COPY / CUT are OCT- / OCT+, SHIFT is GLO, SAMPLES is SAVE.</p>
-<svg class="panel" viewBox="0 0 950 612" role="img" aria-label="Elasticat on the RemoteFM1 panel: knobs VOL, LANE, PAGE, TARGET and K1 to K4, the COPY and CUT keys, the screen, the menu buttons and the keybed">
+<p>This is the panel as RemoteFM1 draws it for Elasticat (the web player, the iOS and Android apps; an FM-1 running RemoteFM1 has the same controls). The guide uses the names RemoteFM1 shows: the knobs <kbd>VOL</kbd>, <kbd>LANE</kbd>, <kbd>PAGE</kbd>, <kbd>TARGET</kbd> and <kbd>K1</kbd>…<kbd>K4</kbd>, the keys <kbd>F1</kbd> and <kbd>F2</kbd> left of the screen, the menu buttons as labelled, black keys <kbd>B1</kbd>…<kbd>B11</kbd> and white keys <kbd>W1</kbd>…<kbd>W16</kbd>. Labels follow the mode (LANE reads LANE 1, PAGE or ROW; PAGE reads SLOT or PREVIEW; F1 and F2 show what they do in each mode, such as BACK / OK in a pop-up or UP / OPEN in the browser; the black keys name their pages), so the guide calls each control by its usual label. On the FM-1's print: VOL is MASTER, LANE is SELECT, PAGE is PRESETS, TARGET is ALGORITHM, F1 / F2 are OCT- / OCT+, SHIFT is GLO, SAMPLES is SAVE.</p>
+<svg class="panel" viewBox="0 0 950 612" role="img" aria-label="Elasticat on the RemoteFM1 panel: knobs VOL, LANE, PAGE, TARGET and K1 to K4, the F1 and F2 keys, the screen, the menu buttons and the keybed">
 <rect x="0" y="0" width="950" height="612" rx="26" fill="#616161"/>
 <rect x="455" y="6" width="40" height="3" rx="1.5" fill="#888"/>
 <text x="74" y="32" text-anchor="middle" class="kl">VOL</text>
@@ -138,11 +141,9 @@ ol.steps li{margin:7px 0}
 <rect x="148.5" y="129" width="3" height="12" rx="1.5" fill="#fff"/>
 <rect x="36" y="224" width="153" height="44" rx="9" fill="#000"/>
 <rect x="40" y="228" width="70" height="35" rx="7" fill="#0c0c0c"/>
-<text x="75" y="250" text-anchor="middle" class="bt">COPY</text>
-<text x="75" y="281" text-anchor="middle" class="ks">F1 · OCT-</text>
+<text x="75" y="250" text-anchor="middle" class="bt">F1</text>
 <rect x="115" y="228" width="70" height="35" rx="7" fill="#0c0c0c"/>
-<text x="150" y="250" text-anchor="middle" class="bt">CUT</text>
-<text x="150" y="281" text-anchor="middle" class="ks">F2 · OCT+</text>
+<text x="150" y="250" text-anchor="middle" class="bt">F2</text>
 <rect x="215" y="28" width="239" height="240" rx="22" fill="#000"/>
 <image x="224" y="37" width="221" height="221" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAGFBMVEX28u7Nyr2clYv/aRhaXVI5jf8xMCkAAAB1+CaUAAAEzElEQVR42u3di3GjMBAAUFq4FtLCtZAWroW0kPYvHoagHz8jMBZvZzgHI5AeN7MR4Ky775n48xNz264d5XF3wMDAwMDAwMDAwJXBY6OxabhbunVoPx4+fA1PSb/PcrtnUeMo0xHF24CB2wYPb5WQMbMEHlDpkoLn2j0HTpcUPPYADHwP8HTSyulzkDQ5LQ9wX9JKe1qdtICBbwIeh7c2aeXTjLoJq3TcHJzqgIFbB4cXz/lPcTooTdpLa8vt9oNL/xmld4CB2wW7awkMDAwMDHwlcIsBDAwMDAwMDAwMXBfcdf2/jwhfwy3BTkG78n7T7eP3x+PH6/vj46P/9xHjKzBwm+Bx4OFQxgHkg8gHmLYtw8rvp0sNbs8b6MMCDNwmOE1aU+s5eGTMJ7nl5FcXnCctYOB7gKcnAvFAaiWtGHoEOE5cwMBtgvPJfTrxmE5qcxcP0xcV+cSmnBz3TDzCi4bCxQMwcENgdy2BgYGBgYGBgYGB2wD//QlgYGBgYOC7grsu/fgJMDDwO4C7JBZ33tAWGBj4NeAUEz9AW9d27oStAW89oXPtgYFbBHcTkQLXtC2tTw1matsDvHQi1xwHGBh4GrEVXJqkTG0rgdP9tvQRrQMDA1cBz20DBga+H3jq5gUwMPCx4NJx5sB7xgMMDLy+7Z7jAAMDAwMDAwMDAwMDAwPfHVzzhgQwMPBrwXv7BAa+O7hm58DAwO8D3jrQGuDJB+TAwDcCb4maJ2cteOv4gIGBz4kjwL8nGhgYGBgYuEGwmRYw8PXA7ngAAwN78gAM7IE4MDCwD6YBAwP7gDgwMDAwMDAwMDAwMDAwcKeAGDAwsMqlwMDAKogDA/tiC2DgxsG+UQsY+Npg32wJDNwu2DdMAwO/D3jqF/vZAQwMvA/ccgADAwMDAwPH8e83gIGBgYGBgU08gIHfDbw+bcQt5/a70jZgYGBgYGBgYGBgYGBg4GVwe2vAwMDAwMBXBnvyAAwMDAwMDAwMDHxPcOnPRD+TAAYGBgYGBjbxAAauC/66WQADAwMDA18J3P86/viJ4fXx0/A6bBmW5+Ixce8n78MU/tF1fPRhHOEo9sXQa3jp8DvTAgZuDjx2Fnedbt/bdQiO+yqNogY4PNHAwO2CS52Ha3vSyAjNk9aR4CFRzmRpYOBmwPGv/mOSVg6Oj3xM0hqxwMDtg8OLhjCd1Zt49N0PE4/0YiFNnYdePAADNwQ+O8akdZOnh8DAB4OP+oqKZfDZxfeBgYGBgYGvCT6z+x78ii/BAQYGBgYGBr7pxAMYGBgYGBgYGBgYGBjYjfiv83sFBgYGBga+JvjbJ/GAgd8a/PFkPFN2YASfWewAGBgYGBj4umAzLWBgYGBg4FeC88JhpcJi39X/YHroNS6fUiPCogd9r8DA7YLzMnzxsq8MwWdWyisvIBb3BgwMvD1plUpp5oXF9hYQKxcuOQY8U0AMGLg5cJycWkpaxUKewMCNgdPkdAx4+uJhWI64eAAGvgPYXUtgYDXx9v+RRzqKI0YFDAwMDAx8TfB1ig+lowEGBgYGBgY28QAGBgYGBm4dPDcBAQYGBgYGbhf8+uJDzT95AAYGBgYG9sE0YOAGwWeXAQo/IH5OAAMDAwMDXxdspgUMDAwMDPwC8H9mza0ZaZIVaQAAAABJRU5ErkJggg==" style="image-rendering:pixelated"/>
 <rect x="451" y="32" width="30" height="30" rx="6" fill="#ff2a12"/>
@@ -240,52 +241,52 @@ ol.steps li{margin:7px 0}
 <text x="853" y="327" text-anchor="middle" class="kn">B11</text>
 <text x="853" y="406" text-anchor="middle" class="kf">STEP</text>
 <rect x="44.5" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="67.0" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="67.0" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="69.0" y="566" text-anchor="middle" class="kn">W1</text>
 <rect x="98.6" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="121.1" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="121.1" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="123.1" y="566" text-anchor="middle" class="kn">W2</text>
 <rect x="152.7" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="175.2" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="175.2" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="177.2" y="566" text-anchor="middle" class="kn">W3</text>
 <rect x="206.8" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="229.3" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="229.3" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="231.3" y="566" text-anchor="middle" class="kn">W4</text>
 <rect x="260.9" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="283.4" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="283.4" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="285.4" y="566" text-anchor="middle" class="kn">W5</text>
 <rect x="315.0" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="337.5" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="337.5" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="339.5" y="566" text-anchor="middle" class="kn">W6</text>
 <rect x="369.1" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="391.6" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="391.6" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="393.6" y="566" text-anchor="middle" class="kn">W7</text>
 <rect x="423.2" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="445.7" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="445.7" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="447.7" y="566" text-anchor="middle" class="kn">W8</text>
 <rect x="477.3" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="499.8" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="499.8" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="501.8" y="566" text-anchor="middle" class="kn">W9</text>
 <rect x="531.4000000000001" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="553.9000000000001" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="553.9000000000001" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="555.9000000000001" y="566" text-anchor="middle" class="kn">W10</text>
 <rect x="585.5" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="608.0" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="608.0" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="610.0" y="566" text-anchor="middle" class="kn">W11</text>
 <rect x="639.6" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="662.1" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="662.1" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="664.1" y="566" text-anchor="middle" class="kn">W12</text>
 <rect x="693.7" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="716.2" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="716.2" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="718.2" y="566" text-anchor="middle" class="kn">W13</text>
 <rect x="747.8000000000001" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="770.3000000000001" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="770.3000000000001" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="772.3000000000001" y="566" text-anchor="middle" class="kn">W14</text>
 <rect x="801.9" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="824.4" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="824.4" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="826.4" y="566" text-anchor="middle" class="kn">W15</text>
 <rect x="856.0" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
-<rect x="878.5" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<rect x="878.5" y="446" width="4" height="64" rx="2" fill="#5a1a12"/>
 <text x="880.5" y="566" text-anchor="middle" class="kn">W16</text>
 </svg>
 
@@ -318,7 +319,7 @@ ol.steps li{margin:7px 0}
 </table>
 <p>Knobs accelerate: slow turns are the finest step, fast turns jump further (APP SETTINGS &gt; KNOB SPEED). SHIFT + a value knob snaps to useful values. Turning a value whose box is not on screen shows it big for a second.</p>
 
-<h3 id="panel-shift">SHIFT, COPY (F1) and CUT (F2)</h3>
+<h3 id="panel-shift">SHIFT, F1 and F2</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAElBMVEX28u7Nyr2clYtaXVIxMCkAAAC/hn5IAAADAUlEQVR42u3ci4GDIAwGYFdwhazgCq6Q/Ve5IgSCRQ6tCOpPz7Za9fNSqfLQgaM01k1KGgADrgqbSXay/XRcHhyGx8HL2oWwA4/uzz09EQ6hdu+W1yfDYTfiNt/x1bDPTjbKLis9FsZB4kXwdQkwYMCnwkRu+DxqJKJl1WReyXmNYQ6f1HAdwSQUN4cl1FQp1G7VFP7H1rB7X2vnkm+xI5i4Jiw5lVy2WuXjFjAOEq+AhyG8sWn1PlpmY3oa2FghYMBV4e+1+Pn0NiU/LYHTqwUMuCacyU6nwMkVAgZ8JfwvsAveyp+AAVeFN89O4lOcZJY74dQHMOAKMArmgAEDBgwYMGDA9eFZpXhkUCkzWzQCGHAn8KfL0+fJrcSMLBOiMrT/xMwXzxaNsGom9X0TbJO4NGma0dawWdko8LIFs4MHefKzCTy7bV2NSHcEUn0T3LNtyLVjPcCzhn2oBxtvBY/jerZoJPTAWPVNCF0U+oR9dlqHetahnuO4C8x65wpdAKQPRC9wImxi8hacDnXUm0WN2C4K3AeMgwTgZ8E4oQcMGPAN4Wm6BtMOYMB1YfyAAAYMGDBgwIABAz4XnhslwNfBHJorQlsF5S4lnD4P8/epSVQXu6oGn0wZxjxsQaYpTBxaZQouF7VLB3jHFabLNnMHMCnYtcJl4jbJwgamfbD5kqYO4P2h5uOhnpi7gwuy0xIvnZ3kUv2fstNl8NFU3vJx8vH4Z1g6W8tgpxTBYdGwYGGHb8DXwjKEDSjeuQTU2w24e7h0+SRcSgNuBAey8AfkrJ0LcHU4PkiU7iHRQQJw1/D7zjKP1SVIoe1AAnw5/L69+n0wRZUuqpItXdSOCuaqUE758nyoipjaw6H/sa9Fibpmb9SS+cqX+AZ+d4BJ3QBO342PMhVsCpZZ/79H4FfNXis4EepM1NKh5tJQM3cCkxqYcjd1TGane8Go2TtQ3QS4e/hwddO+YgvgbuAd1U2Abwfvrm4CfBv45+omwJ3DqNk7qboptyjgi2FUsD0b/gPssuFNrIno2QAAAABJRU5ErkJggg==" alt="SHIFT held: tempo and swing, the target keys below" width="240" height="240"><figcaption>SHIFT held: tempo and swing, the target keys below</figcaption></figure>
 <p><strong>SHIFT (GLO)</strong>: hold it, or tap it once for sticky SHIFT (tap again to turn it off; its LED blinks while sticky). The panel's labels change to show the SHIFT layer:</p>
 <table>
@@ -332,7 +333,7 @@ ol.steps li{margin:7px 0}
 <tr><td>B11 held</td><td>FILL while held</td></tr>
 <tr><td>SAMPLES / ARP / SEQ / HOME</td><td>save / APP SETTINGS / F3 / LOOP SETUP; another menu button: that mode's settings</td></tr>
 </table>
-<p><strong>F1 and F2</strong>: a tap makes one sticky (its LED blinks and the header shows it, e.g. <code>F1 COPY/CLR LOCK</code>), a hold keeps it on while held. With F1 on, the white keys copy and paste steps and a knob clears that parameter's locks; with F2 on they cut and paste, and a knob clears that parameter's modulation. F1 + F2 together is F3. In pop-ups F1 is back and F2 is OK; in KEYBOARD they move the octave.</p>
+<p><strong>F1 and F2</strong>: a tap makes one sticky (its LED blinks and the header shows it, e.g. <code>F1 COPY/CLR LOCK</code>), a hold keeps it on while held. With F1 on, the white keys copy and paste steps and a knob clears that parameter's locks; with F2 on they cut and paste, and a knob clears that parameter's modulation. F1 and F2 together are F3. In pop-ups F1 is back and F2 is OK; in KEYBOARD they move the octave.</p>
 
 <h3 id="panel-b11">B11 and the pages</h3>
 <p>On every track page (LOOP ENGINE, TRIG, KEYBOARD, FILTER, AMP, FX, MODULATION) <strong>B11 held</strong> is a layer of its own:</p>
@@ -340,7 +341,7 @@ ol.steps li{margin:7px 0}
 <li>the white keys <strong>select steps</strong> of the shown page (keys held together are one selection; let them all go and the next press starts a new one);</li>
 <li><strong>B1…B8 are the pattern's pages</strong>, FIZZ style: tap = go to the page, hold = mute it (out of the loop), double-tap = solo it, two keys held = loop between them (past the end: the track grows to that page);</li>
 <li>the cells area shows the <strong>pages panel</strong>, with <kbd>K1</kbd> (or <kbd>TARGET</kbd>) = LEN, the pattern length, <kbd>K2</kbd> = RATE, <kbd>K3</kbd> (or <kbd>PAGE</kbd>) = the loop-key zoom. On slice tracks the zoom is the pads' bank (slices 1–16 / 17–32), shown as a bar under the waveform;</li>
-<li><kbd>COPY</kbd> (F1) clears the selected steps, <kbd>CUT</kbd> (F2) goes LIVE (clears the selection).</li>
+<li><kbd>F1</kbd> clears the selected steps, <kbd>F2</kbd> goes LIVE (clears the selection).</li>
 </ul>
 <p>A quick click on B11 <strong>latches</strong> the step layer (click again to go back). On FILTER, AMP, FX and MOD the quick click keeps the page's own B11 function (the envelope mode, FX MIX, MACROS). Patterns have up to 128 steps = 8 pages.</p>
 
@@ -357,14 +358,23 @@ ol.steps li{margin:7px 0}
 
 <section id="quick">
 <h2>Quick start: a loop in two minutes</h2>
+<div class="card tip"><h4>0. Get around: hold a menu button, pick with the black keys</h4>
+<p>Tap a menu button to open its mode; tap it again to step through its sub-modes. To jump straight to one, <strong>hold the button</strong>: its modes light up on the black keys <kbd>B1</kbd>, <kbd>B2</kbd>, <kbd>B3</kbd> … and the header says PICK A MODE. <strong>Press a black key while still holding</strong> and that mode opens (the button remembers it). Let go without a key and nothing changes.</p>
+<table>
+<tr><th>Hold</th><th>B1</th><th>B2</th><th>B3</th><th>B4</th><th>B5</th></tr>
+<tr><td>LOOP</td><td>LOOP ENGINE</td><td>TRIG</td><td>KEYBOARD</td><td></td><td></td></tr>
+<tr><td>SAMPLES</td><td>browser</td><td>PROJECTS</td><td>EDITOR</td><td>SLICE</td><td>SAMPLER</td></tr>
+<tr><td>MIX</td><td>MIX</td><td>PAGES</td><td></td><td></td><td></td></tr>
+</table>
+<p>Settings are never on a hold: they are SHIFT + the button.</p></div>
 <div class="grid2">
 <div class="card">
 <h4>1. Load a sound</h4>
 <ol class="steps">
 <li>Press <kbd>SAMPLES</kbd>. You are in the browser, in <code>AUDIO/</code>.</li>
-<li><kbd>LANE</kbd> moves the cursor; <kbd>CUT</kbd> (OPEN) enters a folder, <kbd>COPY</kbd> (UP) goes back up. Each move previews the file once (turn the preview off with <kbd>PAGE</kbd>; then hold <kbd>B11</kbd> to hear a file).</li>
+<li><kbd>LANE</kbd> moves the cursor; <kbd>F2</kbd> (OPEN) enters a folder, <kbd>F1</kbd> (UP) goes back up. Each move previews the file once (turn the preview off with <kbd>PAGE</kbd>; then hold <kbd>B11</kbd> to hear a file).</li>
 <li>Hold white keys to hear parts of the file as loop keys.</li>
-<li>A click on <kbd>B11</kbd> (or <kbd>CUT</kbd>, <kbd>B10</kbd>, <kbd>TARGET</kbd> clockwise) adds it to the pool. A new project's track 1 already plays slot 1; any other track plays nothing until you set its SLOT (<kbd>K2</kbd> on the LOOP page, or ASSIGN in POOL).</li>
+<li>A click on <kbd>B11</kbd> (or <kbd>F2</kbd>, <kbd>B10</kbd>, <kbd>TARGET</kbd> clockwise) adds it to the pool. A new project's track 1 already plays slot 1; any other track plays nothing until you set its SLOT (<kbd>K2</kbd> on the LOOP page, or ASSIGN in POOL).</li>
 </ol>
 </div>
 <div class="card">
@@ -399,11 +409,11 @@ ol.steps li{margin:7px 0}
 <p>Samples live in the <strong>pool</strong>: 128 slots sharing 200 MiB (about 20 minutes of stereo). A track plays its slot (the SLOT parameter on LOOP ENGINE's first page); any step can lock a different slot.</p>
 
 <h3 id="sounds-browse">The browser and the pool</h3>
-<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAD/klEQVR42u2cjbmrIAyGWcEVXCEruMJZIfuPcFskISC9BfyJxWA9ILa85/nKXwLVYRKmc4MgOQMb+FSwz5o4hesZ0q+/77tTSE7+TnhPFSqUgASebgCmkqnsAAhpj8oPuleBDiWQ1NNdwEJqAaY0nSQaSV+jdXj3J6lvAM6kxlxslOLVSI1R8juBRdUXTYqbFTUjkntqaE6i7Bgpg22QeBD4umBgA58LXsLrdbzjZb1Gvo55C4aM9Q1fAgCCj99JCFmwprXB8mBAmpukq8DAJ6wJmasKDlJuwCxzlJtVrlGaeAkYQloTvBGVKlomb5rCOnJR6tuAlyVrOkFiukfHUqs0NSOqZSiuNcE2SBh4VDAZ3MEKTdwSQ4PJEGXkM8DscDiPqw6eSuAzuepgckaQmyE6XYYF2yBh4PHAsM67VytS5JFVKeblECfn9YFtPTKINMHzLKAYCwYgXASDuO4DU0odDFFmLhgwkZbf0wVeItiT1cFCxP+Ce6VGIbVPa4KTigMiDhYlxwTt4rJvI/gztMFP6qvn2ekEA18NxtcL1/id8IfPcD69vrAfQx/2hfqCFcEYCo2H49g5l93ZC+aUNth3JSF28dpxei84+970wZnEidR4gNROSL2mFcEuAybNSVS8fVxqk/wdKoNtkBgZ/FT7OE5rMZm0rys4qcEmTdl+01UdnJmhJdM0Gm14gOmqDpZyyhU5Kb80ZcWKXZ/pqg7OZQPcSl0wZftN11uAIQVL14S8x9LuMl21weZENfDI43HqVjzObbyU/dUq4LcRwwXmEwGB2eU2xg9uY12wdB1mw95pbmNdcEHqZGkAdi0NYNFfrQLeLP/kk7sj3Ma8Vyt3G6uBbZAw8FBgALm4lXeVsFnO3RW4z1UFFwc8MTBCPkDuAdNfVTDgFiy6ysOlpi2wemDED1KLvfeIR0kditEGS0nTaQ6mw+OxzUkJbIPE+GD/M7d5/rsyGNjABj4WbF2mgQ386+A/pWDg68DWnAxs4CHAhecMtHiPeENK02KJJhiKzxloAEufSvUSoCa4+JyBJqlxs6nh5uDicwZ6pIZGqbXApecMNPnLeEPKr4BtkBgfTDtSe3amOtoAz9dUxreyDHwlmAqQcT94m2fgO4BjhWjuBrIKGaHfyjLwteDaN3+uYKXK1tCBGPhksOzY+8FxaKABp3oiYODTwTa9NTAOuYMNoG9LTfxRTusGFVWw2PLasy8s/jAHfwUMwh3RLHV6/gg4fwDJtd+xBnjH1jgGd7djDbANEk8Abydq9dO+8me/G+cGvhIsMfXOk2iYlz73/Z838JXgbQVpMd8+VS4D3xNcdozWmuWl08D3ALdXjK0TtXuQMPAl4IfNMv8B+qFRh9JZcpwAAAAASUVORK5CYII=" alt="BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below" width="240" height="240"><figcaption>BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below</figcaption></figure>
+<figure><img src="data:image/png;base64,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" alt="The browser in a folder: the UP row on top, the cursor on a file in the pool (the orange mark), the pool meter and the info rows" width="240" height="240"><figcaption>The browser in a folder: the UP row on top, the cursor on a file in the pool (the orange mark), the pool meter and the info rows</figcaption></figure>
 <table>
 <tr><th>Browser (SAMPLES)</th><th>Does</th></tr>
 <tr><td>LANE</td><td>the cursor (folders first, then files). Each move plays the file once if the preview is on</td></tr>
-<tr><td>B1 / B2, COPY / CUT</td><td>up a folder / into the folder. <code>AUDIO/</code> is the top; inside a folder the first row is <strong>UP</strong> (an arrow and where it goes). <kbd>CUT</kbd> opens the row under the cursor (UP, a folder, or on a file: in / out of the pool), <kbd>COPY</kbd> goes up</td></tr>
+<tr><td>B1 / B2, F1 / F2</td><td>up a folder / into the folder. <code>AUDIO/</code> is the top; inside a folder the first row is <strong>UP</strong> (an arrow and where it goes). <kbd>F2</kbd> opens the row under the cursor (UP, a folder, or on a file: in / out of the pool), <kbd>F1</kbd> goes up</td></tr>
 <tr><td>B10 ADD, B9 REMOVE</td><td>load the file into the next free slot / free its slot. Loading only fills the pool: a track's SLOT never changes by itself (OFF until you set it). <kbd>TARGET</kbd> does the same: clockwise adds, anticlockwise removes</td></tr>
 <tr><td>B11</td><td>a click: the file <strong>in / out of the pool</strong> (+/- POOL). Held: the file previews until you let go. With the preview off, hold to hear and click to take: the fast way through a folder</td></tr>
 <tr><td>PAGE</td><td>the audible preview on / off (saved in APP SETTINGS as AUTO-PREVIEW)</td></tr>
@@ -416,7 +426,7 @@ ol.steps li{margin:7px 0}
 <tr><th>POOL</th><th>Does</th></tr>
 <tr><td>LANE</td><td>the slot; a used slot previews</td></tr>
 <tr><td>B10 ASSIGN</td><td>the selected track plays this slot</td></tr>
-<tr><td>B9 or CUT</td><td>FREE the slot</td></tr>
+<tr><td>B9 or F2</td><td>FREE the slot</td></tr>
 <tr><td>B11 held</td><td><strong>move</strong> the slot: while held, <kbd>LANE</kbd> or <kbd>K1</kbd> carry it to another slot and the list shows the result; let go to drop it (a swap, every reference follows, one undo)</td></tr>
 </table>
 <p>SAMPLES opens while the transport runs (PROJECTS too); browsing, loading and previewing all work while playing. Only the editors, FREE, MOVE and purge ask you to stop first.</p>
@@ -466,20 +476,234 @@ ol.steps li{margin:7px 0}
 <tr><td>REC held</td><td>the recorder's setup: SOURCE (IN / MASTER), LENGTH, THRESHOLD, SYNC, SLOT</td></tr>
 </table>
 
-<h3 id="sounds-projects">PROJECTS and names</h3>
-<p>SAMPLES' second mode lists every project in <code>data/elasticat/projects/</code> by name (numbered copies in order: WALRUS, WALRUS 2 … WALRUS 10); the open one says OPEN. The top line is the project you work on (EDITED or SAVED); below, the project under the cursor: its name, its 64 patterns as blocks, its tempo and samples.</p>
+<h3 id="sounds-projects">PROJECTS</h3>
+<p>A project is a file in <code>data/elasticat/projects/</code>, named after the project. Open <strong>PROJECTS</strong> by tapping <kbd>SAMPLES</kbd> twice (or hold <kbd>SAMPLES</kbd> and press <kbd>B2</kbd>). The top line is the project you are working on (EDITED or SAVED); the list below is every project by name (numbered copies in order: WALRUS, WALRUS 2 … WALRUS 10), the open one marked OPEN; the lower half is the card of the project under the cursor: its name, its 64 patterns as blocks, its tempo and samples.</p>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAEC0lEQVR42u3di42jMBAAUFq4Fq6FtJAWroXtv4QNylr+MLC6JAJj3khgzOfwS5RZ27dspq+N+HPqiE0TMDAwMDAwMDAw8IfB+aR8anlhWdb7n9vp2lzmM/Px8oy2/joqugcw8NXAbZPXml2CyxuvL+XxrX/v9eS0VgIDXxEcJ60Y3O5vyxbcAqOX7tWkVb5VwMDA/5O0ovK3BLa+9ZmEBQx8XXDcKY8HEe1gou1kLJPaMq29M3T4bUADDHwtsFlLYGBgYGDgnsAjBjAwMDAwMDAwMPAnwfdHPKvPcl6nPT+nPWJepyXVpykdnab67GnnlzIZasH9/tyfhcDAY4LjJQNymYhlPcLtCy7fsEiRt4GBrwHOH/Ky+TkZ5XpZHpu0UupqJcDAwMsEtZ20pkOGJFupFxj4GuC1wUOZqurBQ10/Lmktk1ObxMLBAzDwIGCzlsDAwMDAwMDAwMDAwMDXBt8eMa/TkurzOteBgYH7BCdMApfrvA8YGLjnpFUnp1wvS2Bg4H4HD3WCGj5pAQMP1vFogfFgAhgY2CQeMDDwZ8BCCCGEODaWD2GVj260D2PV1/X2ozx6fKwUAgOPDG4f3yjX5eMcyxv0xG2XWgQMPDK4/MjX4PaPlPSatMp0276VwMBXALcf9+2k1d+UWPwHkoCBRwdHHZB68FDXzzB4qFsIDHwNsBBCCCH2/38lv8UDDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDLwP+N/FAhgYGBgYuCewnhYwMDAwMDAwMDDwe+Dlly7XZfwF68uvXA5v0tH3LAIDAwMDA/cGbhvSgte2o/M2bwYMDAwMDAy82vHY6ihEx9fqp+lpAQMDAwMDdzQRv9WheKfj0QMUGBgYGBi4V/BaJ2NrIn7r+Ckm4oGBgYGBgTsbD3/5TTxgYGBgYGBgYGDgt8F/f2LeTg8bn2kbGBgYGBgYGBgYGBgYGNgEADAwMDAw8LnAZ+xsvNXxAAYGBgYGBgYGBgYGBgY24wEMDAwMDGxeWk8LGBgYGBgYGBgYGBgY2Ly0GQ9gYGBgYPPSelrAwMDAwMDAwMDAwMDA5qXNeAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwOfCny7Pddz5DJFquUyXbF/tPct25RbVu8tRcDAI4JLXr6kvkm91C/Intz6vhlUt6xV5KuAgUcEL5NWC26T1lHgKGlF6TZKWsDAVwDXKWAtkfXU8YhS6jJZrSYtYOAhwNFHPk5aR4O3WhaDWxEw8Ihgs5bAwMDAwMDAwMDAwMDAwMDAwCeKbzPXxbutCMG1AAAAAElFTkSuQmCC" alt="PROJECTS: the open project and the list" width="240" height="240"><figcaption>PROJECTS: the open project and the list</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAD70lEQVR42u3di3HiMBAAUFq4FmjBLdDCtZD+S7gwjmYlsYbjE7DltzNGsmzHemTYkTRxOHxdiT+bjtx0AAYGBgYGBgYGBn4xOE6KU+sL67Jtn+vl2ijjzDhen9HvP47K7gEMvDdw3+Wlbtfg+sbLW3382s97PDktlcDAewTnSSsH9+192YN7YPbWPZq06l8VMDDwPUkrK28lsOXaaxIWMPB+wfmgPJ9E9JOJfpBxmdQu09ozU4dbExpg4H2BrVoCAwMDAwOvCTxiAAMDAwMDAwMDA78SfPqOeXcuz6+l5ee0QynPtcMhyuysUuuP/2YUQys4neb2EAIDjwnOt7r7ZWtBdVv9tmTX/C43ykwRdWDgfYDjQ16Sz33gPKn9PjmSVEiAgYHXn7RupV5g4H2AlyYP0fFbk4dIbu9NWpfJqU9i6eQBGHgQsFVLYGBgYGBgYGBgYGBg4D2Cj98x705TKc+1aYqyvij25lp//JMxS4roeJxrIQQGHhk84zJQ3Va/Ldk1n+b2W90ODDw6uCSp/wXnSW0N4D55AQPvAzxS0ophCDDw6OAaUk8HlicPkdzWlbRi8lD2yuQBGHgPYKuWwMDbAwshhBBiLZE90tE//AwMDLxebvuYRv0abcDAwGsnf3X/pKROWsDAwOsn7yhpAQMPOHXIJg/tPjAwsBBCCCHEwV/xAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwO/Efx3ZwEMDAwMDLwmsJEWMDAwMDAwMDAw8HPgyy9dbsv+eP2diVv6HkVgYGBgYOC1gfuO9uClenYeMDAwMDAw8GMDj2sDiez40j4wMDAwMDDw/Qvx1wYUww08gIGBgYGBV7QAcAt0z0I9MDAwMDAwsD9MAwYGBgYGBgYGBv4E+PgT53p52HhLdWBgYGBgYGBgYGBgYGBgCwDAwMDAwMDbAm9xsPHUwAMYGBgYGBgYGBgYGBgY2IoHMDAwMDCwdWkjLWBgYGBgYGBgYGBgYGDr0lY8gIGBgYGtSxtpAQMDAwMDAwMDAwMDA1uXtuIBDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMvCnwNM2v54iyRNmLslzx/ujvW/cpeta21iJg4BHBNS8uaW/Sbu0b8k5ue98AtT3rFXEVMPCI4Muk1YP7pPUpcJa0snSbJS1g4D2A2xSwlMjWNPDIUuplslpMWsDAQ4Czj3yetD4NvtazHNyLgIFHBFu1BAYGBgYGBgYGBgYGBgYGBgbeUPwDNwkbu1RqC2EAAAAASUVORK5CYII=" alt="The cursor on another project: its card" width="240" height="240"><figcaption>The cursor on another project: its card</figcaption></figure><figure><img src="data:image/png;base64,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" alt="B11 loads it: the cat dances while it loads" width="240" height="240"><figcaption>B11 loads it: the cat dances while it loads</figcaption></figure>
 <table>
 <tr><th>PROJECTS</th><th>Does</th></tr>
-<tr><td>LANE / TARGET</td><td>the cursor</td></tr>
-<tr><td>B11 or CUT</td><td><strong>LOAD</strong> the project under the cursor. With unsaved edits it asks (LOAD X?): CUT yes (your edits are saved first), COPY no. You stay in PROJECTS while the cat dances over the card</td></tr>
-<tr><td>COPY</td><td>back to the browser</td></tr>
-<tr><td>B10 SAVE</td><td>save the open project (as SHIFT + SAVE anywhere). With another project under the cursor it asks OVERWRITE X? first</td></tr>
-<tr><td>B9 SAVE AS</td><td>a copy under the next free number (PROJ-001 2), which becomes the open project</td></tr>
+<tr><td>LANE / TARGET</td><td>move the cursor</td></tr>
+<tr><td>B11 or F2</td><td><strong>LOAD</strong> the project under the cursor. With unsaved edits it asks first (LOAD X? in the header): <kbd>F2</kbd> yes (your edits are saved, then it loads), <kbd>F1</kbd> no. You stay in PROJECTS</td></tr>
+<tr><td>F1</td><td>back to the browser</td></tr>
+<tr><td>B10 SAVE</td><td>save the open project (the same as SHIFT + SAVE anywhere). With another project under the cursor it asks OVERWRITE X? first</td></tr>
+<tr><td>B9 SAVE AS</td><td>save a copy with the next free number (ACID LAB 2); the copy becomes the open project</td></tr>
 <tr><td>B1 NEW</td><td>asks, saves your edits, then starts an empty project (the folder's first file on T1)</td></tr>
-<tr><td>B2 RENAME</td><td>the name keybed on the project under the cursor; OK renames its file</td></tr>
-<tr><td>B6 DELETE</td><td>asks (GONE FOR GOOD). Deleting the open project leaves it open, unsaved</td></tr>
+<tr><td>B2 RENAME</td><td>rename the project under the cursor on the <a href="#sounds-names">name keybed</a></td></tr>
+<tr><td>B6 DELETE</td><td>asks (GONE FOR GOOD). Deleting the open project leaves it open, unsaved; its next save makes a new file</td></tr>
 </table>
-<p><strong>The name keybed</strong> (project, pattern and file names): the black keys type A–K, the white keys L–Z and SPACE; SHIFT gives digits and signs. The suggested name starts selected, so the first key replaces it. <kbd>PAGE</kbd>, <kbd>K2</kbd> or <kbd>K4</kbd> turned right <strong>rolls a new name</strong> (the blue die tumbles); left walks back through the last ten. <kbd>TARGET</kbd> moves the cursor, <kbd>LANE</kbd> / <kbd>K1</kbd> turn the letter under it. <kbd>COPY</kbd> deletes (SHIFT + COPY clears), <kbd>CUT</kbd> is OK, <kbd>HOME</kbd> cancels. Names are up to 14 characters; a taken name gets the next free number.</p>
+<p>A new project gets a rolled name at its first save. SHIFT + SAVE saves from any mode; a stopped project also saves itself two seconds after the last edit.</p>
+
+<h3 id="sounds-names">Naming: rolling and typing</h3>
+<p>Every name is typed on the same keybed: a project (<kbd>B2</kbd> RENAME in PROJECTS, or NAME in the project settings, SHIFT + EDIT) and a pattern (<kbd>PAGE</kbd> in F3). While it is open the panel changes its labels:</p>
+<svg class="panel" viewBox="0 0 950 612" role="img" aria-label="The name keybed: the black keys type A to K, the white keys L to Z and SPACE; PAGE, K2 and K4 roll names, TARGET moves the cursor, LANE and K1 turn the letter, F1 deletes, F2 is OK">
+<rect x="0" y="0" width="950" height="612" rx="26" fill="#616161"/>
+<rect x="455" y="6" width="40" height="3" rx="1.5" fill="#888"/>
+<text x="74" y="32" text-anchor="middle" class="kl">VOL</text>
+<circle cx="74" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="72.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="150" y="32" text-anchor="middle" class="kl">CHAR</text>
+<circle cx="150" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="148.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="74" y="117" text-anchor="middle" class="kl">ROLL</text>
+<circle cx="74" cy="150" r="29" fill="none" stroke="#ff2a12" stroke-width="2"/>
+<circle cx="74" cy="150" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="72.5" y="129" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="150" y="117" text-anchor="middle" class="kl">CURSOR</text>
+<circle cx="150" cy="150" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="148.5" y="129" width="3" height="12" rx="1.5" fill="#fff"/>
+<rect x="36" y="224" width="153" height="44" rx="9" fill="#000"/>
+<rect x="40" y="228" width="70" height="35" rx="7" fill="#0c0c0c"/>
+<text x="75" y="250" text-anchor="middle" class="bt">DELETE</text>
+<text x="75" y="281" text-anchor="middle" class="ks">F1</text>
+<rect x="115" y="228" width="70" height="35" rx="7" fill="#0c0c0c"/>
+<text x="150" y="250" text-anchor="middle" class="bt">OK</text>
+<text x="150" y="281" text-anchor="middle" class="ks">F2</text>
+<rect x="215" y="28" width="239" height="240" rx="22" fill="#000"/>
+<image x="224" y="37" width="221" height="221" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAElBMVEX28u7Nyr3/aRhaXVIxMCkAAABJDwbxAAADdklEQVR42u3djY2bMBgAUK9wK3SFrtAV2H+VXkWQP4gNJkcDMc9SkDH+yeOkT7ZBlzSspK+PSUNzSsDAwMDAwMD/EZy+U/0cGLhXcG6Ym8eyqTSf/8tNx9zqXHB6pCU4lwED9wqOlCU4f5bnEXpmkIuwCHwuAwbuHbwetEpB6jmYAQMDXwu8FbTm1z9s4gEM3Bk4drAE5glG+XP+4mHXjgcwcGdgG/HAwMDAwMBXAveYgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBge8OXnsls/badbXTwrVYttUeGBgYGBj4TuAIaf3CtXprr2i3jAMMDAwMDHxH8HJicTR4z8QFGBgYGBj4bmAzLWBgYGBg4GuAhwM24ksTmctOPICBgYGBgU9+ID54Ew8YGBgYGBgYGBgYGBgY+K3pV0jAwMDAwMDAJh7AwMDAwMDAwMDAwMDA/YN/P1JrHhgYGBgYGNjEAxgYGBgYGBgYGBgYGBi4b3DcfJg2JKbjvk0JYGDgc8AZNuaBgYE/M2gtQ9fehwPAwMBnBq2MK+WAgYGvHrRyyFouJoCBgQebeMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAvg/880lq+pf47+wQGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGroNTmgZLKefHs+f6sU5K9TpjeexnHGm7fq1OqRwYGDh39JwvBY/WOvmmzPMlTLzpwMDAe8ExqMSA1AKe6q8Ftnn918GlsYCBgd8RtLYmHvPJTwdRGhj4NPBRi4e4oN+7eKgFQmBgYJt4wMDAwMDAwMDAwEeBB/9BHBgYGBgYGBgYGBgYGPhm4K9H+tQ8MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDDwWeCxg5zP5fmYr7SXx37iWK/nS38kYGDgOfioLxcDTLwdr/eZicDAwD8D1wDlYNYGjgFpux9gYOCWicd2QKrh5wFmH3jez7wtMDBwCbwdqOoD19rWFxh7bkS57fCzH7YABu4M3M/GHTAwsCcPwMDAwMDAwMDAwMDAwPcAD35hGhgYGBgYGBgYGBgYGLjf9BdHLmSZtIkeagAAAABJRU5ErkJggg==" style="image-rendering:pixelated"/>
+<rect x="451" y="32" width="30" height="30" rx="6" fill="#ff2a12"/>
+<text x="563" y="32" text-anchor="middle" class="kl">CHAR</text>
+<text x="563" y="107" text-anchor="middle" class="ks">K1</text>
+<circle cx="563" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="561.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="669" y="32" text-anchor="middle" class="kl">ROLL</text>
+<text x="669" y="107" text-anchor="middle" class="ks">K2</text>
+<circle cx="669" cy="65" r="29" fill="none" stroke="#ff2a12" stroke-width="2"/>
+<circle cx="669" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="667.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="775" y="32" text-anchor="middle" class="kl">K3</text>
+<text x="775" y="107" text-anchor="middle" class="ks">K3</text>
+<circle cx="775" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="773.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="881" y="32" text-anchor="middle" class="kl">ROLL</text>
+<text x="881" y="107" text-anchor="middle" class="ks">K4</text>
+<circle cx="881" cy="65" r="29" fill="none" stroke="#ff2a12" stroke-width="2"/>
+<circle cx="881" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="879.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<rect x="482" y="145" width="430" height="119" rx="22" fill="#000"/>
+<rect x="490.0" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="521.0" y="181" text-anchor="middle" class="bt">FX</text>
+<rect x="490.0" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="521.0" y="237" text-anchor="middle" class="bt" style="fill:#ff2a12">LOOP</text>
+<text x="521.0" y="264" text-anchor="middle" class="pr">HOME</text>
+<rect x="560.5" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="591.5" y="181" text-anchor="middle" class="bt">FILTER</text>
+<text x="591.5" y="150" text-anchor="middle" class="pr">SEL</text>
+<rect x="560.5" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="591.5" y="237" text-anchor="middle" class="bt">SAMPLES</text>
+<text x="591.5" y="264" text-anchor="middle" class="pr">SAVE</text>
+<rect x="631.0" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="662.0" y="181" text-anchor="middle" class="bt">AMP</text>
+<text x="662.0" y="150" text-anchor="middle" class="pr">ENV</text>
+<rect x="631.0" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="662.0" y="237" text-anchor="middle" class="bt">XFADE</text>
+<text x="662.0" y="264" text-anchor="middle" class="pr">ARP</text>
+<rect x="701.5" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="732.5" y="181" text-anchor="middle" class="bt">MOD</text>
+<text x="732.5" y="150" text-anchor="middle" class="pr">LFO</text>
+<rect x="701.5" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="732.5" y="237" text-anchor="middle" class="bt">PATTERN</text>
+<text x="732.5" y="264" text-anchor="middle" class="pr">SEQ</text>
+<rect x="772.0" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="803.0" y="181" text-anchor="middle" class="bt">MIX</text>
+<text x="803.0" y="150" text-anchor="middle" class="pr">EDIT</text>
+<rect x="772.0" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="803.0" y="242" text-anchor="middle" class="bt">PLAY</text>
+<path d="M800.0 218l6 3.5l-6 3.5z" fill="#3ddc84"/>
+<rect x="842.5" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="873.5" y="181" text-anchor="middle" class="bt">SHIFT</text>
+<text x="873.5" y="150" text-anchor="middle" class="pr">GLO</text>
+<rect x="842.5" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="873.5" y="242" text-anchor="middle" class="bt">REC</text>
+<circle cx="873.5" cy="222" r="3.5" fill="#ff2a12"/>
+<rect x="36" y="297" width="878" height="289" rx="26" fill="#000"/>
+<rect x="74.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="93.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="95.5" y="327" text-anchor="middle" class="kn">B1</text>
+<text x="95.5" y="404" text-anchor="middle" class="kL">A</text>
+<rect x="128.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="147.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="149.5" y="327" text-anchor="middle" class="kn">B2</text>
+<text x="149.5" y="404" text-anchor="middle" class="kL">B</text>
+<rect x="183" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="202" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="204" y="327" text-anchor="middle" class="kn">B3</text>
+<text x="204" y="404" text-anchor="middle" class="kL">C</text>
+<rect x="291" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="310" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="312" y="327" text-anchor="middle" class="kn">B4</text>
+<text x="312" y="404" text-anchor="middle" class="kL">D</text>
+<rect x="345" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="364" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="366" y="327" text-anchor="middle" class="kn">B5</text>
+<text x="366" y="404" text-anchor="middle" class="kL">E</text>
+<rect x="453.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="472.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="474.5" y="327" text-anchor="middle" class="kn">B6</text>
+<text x="474.5" y="404" text-anchor="middle" class="kL">F</text>
+<rect x="507.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="526.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="528.5" y="327" text-anchor="middle" class="kn">B7</text>
+<text x="528.5" y="404" text-anchor="middle" class="kL">G</text>
+<rect x="561.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="580.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="582.5" y="327" text-anchor="middle" class="kn">B8</text>
+<text x="582.5" y="404" text-anchor="middle" class="kL">H</text>
+<rect x="669.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="688.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="690.5" y="327" text-anchor="middle" class="kn">B9</text>
+<text x="690.5" y="404" text-anchor="middle" class="kL">I</text>
+<rect x="724" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="743" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="745" y="327" text-anchor="middle" class="kn">B10</text>
+<text x="745" y="404" text-anchor="middle" class="kL">J</text>
+<rect x="832" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="851" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="853" y="327" text-anchor="middle" class="kn">B11</text>
+<text x="853" y="404" text-anchor="middle" class="kL">K</text>
+<rect x="44.5" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="67.0" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="69.0" y="566" text-anchor="middle" class="kn">W1</text>
+<text x="69.0" y="540" text-anchor="middle" class="kL">L</text>
+<rect x="98.6" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="121.1" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="123.1" y="566" text-anchor="middle" class="kn">W2</text>
+<text x="123.1" y="540" text-anchor="middle" class="kL">M</text>
+<rect x="152.7" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="175.2" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="177.2" y="566" text-anchor="middle" class="kn">W3</text>
+<text x="177.2" y="540" text-anchor="middle" class="kL">N</text>
+<rect x="206.8" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="229.3" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="231.3" y="566" text-anchor="middle" class="kn">W4</text>
+<text x="231.3" y="540" text-anchor="middle" class="kL">O</text>
+<rect x="260.9" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="283.4" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="285.4" y="566" text-anchor="middle" class="kn">W5</text>
+<text x="285.4" y="540" text-anchor="middle" class="kL">P</text>
+<rect x="315.0" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="337.5" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="339.5" y="566" text-anchor="middle" class="kn">W6</text>
+<text x="339.5" y="540" text-anchor="middle" class="kL">Q</text>
+<rect x="369.1" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="391.6" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="393.6" y="566" text-anchor="middle" class="kn">W7</text>
+<text x="393.6" y="540" text-anchor="middle" class="kL">R</text>
+<rect x="423.2" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="445.7" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="447.7" y="566" text-anchor="middle" class="kn">W8</text>
+<text x="447.7" y="540" text-anchor="middle" class="kL">S</text>
+<rect x="477.3" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="499.8" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="501.8" y="566" text-anchor="middle" class="kn">W9</text>
+<text x="501.8" y="540" text-anchor="middle" class="kL">T</text>
+<rect x="531.4000000000001" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="553.9000000000001" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="555.9000000000001" y="566" text-anchor="middle" class="kn">W10</text>
+<text x="555.9000000000001" y="540" text-anchor="middle" class="kL">U</text>
+<rect x="585.5" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="608.0" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="610.0" y="566" text-anchor="middle" class="kn">W11</text>
+<text x="610.0" y="540" text-anchor="middle" class="kL">V</text>
+<rect x="639.6" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="662.1" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="664.1" y="566" text-anchor="middle" class="kn">W12</text>
+<text x="664.1" y="540" text-anchor="middle" class="kL">W</text>
+<rect x="693.7" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="716.2" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="718.2" y="566" text-anchor="middle" class="kn">W13</text>
+<text x="718.2" y="540" text-anchor="middle" class="kL">X</text>
+<rect x="747.8000000000001" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="770.3000000000001" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="772.3000000000001" y="566" text-anchor="middle" class="kn">W14</text>
+<text x="772.3000000000001" y="540" text-anchor="middle" class="kL">Y</text>
+<rect x="801.9" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="824.4" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="826.4" y="566" text-anchor="middle" class="kn">W15</text>
+<text x="826.4" y="540" text-anchor="middle" class="kL">Z</text>
+<rect x="856.0" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="878.5" y="446" width="4" height="64" rx="2" fill="#ff2a12"/>
+<text x="880.5" y="566" text-anchor="middle" class="kn">W16</text>
+<text x="880.5" y="540" text-anchor="middle" class="kS">SPACE</text>
+</svg>
+<figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAD1BMVEX28u7Nyr1aXVIxMCkAAAAhD4ZDAAADeklEQVR42u3dC3KDIBAAUK/QK/QKvYL3P1N/cVgURJO0KnnMJEWCmGdmdhZi4zCulLfLlHFzGYCBgYGBgYH/EDx8lfo2MHCv4LRj2j22Ta1p+7s2Pae9jgUPtzIHpzZg4F7BkTIHp8d8O0KPDHIRFoHLNmDg3sHrQasUpJbBDBgY+FzgVtDKX79Y4gEM3Bk4DjAHpgSj/Dh+8rBrxQMYuDOwhXhgYGBgYOAzgXsswMDAwMDAwMDAwMDAwMDAwMDAwMDAx4KPKsDAwMDAwMDj4g3ES6vHxmVea5dy1nDAwMDAwMDA+fHnb3QOrtVL/VrJBjAwMDAwMHA58WglCqUkpbR9mUwLGBgYGBj4RAvxawnFI4nHWPlZEWBgYGBgYOByItFaiF97/RIL8cDAwMDAwCebD7sSDxgYGBgY2D9qAQMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwP/DfjoL6mBgYGBgYFfGSzTAgYGBgYGBgYGBgYGBgY+Y3n/KVM9f57agYGBz45Ofyc+MDDwFbkxaKVgBgwMfH5wwpVqwMDAVwEvJxPAwMCjRTxgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGDgu8Eft7JW39L/P8cEBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBq6Dh2E62PctmdOBSzdozvuUb+Ic2+M4v0dq96/1KbUDAwOngZb1UvDY2iedlLxewsSTDgwMvBccg0oMSFvAU/+1wJb3vx9cOhYwMPB/BK1W4pEnPx1EaWDgw8DPmjzECf3eyUMtEAIDA1vEAwYGBgYGBgYGBn4WePQL4sDAwMDAwMDAwMDAwMAvBn67lavWgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBjwL/DpDqqT09p1e2t8dx4rHur5c+JGBg4Bz8rDcXA0w8HfePmYjAwMCPgWuAcjDbBo4BqT0OMDDwlsSjHZBq+DzA7APn4+T7AgMDl8DtQFU/cG3f+gRjz4ko7zs+dmMLYODOwP0s3AEDA/vmARgYGBgYGBgYGBgYGPg1wKM7TAMDAwMDAwMDAwMDAwP3Wz4B6hEuc3iO8D0AAAAASUVORK5CYII=" alt="RENAME opens with the name selected" width="240" height="240"><figcaption>RENAME opens with the name selected</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAElBMVEX28u7Nyr1qwt5aXVIxMCkAAAAajrAXAAADr0lEQVR42u3djW2jMBQAYFboCrfCrXArsP8qd1WC/HBsMIQL4H6WkjqOf/JR6enh0DKMC+XrNmVsLgMwMDAwMDDwfwQP/0r9NTBwr+A0MA2PbVNrev1dm57TqHPBw7Pk4NQGDNwrOFJycHrkryP0zCAXYRH42gYM3Dt4OWiVgtRrMAMGBr4WeC1ozd+/WeIBDNwZOE6QA1OCUX6cf/KwaccDGLgzsI14YGBgYGDgK4F7LMDAwMDAwMDAwMDAwMDAwMDAwMDAwOeCeynAwMDAwMB3BueXceWXWOdHZ1y4lLM0vvTh8rlq643Nl44CAwMDAwPfD1zCLAFaPuAa+IifuxMPYGBgYGDgC4G3JhKticKWxGPLeqW5gYGBgYGB7wx+NwHYk3gcsS4wMDAwMPDdwVs3xls25t8Br813yEY8MDAwMDDwRcCuxAMGBgYGBj4HPPrLNGBgYGBgYGBgYGBgYGBgYGBgYGBgYODd5ddCAQYGBgYGviL497PsudDriuAcHtuBgYGBgYGvBpZpAQMDAwMDA0s8gIGBgYGBr1Ue2xJpgyK1TM9TeyeJBzBwV+DETLAHEhgY+J5BKw9d8ZB0mXgAA3cCngeucg0YGPiKiceUaMQk4/VkoqNMCxjYl2nAwMCjP9QCBgYGBgYGBgYGBgYGBgYGBgYGBgb+NPjPsyzVW/p/ck5gYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg4Dp4GKbFvm/DnBYu3ZR53qd84+bYHud5rLTev9an1A4MDJwmeq2Xgkdrn3RQ5vUSJh50YGDgreAYVGJAagFP/ZcC27z/fnBpLWBg4E8ErbXEY578dBClgYFPAx918hBP6LeePNQCITAwsE08YGBgYGBgYGBg4KPAo/8gDgwMDAwMDAwMDAwMDPzDwF/Pctc6MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDDwWeDHBKme2tNzeqe9Pc4T19pfL/2SgIGB5+CjPlwMMPFw7J8zEYGBgd8D1wDlYNYGjgFpfR5gYOCWxGM9INXw8wCzDTyfZz4WGBi4BF4PVPWFa2PrJxhbDkR57PjejS2AgTsD97NxBwwM7JsHYGBgYGBgYGBgYGBg4J8BHt1hGhgYGBgYGBgYGBgYGLjf8hdvuaASTky+GgAAAABJRU5ErkJggg==" alt="K4 turned right: a rolled name, the die tumbling" width="240" height="240"><figcaption>K4 turned right: a rolled name, the die tumbling</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAElBMVEX28u7Nyr3/aRhaXVIxMCkAAABJDwbxAAADdklEQVR42u3djY2bMBgAUK9wK3SFrtAV2H+VXkWQP4gNJkcDMc9SkDH+yeOkT7ZBlzSspK+PSUNzSsDAwMDAwMD/EZy+U/0cGLhXcG6Ym8eyqTSf/8tNx9zqXHB6pCU4lwED9wqOlCU4f5bnEXpmkIuwCHwuAwbuHbwetEpB6jmYAQMDXwu8FbTm1z9s4gEM3Bk4drAE5glG+XP+4mHXjgcwcGdgG/HAwMDAwMBXAveYgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBge8OXnsls/badbXTwrVYttUeGBgYGBj4TuAIaf3CtXprr2i3jAMMDAwMDHxH8HJicTR4z8QFGBgYGBj4bmAzLWBgYGBg4GuAhwM24ksTmctOPICBgYGBgU9+ID54Ew8YGBgYGBgYGBgYGBgY+K3pV0jAwMDAwMDAJh7AwMDAwMDAwMDAwMDA/YN/P1JrHhgYGBgYGNjEAxgYGBgYGBgYGBgYGBi4b3DcfJg2JKbjvk0JYGDgc8AZNuaBgYE/M2gtQ9fehwPAwMBnBq2MK+WAgYGvHrRyyFouJoCBgQebeMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAvg/880lq+pf47+wQGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGroNTmgZLKefHs+f6sU5K9TpjeexnHGm7fq1OqRwYGDh39JwvBY/WOvmmzPMlTLzpwMDAe8ExqMSA1AKe6q8Ftnn918GlsYCBgd8RtLYmHvPJTwdRGhj4NPBRi4e4oN+7eKgFQmBgYJt4wMDAwMDAwMDAwEeBB/9BHBgYGBgYGBgYGBgYGPhm4K9H+tQ8MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDDwWeCxg5zP5fmYr7SXx37iWK/nS38kYGDgOfioLxcDTLwdr/eZicDAwD8D1wDlYNYGjgFpux9gYOCWicd2QKrh5wFmH3jez7wtMDBwCbwdqOoD19rWFxh7bkS57fCzH7YABu4M3M/GHTAwsCcPwMDAwMDAwMDAwMDAwPcAD35hGhgYGBgYGBgYGBgYGLjf9BdHLmSZtIkeagAAAABJRU5ErkJggg==" alt="Typed on the keys: ACID LAB" width="240" height="240"><figcaption>Typed on the keys: ACID LAB</figcaption></figure>
+<div class="grid2">
+<div class="card"><h4>Roll a name</h4><ol class="steps">
+<li>Turn <kbd>K4</kbd> to the right (or <kbd>K2</kbd>, or <kbd>PAGE</kbd>). Every click rolls a new name and the blue die tumbles.</li>
+<li>Turn it left to step back through the last ten names (the dots under the name), then right to come forward again before new ones roll.</li>
+<li><kbd>F2</kbd> keeps the name.</li>
+</ol></div>
+<div class="card"><h4>Type a name</h4><ol class="steps">
+<li>The suggested name starts selected: the <strong>first key you press replaces it</strong>.</li>
+<li>Black keys <kbd>B1</kbd>…<kbd>B11</kbd> type <strong>A–K</strong>; white keys <kbd>W1</kbd>…<kbd>W15</kbd> type <strong>L–Z</strong>; <kbd>W16</kbd> is <strong>SPACE</strong>.</li>
+<li>Hold <kbd>SHIFT</kbd> for <strong>0–9</strong> and <strong>-</strong> on the black keys, and <strong>. ' &amp; ! # + ( ) _ ~ , = @ $ %</strong> on the white keys.</li>
+<li><kbd>F2</kbd> is OK (so is <kbd>SAMPLES</kbd>); <kbd>LOOP</kbd> (HOME) cancels.</li>
+</ol></div>
+<div class="card"><h4>Fix a name</h4><ol class="steps">
+<li><kbd>TARGET</kbd> moves the cursor; typing inserts there.</li>
+<li><kbd>LANE</kbd> or <kbd>K1</kbd> turns the letter under the cursor.</li>
+<li><kbd>F1</kbd> deletes the letter before the cursor; <kbd>SHIFT</kbd> + <kbd>F1</kbd> clears the name; <kbd>F1</kbd> on an empty name cancels.</li>
+</ol></div>
+</div>
+<div class="card tip">Example: <strong>ACID LAB</strong> is <kbd>B1</kbd> <kbd>B3</kbd> <kbd>B9</kbd> <kbd>B4</kbd> <kbd>W16</kbd> <kbd>W1</kbd> <kbd>B1</kbd> <kbd>B2</kbd>, then <kbd>F2</kbd>. Names are up to 14 characters; a name another project already has gets the next free number. Renaming the open project saves it under the new name.</div>
 </section>
 
 <section id="seq">
@@ -519,7 +743,7 @@ ol.steps li{margin:7px 0}
 <li><strong>Locks stick</strong> as on an Elektron: a locked value holds until a later trig without that lock puts the track value back. SLIDE (TRIG, lane 2) glides between locked values.</li>
 <li><strong>Hold a step + PAGE</strong> locks a pool slot on it: that step plays another sample. A track's SLOT starts OFF (a new project's T1 on slot 1); K2 on the LOOP page sets it on every machine.</li>
 <li><strong>Slice locks</strong>: on slice tracks, hold a pad and turn a knob to lock that value on the slice itself. COUNT, SLICE, SLOT, LENGTH, LOOP DIV and RATE always edit the track.</li>
-<li><strong>COPY (F1) + a knob</strong> clears that parameter's locks (on the held steps or pads, else the whole track, slices included); <strong>CUT (F2) + a knob</strong> clears its modulation.</li>
+<li><strong>F1 + a knob</strong> clears that parameter's locks (on the held steps or pads, else the whole track, slices included); <strong>F2 + a knob</strong> clears its modulation.</li>
 <li><strong>Copy / cut / paste</strong>: with F1 (copy) or F2 (cut) on, tap a step to take it into the buffer, tap another to paste. The same works on whole pages (PAGES, black keys) and patterns (PATTERN LAUNCH, white keys). The buffer empties when F1 / F2 turns off.</li>
 <li><strong>SHIFT + F1 / F2</strong> undo and redo, gesture by gesture, with the gesture's name in the header.</li>
 </ul>
@@ -549,7 +773,7 @@ ol.steps li{margin:7px 0}
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAACr0lEQVR42u3ai5WDIBAFUFuwBVugBVqwhem/hJWvA6ISVoGER/YYR8WbRY0wZqKgzO8WJk2AAb8Kq0VmsZ4jPUfzox+DuoK1RA5WU5ofhqlDeI7gZ1t67hAmdnI939Qdwi9fTv4wdgLjJjEQXK8ABgwYMGDAgAeH161sb1LSg4EpqcBsBhgwYMCAC+BpKzVg6/QG/zv4BjhoqRfh67O6GYwvEMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDPh1GD/HGAAOfptK7sewdmZZkovjakFgzp9UALgNvM7zKoS9vNWbCvSOVLAsfM22qQ/0fDKQMhUAbgfjchoAxm1xYHjaC+Avh4UQ28QuUoFeoGC7iYH1Grcd2ywKiO+NgjV79cawivhKN1FNPJmJ32z/gGzvQSCI7U2wqfsXO4GDir6pNUwc5rs8D1J76xv2l1Pc1ETicETigxAfhX0+dXI1g1PN5s0TON3U4jToCMZNYlgYnb1Cwx8taQvgX4M7O6vXRgVwPdh3R01f3bxfFrm91N+WSzK92KBvfFtV7o8G2sK2WxL0+q5qW5i9MmHzoTuAbf80GG+d1HaVbVMHQ7n7qodj3Ar+rKk97KtlN7Xcv6vbwW7sLOIR9vU1UQizpm4Fl5Zj9rvS/fgB2PTXXQcltwev4dLOPuCqsKvrsiws23IHlw/mAFeF95MLMGDA3wrHN4eqNwnAlToCo/UyRXbhuQQ7aMvbOCyAq8Mjjp2Gg+1gXIjDA+e7gXmq6sW4Xu7JiKZwmHwR/lnkXZbMpyLidET3sMuCBrXFTYLNNfWx6lVThwm2drBPrOXBrKlTVUV2ErUZzDOhudeES7B9XrUHeLzv6tJn8XoI80S/GnAFOG9YejJMBQwYMGDAVWDcFn8dHq+XWfYrIQ2XVgVcGUaC7bfhP3XZrt9JbV3kAAAAAElFTkSuQmCC" alt="MIX: the nine targets with their levels; the selected one bright" width="240" height="240"><figcaption>MIX: the nine targets with their levels; the selected one bright</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAACG0lEQVR42u3bh4GDIBhAYVZghazACqzgCuw/wqkUwZz9jiIPY8/PpwhRkyhMkuT/pkgSwMD/Cs+L5DI1DsIit2A7L9f7kZsPQSZ+i925CmAjLeBM3yW5bromIGm0WdYnsKwFTop6nvVZmoPqkhR1YM2yfr+oK4BXxb0vG7kBx4eiTtgXWwiXYXuOK5dJi33ZlrDeH8YwKgxzkugIzpeAc8JiSR3Cn083sB19wdJf/cnVzOrjYCPtRABnhucp4FfDNCfgl8PDmPzwALZvSiI+nyWP7YjisNt74BfDPV5ldnUnwW1qX3DW5lQSDl8GAb8WDj9SAL8Wpjn1ABc7SdQAx5fn8fAvV1QAR5UL+JVwf1eZ3MIAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAzcPD4UScD54PM5q6pUa+3nCTs9Lf0167KbX+BcpF+LD1VGNmkK11r5Wl4Xn3nHKHMHawz7Ivs7AdqMrgJVJc9kuN+2DXVEr5UOO4ekg6Upgs4JPVq7rRa2Xz+pycNyElDpXufQ3fL05lYLvJvfXzvzn48ewiB6LvfJA3QwLAdwAbKL4i7AQwI3AxSoXcOZ2fDUP4HbgBycJcfuZeOCscH9XmSpJZ79LcDdte2k7FDgz3F+tBj7yps5VrjuhZmgRnoYdwYMb3IDtY7HNwc+K2pgm4QfNqUGYkwQwMDAwMDAwMDAwMDDw6+AfCr8WHQ0nW1UAAAAASUVORK5CYII=" alt="PAGES: each step page as a row; the loop in the header" width="240" height="240"><figcaption>PAGES: each step page as a row; the loop in the header</figcaption></figure>
 <p><strong>MIX</strong>: W1–W9 are T1–T6, S1, S2, MST. Tap to select, hold to mute, SHIFT + key to solo. B1–B8 set the track's rate (1/8 … 4X), B9 / B10 step it, B11 is the CAT (the dancing-cat visualiser). PAGE selects the track. The knobs are LEVEL, PAN, SEND 1, SEND 2 (MASTER: BPM, SWING, GLO LENGTH).</p>
 <p><strong>PAGES</strong>: the black keys are the step pages with the same gestures as B11's (tap, hold to mute, double-tap to solo, two held to loop). K1 LEN, K2 RATE, PAGE the page; the loop reads in the header (LOOP ALL, LOOP 1-2). F1 / F2 copy and cut whole pages.</p>
-<p><strong>F3</strong> (SHIFT + SEQ, or F1 + F2): the timing menu with LANE tempo, TARGET swing, PAGE to name the pattern, K1 / K2 the track's LENGTH and RATE, K3 / K4 the global length and the launch quantize.</p>
+<p><strong>F3</strong> (SHIFT + SEQ, or F1 and F2 together): the timing menu with LANE tempo, TARGET swing, PAGE to name the pattern, K1 / K2 the track's LENGTH and RATE, K3 / K4 the global length and the launch quantize.</p>
 
 <h3 id="arrange-pat">PATTERN LAUNCH (SEQ)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADQklEQVR42u3ci5mrIBAG0LRgC9sCLdhCWqD/EjaI4AwvgUTGx09uojeEHJeMyvDFvDQr07GFSC/AgA+Fl6cmB2vzTx8HTyeAzfrkYL3ejoInK8vDvqvdfw+Dp9PBk30c39WD4bWTnwLjJPEgeFyRhN/5slP5yhet//IFsBQ8TXzJYPuk3Ski2K6tQRPCds08+ucAy8Dm/ew9AbtKtl0OMUu6zmAHAj4F7MgkbCuTwbUFVSK4bOW2BCwKb0eJbHCRqsbg2g4lgMXhIH6KlRxOniQAnwjG8PbOMLLF+q4GfDU4maUUK12ZZ/toSiRkKgGPhzOjm2Ll9s7uPSPYVdIXARaDk1lKsdK9t4ubZGjZylJwAR4GJ2cb4uBKwNtRInn4qItqwMPglhSmCd4/SQA+GMbw9s7w87JFwM+Bs4kIH7sGLwgHtqxtoSXg8XB2jEJPbGHGkqgMtolWsu0CLAFnco0wQwngMH1hcNgyHVyAh8GFg0ABDoe2ieBKjn4By8GJ4OIV7AX9lYDHwxjeAgYM+GpwQ5YSjH+bWsaHTMCD4GKu0ZjC7CQ/PLgAD4TjRCSbpQSjm95KwKPhOMsoZCm9lSwsAcvAVYlI9ujSkcIAHgZjeAv4bvBfd3l3F8BjYexOgO8Gv4UK4HHw53NW6nM3H/iy/NyUWp6zD1GZtRm4afMFJNtUKd9sp5im63hPFl5ubqm2DSi1XmHSVO+6dpv1CeC1kfIrZCN0+tv4FF6b1MB2WC8P+3sdTIOrvavn7VgtCysSWH5dFfcJ39WqCQ66WgLuLV99Q1IYpldpN8L2YkB3LSjgk8L8Kt4mOPxNBsCnhenvLTTC9BpuwCeGvw4urYWiGnAb3HGSAHwR+HmjTKX65kGXxLyvKeDB8BNzp8fBSpOkXO/NlPHEXLP5OJ+kl6YiZnFYBbedOQU/S+ZgMkfn/4aLwHWzKHaCjXZ1MBuZ/6SiCTYpWOnfdLWq6epoElUApvtBJex3J7oLqevAj5zZ48PbukHuB+Y/6wf4tHCYotK0tSK4ejJcwINhOm3cDH8b1YAHwfFvbTacJGq3E7AgzH8PuZ7+wUkC8CD4eaPM3m842gE9Ka3TTYCHwZhguzf8D2jAI9f2QMngAAAAAElFTkSuQmCC" alt="PATTERN LAUNCH: A3 playing, A4 queued" width="240" height="240"><figcaption>PATTERN LAUNCH: A3 playing, A4 queued</figcaption></figure>

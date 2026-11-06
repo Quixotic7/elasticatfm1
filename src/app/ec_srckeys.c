@@ -314,16 +314,16 @@ static void arm_menu(int mode, int key)
     }
     if (mode != EC_CAT_SRC)
         return;
-    switch (key) {
-    case 1: {
+    switch (key) {                                 /* 0.6.41 (owner): B1 TRIG, B2-B5 LOOP, MACHINE, WARP, RANGE */
+    case 1: ec_hm_arm(key, EC_HM_ADVANCE, 0, "ADVANCE"); break;
+    case 2: {
         const int m = iv(ec_app_params(A), EC_P_MACHINE);
         const int slice = m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY;
         ec_hm_arm(key, EC_HM_PARAM, slice ? EC_P_SLICE_PLAY_MODE : EC_P_CHOP_LOOP_MODE, "LOOP MODE");
     } break;
-    case 2: ec_hm_arm(key, EC_HM_PARAM, EC_P_MACHINE, "MACHINE"); break;
-    case 3: ec_hm_arm(key, EC_HM_PARAM, EC_P_MODE, "WARP MODE"); break;
-    case 4: ec_hm_arm(key, EC_HM_PARAM, EC_P_TRIG_POLY, "VOICE MODE"); break;
-    case 5: ec_hm_arm(key, EC_HM_ADVANCE, 0, "ADVANCE"); break;
+    case 3: ec_hm_arm(key, EC_HM_PARAM, EC_P_MACHINE, "MACHINE"); break;
+    case 4: ec_hm_arm(key, EC_HM_PARAM, EC_P_MODE, "WARP MODE"); break;
+    case 5: ec_hm_arm(key, EC_HM_PARAM, EC_P_TRIG_POLY, "VOICE MODE"); break;
     default: break;
     }
 }
@@ -375,7 +375,7 @@ const char *ec_src_label(int mode, int key)
         const int m = iv(ec_app_params(A), EC_P_MACHINE);
         ec_page_items(mode, p, ec_app_params(A), 0, &pg);
         if (mode == EC_CAT_SRC && !A->bus && pg.title && !strcmp(pg.title, "LOOP"))
-            return ec_machine_name(m);             /* 0.6.19 (owner): B1's page is named after the machine */
+            return ec_machine_name(m);             /* 0.6.19 (owner): the LOOP page is named after the machine */
         snprintf(b, sizeof b, "%.10s", pg.title ? pg.title : "");
     }
     return b;

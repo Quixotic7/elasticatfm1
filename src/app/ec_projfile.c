@@ -509,7 +509,7 @@ static void load_done(uint32_t n)
     snprintf(m, sizeof m, g.ld_tmp ? "%s (COPY)" : "%s LOADED", g.name);
     ec_app_message(m);
     if (!boot)
-        ec_app_goto(EC_CAT_SRC, 0);
+        ec_app_goto(EC_CAT_SRC, ec_src_loop_page());   /* 0.6.41: the LOOP page */
 }
 
 static void load_fail(int32_t err)

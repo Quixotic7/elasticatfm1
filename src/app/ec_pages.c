@@ -80,6 +80,20 @@ int ec_cat_key_page(int cat, int bkey)
     return -1;
 }
 
+/* 0.6.41: LOOP ENGINE's LOOP page (B1 is TRIG since 0.6.41): its index, else 0 */
+int ec_src_loop_page(void)
+{
+    int p;
+    if (!is_cat(EC_CAT_SRC))
+        return 0;
+    for (p = 0; p < L->cat[EC_CAT_SRC].npages; p++) {
+        const char *t = L->page[L->cat[EC_CAT_SRC].page0 + p].title;
+        if (t && !strcmp(t, "LOOP"))
+            return p;
+    }
+    return 0;
+}
+
 int ec_cat_key_bus(int cat, int bkey)
 {
     int b;

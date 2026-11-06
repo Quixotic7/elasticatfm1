@@ -870,6 +870,22 @@ static void src_screen(const ec_app_t *a, const ec_page_t *pg)
         T(EC_C_L8, r, W - 2, 13, EC_AL_RIGHT);
     }
     sample_area(a, 22, 58, pg->pic == EC_PIC_WAVE_RANGE);
+    if (a == &ec_app && ec_lp_b11_held() && !A_IS_BUS(a) && pg->pic != EC_PIC_WAVE_RANGE && is_slice(v) &&
+        ec_app_track_sample(a, a->track)) {        /* 0.6.41 (owner): B11 held: the pads' bank, a bar under its slices */
+        const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32), lo = a->pn.zoom_half ? 16 : 0;
+        const int hi = cnt < lo + 16 ? cnt : lo + 16;
+        if (hi > lo) {
+            view_t w;
+            int sx, ex, s2, e2;
+            view_of(a, 0, &w);
+            slice_cols(a, lo, cnt, 0, 1, w.x0, w.cols, &sx, &ex);
+            slice_cols(a, hi - 1, cnt, 0, 1, w.x0, w.cols, &s2, &e2);
+            sx &= ~1;
+            e2 = (e2 + 1) & ~1;
+            if (e2 > sx)
+                R(ec_lp_step_layer() ? EC_C_SPECIAL : ec_lp_first() >= 0 ? EC_C_ALERT : EC_C_SRC, sx, 60, e2 - sx, 2);
+        }
+    }
     if (mach != EC_MACH_NEIGHBOR && mach != EC_MACH_INPUT) {   /* E3, E6 */
         if (a == &ec_app && ec_lp_step_layer())    /* 0.6.14 (owner): STEP layer yellow, loop keys red, LIVE blue;
                                                     * the selected steps white on every layer */

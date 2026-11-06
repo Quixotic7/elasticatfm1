@@ -59,8 +59,30 @@
       "order": 1,
       "pages": [
         {
-          "title": "LOOP",
+          "title": "TRIG",
           "key": 1,
+          "picture": "wave",
+          "lanes": [
+            [{"item": "pitch", "label": "NOTE"}, "default_length", "default_velocity", {"item": "micro_timing", "label": "MICRO"}],
+            [{"item": "trig_slide", "label": "SLIDE"}, {"item": "env_reset", "label": "ENV RESET"}, {"item": "lfo_reset", "label": "LFO RESET"}, {"item": "filter_reset", "label": "FILT RESET"}],
+            [{"item": "trig_chance", "label": "CHANCE"}, "trig_condition", {"item": "trig_ratchet", "label": "RATCHET"}],
+            [{"item": "trig_jump", "label": "SNAP START"}, {"item": "trig_release", "label": "RET MODE"}]
+          ],
+          "variants": [
+            {
+              "when": {"machine": ["slice", "razor"]},
+              "lanes": [
+                [{"item": "pitch", "label": "NOTE"}, "default_length", "default_velocity", {"item": "micro_timing", "label": "MICRO"}],
+                [{"item": "trig_slide", "label": "SLIDE"}, {"item": "env_reset", "label": "ENV RESET"}, {"item": "lfo_reset", "label": "LFO RESET"}, {"item": "filter_reset", "label": "FILT RESET"}],
+                [{"item": "trig_chance", "label": "CHANCE"}, "trig_condition", {"item": "trig_ratchet", "label": "RATCHET"}],
+                ["slice_index", "slice_play_mode", "slice_ratchet", "slice_reverse"]
+              ]
+            }
+          ]
+        },
+        {
+          "title": "LOOP",
+          "key": 2,
           "picture": "wave",
           "lanes": [
             [{"item": "pitch", "label": "PITCH"}, "sample_slot", {"item": "loop_start", "label": "START"}, "loop_end"],
@@ -82,7 +104,7 @@
         },
         {
           "title": "MACHINE",
-          "key": 2,
+          "key": 3,
           "picture": "wave-machine",
           "lanes": [
             [{"item": "loop_reverse", "label": "LREVERSE"}, {"item": "xfade", "label": "LXFADE"}, {"item": "trig_release", "label": "RET MODE"}]
@@ -103,7 +125,7 @@
         },
         {
           "title": "WARP",
-          "key": 3,
+          "key": 4,
           "picture": "wave-warp",
           "lanes": [
             ["mode_macro", "warp_rate"]
@@ -200,7 +222,7 @@
         },
         {
           "title": "RANGE",
-          "key": 4,
+          "key": 5,
           "picture": "wave-range",
           "lanes": [
             [null, null, {"item": "range_start", "label": "R-START"}, {"item": "range_end", "label": "R-END"}]
@@ -637,18 +659,8 @@
           "key": 0,
           "note": "0.6.15: K1 START, K2 END (each selects the marker the white keys place; the view follows it), K4 ZOOM round the selected marker; P2: BPM, STEPS, GAIN; B1 / B2 the pages, B9 AUTO BPM",
           "lanes": [
-            [
-              {"item": "slot.trim_start", "label": "START"},
-              {"item": "slot.trim_end", "label": "END"},
-              null,
-              {"item": "slot.zoom", "label": "ZOOM"}
-            ],
-            [
-              {"item": "slot.bpm", "label": "BPM"},
-              {"item": "slot.steps", "label": "STEPS"},
-              {"item": "slot.gain", "label": "GAIN"},
-              {"item": "slot.zoom", "label": "ZOOM"}
-            ]
+            [{"item": "slot.trim_start", "label": "START"}, {"item": "slot.trim_end", "label": "END"}, null, {"item": "slot.zoom", "label": "ZOOM"}],
+            [{"item": "slot.bpm", "label": "BPM"}, {"item": "slot.steps", "label": "STEPS"}, {"item": "slot.gain", "label": "GAIN"}, {"item": "slot.zoom", "label": "ZOOM"}]
           ]
         },
         {

@@ -158,7 +158,7 @@ static void leds_loop(void)
                     on |= 1u << (st.voice_slice[j] - 1);
         for (i = 0; i < EC_NLOWER; i++) {
             const int s = i + hi;
-            ec_plat_led_lower(i, s >= cnt ? EC_LED_OFF : (on >> s & 1u) ? EC_LED_LIT : EC_LED_DIM);
+            ec_plat_led_lower(i, s >= cnt ? EC_LED_OFF : (on >> s & 1u) ? EC_LED_LIT : EC_LED_10);   /* 0.6.41: ~10 % */
         }
         return;
     }
@@ -481,7 +481,8 @@ static void leds_black(void)
                 ec_pn_roles(mode, &cur);
                 for (i = 0; i < EC_NBKEY; i++) {
                     const char r = ec_src_role(mode, i + 1);
-                    l[i] = r == 'P' ? (i == cur ? EC_LED_LIT : EC_LED_DIM) : r == 'S' ? EC_LED_DIM
+                    /* 0.6.41 (owner): the page keys ~40 %, the source (mod) keys ~10 %, so they read apart */
+                    l[i] = r == 'P' ? (i == cur ? EC_LED_LIT : EC_LED_40) : r == 'S' ? EC_LED_10
                            : r == 'X' ? EC_LED_MID : EC_LED_OFF;
                     if (P->bk_held >> i & 1u && r != 'O')
                         l[i] = EC_LED_LIT;

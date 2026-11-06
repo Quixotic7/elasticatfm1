@@ -21,6 +21,7 @@
     "SRC/LOOP": "The main view: the track's waveform with pitch, loop start / end and sample slot (slice machines: play mode, slice, slice count, choke, slice mute). Empty for NEIGH and INPUT, which show their routing / input meters.",
     "SRC/MACHINE": "The machine's own controls: loop reverse, crossfade and trig release for loop machines; slice, play mode, reverse, ratchet, clock sync and rate for slice machines.",
     "SRC/WARP": "The warp mode's controls (each mode shows its own: grains, stretch, harmonies, wavetable ...) plus RATE, over the waveform. Empty for NEIGH and INPUT.",
+    "SRC/TRIG": "The step's trig settings without leaving LOOP ENGINE (0.6.41): B1 steps through its four lanes: NOTE, LENGTH, VELOCITY, MICRO; SLIDE and the resets; CHANCE, CONDITION, RATCHET; the playhead (slice machines: the slice, its play mode, ratchet, reverse).",
     "SRC/RANGE": "The Range: a crop of the trimmed, stretched sample that the loop points, loop keys and slices work within. The white keys set it as loop keys, on every machine.",
     "SRC/SETUP": "The track's machine, warp mode (changes only while stopped), loop-key division and trig polyphony.",
     "FILT/FILTER": "The filter machine's controls (cutoff, resonance and its own third / fourth knob) and the filter envelope depth, over the filter curve.",

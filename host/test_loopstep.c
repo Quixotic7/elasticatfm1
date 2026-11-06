@@ -178,12 +178,12 @@ static void test_range(void)
 {
     int n;
     to(EC_CAT_SRC);
-    for (n = 0; n < 6; n++) {                        /* tap B4 (RANGE) */
+    for (n = 0; n < 6; n++) {                        /* tap B5 (RANGE; 0.6.41: was B4) */
         ec_page_t pg;
         ec_app_page(A, &pg);
         if (pg.pic == EC_PIC_WAVE_RANGE)
             break;
-        B(4, 40);
+        B(5, 40);
     }
     hold_b11(1);
     wtap(6);
@@ -328,12 +328,12 @@ static void test_live_undo(void)
     float s0, e0;
     int n;
     to(EC_CAT_SRC);
-    for (n = 0; n < 6; n++) {                        /* tap B1 until the LOOP page */
+    for (n = 0; n < 6; n++) {                        /* tap B2 until the LOOP page (0.6.41) */
         ec_page_t pg;
         ec_app_page(A, &pg);
         if (pg.title && !strcmp(pg.title, "LOOP") && pg.pic != EC_PIC_WAVE_RANGE)
             break;
-        B(1, 40);
+        B(2, 40);
     }
     turn(FM1P_E_ALGO, -40);                          /* LIVE */
     v = ec_project_track(&A->proj, A->track)->v;

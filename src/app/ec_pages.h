@@ -106,6 +106,7 @@ int ec_button_modes(int button, int *modes, int max);
 /* the black keys: the key (1..11) that opens page `page` of the mode, 0 none; the page key bkey opens, -1 none */
 int ec_cat_page_key(int cat, int page);
 int ec_cat_key_page(int cat, int bkey);
+int ec_src_loop_page(void);   /* 0.6.41: LOOP ENGINE's LOOP page (B2; B1 is TRIG): power-on and a load open it */
 /* FX's bus keys: the bus (1 S1, 2 S2, 3 MST) black key bkey targets in mode cat (only FX has them), 0 none */
 int ec_cat_key_bus(int cat, int bkey);
 int ec_bus_key(int bus);                      /* the key that targets bus 1..3 in FX, 0 none */

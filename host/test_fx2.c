@@ -462,7 +462,8 @@ static void test_ins2_data(void)
 
 static void test_loop_menus(void)
 {
-    static const char *const HEAD[6] = {"", "LOOP MODE", "MACHINE", "WARP MODE", "VOICE MODE", "ADVANCE"};
+    /* 0.6.41 (owner): B1 TRIG (hold: ADVANCE), B2 LOOP, B3 MACHINE, B4 WARP, B5 RANGE (hold: VOICE MODE) */
+    static const char *const HEAD[6] = {"", "ADVANCE", "LOOP MODE", "MACHINE", "WARP MODE", "VOICE MODE"};
     float *v;
     int b;
     to(EC_CAT_SRC);
@@ -471,48 +472,48 @@ static void test_loop_menus(void)
     v = tv();
     v[EC_P_MACHINE] = EC_MACH_LOOP;
     for (b = 1; b <= 5; b++) {
-        const int id = b == 1 ? EC_P_CHOP_LOOP_MODE : b == 2 ? EC_P_MACHINE : b == 3 ? EC_P_MODE : EC_P_TRIG_POLY;
-        const float x0 = b == 5 ? (float)ec_as->advance : v[id];
+        const int id = b == 2 ? EC_P_CHOP_LOOP_MODE : b == 3 ? EC_P_MACHINE : b == 4 ? EC_P_MODE : EC_P_TRIG_POLY;
+        const float x0 = b == 1 ? (float)ec_as->advance : v[id];
         hold_b(b);
         run(450);
         CHECK(ec_hm_shown() && !strcmp(ec_hm_head(), HEAD[b]), "LOOP ENGINE B%d held: the %s menu", b, HEAD[b]);
-        turn(FM1P_E_SELECT, x0 >= (b == 5 ? 1 : EC_PARAMS[id].nopt) ? -1 : 1);   /* SEL moves it too */
+        turn(FM1P_E_SELECT, x0 >= (b == 1 ? 1 : EC_PARAMS[id].nopt) ? -1 : 1);   /* SEL moves it too */
         let_b(b);
-        if (b == 5)
-            CHECK((float)ec_as->advance != x0, "B5 released: ADVANCE flipped (%d)", ec_as->advance);
+        if (b == 1)
+            CHECK((float)ec_as->advance != x0, "B1 released: ADVANCE flipped (%d)", ec_as->advance);
         else
             CHECK(v[id] != x0 && fabsf(v[id] - x0) == 1, "B%d released: %s %g -> %g", b, EC_PARAMS[id].name, x0, v[id]);
-        if (b == 5)
+        if (b == 1)
             ec_pn_item_edit(EC_UX_ADVANCE, x0 > 0 ? 1 : -1);
         else
             v[id] = x0;
     }
-    /* a slice machine: B1 is the slice play mode */
+    /* a slice machine: B2 is the slice play mode */
     v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;
-    hold_b(1);
+    hold_b(2);
     run(450);
     turn(FM1P_E_K1, 1);
-    let_b(1);
-    CHECK(v[EC_P_SLICE_PLAY_MODE] == 2, "SLICE: B1 = the slice play mode (%g)", v[EC_P_SLICE_PLAY_MODE]);
+    let_b(2);
+    CHECK(v[EC_P_SLICE_PLAY_MODE] == 2, "SLICE: B2 = the slice play mode (%g)", v[EC_P_SLICE_PLAY_MODE]);
     v[EC_P_SLICE_PLAY_MODE] = 1;
     v[EC_P_MACHINE] = EC_MACH_LOOP;
     /* a tap still turns the page */
+    B(3, 40);
+    CHECK(!ec_hm_shown() && A->page[EC_CAT_SRC] == ec_cat_key_page(EC_CAT_SRC, 3) && v[EC_P_MACHINE] == EC_MACH_LOOP,
+          "B3 tapped: the MACHINE page, nothing picked");
     B(2, 40);
-    CHECK(!ec_hm_shown() && A->page[EC_CAT_SRC] == ec_cat_key_page(EC_CAT_SRC, 2) && v[EC_P_MACHINE] == EC_MACH_LOOP,
-          "B2 tapped: the MACHINE page, nothing picked");
+    CHECK(A->page[EC_CAT_SRC] == ec_cat_key_page(EC_CAT_SRC, 2) && ec_cat_key_page(EC_CAT_SRC, 2) == ec_src_loop_page(),
+          "B2 tapped: the LOOP page");
     B(1, 40);
-    CHECK(A->page[EC_CAT_SRC] == ec_cat_key_page(EC_CAT_SRC, 1), "B1 tapped: the LOOP page");
-    {
-        const int pg = A->page[EC_CAT_SRC];
-        B(5, 40);
-        CHECK(A->page[EC_CAT_SRC] == pg && !ec_hm_shown(), "B5 tapped: nothing (hold only)");
-    }
+    CHECK(A->page[EC_CAT_SRC] == ec_cat_key_page(EC_CAT_SRC, 1) && !ec_hm_shown(), "B1 tapped: the TRIG page");
+    B(5, 40);
+    CHECK(A->page[EC_CAT_SRC] == ec_cat_key_page(EC_CAT_SRC, 5) && !ec_hm_shown(), "B5 tapped: the RANGE page");
     /* the warp menu while playing: STOP FIRST */
     press(FM1P_B_PLAY, 40);
-    hold_b(3);
+    hold_b(4);
     run(450);
     turn(FM1P_E_K1, 1);
-    let_b(3);
+    let_b(4);
     CHECK(v[EC_P_MODE] == 1 && A->msg_ms && !strcmp(A->msg, "STOP FIRST"), "playing: the warp menu refuses (%s)", A->msg);
     press(FM1P_B_PLAY, 40);
     A->track = 0;

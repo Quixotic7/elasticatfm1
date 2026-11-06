@@ -326,7 +326,7 @@ static void test_held(void)
         {EC_CAT_XFD, K_WK, 12, 450, "GLIDE TO 127", EC_C_L12},
         {EC_CAT_FILT, K_BK, 1, 300, "FILTER TYPE", EC_C_L12},
         {EC_CAT_AMP, K_BK, 1, 300, "ENV MODE", EC_C_L12},
-        {EC_CAT_SRC, K_BK, 1, 300, "LOOP MODE", EC_C_L12},
+        {EC_CAT_SRC, K_BK, 2, 300, "LOOP MODE", EC_C_L12},   /* 0.6.41: B2 */
         {EC_CAT_FX, K_BK, 1, 300, "INSERT 1 TYPE", EC_C_L12},
         {EC_CAT_FX, K_BK, 3, 300, "SEND 1 TYPE", EC_C_L12},
         {EC_CAT_FILT, K_BTN, FM1P_B_FX, 450, "PICK A MODE", EC_C_L12},

@@ -1225,7 +1225,7 @@ void ec_app_init(void)
     ec_e5_init();                                  /* E5 */
     ec_rec_init();                                 /* E6 */
     A->cat = EC_CAT_SRC;                           /* 0.6.0: power-on / project load = LOOP ENGINE */
-    A->page[EC_CAT_SRC] = 0;
+    A->page[EC_CAT_SRC] = ec_src_loop_page();      /* 0.6.41: the LOOP page (B1 is TRIG now) */
     ec_pn_init();                                  /* 0.6.0: the modes, APP SETTINGS, the intro */
     scan();
 }

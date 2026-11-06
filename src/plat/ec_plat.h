@@ -39,7 +39,8 @@ enum {
 enum { EC_E_SELECT, EC_E_ALGO, EC_E_PRESETS, EC_E_K1, EC_E_K2, EC_E_K3, EC_E_K4, EC_NE };
 
 /* ---- LED levels (fm1core.h FM1P_LED_*; any 0..255 works) ---- */
-enum { EC_LED_OFF = 0, EC_LED_FAINT = 12, EC_LED_DIM = 40, EC_LED_MID = 96, EC_LED_LIT = 255 };
+enum { EC_LED_OFF = 0, EC_LED_FAINT = 12, EC_LED_DIM = 40, EC_LED_MID = 96, EC_LED_LIT = 255,
+       EC_LED_10 = 26, EC_LED_40 = 102 };   /* 0.6.41 (owner): ~10 % and ~40 % (the source / page keys, slice keys) */
 
 /* ---- input: one snapshot per device millisecond (taken at tick) ---- */
 typedef struct {

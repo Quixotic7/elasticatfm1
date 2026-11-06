@@ -92,7 +92,7 @@ These hold in every mode unless the mode says otherwise.
   there it steps through the group's pages** (the same ones SEL passes), back to the first after the last. Nothing
   is reachable only by a key. The lists, as built (track selected):
   - TRIG: TRIG P1, TRIG P2 (B1), COND (B2), PLAYHEAD (B3)
-  - LOOP ENGINE: LOOP P1, LOOP P2 (B1), MACHINE (B2), WARP (B3), RANGE (B4); the warp page's lanes follow the warp
+  - LOOP ENGINE (0.6.41): TRIG P1-P4 (B1), LOOP P1, LOOP P2 (B2), MACHINE (B3), WARP (B4), RANGE (B5); the warp page's lanes follow the warp
   - FILTER: FILTER (B1; lanes by filter machine), FILTER ENV (B2), MIX (B3)
   - AMP: AMP P1, AMP P2 (B1), AMP ENV (B2), MOD ENV P1, MOD ENV P2 (B3)
   - FX (0.6.3): INSERT 1 P1.. (B1), INSERT 2 P1.. (B2), SEND 1 P1.. (B3), SEND 2 P1.. (B4), SENDS, MASTER P1.. (B5),
@@ -263,9 +263,9 @@ patterns (PATTERN LAUNCH's white keys).
 - **Hold menus** (0.6.1) in FX and LOOP ENGINE: holding the key (400 ms, or at once with SEL / K1) shows a list of
   one setting's values over the screen, the header saying what the key does; SEL or K1 moves the cursor, letting go
   picks (nothing changes if the cursor never moved). A tap still opens the key's page (or steps its group).
-  - LOOP ENGINE: B1 LOOP = loop mode (the slice play mode on slice machines, else the chop loop mode), B2 MACHINE =
-    machine (0.6.16: STOP FIRST while playing, like the warp), B3 WARP = warp mode (STOP FIRST while playing), B4 RANGE = voice mode (MONO / POLY), B5 = ADVANCE
-    (hold only).
+  - LOOP ENGINE (0.6.41: one key on): B1 TRIG = ADVANCE, B2 LOOP = loop mode (the slice play mode on slice
+    machines, else the chop loop mode), B3 MACHINE = machine (0.6.16: STOP FIRST while playing, like the warp), B4
+    WARP = warp mode (STOP FIRST while playing), B5 RANGE = voice mode (MONO / POLY).
   - FX (0.6.3): B1 / B2 / B3 / B4 = INSERT 1's / INSERT 2's / SEND 1's / SEND 2's effect type; B5 on MASTER = the
     master's. On SENDS a held B1-B4 swaps instead (below).
 - **FX** (0.6.3, docs/UX-V2.md §10 "FX layout"): two inserts per track, INSERT 1 then INSERT 2 in series (an empty
@@ -425,16 +425,24 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 
 | Page | Key | Lane | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|---|---|
-| LOOP · NEIGHBOR/INPUT | B1 | - | | | | |
+| TRIG · SLICE/RAZOR | B1 | 1 | NOTE | LEN | VEL | MICRO |
+|  |  | 2 | SLIDE | ENV RESET | LFO RESET | FILT RESET |
+|  |  | 3 | CHANCE | COND | RATCHET | - |
+|  |  | 4 | SLIC | PLAY | RTCH | SREV |
+| TRIG · otherwise |  | 1 | NOTE | LEN | VEL | MICRO |
+|  |  | 2 | SLIDE | ENV RESET | LFO RESET | FILT RESET |
+|  |  | 3 | CHANCE | COND | RATCHET | - |
+|  |  | 4 | SNAP START | RET MODE |  |  |
+| LOOP · NEIGHBOR/INPUT | B2 | - | | | | |
 | LOOP · SLICE/RAZOR |  | 1 | P/T | SLOT | SLIC | PLAY |
 |  |  | 2 | CNT | CHOK | SMUT | SREV |
 | LOOP · otherwise |  | 1 | PITCH | SLOT | START | END |
 |  |  | 2 | XFADE | REVERSE |  |  |
-| MACHINE · NEIGHBOR/INPUT | B2 | - | | | | |
+| MACHINE · NEIGHBOR/INPUT | B3 | - | | | | |
 | MACHINE · SLICE/RAZOR |  | 1 | CNT | PLAY | SREV | RTCH |
 |  |  | 2 | SYNC | RATE |  |  |
 | MACHINE · otherwise |  | 1 | LREVERSE | LXFADE | RET MODE |  |
-| WARP · NEIGHBOR/INPUT | B3 | - | | | | |
+| WARP · NEIGHBOR/INPUT | B4 | - | | | | |
 | WARP · TAPE |  | 1 | WARP RATE | WARP FADE |  |  |
 | WARP · VARI |  | 1 | RATE | MFAD |  |  |
 | WARP · DOMINO |  | 1 | SLCS | SLEN | LOOP | RATE |
@@ -453,7 +461,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | WARP · GSTR2 |  | 1 | STRCH | PWIN | SMTH | RATE |
 | WARP · CHOP |  | 1 | SLEN | GATE | RATE | - |
 |  |  | 2 | ATK | REL |  |  |
-| RANGE · NEIGHBOR/INPUT | B4 | - | | | | |
+| RANGE · NEIGHBOR/INPUT | B5 | - | | | | |
 | RANGE · otherwise |  | 1 | - | - | R-START | R-END |
 | SETUP | hold | 1 | MACHINE | WARP MODE | LOOP DIV | VOICE MODE |
 
@@ -877,6 +885,7 @@ CROSSFADER (ARP): the A / B scene crossfader; B1 / B2 are the scenes, the white 
 | TRIG/COND | Whether and how often a step fires: chance, trig condition (A:B cycles, FILL, PRE, 1ST ...) and ratchet repeats. |
 | TRIG/PLAYHEAD | How a trig engages the loop region: trig jump and trig release. On slice machines this page is SLICE instead: slice number, play mode, ratchet, reverse. |
 | TRIG/SETUP | The global swing amount, shared by every track. |
+| SRC/TRIG | The step's trig settings without leaving LOOP ENGINE (0.6.41): B1 steps through its four lanes: NOTE, LENGTH, VELOCITY, MICRO; SLIDE and the resets; CHANCE, CONDITION, RATCHET; the playhead (slice machines: the slice, its play mode, ratchet, reverse). |
 | SRC/LOOP | The main view: the track's waveform with pitch, loop start / end and sample slot (slice machines: play mode, slice, slice count, choke, slice mute). Empty for NEIGH and INPUT, which show their routing / input meters. |
 | SRC/MACHINE | The machine's own controls: loop reverse, crossfade and trig release for loop machines; slice, play mode, reverse, ratchet, clock sync and rate for slice machines. |
 | SRC/WARP | The warp mode's controls (each mode shows its own: grains, stretch, harmonies, wavetable ...) plus RATE, over the waveform. Empty for NEIGH and INPUT. |
@@ -999,8 +1008,9 @@ An FX machine changes at any time (a short fade, no click).
 
 | Key | Does |
 |---|---|
-| B1 | **LOOP** (hold: the machine, with K1 or SEL) |
-| B2 / B3 / B4 | **MACHINE**, **WARP**, **RANGE** |
+| B1 | 0.6.41: **TRIG**, the step's trig settings: a tap steps its four lanes (NOTE LEN VEL MICRO; SLIDE and the resets; CHANCE COND RATCHET; the playhead, slice machines the slice's) (hold: ADVANCE) |
+| B2 | **LOOP** (hold: the loop / slice play mode) |
+| B3 / B4 / B5 | **MACHINE**, **WARP**, **RANGE** (hold: the machine, the warp mode, the voice mode) |
 | B6-B10 | the sources |
 | PRESETS | **the step page** (steps 1-16, 17-32 ..; 0.6.40: the header's second box, S1 S2 .., beside the track) |
 | ALGO | **selects one step** (shared with KEYBOARD's target; 0.6.11: each track's own); below step 1 is **LIVE** (nothing selected) |
@@ -1013,7 +1023,7 @@ An FX machine changes at any time (a short fade, no click).
   play exactly as live**, but each entry (the keys held together) also goes into **every selected step**, written
   at every press (0.6.24) and once more on the last release, which shows the message and closes the undo gesture:
   its region lock (one key: that division; several: first..last) and a trig. On the
-  **RANGE page** (B4) the entry is the steps' **range** (the 16 keys over the whole sample). The selection stays
+  **RANGE page** (B5; B4 before 0.6.41) the entry is the steps' **range** (the 16 keys over the whole sample). The selection stays
   until you select again (holding B11 and pressing nothing keeps it); 0.6.11: it is **the track's own** (T2 has its
   own selection and target step; switching tracks never writes into another track's steps), and on the LOOP layer the
   selected steps stay in view as **bright caps over the loop-key ruler**; ALGO selects one step, and ALGO below step 1
@@ -1033,7 +1043,7 @@ An FX machine changes at any time (a short fade, no click).
   the header's message comes on the last release. Let go of all of them and the playhead returns as RET MODE says
   (return / boomerang / reset). While stopped they audition; **stopped with a step selected, they (and the slice
   pads) play through that step's region / range locks** (0.6.30), as the screen shows.
-- **The RANGE page (B4) is the same on every machine** (0.6.21-0.6.28): the white keys are loop keys editing R-START
+- **The RANGE page (B5) is the same on every machine** (0.6.21-0.6.28): the white keys are loop keys editing R-START
   / R-END over the 16 keys, with the same span rules, LEDs and markers (on slice tracks too: no pads there, and the
   page is drawn by the loop track's code). The range is **a crop, never a repitch**: the trim is stretched to the
   slot's STEPS, the range crops that, and the loop points or slices work in 0..128 of the range, so a sequence of
@@ -1389,7 +1399,7 @@ What the code does where the spec says otherwise (or says nothing):
   = the MATRIX, M1-M4 = the macro's page; AMP: MOD ENV). Elsewhere a tap does nothing: no key changes the mode.
 - **The header's held-key text** shows 0.15 s into a hold (a tap shows none); a message newer than the last key
   press wins over it, an older one gives way.
-- **AMP and TRIG have no B11** (unused). LOOP ENGINE has no B5 page; hold B1 there is the machine.
+- **AMP and TRIG have no B11** (unused). LOOP ENGINE (0.6.41): B1 TRIG, B2 LOOP, B3 MACHINE, B4 WARP, B5 RANGE; their holds: ADVANCE, the loop mode, the machine, the warp mode, the voice mode.
 - **LOOP ENGINE's zoom** (B11) changes the track's LOOP DIV param (16 ↔ 32), so it is saved and heard.
 - **MIX's rates:** B1-B8 are eight rates (1/8 .. 4X), **B9 slower, B10 faster**, B11 the CAT (the spec had B1-B9 the
   list and B10 / B11 slower / faster, with B11 also the CAT).

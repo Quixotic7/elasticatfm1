@@ -1196,3 +1196,15 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - B11 held + PRESETS = the zoom (as K3); on slice tracks the zoom is the pads' bank: right = SLICES 17-32, left =
   SLICES 1-16, one click, and it no longer writes the track's LOOP DIV (the loop keys' division).
 - B11 held + ALGO = the pattern length, as K1.
+
+## 37. 0.6.41: TRIG on LOOP ENGINE's B1, the key LEDs, the bank bar (owner, 2026-11-05)
+
+- LOOP ENGINE's B1 is TRIG: one page with four lanes (a tap steps them, the header's right box says P1-P4): NOTE,
+  LENGTH, VELOCITY, MICRO; SLIDE and the ENV / LFO / FILTER resets; CHANCE, CONDITION, RATCHET; the playhead (SNAP
+  START, RET MODE; slice machines: the slice, its play mode, ratchet, reverse). The waveform and the loop keys stay
+  as on LOOP. The pages moved one key on: B2 LOOP, B3 MACHINE, B4 WARP, B5 RANGE, and their hold menus with them
+  (B1 holds ADVANCE). Power-on and a project load open the LOOP page (B2), as before.
+- The source template's black keys read apart: the page keys ~40 %, the source (mod) keys ~10 %, the page shown
+  full. Slice tracks' keys with a slice ~10 % (were ~16 %).
+- B11 held on a slice track: a bar under the waveform spans the slices of the pads' bank (1-16 / 17-32, in the
+  layer's colour), so B11 + PRESETS shows where the bank went.

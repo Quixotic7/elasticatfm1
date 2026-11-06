@@ -136,7 +136,7 @@ void ec_prj_oct(int up)
         ec_pn_enter(EC_CAT_FILE);                  /* back: SAMPLES */
 }
 
-/* 0.6.44: the name keybed; until then a message */
+/* 0.6.45: the name keybed; until then a message */
 void ec_prj_rename(const char *name)
 {
     (void)name;

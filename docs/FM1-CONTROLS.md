@@ -1111,9 +1111,9 @@ An FX machine changes at any time (a short fade, no click).
 |---|---|
 | SEL | the cursor: the folder's subfolders first, then its files |
 | B1 / B2 | **up a folder / into the folder** under the cursor. 0.6.42: **AUDIO/ is the top** (nothing above it; the projects are PROJECTS'); below it the first row is **UP** (an arrow, the folder it goes to on the right) |
-| OCT+ / OCT- | 0.6.42: **open** the row under the cursor (UP: up, a folder: into it, a file: LOAD) / **up** |
+| OCT+ / OCT- | 0.6.42: **open** the row under the cursor (UP: up, a folder: into it; 0.6.44: a file: **in or out of the pool**) / **up** |
 | B10 | **LOAD**: the file goes into **the next free pool slot** (0.6.32: the pool only: a track plays it once its SLOT is set, with K2 on the LOOP page, PRESETS or POOL's ASSIGN). The cursor stays put. A file already in the pool isn't loaded twice (IN SLOT n). A full pool says FULL |
-| B11 | **preview** play / stop |
+| B11 | 0.6.44 (owner): **a click: the file in / out of the pool** (as OCT+); **held: the file previews until let go** (AUTO-PREVIEW off, PRESETS: hold B11 to hear, click to take it) |
 | B9 | **free the pool slot** of the file under the cursor (its tracks fall silent; 0.6.42: was F2) |
 | SHIFT + B11 | **purge**: free every slot no pattern uses and compact the memory (not while playing) |
 

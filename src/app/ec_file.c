@@ -353,9 +353,11 @@ void ec_file_preview_yield(void)
     }
 }
 
+static void b11_tick(void);
 void ec_file_tick(void)
 {
     int i;
+    b11_tick();
     if (P->pv_state == EC_PV_WAIT && A->load_slot < 0) {
         for (i = 0; i < EC_NSLOT && A->slot[i].state != EC_SL_QUEUED; i++)
             ;
@@ -638,6 +640,16 @@ static void load(void)
 
 /* 0.6.42 (owner): OCT+ = yes / open: the row under the cursor (UP: up, a folder: into it, a file: LOAD into the
  * pool); OCT- = no / back: up */
+/* 0.6.44 (owner): a file: in the pool or out of it (LOAD / FREE: out is refused while playing, as FREE) */
+static void pool_toggle(void)
+{
+    const char *path = cursor_path();
+    if (path && ec_file_pooled(path) >= 0)
+        ec_file_f2();
+    else
+        load();
+}
+
 void ec_file_open(void)
 {
     int isd, f;
@@ -645,8 +657,51 @@ void ec_file_open(void)
     if (isd)
         folder_in();
     else
-        load();
+        pool_toggle();
 }
+
+/* 0.6.44 (owner): SAMPLES' B11: a quick click = OCT+ (the file in / out of the pool, a folder opened); held, the file
+ * previews until it is let go */
+#define B11_HOLD_MS 300u
+static struct {
+    int down, playing;
+    uint32_t ms;
+} g_b11;
+
+static void b11(int down)
+{
+    if (down) {
+        g_b11.down = 1;
+        g_b11.playing = 0;
+        g_b11.ms = A->ms;
+        return;
+    }
+    if (!g_b11.down)
+        return;
+    g_b11.down = 0;
+    if (g_b11.playing) {                           /* the hold's preview ends */
+        g_b11.playing = 0;
+        P->pv_play = 0;
+        A->redraw = 1;
+    } else
+        ec_file_open();
+}
+
+static void b11_tick(void)
+{
+    const char *p;
+    if (!g_b11.down || g_b11.playing || A->ms - g_b11.ms < B11_HOLD_MS)
+        return;
+    if (ec_app_mode() != EC_CAT_FILE || ec_file_page() != EC_PIC_FILE) {
+        g_b11.down = 0;
+        return;
+    }
+    g_b11.playing = 1;                             /* (a folder: nothing to hear; the release does nothing) */
+    p = cursor_path();
+    if (p)
+        preview(p, 1);
+}
+int ec_file_b11_previewing(void) { return g_b11.playing; }
 void ec_file_up(void) { folder_up(); }
 
 /* 0.6.11: PLAY inside FILE: 1 = the EDITOR / RAZOR was shown, now BROWSE (the press is used up; play from there) */
@@ -1094,6 +1149,10 @@ void ec_file_black(int key, int down)
         A->redraw = 1;
         return;
     }
+    if (mode == EC_CAT_FILE && key == 11 && ec_file_page() == EC_PIC_FILE) {
+        b11(down);                                 /* 0.6.44: click = in / out of the pool, held = the preview */
+        return;
+    }
     if (!down || mode != EC_CAT_FILE)
         return;
     pic = ec_file_page();
@@ -1160,15 +1219,6 @@ void ec_file_black(int key, int down)
     case 2: folder_in(); break;
     case 9: ec_file_f2(); break;                   /* 0.6.15: B9 removes from the pool */
     case 10: load(); break;
-    case 11: {
-        const char *p = cursor_path();
-        if (!p)
-            break;
-        if (P->pv_play && !strcmp(P->pv_path, p))
-            P->pv_play = 0;
-        else
-            preview(p, 1);
-    } break;
     default: break;
     }
     A->redraw = 1;

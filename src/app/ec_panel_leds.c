@@ -748,8 +748,10 @@ static void button_labels(void)
         L(EC_LBL_BTN0 + EC_B_OCTDN, ec_prj_ask() ? "NO" : "BACK");
         L(EC_LBL_BTN0 + EC_B_OCTUP, ec_prj_ask() ? "YES" : "LOAD");
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE) {   /* 0.6.42: OCT- up, OCT+ open */
+        int isd = 0, f = 0;
+        ec_file_entry(A->cursor, &isd, &f);
         L(EC_LBL_BTN0 + EC_B_OCTDN, "UP");
-        L(EC_LBL_BTN0 + EC_B_OCTUP, "OPEN");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, isd ? "OPEN" : "+/- POOL");   /* 0.6.44: a file: in / out of the pool */
     } else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR) {   /* 0.6.1: the point the keys place */
         L(EC_LBL_BTN0 + EC_B_OCTDN, "START");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "END");
@@ -894,7 +896,7 @@ static void black_labels(void)
                     snprintf(b, sizeof b, "BANK %c", 'A' + i), s = b;
                 break;
             case EC_CAT_FILE: {
-                static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "REMOVE", "ADD", "PREVIEW"};
+                static const char *const BR[EC_NBKEY] = {"UP", "INTO", "", "", "", "", "", "", "REMOVE", "ADD", "+/- POOL"};   /* 0.6.44: B11 click; held: the preview */
                 static const char *const PO[EC_NBKEY] = {"", "", "", "", "", "", "", "", "FREE", "ASSIGN", "MOVE"};
                 static const char *const ED[EC_NBKEY] = {"P1", "P2", "", "", "", "", "", "", "AUTO BPM", "RECALC", "PREVIEW"};
                 static const char *const RZ[EC_NBKEY] = {"P1", "P2", "P3", "", "", "", "", "", "EVEN", "CHOP", "PREVIEW"};

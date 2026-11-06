@@ -1227,4 +1227,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - PROJECTS: the white keys do nothing (they edited the track's steps) and are dark. B11 does nothing there either
   (the owner saw it open the slice editor; not reproduced in the harness or the player: watching).
 - The browser's header is FILE/SAMPLES (it said FILE/BROWSE).
-- The name keybed, RENAME and RANDOM are 0.6.44.
+- The name keybed, RENAME and RANDOM are 0.6.45.
+
+## 40. 0.6.44: SAMPLES' OCT+ and B11 toggle the pool, B11 held previews (owner, 2026-11-05)
+
+- OCT+ on a file puts it in the pool or takes it out (out: as B9 FREE, refused while playing); on a folder or UP it
+  opens, as before.
+- B11: a quick click does the same as OCT+; held (300 ms), the file under the cursor previews until B11 is let go.
+  With AUTO-PREVIEW off (PRESETS), hold B11 to hear a file and click it to take it: the fast way through a folder.
+- The labels: B11 and OCT+ on a file +/- POOL. test_file checks hold, click and OCT+.

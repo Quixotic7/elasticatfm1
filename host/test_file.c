@@ -142,7 +142,7 @@ static void test_folders(void)
     turn(FM1P_E_SELECT, -20);
     CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "UP") && lbl(FM1CORE_LBL_BLACK0 + 1, "INTO") &&
               lbl(FM1CORE_LBL_BLACK0 + 9, "ADD") && lbl(FM1CORE_LBL_BLACK0 + 8, "REMOVE") &&
-              lbl(FM1CORE_LBL_BLACK0 + 10, "PREVIEW") && lbl(FM1CORE_LBL_BLACK0 + 3, "") &&
+              lbl(FM1CORE_LBL_BLACK0 + 10, "+/- POOL") && lbl(FM1CORE_LBL_BLACK0 + 3, "") &&
               lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "+/- POOL") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "PREVIEW"),
           "the browser's labels: B1 %s B2 %s B9 %s B10 %s B11 %s; ALGO %s PRESETS %s", L(FM1CORE_LBL_BLACK0),
           L(FM1CORE_LBL_BLACK0 + 1), L(FM1CORE_LBL_BLACK0 + 8), L(FM1CORE_LBL_BLACK0 + 9), L(FM1CORE_LBL_BLACK0 + 10),
@@ -166,13 +166,41 @@ static void test_preview(void)
     run(200);
     CHECK(!A->seq.playing && out_peak(f0, frames) > 2000, "heard on the output, stopped (peak %d)",
           out_peak(f0, frames));
-    B(11, 40);                                     /* B11: stop */
+    turn(FM1P_E_PRESETS, 1);                       /* PRESETS: the preview off (0.6.44: B11 is the pool) */
     f0 = frames;
     run(100);
-    CHECK(!A->pn.pv_play && out_peak(f0 + 256, frames) == 0, "B11: the preview stops (peak %d)",
+    CHECK(!A->pn.pv_play && out_peak(f0 + 256, frames) == 0, "PRESETS: the preview stops (peak %d)",
           out_peak(f0 + 256, frames));
+    {   /* 0.6.44 (owner): B11 held = the preview while held; a click = in / out of the pool (as OCT+) */
+        const char *path = "/audio/c_chords_bpm120.wav";
+        const int was = ec_file_pooled(path);
+        key(1, 10, 1);
+        run(400);
+        CHECK(A->pn.pv_play == 1 && ec_file_pooled(path) == was, "B11 held: it previews, the pool as it was");
+        key(1, 10, 0);
+        run(20);
+        CHECK(!A->pn.pv_play && ec_file_pooled(path) == was, "B11 let go: silence, the pool as it was");
+        B(11, 40);
+        settle(100);
+        CHECK((ec_file_pooled(path) >= 0) != (was >= 0), "B11 click: in / out of the pool (%d -> %d)", was,
+              ec_file_pooled(path));
+        press(FM1P_B_OCTUP, 40);
+        settle(100);
+        CHECK((ec_file_pooled(path) >= 0) == (was >= 0), "OCT+: back as it was (%d)", ec_file_pooled(path));
+    }
+    turn(FM1P_E_PRESETS, 1);
+    CHECK(A->pn.as.preview == 1, "PRESETS again: AUTO-PREVIEW on");
+    B(11, 40);                                     /* (in / out once more: as it was) */
+    settle(100);
     B(11, 40);
-    CHECK(A->pn.pv_play == 1, "B11 again: it plays");
+    settle(100);
+    key(1, 10, 1);                                 /* (playing again, for the checks below) */
+    run(400);
+    CHECK(A->pn.pv_play == 1, "B11 held: it plays");
+    key(1, 10, 0);
+    turn(FM1P_E_SELECT, 1);
+    turn(FM1P_E_SELECT, -1);
+    settle(200);
     CHECK(fabsf(ec_pn_item_value(EC_UX_FLEN) - 4.0f) < 0.05f && fabsf(ec_pn_item_value(EC_UX_FBPM) - 120.0f) < 0.01f,
           "LENGTH %.2f s, BPM %.1f of the file", ec_pn_item_value(EC_UX_FLEN), ec_pn_item_value(EC_UX_FBPM));
     A->pn.as.preview = 0;                          /* APP SETTINGS' AUTO-PREVIEW off: a move does not */

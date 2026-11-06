@@ -55,7 +55,7 @@ ol.steps li{margin:6px 0}
 <div class="wrap">
 <nav>
 <h1>Elasticat FM-1</h1>
-<p class="v">User guide, 0.6.15</p>
+<p class="v">User guide, 0.6.48</p>
 <a href="#what">What it is</a>
 <a href="#setup">Setting up</a>
 <a href="#panel">The panel</a>
@@ -70,6 +70,7 @@ ol.steps li{margin:6px 0}
 <a href="#sounds-editor" class="sub">Trim EDITOR</a>
 <a href="#sounds-slice" class="sub">SLICE editor</a>
 <a href="#sounds-sampler" class="sub">SAMPLER</a>
+<a href="#sounds-projects" class="sub">PROJECTS and names</a>
 <a href="#seq">Sequencing</a>
 <a href="#seq-loop" class="sub">LOOP ENGINE</a>
 <a href="#seq-trig" class="sub">TRIG</a>
@@ -287,8 +288,8 @@ ol.steps li{margin:6px 0}
 <tr><td>AMP (ENV)</td><td>AMP</td><td>amp settings</td></tr>
 <tr><td>MOD (LFO)</td><td>MODULATION</td><td>(no settings)</td></tr>
 <tr><td>MIX (EDIT)</td><td>MIX → PAGES</td><td>project settings: NAME, GLO BPM, BPM, RETURN MODE</td></tr>
-<tr><td>LOOP (HOME)</td><td>LOOP ENGINE → TRIG → KEYBOARD. From another mode HOME always lands on LOOP ENGINE</td><td>LOOP SETUP: the machine, warp, voice mode, ADVANCE</td></tr>
-<tr><td>SAMPLES (SAVE)</td><td>BROWSE/POOL → EDITOR → SLICE → SAMPLER. From another mode SAMPLES always lands on BROWSE</td><td><strong>save the project</strong></td></tr>
+<tr><td>LOOP (HOME)</td><td>LOOP ENGINE → TRIG → KEYBOARD. From another mode HOME always lands on LOOP ENGINE</td><td>LOOP SETUP: the machine, warp, voice mode, ADVANCE (the machine and the warp change only while stopped)</td></tr>
+<tr><td>SAMPLES (SAVE)</td><td>SAMPLES (the browser) / POOL → PROJECTS → EDITOR → SLICE → SAMPLER (playing, the editors are skipped). From another mode it always lands on the browser. The button's label names the sub-mode it is on</td><td><strong>save the project</strong></td></tr>
 <tr><td>XFADE (ARP)</td><td>CROSSFADER</td><td><strong>APP SETTINGS</strong></td></tr>
 <tr><td>PATTERN (SEQ)</td><td>PATTERN LAUNCH</td><td>F3, the timing menu</td></tr>
 <tr><td>PLAY</td><td>start / stop at once (stop is a real stop; it ends live recording)</td><td></td></tr>
@@ -301,8 +302,8 @@ ol.steps li{margin:6px 0}
 <tr><th>Knob</th><th>Does</th></tr>
 <tr><td>VOL</td><td>master volume</td></tr>
 <tr><td>LANE</td><td>walks the mode's page list both ways (pages, lanes, knob pages) and stops at its ends. On lists (the browser, the pool, settings) it is the cursor</td></tr>
-<tr><td>TARGET</td><td>on every track page: <strong>selects a step</strong> on the shown page (full left = LIVE, nothing selected). SLICE editor: the slice. BROWSE: add / remove from the pool. Trim EDITOR: moves the selected marker</td></tr>
-<tr><td>PAGE</td><td>on every track page and in PAGES: <strong>turns the step page</strong>. MIX: selects the track. BROWSE / POOL: the audible preview on / off. EDITOR / SLICE: the track's sample (a pool list pops up)</td></tr>
+<tr><td>TARGET</td><td>on every track page: <strong>selects a step</strong> on the shown page (full left = LIVE, nothing selected). SLICE editor: the slice. The browser: add / remove from the pool. PROJECTS: the cursor. Trim EDITOR: moves the selected marker. Name keybed: the cursor</td></tr>
+<tr><td>PAGE</td><td>on every track page, KEYBOARD and PAGES: <strong>turns the step page</strong>, shown in the header beside the track (T1 | S1 = steps 1–16, S2 = 17–32 …). MIX: selects the track. Browser / POOL: the audible preview on / off. EDITOR / SLICE: the track's sample (a pool list pops up). Name keybed: rolls names</td></tr>
 <tr><td>K1–K4</td><td>the page's four values. A step held, or steps selected: the value becomes a <strong>lock</strong> on those steps</td></tr>
 </table>
 <p>Knobs accelerate: slow turns are the finest step, fast turns jump further (APP SETTINGS &gt; KNOB SPEED). SHIFT + a value knob snaps to useful values. Turning a value whose box is not on screen shows it big for a second.</p>
@@ -328,8 +329,8 @@ ol.steps li{margin:6px 0}
 <ul>
 <li>the white keys <strong>select steps</strong> of the shown page (keys held together are one selection; let them all go and the next press starts a new one);</li>
 <li><strong>B1…B8 are the pattern's pages</strong>, FIZZ style: tap = go to the page, hold = mute it (out of the loop), double-tap = solo it, two keys held = loop between them (past the end: the track grows to that page);</li>
-<li>the cells area shows the <strong>pages panel</strong>, with <kbd>K1</kbd> = LEN (pattern length), <kbd>K2</kbd> = RATE, <kbd>K3</kbd> = the loop-key zoom;</li>
-<li><kbd>F1</kbd> clears the selected steps, <kbd>F2</kbd> goes LIVE (clears the selection).</li>
+<li>the cells area shows the <strong>pages panel</strong>, with <kbd>K1</kbd> (or <kbd>TARGET</kbd>) = LEN, the pattern length, <kbd>K2</kbd> = RATE, <kbd>K3</kbd> (or <kbd>PAGE</kbd>) = the loop-key zoom. On slice tracks the zoom is the pads' bank (slices 1–16 / 17–32), shown as a bar under the waveform;</li>
+<li><kbd>COPY</kbd> (F1) clears the selected steps, <kbd>CUT</kbd> (F2) goes LIVE (clears the selection).</li>
 </ul>
 <p>A quick click on B11 <strong>latches</strong> the step layer (click again to go back). On FILTER, AMP, FX and MOD the quick click keeps the page's own B11 function (the envelope mode, FX MIX, MACROS). Patterns have up to 128 steps = 8 pages.</p>
 
@@ -341,7 +342,7 @@ ol.steps li{margin:6px 0}
 <p><span style="background:#f6f3e8;border:1px solid #999"></span><strong>White</strong> = the selected steps, on every layer. Under a step, a short bar in the lock colour is its region lock.</p>
 <p><span style="background:var(--acc)"></span><strong>Orange</strong> = the playhead, the accent, alerts.</p>
 </div>
-<p>Key LEDs follow the layer: on the loop keys only the active loop range is lit and the selected steps blink; on the step layer trigs are mid, empty steps dark, the selection blinks. A held menu button lights only its picker keys. The header's title line shows messages (STOP FIRST, SAVED, PAGE 2/4) and what a held key does.</p>
+<p>Key LEDs follow the layer: on the loop keys they light what plays now (each step's region as it fires, the span of the keys held) and the selected steps blink; on slice tracks every key with a slice is dim and the pads held, the slices sounding, or a selected step's slices are bright; on the step layer trigs are mid, empty steps dark, the selection blinks. A held menu button lights only its picker keys. The header's title line shows messages (STOP FIRST, SAVED, PAGE 2/4) and what a held key does.</p>
 </section>
 
 <section id="quick">
@@ -350,10 +351,10 @@ ol.steps li{margin:6px 0}
 <div class="card">
 <h4>1. Load a sound</h4>
 <ol class="steps">
-<li>Press <kbd>SAMPLES</kbd>. You are in BROWSE, in <code>audio/</code>.</li>
-<li><kbd>LANE</kbd> moves the cursor; <kbd>B2</kbd> enters a folder, <kbd>B1</kbd> goes up. Each move previews the file once (turn the preview off with <kbd>PAGE</kbd>).</li>
+<li>Press <kbd>SAMPLES</kbd>. You are in the browser, in <code>AUDIO/</code>.</li>
+<li><kbd>LANE</kbd> moves the cursor; <kbd>CUT</kbd> (OPEN) enters a folder, <kbd>COPY</kbd> (UP) goes back up. Each move previews the file once (turn the preview off with <kbd>PAGE</kbd>; then hold <kbd>B11</kbd> to hear a file).</li>
 <li>Hold white keys to hear parts of the file as loop keys.</li>
-<li><kbd>B10</kbd> (or <kbd>TARGET</kbd> clockwise) adds it to the pool. A new project's track 1 already plays slot 1; any other track plays nothing until you set its SLOT (<kbd>K2</kbd> on the LOOP page, or ASSIGN in POOL).</li>
+<li>A click on <kbd>B11</kbd> (or <kbd>CUT</kbd>, <kbd>B10</kbd>, <kbd>TARGET</kbd> clockwise) adds it to the pool. A new project's track 1 already plays slot 1; any other track plays nothing until you set its SLOT (<kbd>K2</kbd> on the LOOP page, or ASSIGN in POOL).</li>
 </ol>
 </div>
 <div class="card">
@@ -361,7 +362,7 @@ ol.steps li{margin:6px 0}
 <ol class="steps">
 <li>Press <kbd>HOME</kbd> (LOOP ENGINE) and <kbd>PLAY</kbd>.</li>
 <li>The white keys are 16 loop keys over the sample: hold one to loop that slice, two to span them. Let go and the playhead returns.</li>
-<li>Turn <kbd>K1</kbd>…<kbd>K4</kbd> (PITCH, SLOT, START, END on the LOOP page). <kbd>B3</kbd> is the WARP page: try GRAIN.</li>
+<li>Turn <kbd>K1</kbd>…<kbd>K4</kbd> (PITCH, SLOT, START, END on the LOOP page). <kbd>B4</kbd> is the WARP page: stop, hold <kbd>B4</kbd> and pick GRAIN.</li>
 </ol>
 </div>
 <div class="card">
@@ -377,7 +378,7 @@ ol.steps li{margin:6px 0}
 <ol class="steps">
 <li><kbd>SHIFT</kbd> + <kbd>W2</kbd> selects track 2 (or MIX's keys). Load it a sound and repeat.</li>
 <li><kbd>MIX</kbd>: tap a track key to select, hold it to mute.</li>
-<li><kbd>SHIFT</kbd> + <kbd>SAMPLES</kbd> saves the project. It also saves itself when stopped.</li>
+<li><kbd>SHIFT</kbd> + <kbd>SAMPLES</kbd> (it reads SAVE) saves the project. It also saves itself when stopped. Projects are in PROJECTS (tap <kbd>SAMPLES</kbd> twice).</li>
 </ol>
 </div>
 </div>
@@ -387,31 +388,31 @@ ol.steps li{margin:6px 0}
 <h2>Getting sounds in</h2>
 <p>Samples live in the <strong>pool</strong>: 128 slots sharing 200 MiB (about 20 minutes of stereo). A track plays its slot (the SLOT parameter on LOOP ENGINE's first page); any step can lock a different slot.</p>
 
-<h3 id="sounds-browse">BROWSE and the pool</h3>
+<h3 id="sounds-browse">The browser and the pool</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAD/klEQVR42u2cjbmrIAyGWcEVXCEruMJZIfuPcFskISC9BfyJxWA9ILa85/nKXwLVYRKmc4MgOQMb+FSwz5o4hesZ0q+/77tTSE7+TnhPFSqUgASebgCmkqnsAAhpj8oPuleBDiWQ1NNdwEJqAaY0nSQaSV+jdXj3J6lvAM6kxlxslOLVSI1R8juBRdUXTYqbFTUjkntqaE6i7Bgpg22QeBD4umBgA58LXsLrdbzjZb1Gvo55C4aM9Q1fAgCCj99JCFmwprXB8mBAmpukq8DAJ6wJmasKDlJuwCxzlJtVrlGaeAkYQloTvBGVKlomb5rCOnJR6tuAlyVrOkFiukfHUqs0NSOqZSiuNcE2SBh4VDAZ3MEKTdwSQ4PJEGXkM8DscDiPqw6eSuAzuepgckaQmyE6XYYF2yBh4PHAsM67VytS5JFVKeblECfn9YFtPTKINMHzLKAYCwYgXASDuO4DU0odDFFmLhgwkZbf0wVeItiT1cFCxP+Ce6VGIbVPa4KTigMiDhYlxwTt4rJvI/gztMFP6qvn2ekEA18NxtcL1/id8IfPcD69vrAfQx/2hfqCFcEYCo2H49g5l93ZC+aUNth3JSF28dpxei84+970wZnEidR4gNROSL2mFcEuAybNSVS8fVxqk/wdKoNtkBgZ/FT7OE5rMZm0rys4qcEmTdl+01UdnJmhJdM0Gm14gOmqDpZyyhU5Kb80ZcWKXZ/pqg7OZQPcSl0wZftN11uAIQVL14S8x9LuMl21weZENfDI43HqVjzObbyU/dUq4LcRwwXmEwGB2eU2xg9uY12wdB1mw95pbmNdcEHqZGkAdi0NYNFfrQLeLP/kk7sj3Ma8Vyt3G6uBbZAw8FBgALm4lXeVsFnO3RW4z1UFFwc8MTBCPkDuAdNfVTDgFiy6ysOlpi2wemDED1KLvfeIR0kditEGS0nTaQ6mw+OxzUkJbIPE+GD/M7d5/rsyGNjABj4WbF2mgQ386+A/pWDg68DWnAxs4CHAhecMtHiPeENK02KJJhiKzxloAEufSvUSoCa4+JyBJqlxs6nh5uDicwZ6pIZGqbXApecMNPnLeEPKr4BtkBgfTDtSe3amOtoAz9dUxreyDHwlmAqQcT94m2fgO4BjhWjuBrIKGaHfyjLwteDaN3+uYKXK1tCBGPhksOzY+8FxaKABp3oiYODTwTa9NTAOuYMNoG9LTfxRTusGFVWw2PLasy8s/jAHfwUMwh3RLHV6/gg4fwDJtd+xBnjH1jgGd7djDbANEk8Abydq9dO+8me/G+cGvhIsMfXOk2iYlz73/Z838JXgbQVpMd8+VS4D3xNcdozWmuWl08D3ALdXjK0TtXuQMPAl4IfNMv8B+qFRh9JZcpwAAAAASUVORK5CYII=" alt="BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below" width="240" height="240"><figcaption>BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below</figcaption></figure>
 <table>
-<tr><th>BROWSE</th><th>Does</th></tr>
+<tr><th>Browser (SAMPLES)</th><th>Does</th></tr>
 <tr><td>LANE</td><td>the cursor (folders first, then files). Each move plays the file once if the preview is on</td></tr>
-<tr><td>B1 / B2</td><td>up a folder / into the folder. Above <code>audio/</code> is the top level with AUDIO/ and PROJECTS/</td></tr>
-<tr><td>B10 ADD, B9 REMOVE</td><td>load the file into the next free slot / free its slot. A track's SLOT never changes by itself: OFF until you set it. <kbd>TARGET</kbd> does the same: clockwise adds, anticlockwise removes</td></tr>
-<tr><td>B11</td><td>preview play / stop</td></tr>
+<tr><td>B1 / B2, COPY / CUT</td><td>up a folder / into the folder. <code>AUDIO/</code> is the top; inside a folder the first row is <strong>UP</strong> (an arrow and where it goes). <kbd>CUT</kbd> opens the row under the cursor (UP, a folder, or on a file: in / out of the pool), <kbd>COPY</kbd> goes up</td></tr>
+<tr><td>B10 ADD, B9 REMOVE</td><td>load the file into the next free slot / free its slot. Loading only fills the pool: a track's SLOT never changes by itself (OFF until you set it). <kbd>TARGET</kbd> does the same: clockwise adds, anticlockwise removes</td></tr>
+<tr><td>B11</td><td>a click: the file <strong>in / out of the pool</strong> (+/- POOL). Held: the file previews until you let go. With the preview off, hold to hear and click to take: the fast way through a folder</td></tr>
 <tr><td>PAGE</td><td>the audible preview on / off (saved in APP SETTINGS as AUTO-PREVIEW)</td></tr>
 <tr><td>White keys</td><td>preview loop keys: each key a 16th of the file, keys held together loop their span, silent on release. Their LEDs light the span and the playhead's key flashes</td></tr>
 <tr><td>B7 / B6</td><td>BROWSE / POOL</td></tr>
 <tr><td>SHIFT + B11</td><td>purge: free every slot no pattern uses and compact the memory (stopped only)</td></tr>
 </table>
-<p>In PROJECTS/, B10 opens that project. The rows under the browser show the next free SLOT, the file's LENGTH and BPM, and the FREE memory.</p>
+<p>The rows under the browser show the next free SLOT, the file's LENGTH and BPM, and the FREE memory. Projects have a mode of their own: <a href="#sounds-projects">PROJECTS</a>.</p>
 <table>
 <tr><th>POOL</th><th>Does</th></tr>
 <tr><td>LANE</td><td>the slot; a used slot previews</td></tr>
 <tr><td>B10 ASSIGN</td><td>the selected track plays this slot</td></tr>
-<tr><td>B9 or F2</td><td>FREE the slot</td></tr>
+<tr><td>B9 or CUT</td><td>FREE the slot</td></tr>
 <tr><td>B11 held</td><td><strong>move</strong> the slot: while held, <kbd>LANE</kbd> or <kbd>K1</kbd> carry it to another slot and the list shows the result; let go to drop it (a swap, every reference follows, one undo)</td></tr>
 </table>
-<p>SAMPLES opens while the transport runs; browsing, loading and previewing all work while playing. Only the editors, FREE, MOVE and purge ask you to stop first.</p>
+<p>SAMPLES opens while the transport runs (PROJECTS too); browsing, loading and previewing all work while playing. Only the editors, FREE, MOVE and purge ask you to stop first.</p>
 
 <h3 id="sounds-editor">The trim EDITOR</h3>
-<p>Press <kbd>SAMPLES</kbd> again from BROWSE. The EDITOR trims the selected track's sample.</p>
+<p>From the browser, tap <kbd>SAMPLES</kbd> past PROJECTS (or hold it and pick B3). The EDITOR trims the selected track's sample.</p>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADJ0lEQVR42u3bi5WrIBAGYFqwhdsCLdhCWqD/EjY8hEEBwVxlkJ+cJESEj50jkcUoVJSWexORBGDAt8Jm0+Jzyj5d/vvqtoWyKsPuaWr5lkIbfWHfqmXsi88vrhPxxjPXt6JCTdMb2xUGMAk1gbe8aoUXX1Mt5O9JhJoBvAt1eDbBbu9jqNnAZPCQIUWGlR8UtaMpC5tMZxgniYng5xJgwHfCQghlHvpdf3a9sZ9d3uwYyvJJSiXNu85Kt0mGvHt0hX2D7t3DhBHkUXb9U9qM5xQzWBDYtR2F2uUrQp2Aaail294dToSaBtsfgOfjT2ZCHQebBUwb96EVuw5VjKYQTqkOw4kHjJPENPA/ne60ovkeYMDPwPcPIsD8YCEA/9YtHvC6luBS4zPC+dJ0CRfY0jm41HhrGR9Y09fgXCl/eF3zcKnxtrJx4HTz7WXc4GMTQpTomjLu8H5HIUp0e6c4wvGuQpTo2jL+cNhZJFJdt9JlnOFyOu9Wumxc+Lxj6e3Lsk203gbnkobttAMwYMDc4fd9c73x7DTXDGSuWeZs/0nM9t/ifCsCc636zLayN9vq7Xwr9LNdhZnvShuupuJSPeD3wAo/nQMMeFzYT+jNT+fcp//6FjcN+Hn4/p9HJpoG3AOe55ureMPf554E+FkYEwHAvxt+JXZbrwX8NpjZUf3plAA/Byty06okNzzm06r0TP2b+Z7d7L2QtlpF0lXdnL4rbCpJclOyrKjtYHovcx1sO90X3m5g3eJ2Bm+VTajbYPt/XH/Yhbch1Op6qFf6Xd0J3sLbdHCtYTgpeXU49YKvJj0v73I+/hlO/86Gbk9f6fvCx6rbs1wV8ONwfC2Pft6XHeBrVQGzgcMRUg3vq+RowEzgcv0EHHYVony5H/DDcHxE7E8Sue/56CSxh8qnCMAPw/PNMq+uddsJvU8tVQE/DM93VAM+8/QjHFxh7eZ8OWINixGjwfrVhlqGh3wt/HEv+knWbGrg/QLbIDAJtYyD3bqIOhD8w3AaEJ77JBGWl0rLDoABA+YNl1ekAI8Px5cDAAMGPCo81yxTyisLToBHgrHANgD8B/A6EWTMasX3AAAAAElFTkSuQmCC" alt="EDITOR page 1: START and END, the view zoomed 4X" width="240" height="240"><figcaption>EDITOR page 1: START and END, the view zoomed 4X</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADZElEQVR42u3cgZmrIAwAYFZwha7ACqzQFdh/hKsQISBC8KqkEvrZelr4fTyoGEuVTdJybUKSEljgS2G3aQlr1i+w/nmGbXEfyfDvdLlCSfDXMhoOpXrGP4X1BQ4i3dhyQyk25nRHA0c/HkZVjeBt3fbCS8hpF/TvKVQ1Azir6rh0wfDufVWDNB5GnQd1KdStQqeg9qZjOOtOI2A5SUwE35cEFvhKWCll3WN9Xf+Go/F/w7p7Y9x3nLS22r2uqxo26bgOj6FwKBBeA4wYhR51NyzarwTOMoMVgqHspKphnVDVBRhXtYbtw+FCVePKDg2w3f/0QVWnlc0CxoWHqlXZARF6U6xObXfdiQcsJ4nZ4NeavlN4PsATWOBh8Dd7jcDsYaUEtn2HxRI2pgbXCp8RPt4Le5jCCb2Da4U397GFEd0JH+3lDwe6ANcKb+xjDQNdhMvFE/Yxhx19AJeKJ+xjD3/oQ3hfPAk23GHzeqkjOAcI+z6wMfzhWIwqJNphYdgUcH5wPbUPK4dz/Nfg9oGVYMw/DQ6pAHtcYIEF5g4/75PriWenuUYgc40yZ7uSmO1qcbaIwGxRn9kie7NFb+eL0M92F2a+O21yN1Vu1Qv8ONjKV+cEFvgHYRjQwwt8dS7d2P1SK0Xg++Ervh7ZLEXggfAEn1zVCX/va5LA98IyEBD43wndyYwxWYEfBTNr1e9BSeD7YLtNcsSTdeu9w65j88/KenaDuZB+gbLqWWFMPxbeHpoMG4B1NvNXE47ZMoA1msxK+QS0qKq3eexQy7qZtfR/fDuMJyt3Ni6o52i2G1f8rB4H4wnp1MZlfOPS8bcK2r2p2I9HwGeTq+oR5+MvwP4uT/odMCKcZhWYKZx+4y0uBHjL2n8rUOBb4X3jIsPfbtUCXw6nDawL7m1gAt8K5yeHjpNEbxaBB8HzjTJ1IVFi3W5Afy5MLvDN8IzXTtPBcGUeomQ9F+YxDkG4rjcxGDEUxj9PR8ztoi8QfOmIz/GBdagzCmzgCQJsPXAhwDYMPlfVOq1sctbBsP85UYh2E/vE+e7EAp42smezWRmty1Y3vO2LXgg8CFa72Z3lReDfhfeNKy+tXCa6TO0PKgrMCq40rt5Is8CD4LyFdJwkBP4RePbIHj1m5Af0p7IKfDMsAbZnw38FgTpuODXS5gAAAABJRU5ErkJggg==" alt="EDITOR page 2: BPM, STEPS, GAIN" width="240" height="240"><figcaption>EDITOR page 2: BPM, STEPS, GAIN</figcaption></figure>
 <table>
 <tr><th>Control</th><th>Does</th></tr>
@@ -441,7 +442,7 @@ ol.steps li{margin:6px 0}
 <tr><td>White keys</td><td>play the slices (the slice machines play the pad; any other machine hears it as a preview). SHIFT + a key mutes the slice</td></tr>
 <tr><td>B11 held</td><td>hear the selected slice, looping</td></tr>
 </table>
-<p>The selected slice is the bright block; the other slices' edges sit behind the waveform in grey. LANE stays on the editor's own pages; the SAMPLES button leaves (next: the SAMPLER, then BROWSE).</p>
+<p>The selected slice is the bright block; the other slices' edges sit behind the waveform in grey. LANE stays on the editor's own pages; the SAMPLES button leaves (next: the SAMPLER, then the browser). Every table edit (EVEN, CHOP, split, delete, mute, the slice knobs, COUNT) is one undo step.</p>
 
 <h3 id="sounds-sampler">The SAMPLER</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADDElEQVR42u3cAbZEIBQGYFuwhdnC3YItzBbu/pcwplS3hIQKf+8580J9TlMkLx17ob82CKkDDPhSWK3qDcwqNn6oVb08GrWe2W4z60ya28BsctR5uIxNvJ8y1Vti68yWG8G2qMVx2CK3CXu2RWthse9N4aDwyhV1YXgq5AAOm5OtdOwX9e1gXCReBJcLgAFfCRPRuExxEnHKztVl8M9MZ6TX6TjVhdX2SSEdUZ90CJ5+XOZ2jaaagUnsS/nudOTkFbcp5bZgPgH2CtYcBHPyd3w5rJqPgE2ccmuXypw4DoftuAaMiwRgwE/ogdhIF18yNny/8QUwYMCAAQMGvADT1HcH/FQY3VvAjxzLpDNPmarVpLZjwIVgc2kE/FwYzQntGDBgwK3D6N4CBgz43vBnDObT/bUrw67rXEdKxuUwXnXY5v5G2C0mvrPSLF1BgwOrCn8+tmTfCPtVKgd2lUqjy5ULcB346srVBFz0BNIufPQisXYCUevqwqIj8DYY3VvAgAEDbhT+yMA8yPAfCBThvChgwIBPhXHKBAwYMODG4W+lALgczGaCo5msTN4MykgYxp//r3r0Lua9Jsyv/CdVvQs7N7UizG4qp5wlu5hawxROpN2G9UE3AFMwdXe54AaTWMHkT5begAeef8e14Mhk5YTKlZjE+5bcuboeLJsQUVrlGmxzkpOldzanWnBu8P5pqOT1+DBsxq63nz37+wk4fLw1f8wFuCrsiPVnVmFeCo4/+ojtDrgivFS55s+e/bxG2O0SLkdqNeAL4PRnz7MTyLHKBbgYvFS51mvMZVcnwKfD7+tl0kpYHkvQtzCZSQEXht9Xq1/Yjlm+jo6819Nt3JibgTWbLGUoYqgPk/8KQpZDTyujZGKALfGdj83DtDLAZoqavWXnAFs1mEsWNXMbcPiqyZVBNq85ydcgEt0FfuNFYn5b2nWJcDxp6hgI4ELw2q3oBrx2twO4STj1HjOhcgFuFN5dueTOeeNcgIvAclww4wQSq1SAm4Pf1svM+y+hzeGm5QC4OIwBtmfDP9Vy+pzedYFsAAAAAElFTkSuQmCC" alt="SAMPLER armed for the next bar; the white keys are the level meter" width="240" height="240"><figcaption>SAMPLER armed for the next bar; the white keys are the level meter</figcaption></figure>
@@ -454,6 +455,21 @@ ol.steps li{margin:6px 0}
 <tr><td>K1–K4</td><td>LENGTH, GAIN, MONITOR, FREE</td></tr>
 <tr><td>REC held</td><td>the recorder's setup: SOURCE (IN / MASTER), LENGTH, THRESHOLD, SYNC, SLOT</td></tr>
 </table>
+
+<h3 id="sounds-projects">PROJECTS and names</h3>
+<p>SAMPLES' second mode lists every project in <code>data/elasticat/projects/</code> by name (numbered copies in order: WALRUS, WALRUS 2 … WALRUS 10); the open one says OPEN. The top line is the project you work on (EDITED or SAVED); below, the project under the cursor: its name, its 64 patterns as blocks, its tempo and samples.</p>
+<table>
+<tr><th>PROJECTS</th><th>Does</th></tr>
+<tr><td>LANE / TARGET</td><td>the cursor</td></tr>
+<tr><td>B11 or CUT</td><td><strong>LOAD</strong> the project under the cursor. With unsaved edits it asks (LOAD X?): CUT yes (your edits are saved first), COPY no. You stay in PROJECTS while the cat dances over the card</td></tr>
+<tr><td>COPY</td><td>back to the browser</td></tr>
+<tr><td>B10 SAVE</td><td>save the open project (as SHIFT + SAVE anywhere). With another project under the cursor it asks OVERWRITE X? first</td></tr>
+<tr><td>B9 SAVE AS</td><td>a copy under the next free number (PROJ-001 2), which becomes the open project</td></tr>
+<tr><td>B1 NEW</td><td>asks, saves your edits, then starts an empty project (the folder's first file on T1)</td></tr>
+<tr><td>B2 RENAME</td><td>the name keybed on the project under the cursor; OK renames its file</td></tr>
+<tr><td>B6 DELETE</td><td>asks (GONE FOR GOOD). Deleting the open project leaves it open, unsaved</td></tr>
+</table>
+<p><strong>The name keybed</strong> (project, pattern and file names): the black keys type A–K, the white keys L–Z and SPACE; SHIFT gives digits and signs. The suggested name starts selected, so the first key replaces it. <kbd>PAGE</kbd>, <kbd>K2</kbd> or <kbd>K4</kbd> turned right <strong>rolls a new name</strong> (the blue die tumbles); left walks back through the last ten. <kbd>TARGET</kbd> moves the cursor, <kbd>LANE</kbd> / <kbd>K1</kbd> turn the letter under it. <kbd>COPY</kbd> deletes (SHIFT + COPY clears), <kbd>CUT</kbd> is OK, <kbd>HOME</kbd> cancels. Names are up to 14 characters; a taken name gets the next free number.</p>
 </section>
 
 <section id="seq">
@@ -466,17 +482,18 @@ ol.steps li{margin:6px 0}
 <p>The track's sample, its machine and warp, and the loop keys.</p>
 <table>
 <tr><th>Control</th><th>Does</th></tr>
-<tr><td>B1 LOOP, B2 MACHINE, B3 WARP, B4 RANGE</td><td>the pages. Tapped again, a key steps the page's lanes. Held, B1 picks the loop mode, B2 the machine, B3 the warp mode, B4 the voice mode (MONO / POLY) from a list; turn LANE or K1 while holding</td></tr>
-<tr><td>White keys (blue, LIVE)</td><td>the <strong>loop keys</strong>: 16 divisions of the loop. Hold one to loop it, two or more to span them; the span never shrinks while you hold. Let go and the playhead returns as RET MODE says. LIVE, the keys also <strong>set the track's loop</strong> to what you played. Stopped, they audition</td></tr>
+<tr><td>B1 TRIG, B2 LOOP, B3 MACHINE, B4 WARP, B5 RANGE</td><td>the pages (named after the track's machine: SLICE/SLICE, RAZOR/MACHINE …). Tapped again, a key steps the page's lanes; TRIG has four: NOTE / LENGTH / VELOCITY / MICRO, SLIDE and the resets, CHANCE / CONDITION / RATCHET, the playhead. Held, B1 sets ADVANCE, B2 the loop mode, B3 the machine, B4 the warp mode, B5 the voice mode (MONO / POLY) from a list; turn LANE or K1 while holding. The machine and the warp change only while stopped</td></tr>
+<tr><td>White keys (blue, LIVE)</td><td>the <strong>loop keys</strong>: 16 divisions of the loop. Hold one to loop it, two or more to span them. Each press refits the span to the keys held now; letting one go keeps it while the other is held; pressing a held key's neighbour again toggles between the two keys and the one. Let go of all and the playhead returns as RET MODE says. LIVE, every press also <strong>sets the track's loop</strong>, so the cells and markers follow at once; the whole gesture is one undo. Stopped, they audition (with a step selected, through that step's locks)</td></tr>
 <tr><td>TARGET</td><td>select a step on the shown page (its column turns white; full left = LIVE)</td></tr>
-<tr><td>White keys (red, a step selected)</td><td>still play live, and each entry is <strong>written into the selected steps</strong> as a region lock and a trig. On the RANGE page the entry is a range lock instead</td></tr>
+<tr><td>White keys (red, a step selected)</td><td>still play live, and each entry is <strong>written into the selected steps</strong> at every press, as a region lock and a trig. On the RANGE page the entry is a range lock instead</td></tr>
 <tr><td>B11 held (yellow)</td><td>select steps with the keys; B1–B8 the pages; F1 clears the selected steps, F2 goes LIVE</td></tr>
 <tr><td>K1–K4</td><td>the page's values; with steps selected they lock onto all of them</td></tr>
-<tr><td>PAGE</td><td>the step page</td></tr>
+<tr><td>PAGE</td><td>the step page (S1, S2 … in the header)</td></tr>
 <tr><td>B6–B10</td><td>the modulation sources (see Modulation)</td></tr>
 </table>
-<p>The waveform shows the loop range; the brackets are the track's region (static while playing) and the bright span is what the engine plays now. With the GRAIN warp each grain is drawn where it reads, with a blue head at its leading end. Slice machines turn the white keys into velocity-sensitive slice pads.</p>
-<div class="card tip"><strong>Machines</strong> (B2 held): LOOP, TRIG (one-shot), SLICE and S.POLY (even slices), RAZOR and R.POLY (the SLICE editor's table, mono / 8 voices), NEIGH (the track to the left), INPUT (the live input). <strong>Warps</strong> (B3 held, stopped): TAPE, VARI, DOMINO, GRAIN, OLA, PITCH, HARM, WTBL, FREEZE, FORMNT, GSTR, GSTR2, CHOP.</div>
+<p>The waveform shows the range; the brackets are the region (a selected step's lock, else the track's; they follow the keys while you hold them, and hide while playing LIVE with no key held) and the bright span is what the engine plays now. With the GRAIN warp each grain is drawn where it reads, with a blue head at its leading end. Slice machines turn the white keys into velocity-sensitive slice pads; the slices are drawn across the range, a sounding one (or a selected step's) as a cream block.</p>
+<div class="card tip"><strong>The chain</strong>: the sample is trimmed (EDITOR), stretched to its STEPS, then <strong>RANGE</strong> crops it (a crop, never a repitch), and the loop keys, the slices and the RAZOR table all work inside the range. The RANGE page (B5) sets it with the same loop-key gestures on every machine and can be locked per step, so the same chops play new audio as the range moves.</div>
+<div class="card tip"><strong>Machines</strong> (B3 held, stopped): LOOP, TRIG (one-shot), SLICE and S.POLY (even slices), RAZOR and R.POLY (the SLICE editor's table, mono / 8 voices), NEIGH (the track to the left), INPUT (the live input). <strong>Warps</strong> (B4 held, stopped): TAPE, VARI, DOMINO, GRAIN, OLA, PITCH, HARM, WTBL, FREEZE, FORMNT, GSTR, GSTR2, CHOP.</div>
 
 <h3 id="seq-trig">TRIG (HOME again)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr2clYv/aRhaXVIxMCkAAAANW7m/AAACnUlEQVR42u3ci7WCMAwG4K7ACl2BFVjBFbL/CJdCUlqvFGxrH/QvIh5FPk8k8pBGkdfmYk0BBvxTeJqm9U7g9Z7suM+V9SNRA7BBJ4GJX9wfkzNvJrcV2Ak1wzQXCXUDMMeZvBA/EN5SiuTLpz28NOcPNS+rMoyNxEBwuQYY8E9hpdabjPy0Uv8+nHLnj/rEer1pvY1VYVngtkxeoLtY5cBCRsHGM7oZqsIyKkWXobZw1Eopoa4Oc5yVF+ILOHrl4mBXhZUN9bE4N9TyeJumpJOkkk2nWjA2EoABPxxWSp1uEOQYDHDfMNLpifA07edU9wmvXP6TN5r/hg/vAwwYMGDAgAEDBgwYMGDAgAEDBgwYMGDAgAEDBgwYMGDAgAEXhxfTiF6m3YJ5Tv99/uQjzK8BLg8TLrkZG064VgxwJzDSCTDg58Jm98DsBgB+Lox0Agy4HTiph/orvtWFt+IMZItxSPGV0yITJJUmeoWlyMoxBMtwbLNIDxytua+r9PINtsUM+6alPszhtTCFq8UwrG1PZu7dew0TNQJ/F+pYeKHE7zgPPNMbe51O/HJMqBfnJ7ManFA4RtLJDF+nUzVYzjkc02A6+aVyUjaLfcJ+d0oV6mDZEnz8FrqPAX+AD+bguoDfV6q7tZQGhHPlcWHYXbHu/3gMD+/T+0VoqsJZNhKjwO8rU7HtcRqcsLM3Hlzr5EuWvczz//jORnMIs7bvT0MALg6Pt1YPBkvhPS5FR1yOzpYsCxxd28tnbrcXD9VhOXPilKPbSB0+S9YxbMPMsNY2/CdnySgy1Pt1V/XhoqEmagt20ykAJ6RTC3Bs+x7O9E9bBjiu0ijgfuC7Rx2A+4WRToABP+O3OoYG3A883l5m3FVCgHuCRzx2Ggn+AwJnX1ehuS1sAAAAAElFTkSuQmCC" alt="TRIG: step 5 selected, its CHANCE lock in orange" width="240" height="240"><figcaption>TRIG: step 5 selected, its CHANCE lock in orange</figcaption></figure>
@@ -490,8 +507,9 @@ ol.steps li{margin:6px 0}
 <h3 id="seq-locks">Locks, copy and undo</h3>
 <ul>
 <li><strong>Locks stick</strong> as on an Elektron: a locked value holds until a later trig without that lock puts the track value back. SLIDE (TRIG, lane 2) glides between locked values.</li>
-<li><strong>Hold a step + PAGE</strong> locks a pool slot on it: that step plays another sample.</li>
-<li><strong>F1 + a knob</strong> clears that parameter's locks (on the held steps, else the whole track); <strong>F2 + a knob</strong> clears its modulation.</li>
+<li><strong>Hold a step + PAGE</strong> locks a pool slot on it: that step plays another sample. A track's SLOT starts OFF (a new project's T1 on slot 1); K2 on the LOOP page sets it on every machine.</li>
+<li><strong>Slice locks</strong>: on slice tracks, hold a pad and turn a knob to lock that value on the slice itself. COUNT, SLICE, SLOT, LENGTH, LOOP DIV and RATE always edit the track.</li>
+<li><strong>COPY (F1) + a knob</strong> clears that parameter's locks (on the held steps or pads, else the whole track, slices included); <strong>CUT (F2) + a knob</strong> clears its modulation.</li>
 <li><strong>Copy / cut / paste</strong>: with F1 (copy) or F2 (cut) on, tap a step to take it into the buffer, tap another to paste. The same works on whole pages (PAGES, black keys) and patterns (PATTERN LAUNCH, white keys). The buffer empties when F1 / F2 turns off.</li>
 <li><strong>SHIFT + F1 / F2</strong> undo and redo, gesture by gesture, with the gesture's name in the header.</li>
 </ul>
@@ -539,26 +557,26 @@ ol.steps li{margin:6px 0}
 <tr><th>Where</th><th>What</th></tr>
 <tr><td>SHIFT + ARP: APP SETTINGS</td><td>THEME, KNOB SPEED, AUTO-PREVIEW, AFTERTOUCH, METRO SOUND, MIDI CC, INTRO, MODE LOCK. Global, kept across projects and power cycles. LANE the row, K1 the value, F2 keeps, F1 reverts</td></tr>
 <tr><td>SHIFT + HOME: LOOP SETUP</td><td>the machine, warp mode, voice mode, KEYBOARD's ADVANCE</td></tr>
-<tr><td>SHIFT + EDIT: project settings</td><td>NAME, GLO BPM, BPM, RETURN MODE</td></tr>
+<tr><td>SHIFT + EDIT: project settings</td><td>NAME (the name keybed; the file follows), GLO BPM, BPM, RETURN MODE</td></tr>
 <tr><td>SHIFT + FX / FILTER / AMP</td><td>the FX, filter and amp settings</td></tr>
 <tr><td>REC held</td><td>the record settings (in the SAMPLER: the recorder's setup)</td></tr>
 </table>
-<p><strong>Saving.</strong> SHIFT + SAMPLES saves the project to <code>data/elasticat/projects/PROJ-nnn.ecp</code>; a project also saves itself two seconds after the last edit while stopped, and power-on reloads the last one. Open another from BROWSE: B1 up to the top level, PROJECTS/, then B10. SHIFT + B5 memorizes the project to RAM and SHIFT + B4 recalls it, for quick A/B comparisons.</p>
+<p><strong>Saving.</strong> SHIFT + SAVE (the SAMPLES button) saves the project to <code>data/elasticat/projects/</code>, as a file named after the project; a project also saves itself two seconds after the last edit while stopped. Saving never stops the sound. Before writing it reads the file back: if another player tab changed it, nothing is written (NOT SAVED: FILE CHANGED) and the next SHIFT + SAVE keeps yours as a new project. Power-on reloads the last project, even after a firmware update. Open, copy, rename and delete projects in <a href="#sounds-projects">PROJECTS</a>. SHIFT + B5 memorizes the project to RAM and SHIFT + B4 recalls it, for quick A/B comparisons.</p>
 </section>
 
 <section id="ref">
 <h2>Reference</h2>
 <h3>The header</h3>
-<p>Left: the target (T1 … MST). Middle: the mode and page, or a message, or what a held key will do (shown after a quarter second so a quick tap never flashes it; sticky SHIFT / F1 / F2 show at once). Right: the page number, the selected step (S09), or F1 / F2 while sticky.</p>
+<p>Left: the target (T1 … MST) and, on the track pages, the step page beside it (S1, S2 …). Middle: the mode and page, or a message, or what a held key will do (shown after a quarter second so a quick tap never flashes it; sticky SHIFT / F1 / F2 show at once). Right: the page number, the selected step (S09), or F1 / F2 while sticky.</p>
 <h3>Hold menus</h3>
-<p>LOOP ENGINE's B1–B5 and FX's B1–B5 open a list while held; LANE or K1 moves the cursor and letting go picks. A quick tap still opens the key's page.</p>
+<p>LOOP ENGINE's B1–B5 and FX's B1–B5 open a list while held (B1 on LOOP ENGINE: ADVANCE); LANE or K1 moves the cursor and letting go picks. A quick tap still opens the key's page.</p>
 <h3>Where things are kept</h3>
 <table>
 <tr><th>Thing</th><th>Where</th></tr>
 <tr><td>Samples</td><td>your RemoteFM1 folder, <code>audio/</code> (read only)</td></tr>
 <tr><td>Projects</td><td><code>data/elasticat/projects/*.ecp</code></td></tr>
 <tr><td>SAMPLER takes</td><td><code>data/elasticat/rec/*.wav</code></td></tr>
-<tr><td>APP SETTINGS, the last project's name</td><td>the cart's own flash image in the host</td></tr>
+<tr><td>APP SETTINGS, the last project's name</td><td>the cart's own flash image in the host; the last project's name also in <code>data/elasticat/last.txt</code></td></tr>
 </table>
 <h3>Numbers</h3>
 <table>

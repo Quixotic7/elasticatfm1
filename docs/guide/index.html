@@ -40,11 +40,14 @@ figure img{image-rendering:pixelated;border-radius:8px;border:1px solid var(--li
 figcaption{font-size:12.5px;color:var(--mute);max-width:240px}
 .legend span{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
 ol.steps li{margin:6px 0}
-.panel{width:100%;max-width:720px;height:auto;display:block;margin:10px 0}
-.panel text{font:600 9px ui-monospace,Menlo,monospace;fill:var(--ink)}
-.panel .lab{font-size:7px;fill:var(--mute);font-weight:500}
-.panel rect.btn{fill:var(--card);stroke:var(--line)}
-.panel rect.k{fill:var(--code);stroke:var(--line)}
+.panel{width:100%;max-width:900px;height:auto;display:block;margin:12px 0}
+.panel text{font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#fff}
+.panel .kl{font-size:13px;font-weight:700}
+.panel .ks{font-size:8px;font-weight:600;fill:#d8d8d8;letter-spacing:.06em}
+.panel .bt{font-size:13px;font-weight:700;fill:#f4f4f4;letter-spacing:.03em}
+.panel .pr{font-size:7px;font-weight:700;fill:#cfcfcf}
+.panel .kn{font-size:10px;font-weight:700;fill:#9a9a9a}
+.panel .kf{font-size:7.5px;font-weight:700;fill:#d0d0d0}
 @media (max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
 </style>
 </head>
@@ -58,7 +61,7 @@ ol.steps li{margin:6px 0}
 <a href="#panel">The panel</a>
 <a href="#panel-buttons" class="sub">Buttons and modes</a>
 <a href="#panel-knobs" class="sub">Knobs</a>
-<a href="#panel-shift" class="sub">SHIFT, F1, F2</a>
+<a href="#panel-shift" class="sub">SHIFT, COPY, CUT</a>
 <a href="#panel-b11" class="sub">B11 and the pages</a>
 <a href="#panel-colours" class="sub">Colours and LEDs</a>
 <a href="#quick">Quick start</a>
@@ -105,44 +108,174 @@ ol.steps li{margin:6px 0}
 
 <section id="panel">
 <h2>The panel</h2>
-<p>Elasticat uses the FM-1's names from the FIZZ layout: white keys <kbd>W1</kbd>…<kbd>W16</kbd>, black keys <kbd>B1</kbd>…<kbd>B11</kbd>, the knobs <kbd>SEL</kbd>, <kbd>ALGO</kbd>, <kbd>PRESETS</kbd>, <kbd>K1</kbd>…<kbd>K4</kbd> and <kbd>MASTER</kbd>. <kbd>GLO</kbd> is <strong>SHIFT</strong>, <kbd>OCT-</kbd> is <strong>F1</strong>, <kbd>OCT+</kbd> is <strong>F2</strong>, and the button printed SAVE is <strong>FILE</strong>.</p>
-<svg class="panel" viewBox="0 0 720 300" role="img" aria-label="The FM-1 panel as Elasticat uses it">
-<g>
-<rect class="k" x="20" y="18" width="46" height="46" rx="23"/><text x="43" y="76" text-anchor="middle" class="lab">MASTER</text>
-<rect class="k" x="86" y="18" width="46" height="46" rx="23"/><text x="109" y="76" text-anchor="middle" class="lab">SEL</text>
-<rect class="k" x="20" y="92" width="46" height="46" rx="23"/><text x="43" y="150" text-anchor="middle" class="lab">PRESETS</text>
-<rect class="k" x="86" y="92" width="46" height="46" rx="23"/><text x="109" y="150" text-anchor="middle" class="lab">ALGO</text>
-<rect class="k" x="470" y="18" width="46" height="46" rx="23"/><text x="493" y="76" text-anchor="middle" class="lab">K1</text>
-<rect class="k" x="530" y="18" width="46" height="46" rx="23"/><text x="553" y="76" text-anchor="middle" class="lab">K2</text>
-<rect class="k" x="590" y="18" width="46" height="46" rx="23"/><text x="613" y="76" text-anchor="middle" class="lab">K3</text>
-<rect class="k" x="650" y="18" width="46" height="46" rx="23"/><text x="673" y="76" text-anchor="middle" class="lab">K4</text>
-<rect x="170" y="18" width="120" height="120" rx="8" fill="#000" stroke="var(--line)"/><text x="230" y="82" text-anchor="middle" fill="#f6f3e8">screen</text>
-<rect class="btn" x="20" y="170" width="40" height="22" rx="5"/><text x="40" y="185" text-anchor="middle">F1</text>
-<rect class="btn" x="68" y="170" width="40" height="22" rx="5"/><text x="88" y="185" text-anchor="middle">F2</text>
-<g font-size="9">
-<rect class="btn" x="340" y="92" width="56" height="24" rx="5"/><text x="368" y="108" text-anchor="middle">FX</text>
-<rect class="btn" x="402" y="92" width="56" height="24" rx="5"/><text x="430" y="108" text-anchor="middle">FILTER</text>
-<rect class="btn" x="464" y="92" width="56" height="24" rx="5"/><text x="492" y="108" text-anchor="middle">AMP</text>
-<rect class="btn" x="526" y="92" width="56" height="24" rx="5"/><text x="554" y="108" text-anchor="middle">MOD</text>
-<rect class="btn" x="588" y="92" width="56" height="24" rx="5"/><text x="616" y="108" text-anchor="middle">MIX</text>
-<rect class="btn" x="650" y="92" width="56" height="24" rx="5"/><text x="678" y="108" text-anchor="middle">SHIFT</text>
-<rect class="btn" x="340" y="124" width="56" height="24" rx="5"/><text x="368" y="140" text-anchor="middle">LOOP</text>
-<rect class="btn" x="402" y="124" width="56" height="24" rx="5"/><text x="430" y="140" text-anchor="middle">FILE</text>
-<rect class="btn" x="464" y="124" width="56" height="24" rx="5"/><text x="492" y="140" text-anchor="middle">XFADE</text>
-<rect class="btn" x="526" y="124" width="56" height="24" rx="5"/><text x="554" y="140" text-anchor="middle">PATTERN</text>
-<rect class="btn" x="588" y="124" width="56" height="24" rx="5"/><text x="616" y="140" text-anchor="middle">PLAY</text>
-<rect class="btn" x="650" y="124" width="56" height="24" rx="5"/><text x="678" y="140" text-anchor="middle">REC</text>
-</g>
-<text x="340" y="86" class="lab">FX · SEL · ENV · LFO · EDIT · GLO</text>
-<text x="340" y="160" class="lab">HOME · SAVE · ARP · SEQ · PLAY · REC (printed names)</text>
-<g>
-<rect class="btn" x="20" y="200" width="680" height="30" rx="6"/>
-<text x="30" y="219" class="lab">B1</text><text x="90" y="219" class="lab">B2</text><text x="150" y="219" class="lab">B3</text><text x="210" y="219" class="lab">B4</text><text x="270" y="219" class="lab">B5</text><text x="330" y="219" class="lab">B6</text><text x="390" y="219" class="lab">B7</text><text x="450" y="219" class="lab">B8</text><text x="510" y="219" class="lab">B9</text><text x="570" y="219" class="lab">B10</text><text x="630" y="219" class="lab">B11</text>
-<rect class="btn" x="20" y="238" width="680" height="30" rx="6"/>
-<text x="30" y="257" class="lab">W1</text><text x="110" y="257" class="lab">W3</text><text x="190" y="257" class="lab">W5</text><text x="270" y="257" class="lab">W7</text><text x="350" y="257" class="lab">W9</text><text x="430" y="257" class="lab">W11</text><text x="510" y="257" class="lab">W13</text><text x="590" y="257" class="lab">W15</text><text x="650" y="257" class="lab">W16</text>
-<text x="20" y="288" class="lab">Black keys: pages, sources, the mode's special key (B11). White keys: steps, loop keys, notes, the fader.</text>
-</g>
-</g>
+<p>This is the panel as RemoteFM1 draws it for Elasticat (the web player, the iOS and Android apps; an FM-1 running RemoteFM1 has the same controls). The guide uses the names RemoteFM1 shows: the knobs <kbd>VOL</kbd>, <kbd>LANE</kbd>, <kbd>PAGE</kbd>, <kbd>TARGET</kbd> and <kbd>K1</kbd>…<kbd>K4</kbd>, the keys <kbd>COPY</kbd> (<strong>F1</strong>) and <kbd>CUT</kbd> (<strong>F2</strong>), the menu buttons as labelled, black keys <kbd>B1</kbd>…<kbd>B11</kbd> and white keys <kbd>W1</kbd>…<kbd>W16</kbd>. Labels follow the mode (LANE reads LANE 1, PAGE or ROW; PAGE reads SLOT or PREVIEW; COPY / CUT read BACK / OK in a pop-up; the black keys name their pages), so the guide calls each control by its usual label. On the FM-1's print: VOL is MASTER, LANE is SELECT, PAGE is PRESETS, TARGET is ALGORITHM, COPY / CUT are OCT- / OCT+, SHIFT is GLO, SAMPLES is SAVE.</p>
+<svg class="panel" viewBox="0 0 950 612" role="img" aria-label="Elasticat on the RemoteFM1 panel: knobs VOL, LANE, PAGE, TARGET and K1 to K4, the COPY and CUT keys, the screen, the menu buttons and the keybed">
+<rect x="0" y="0" width="950" height="612" rx="26" fill="#616161"/>
+<rect x="455" y="6" width="40" height="3" rx="1.5" fill="#888"/>
+<text x="74" y="32" text-anchor="middle" class="kl">VOL</text>
+<circle cx="74" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="72.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="150" y="32" text-anchor="middle" class="kl">LANE</text>
+<circle cx="150" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="148.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="74" y="117" text-anchor="middle" class="kl">PAGE</text>
+<circle cx="74" cy="150" r="29" fill="none" stroke="#ff2a12" stroke-width="2"/>
+<circle cx="74" cy="150" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="72.5" y="129" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="150" y="117" text-anchor="middle" class="kl">TARGET</text>
+<circle cx="150" cy="150" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="148.5" y="129" width="3" height="12" rx="1.5" fill="#fff"/>
+<rect x="36" y="224" width="153" height="44" rx="9" fill="#000"/>
+<rect x="40" y="228" width="70" height="35" rx="7" fill="#0c0c0c"/>
+<text x="75" y="250" text-anchor="middle" class="bt">COPY</text>
+<text x="75" y="281" text-anchor="middle" class="ks">F1 · OCT-</text>
+<rect x="115" y="228" width="70" height="35" rx="7" fill="#0c0c0c"/>
+<text x="150" y="250" text-anchor="middle" class="bt">CUT</text>
+<text x="150" y="281" text-anchor="middle" class="ks">F2 · OCT+</text>
+<rect x="215" y="28" width="239" height="240" rx="22" fill="#000"/>
+<image x="224" y="37" width="221" height="221" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgBAMAAACP+qOmAAAAGFBMVEX28u7Nyr2clYv/aRhaXVI5jf8xMCkAAAB1+CaUAAAEzElEQVR42u3di3GjMBAAUFq4FtLCtZAWroW0kPYvHoagHz8jMBZvZzgHI5AeN7MR4Ky775n48xNz264d5XF3wMDAwMDAwMDAwJXBY6OxabhbunVoPx4+fA1PSb/PcrtnUeMo0xHF24CB2wYPb5WQMbMEHlDpkoLn2j0HTpcUPPYADHwP8HTSyulzkDQ5LQ9wX9JKe1qdtICBbwIeh7c2aeXTjLoJq3TcHJzqgIFbB4cXz/lPcTooTdpLa8vt9oNL/xmld4CB2wW7awkMDAwMDHwlcIsBDAwMDAwMDAwMXBfcdf2/jwhfwy3BTkG78n7T7eP3x+PH6/vj46P/9xHjKzBwm+Bx4OFQxgHkg8gHmLYtw8rvp0sNbs8b6MMCDNwmOE1aU+s5eGTMJ7nl5FcXnCctYOB7gKcnAvFAaiWtGHoEOE5cwMBtgvPJfTrxmE5qcxcP0xcV+cSmnBz3TDzCi4bCxQMwcENgdy2BgYGBgYGBgYGB2wD//QlgYGBgYOC7grsu/fgJMDDwO4C7JBZ33tAWGBj4NeAUEz9AW9d27oStAW89oXPtgYFbBHcTkQLXtC2tTw1matsDvHQi1xwHGBh4GrEVXJqkTG0rgdP9tvQRrQMDA1cBz20DBga+H3jq5gUwMPCx4NJx5sB7xgMMDLy+7Z7jAAMDAwMDAwMDAwMDAwPfHVzzhgQwMPBrwXv7BAa+O7hm58DAwO8D3jrQGuDJB+TAwDcCb4maJ2cteOv4gIGBz4kjwL8nGhgYGBgYuEGwmRYw8PXA7ngAAwN78gAM7IE4MDCwD6YBAwP7gDgwMDAwMDAwMDAwMDAwcKeAGDAwsMqlwMDAKogDA/tiC2DgxsG+UQsY+Npg32wJDNwu2DdMAwO/D3jqF/vZAQwMvA/ccgADAwMDAwPH8e83gIGBgYGBgU08gIHfDbw+bcQt5/a70jZgYGBgYGBgYGBgYGBg4GVwe2vAwMDAwMBXBnvyAAwMDAwMDAwMDHxPcOnPRD+TAAYGBgYGBjbxAAauC/66WQADAwMDA18J3P86/viJ4fXx0/A6bBmW5+Ixce8n78MU/tF1fPRhHOEo9sXQa3jp8DvTAgZuDjx2Fnedbt/bdQiO+yqNogY4PNHAwO2CS52Ha3vSyAjNk9aR4CFRzmRpYOBmwPGv/mOSVg6Oj3xM0hqxwMDtg8OLhjCd1Zt49N0PE4/0YiFNnYdePAADNwQ+O8akdZOnh8DAB4OP+oqKZfDZxfeBgYGBgYGvCT6z+x78ii/BAQYGBgYGBr7pxAMYGBgYGBgYGBgYGBjYjfiv83sFBgYGBga+JvjbJ/GAgd8a/PFkPFN2YASfWewAGBgYGBj4umAzLWBgYGBg4FeC88JhpcJi39X/YHroNS6fUiPCogd9r8DA7YLzMnzxsq8MwWdWyisvIBb3BgwMvD1plUpp5oXF9hYQKxcuOQY8U0AMGLg5cJycWkpaxUKewMCNgdPkdAx4+uJhWI64eAAGvgPYXUtgYDXx9v+RRzqKI0YFDAwMDAx8TfB1ig+lowEGBgYGBgY28QAGBgYGBm4dPDcBAQYGBgYGbhf8+uJDzT95AAYGBgYG9sE0YOAGwWeXAQo/IH5OAAMDAwMDXxdspgUMDAwMDPwC8H9mza0ZaZIVaQAAAABJRU5ErkJggg==" style="image-rendering:pixelated"/>
+<rect x="451" y="32" width="30" height="30" rx="6" fill="#ff2a12"/>
+<text x="563" y="32" text-anchor="middle" class="kl">K1</text>
+<circle cx="563" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="561.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="669" y="32" text-anchor="middle" class="kl">K2</text>
+<circle cx="669" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="667.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="775" y="32" text-anchor="middle" class="kl">K3</text>
+<circle cx="775" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="773.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<text x="881" y="32" text-anchor="middle" class="kl">K4</text>
+<circle cx="881" cy="65" r="25" fill="#111" stroke="#222" stroke-width="3"/>
+<rect x="879.5" y="44" width="3" height="12" rx="1.5" fill="#fff"/>
+<rect x="482" y="145" width="430" height="119" rx="22" fill="#000"/>
+<rect x="490.0" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="521.0" y="181" text-anchor="middle" class="bt">FX</text>
+<rect x="490.0" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="521.0" y="237" text-anchor="middle" class="bt" style="fill:#ff2a12">LOOP</text>
+<text x="521.0" y="264" text-anchor="middle" class="pr">HOME</text>
+<rect x="560.5" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="591.5" y="181" text-anchor="middle" class="bt">FILTER</text>
+<text x="591.5" y="150" text-anchor="middle" class="pr">SEL</text>
+<rect x="560.5" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="591.5" y="237" text-anchor="middle" class="bt">SAMPLES</text>
+<text x="591.5" y="264" text-anchor="middle" class="pr">SAVE</text>
+<rect x="631.0" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="662.0" y="181" text-anchor="middle" class="bt">AMP</text>
+<text x="662.0" y="150" text-anchor="middle" class="pr">ENV</text>
+<rect x="631.0" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="662.0" y="237" text-anchor="middle" class="bt">XFADE</text>
+<text x="662.0" y="264" text-anchor="middle" class="pr">ARP</text>
+<rect x="701.5" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="732.5" y="181" text-anchor="middle" class="bt">MOD</text>
+<text x="732.5" y="150" text-anchor="middle" class="pr">LFO</text>
+<rect x="701.5" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="732.5" y="237" text-anchor="middle" class="bt">PATTERN</text>
+<text x="732.5" y="264" text-anchor="middle" class="pr">SEQ</text>
+<rect x="772.0" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="803.0" y="181" text-anchor="middle" class="bt">MIX</text>
+<text x="803.0" y="150" text-anchor="middle" class="pr">EDIT</text>
+<rect x="772.0" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="803.0" y="242" text-anchor="middle" class="bt">PLAY</text>
+<path d="M800.0 218l6 3.5l-6 3.5z" fill="#3ddc84"/>
+<rect x="842.5" y="153" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="873.5" y="181" text-anchor="middle" class="bt">SHIFT</text>
+<text x="873.5" y="150" text-anchor="middle" class="pr">GLO</text>
+<rect x="842.5" y="209" width="62" height="47" rx="9" fill="#0c0c0c"/>
+<text x="873.5" y="242" text-anchor="middle" class="bt">REC</text>
+<circle cx="873.5" cy="222" r="3.5" fill="#ff2a12"/>
+<rect x="36" y="297" width="878" height="289" rx="26" fill="#000"/>
+<rect x="74.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="93.5" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="95.5" y="327" text-anchor="middle" class="kn">B1</text>
+<text x="95.5" y="406" text-anchor="middle" class="kf">TRIG</text>
+<rect x="128.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="147.5" y="337" width="4" height="46" rx="2" fill="#ff2a12"/>
+<text x="149.5" y="327" text-anchor="middle" class="kn">B2</text>
+<text x="149.5" y="406" text-anchor="middle" class="kf">SLICE</text>
+<rect x="183" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="202" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="204" y="327" text-anchor="middle" class="kn">B3</text>
+<text x="204" y="406" text-anchor="middle" class="kf">MACHINE</text>
+<rect x="291" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="310" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="312" y="327" text-anchor="middle" class="kn">B4</text>
+<text x="312" y="406" text-anchor="middle" class="kf">WARP</text>
+<rect x="345" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="364" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="366" y="327" text-anchor="middle" class="kn">B5</text>
+<text x="366" y="406" text-anchor="middle" class="kf">RANGE</text>
+<rect x="453.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="472.5" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="474.5" y="327" text-anchor="middle" class="kn">B6</text>
+<text x="474.5" y="406" text-anchor="middle" class="kf">LFO1</text>
+<rect x="507.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="526.5" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="528.5" y="327" text-anchor="middle" class="kn">B7</text>
+<text x="528.5" y="406" text-anchor="middle" class="kf">LFO2</text>
+<rect x="561.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="580.5" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="582.5" y="327" text-anchor="middle" class="kn">B8</text>
+<text x="582.5" y="406" text-anchor="middle" class="kf">MENV</text>
+<rect x="669.5" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="688.5" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="690.5" y="327" text-anchor="middle" class="kn">B9</text>
+<text x="690.5" y="406" text-anchor="middle" class="kf">VEL</text>
+<rect x="724" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="743" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="745" y="327" text-anchor="middle" class="kn">B10</text>
+<text x="745" y="406" text-anchor="middle" class="kf">AT</text>
+<rect x="832" y="305" width="42" height="108" rx="8" fill="#0c0c0c"/>
+<rect x="851" y="337" width="4" height="46" rx="2" fill="#5a1a12"/>
+<text x="853" y="327" text-anchor="middle" class="kn">B11</text>
+<text x="853" y="406" text-anchor="middle" class="kf">STEP</text>
+<rect x="44.5" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="67.0" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="69.0" y="566" text-anchor="middle" class="kn">W1</text>
+<rect x="98.6" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="121.1" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="123.1" y="566" text-anchor="middle" class="kn">W2</text>
+<rect x="152.7" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="175.2" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="177.2" y="566" text-anchor="middle" class="kn">W3</text>
+<rect x="206.8" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="229.3" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="231.3" y="566" text-anchor="middle" class="kn">W4</text>
+<rect x="260.9" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="283.4" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="285.4" y="566" text-anchor="middle" class="kn">W5</text>
+<rect x="315.0" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="337.5" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="339.5" y="566" text-anchor="middle" class="kn">W6</text>
+<rect x="369.1" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="391.6" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="393.6" y="566" text-anchor="middle" class="kn">W7</text>
+<rect x="423.2" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="445.7" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="447.7" y="566" text-anchor="middle" class="kn">W8</text>
+<rect x="477.3" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="499.8" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="501.8" y="566" text-anchor="middle" class="kn">W9</text>
+<rect x="531.4000000000001" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="553.9000000000001" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="555.9000000000001" y="566" text-anchor="middle" class="kn">W10</text>
+<rect x="585.5" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="608.0" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="610.0" y="566" text-anchor="middle" class="kn">W11</text>
+<rect x="639.6" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="662.1" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="664.1" y="566" text-anchor="middle" class="kn">W12</text>
+<rect x="693.7" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="716.2" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="718.2" y="566" text-anchor="middle" class="kn">W13</text>
+<rect x="747.8000000000001" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="770.3000000000001" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="772.3000000000001" y="566" text-anchor="middle" class="kn">W14</text>
+<rect x="801.9" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="824.4" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="826.4" y="566" text-anchor="middle" class="kn">W15</text>
+<rect x="856.0" y="420" width="49" height="154" rx="8" fill="#0c0c0c"/>
+<rect x="878.5" y="466" width="4" height="64" rx="2" fill="#5a1a12"/>
+<text x="880.5" y="566" text-anchor="middle" class="kn">W16</text>
 </svg>
 
 <h3 id="panel-buttons">Buttons and modes</h3>
@@ -155,7 +288,7 @@ ol.steps li{margin:6px 0}
 <tr><td>MOD (LFO)</td><td>MODULATION</td><td>(no settings)</td></tr>
 <tr><td>MIX (EDIT)</td><td>MIX → PAGES</td><td>project settings: NAME, GLO BPM, BPM, RETURN MODE</td></tr>
 <tr><td>LOOP (HOME)</td><td>LOOP ENGINE → TRIG → KEYBOARD. From another mode HOME always lands on LOOP ENGINE</td><td>LOOP SETUP: the machine, warp, voice mode, ADVANCE</td></tr>
-<tr><td>FILE (SAVE)</td><td>BROWSE/POOL → EDITOR → SLICE → SAMPLER. From another mode FILE always lands on BROWSE</td><td><strong>save the project</strong></td></tr>
+<tr><td>SAMPLES (SAVE)</td><td>BROWSE/POOL → EDITOR → SLICE → SAMPLER. From another mode SAMPLES always lands on BROWSE</td><td><strong>save the project</strong></td></tr>
 <tr><td>XFADE (ARP)</td><td>CROSSFADER</td><td><strong>APP SETTINGS</strong></td></tr>
 <tr><td>PATTERN (SEQ)</td><td>PATTERN LAUNCH</td><td>F3, the timing menu</td></tr>
 <tr><td>PLAY</td><td>start / stop at once (stop is a real stop; it ends live recording)</td><td></td></tr>
@@ -166,27 +299,27 @@ ol.steps li{margin:6px 0}
 <h3 id="panel-knobs">Knobs</h3>
 <table>
 <tr><th>Knob</th><th>Does</th></tr>
-<tr><td>MASTER</td><td>master volume</td></tr>
-<tr><td>SEL</td><td>walks the mode's page list both ways (pages, lanes, knob pages) and stops at its ends. On lists (the browser, the pool, settings) it is the cursor</td></tr>
-<tr><td>ALGO</td><td>on every track page: <strong>selects a step</strong> on the shown page (full left = LIVE, nothing selected). SLICE editor: the slice. BROWSE: add / remove from the pool. Trim EDITOR: moves the selected marker</td></tr>
-<tr><td>PRESETS</td><td>on every track page and in PAGES: <strong>turns the step page</strong>. MIX: selects the track. BROWSE / POOL: the audible preview on / off. EDITOR / SLICE: the track's sample (a pool list pops up)</td></tr>
+<tr><td>VOL</td><td>master volume</td></tr>
+<tr><td>LANE</td><td>walks the mode's page list both ways (pages, lanes, knob pages) and stops at its ends. On lists (the browser, the pool, settings) it is the cursor</td></tr>
+<tr><td>TARGET</td><td>on every track page: <strong>selects a step</strong> on the shown page (full left = LIVE, nothing selected). SLICE editor: the slice. BROWSE: add / remove from the pool. Trim EDITOR: moves the selected marker</td></tr>
+<tr><td>PAGE</td><td>on every track page and in PAGES: <strong>turns the step page</strong>. MIX: selects the track. BROWSE / POOL: the audible preview on / off. EDITOR / SLICE: the track's sample (a pool list pops up)</td></tr>
 <tr><td>K1–K4</td><td>the page's four values. A step held, or steps selected: the value becomes a <strong>lock</strong> on those steps</td></tr>
 </table>
 <p>Knobs accelerate: slow turns are the finest step, fast turns jump further (APP SETTINGS &gt; KNOB SPEED). SHIFT + a value knob snaps to useful values. Turning a value whose box is not on screen shows it big for a second.</p>
 
-<h3 id="panel-shift">SHIFT, F1 and F2</h3>
+<h3 id="panel-shift">SHIFT, COPY (F1) and CUT (F2)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAElBMVEX28u7Nyr2clYtaXVIxMCkAAAC/hn5IAAADAUlEQVR42u3ci4GDIAwGYFdwhazgCq6Q/Ve5IgSCRQ6tCOpPz7Za9fNSqfLQgaM01k1KGgADrgqbSXay/XRcHhyGx8HL2oWwA4/uzz09EQ6hdu+W1yfDYTfiNt/x1bDPTjbKLis9FsZB4kXwdQkwYMCnwkRu+DxqJKJl1WReyXmNYQ6f1HAdwSQUN4cl1FQp1G7VFP7H1rB7X2vnkm+xI5i4Jiw5lVy2WuXjFjAOEq+AhyG8sWn1PlpmY3oa2FghYMBV4e+1+Pn0NiU/LYHTqwUMuCacyU6nwMkVAgZ8JfwvsAveyp+AAVeFN89O4lOcZJY74dQHMOAKMArmgAEDBgwYMGDA9eFZpXhkUCkzWzQCGHAn8KfL0+fJrcSMLBOiMrT/xMwXzxaNsGom9X0TbJO4NGma0dawWdko8LIFs4MHefKzCTy7bV2NSHcEUn0T3LNtyLVjPcCzhn2oBxtvBY/jerZoJPTAWPVNCF0U+oR9dlqHetahnuO4C8x65wpdAKQPRC9wImxi8hacDnXUm0WN2C4K3AeMgwTgZ8E4oQcMGPAN4Wm6BtMOYMB1YfyAAAYMGDBgwIABAz4XnhslwNfBHJorQlsF5S4lnD4P8/epSVQXu6oGn0wZxjxsQaYpTBxaZQouF7VLB3jHFabLNnMHMCnYtcJl4jbJwgamfbD5kqYO4P2h5uOhnpi7gwuy0xIvnZ3kUv2fstNl8NFU3vJx8vH4Z1g6W8tgpxTBYdGwYGGHb8DXwjKEDSjeuQTU2w24e7h0+SRcSgNuBAey8AfkrJ0LcHU4PkiU7iHRQQJw1/D7zjKP1SVIoe1AAnw5/L69+n0wRZUuqpItXdSOCuaqUE758nyoipjaw6H/sa9Fibpmb9SS+cqX+AZ+d4BJ3QBO342PMhVsCpZZ/79H4FfNXis4EepM1NKh5tJQM3cCkxqYcjd1TGane8Go2TtQ3QS4e/hwddO+YgvgbuAd1U2Abwfvrm4CfBv45+omwJ3DqNk7qboptyjgi2FUsD0b/gPssuFNrIno2QAAAABJRU5ErkJggg==" alt="SHIFT held: tempo and swing, the target keys below" width="240" height="240"><figcaption>SHIFT held: tempo and swing, the target keys below</figcaption></figure>
 <p><strong>SHIFT (GLO)</strong>: hold it, or tap it once for sticky SHIFT (tap again to turn it off; its LED blinks while sticky). The panel's labels change to show the SHIFT layer:</p>
 <table>
 <tr><th>SHIFT +</th><th>Does</th></tr>
-<tr><td>SEL / ALGO</td><td>tempo in 0.1 steps / swing</td></tr>
-<tr><td>PRESETS, or W1–W9</td><td>select the target: tracks T1–T6, the send buses S1 and S2, MST</td></tr>
+<tr><td>LANE / TARGET</td><td>tempo in 0.1 steps / swing</td></tr>
+<tr><td>PAGE, or W1–W9</td><td>select the target: tracks T1–T6, the send buses S1 and S2, MST</td></tr>
 <tr><td>a value knob</td><td>snap the value</td></tr>
 <tr><td>F1 / F2</td><td><strong>undo / redo</strong>, one gesture at a time</td></tr>
 <tr><td>B1 / B2</td><td>tap tempo / latch FILL</td></tr>
 <tr><td>B4 / B5</td><td>recall / memorize the project to RAM</td></tr>
 <tr><td>B11 held</td><td>FILL while held</td></tr>
-<tr><td>FILE / ARP / SEQ / HOME</td><td>save / APP SETTINGS / F3 / LOOP SETUP; another menu button: that mode's settings</td></tr>
+<tr><td>SAMPLES / ARP / SEQ / HOME</td><td>save / APP SETTINGS / F3 / LOOP SETUP; another menu button: that mode's settings</td></tr>
 </table>
 <p><strong>F1 and F2</strong>: a tap makes one sticky (its LED blinks and the header shows it, e.g. <code>F1 COPY/CLR LOCK</code>), a hold keeps it on while held. With F1 on, the white keys copy and paste steps and a knob clears that parameter's locks; with F2 on they cut and paste, and a knob clears that parameter's modulation. F1 + F2 together is F3. In pop-ups F1 is back and F2 is OK; in KEYBOARD they move the octave.</p>
 
@@ -217,10 +350,10 @@ ol.steps li{margin:6px 0}
 <div class="card">
 <h4>1. Load a sound</h4>
 <ol class="steps">
-<li>Press <kbd>FILE</kbd>. You are in BROWSE, in <code>audio/</code>.</li>
-<li><kbd>SEL</kbd> moves the cursor; <kbd>B2</kbd> enters a folder, <kbd>B1</kbd> goes up. Each move previews the file once (turn the preview off with <kbd>PRESETS</kbd>).</li>
+<li>Press <kbd>SAMPLES</kbd>. You are in BROWSE, in <code>audio/</code>.</li>
+<li><kbd>LANE</kbd> moves the cursor; <kbd>B2</kbd> enters a folder, <kbd>B1</kbd> goes up. Each move previews the file once (turn the preview off with <kbd>PAGE</kbd>).</li>
 <li>Hold white keys to hear parts of the file as loop keys.</li>
-<li><kbd>B10</kbd> (or <kbd>ALGO</kbd> clockwise) adds it to the pool. A new project's track 1 already plays slot 1; any other track plays nothing until you set its SLOT (<kbd>K2</kbd> on the LOOP page, or ASSIGN in POOL).</li>
+<li><kbd>B10</kbd> (or <kbd>TARGET</kbd> clockwise) adds it to the pool. A new project's track 1 already plays slot 1; any other track plays nothing until you set its SLOT (<kbd>K2</kbd> on the LOOP page, or ASSIGN in POOL).</li>
 </ol>
 </div>
 <div class="card">
@@ -236,7 +369,7 @@ ol.steps li{margin:6px 0}
 <ol class="steps">
 <li>Press <kbd>HOME</kbd> again for TRIG. Tap white keys to put trigs on steps.</li>
 <li>Hold a step and turn a knob: that value is locked on the step.</li>
-<li>Back in LOOP ENGINE, turn <kbd>ALGO</kbd> to select a step (its column goes white), then play the loop keys: the region you play is written into that step.</li>
+<li>Back in LOOP ENGINE, turn <kbd>TARGET</kbd> to select a step (its column goes white), then play the loop keys: the region you play is written into that step.</li>
 </ol>
 </div>
 <div class="card">
@@ -244,7 +377,7 @@ ol.steps li{margin:6px 0}
 <ol class="steps">
 <li><kbd>SHIFT</kbd> + <kbd>W2</kbd> selects track 2 (or MIX's keys). Load it a sound and repeat.</li>
 <li><kbd>MIX</kbd>: tap a track key to select, hold it to mute.</li>
-<li><kbd>SHIFT</kbd> + <kbd>FILE</kbd> saves the project. It also saves itself when stopped.</li>
+<li><kbd>SHIFT</kbd> + <kbd>SAMPLES</kbd> saves the project. It also saves itself when stopped.</li>
 </ol>
 </div>
 </div>
@@ -258,11 +391,11 @@ ol.steps li{margin:6px 0}
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAD/klEQVR42u2cjbmrIAyGWcEVXCEruMJZIfuPcFskISC9BfyJxWA9ILa85/nKXwLVYRKmc4MgOQMb+FSwz5o4hesZ0q+/77tTSE7+TnhPFSqUgASebgCmkqnsAAhpj8oPuleBDiWQ1NNdwEJqAaY0nSQaSV+jdXj3J6lvAM6kxlxslOLVSI1R8juBRdUXTYqbFTUjkntqaE6i7Bgpg22QeBD4umBgA58LXsLrdbzjZb1Gvo55C4aM9Q1fAgCCj99JCFmwprXB8mBAmpukq8DAJ6wJmasKDlJuwCxzlJtVrlGaeAkYQloTvBGVKlomb5rCOnJR6tuAlyVrOkFiukfHUqs0NSOqZSiuNcE2SBh4VDAZ3MEKTdwSQ4PJEGXkM8DscDiPqw6eSuAzuepgckaQmyE6XYYF2yBh4PHAsM67VytS5JFVKeblECfn9YFtPTKINMHzLKAYCwYgXASDuO4DU0odDFFmLhgwkZbf0wVeItiT1cFCxP+Ce6VGIbVPa4KTigMiDhYlxwTt4rJvI/gztMFP6qvn2ekEA18NxtcL1/id8IfPcD69vrAfQx/2hfqCFcEYCo2H49g5l93ZC+aUNth3JSF28dpxei84+970wZnEidR4gNROSL2mFcEuAybNSVS8fVxqk/wdKoNtkBgZ/FT7OE5rMZm0rys4qcEmTdl+01UdnJmhJdM0Gm14gOmqDpZyyhU5Kb80ZcWKXZ/pqg7OZQPcSl0wZftN11uAIQVL14S8x9LuMl21weZENfDI43HqVjzObbyU/dUq4LcRwwXmEwGB2eU2xg9uY12wdB1mw95pbmNdcEHqZGkAdi0NYNFfrQLeLP/kk7sj3Ma8Vyt3G6uBbZAw8FBgALm4lXeVsFnO3RW4z1UFFwc8MTBCPkDuAdNfVTDgFiy6ysOlpi2wemDED1KLvfeIR0kditEGS0nTaQ6mw+OxzUkJbIPE+GD/M7d5/rsyGNjABj4WbF2mgQ386+A/pWDg68DWnAxs4CHAhecMtHiPeENK02KJJhiKzxloAEufSvUSoCa4+JyBJqlxs6nh5uDicwZ6pIZGqbXApecMNPnLeEPKr4BtkBgfTDtSe3amOtoAz9dUxreyDHwlmAqQcT94m2fgO4BjhWjuBrIKGaHfyjLwteDaN3+uYKXK1tCBGPhksOzY+8FxaKABp3oiYODTwTa9NTAOuYMNoG9LTfxRTusGFVWw2PLasy8s/jAHfwUMwh3RLHV6/gg4fwDJtd+xBnjH1jgGd7djDbANEk8Abydq9dO+8me/G+cGvhIsMfXOk2iYlz73/Z838JXgbQVpMd8+VS4D3xNcdozWmuWl08D3ALdXjK0TtXuQMPAl4IfNMv8B+qFRh9JZcpwAAAAASUVORK5CYII=" alt="BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below" width="240" height="240"><figcaption>BROWSE: the folder, the cursor, a marker on files already in the pool; the pool meter and the info rows below</figcaption></figure>
 <table>
 <tr><th>BROWSE</th><th>Does</th></tr>
-<tr><td>SEL</td><td>the cursor (folders first, then files). Each move plays the file once if the preview is on</td></tr>
+<tr><td>LANE</td><td>the cursor (folders first, then files). Each move plays the file once if the preview is on</td></tr>
 <tr><td>B1 / B2</td><td>up a folder / into the folder. Above <code>audio/</code> is the top level with AUDIO/ and PROJECTS/</td></tr>
-<tr><td>B10 ADD, B9 REMOVE</td><td>load the file into the next free slot / free its slot. A track's SLOT never changes by itself: OFF until you set it. <kbd>ALGO</kbd> does the same: clockwise adds, anticlockwise removes</td></tr>
+<tr><td>B10 ADD, B9 REMOVE</td><td>load the file into the next free slot / free its slot. A track's SLOT never changes by itself: OFF until you set it. <kbd>TARGET</kbd> does the same: clockwise adds, anticlockwise removes</td></tr>
 <tr><td>B11</td><td>preview play / stop</td></tr>
-<tr><td>PRESETS</td><td>the audible preview on / off (saved in APP SETTINGS as AUTO-PREVIEW)</td></tr>
+<tr><td>PAGE</td><td>the audible preview on / off (saved in APP SETTINGS as AUTO-PREVIEW)</td></tr>
 <tr><td>White keys</td><td>preview loop keys: each key a 16th of the file, keys held together loop their span, silent on release. Their LEDs light the span and the playhead's key flashes</td></tr>
 <tr><td>B7 / B6</td><td>BROWSE / POOL</td></tr>
 <tr><td>SHIFT + B11</td><td>purge: free every slot no pattern uses and compact the memory (stopped only)</td></tr>
@@ -270,35 +403,35 @@ ol.steps li{margin:6px 0}
 <p>In PROJECTS/, B10 opens that project. The rows under the browser show the next free SLOT, the file's LENGTH and BPM, and the FREE memory.</p>
 <table>
 <tr><th>POOL</th><th>Does</th></tr>
-<tr><td>SEL</td><td>the slot; a used slot previews</td></tr>
+<tr><td>LANE</td><td>the slot; a used slot previews</td></tr>
 <tr><td>B10 ASSIGN</td><td>the selected track plays this slot</td></tr>
 <tr><td>B9 or F2</td><td>FREE the slot</td></tr>
-<tr><td>B11 held</td><td><strong>move</strong> the slot: while held, <kbd>SEL</kbd> or <kbd>K1</kbd> carry it to another slot and the list shows the result; let go to drop it (a swap, every reference follows, one undo)</td></tr>
+<tr><td>B11 held</td><td><strong>move</strong> the slot: while held, <kbd>LANE</kbd> or <kbd>K1</kbd> carry it to another slot and the list shows the result; let go to drop it (a swap, every reference follows, one undo)</td></tr>
 </table>
-<p>FILE opens while the transport runs; browsing, loading and previewing all work while playing. Only the editors, FREE, MOVE and purge ask you to stop first.</p>
+<p>SAMPLES opens while the transport runs; browsing, loading and previewing all work while playing. Only the editors, FREE, MOVE and purge ask you to stop first.</p>
 
 <h3 id="sounds-editor">The trim EDITOR</h3>
-<p>Press <kbd>FILE</kbd> again from BROWSE. The EDITOR trims the selected track's sample.</p>
+<p>Press <kbd>SAMPLES</kbd> again from BROWSE. The EDITOR trims the selected track's sample.</p>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADJ0lEQVR42u3bi5WrIBAGYFqwhdsCLdhCWqD/EjY8hEEBwVxlkJ+cJESEj50jkcUoVJSWexORBGDAt8Jm0+Jzyj5d/vvqtoWyKsPuaWr5lkIbfWHfqmXsi88vrhPxxjPXt6JCTdMb2xUGMAk1gbe8aoUXX1Mt5O9JhJoBvAt1eDbBbu9jqNnAZPCQIUWGlR8UtaMpC5tMZxgniYng5xJgwHfCQghlHvpdf3a9sZ9d3uwYyvJJSiXNu85Kt0mGvHt0hX2D7t3DhBHkUXb9U9qM5xQzWBDYtR2F2uUrQp2Aaail294dToSaBtsfgOfjT2ZCHQebBUwb96EVuw5VjKYQTqkOw4kHjJPENPA/ne60ovkeYMDPwPcPIsD8YCEA/9YtHvC6luBS4zPC+dJ0CRfY0jm41HhrGR9Y09fgXCl/eF3zcKnxtrJx4HTz7WXc4GMTQpTomjLu8H5HIUp0e6c4wvGuQpTo2jL+cNhZJFJdt9JlnOFyOu9Wumxc+Lxj6e3Lsk203gbnkobttAMwYMDc4fd9c73x7DTXDGSuWeZs/0nM9t/ifCsCc636zLayN9vq7Xwr9LNdhZnvShuupuJSPeD3wAo/nQMMeFzYT+jNT+fcp//6FjcN+Hn4/p9HJpoG3AOe55ureMPf554E+FkYEwHAvxt+JXZbrwX8NpjZUf3plAA/Byty06okNzzm06r0TP2b+Z7d7L2QtlpF0lXdnL4rbCpJclOyrKjtYHovcx1sO90X3m5g3eJ2Bm+VTajbYPt/XH/Yhbch1Op6qFf6Xd0J3sLbdHCtYTgpeXU49YKvJj0v73I+/hlO/86Gbk9f6fvCx6rbs1wV8ONwfC2Pft6XHeBrVQGzgcMRUg3vq+RowEzgcv0EHHYVony5H/DDcHxE7E8Sue/56CSxh8qnCMAPw/PNMq+uddsJvU8tVQE/DM93VAM+8/QjHFxh7eZ8OWINixGjwfrVhlqGh3wt/HEv+knWbGrg/QLbIDAJtYyD3bqIOhD8w3AaEJ77JBGWl0rLDoABA+YNl1ekAI8Px5cDAAMGPCo81yxTyisLToBHgrHANgD8B/A6EWTMasX3AAAAAElFTkSuQmCC" alt="EDITOR page 1: START and END, the view zoomed 4X" width="240" height="240"><figcaption>EDITOR page 1: START and END, the view zoomed 4X</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADZElEQVR42u3cgZmrIAwAYFZwha7ACqzQFdh/hKsQISBC8KqkEvrZelr4fTyoGEuVTdJybUKSEljgS2G3aQlr1i+w/nmGbXEfyfDvdLlCSfDXMhoOpXrGP4X1BQ4i3dhyQyk25nRHA0c/HkZVjeBt3fbCS8hpF/TvKVQ1Azir6rh0wfDufVWDNB5GnQd1KdStQqeg9qZjOOtOI2A5SUwE35cEFvhKWCll3WN9Xf+Go/F/w7p7Y9x3nLS22r2uqxo26bgOj6FwKBBeA4wYhR51NyzarwTOMoMVgqHspKphnVDVBRhXtYbtw+FCVePKDg2w3f/0QVWnlc0CxoWHqlXZARF6U6xObXfdiQcsJ4nZ4NeavlN4PsATWOBh8Dd7jcDsYaUEtn2HxRI2pgbXCp8RPt4Le5jCCb2Da4U397GFEd0JH+3lDwe6ANcKb+xjDQNdhMvFE/Yxhx19AJeKJ+xjD3/oQ3hfPAk23GHzeqkjOAcI+z6wMfzhWIwqJNphYdgUcH5wPbUPK4dz/Nfg9oGVYMw/DQ6pAHtcYIEF5g4/75PriWenuUYgc40yZ7uSmO1qcbaIwGxRn9kie7NFb+eL0M92F2a+O21yN1Vu1Qv8ONjKV+cEFvgHYRjQwwt8dS7d2P1SK0Xg++Ervh7ZLEXggfAEn1zVCX/va5LA98IyEBD43wndyYwxWYEfBTNr1e9BSeD7YLtNcsSTdeu9w65j88/KenaDuZB+gbLqWWFMPxbeHpoMG4B1NvNXE47ZMoA1msxK+QS0qKq3eexQy7qZtfR/fDuMJyt3Ni6o52i2G1f8rB4H4wnp1MZlfOPS8bcK2r2p2I9HwGeTq+oR5+MvwP4uT/odMCKcZhWYKZx+4y0uBHjL2n8rUOBb4X3jIsPfbtUCXw6nDawL7m1gAt8K5yeHjpNEbxaBB8HzjTJ1IVFi3W5Afy5MLvDN8IzXTtPBcGUeomQ9F+YxDkG4rjcxGDEUxj9PR8ztoi8QfOmIz/GBdagzCmzgCQJsPXAhwDYMPlfVOq1sctbBsP85UYh2E/vE+e7EAp42smezWRmty1Y3vO2LXgg8CFa72Z3lReDfhfeNKy+tXCa6TO0PKgrMCq40rt5Is8CD4LyFdJwkBP4RePbIHj1m5Af0p7IKfDMsAbZnw38FgTpuODXS5gAAAABJRU5ErkJggg==" alt="EDITOR page 2: BPM, STEPS, GAIN" width="240" height="240"><figcaption>EDITOR page 2: BPM, STEPS, GAIN</figcaption></figure>
 <table>
 <tr><th>Control</th><th>Does</th></tr>
 <tr><td>K1 START, K2 END</td><td>move the markers. Turning one also <strong>selects</strong> it: the white keys place that marker and the view scrolls to keep it in sight</td></tr>
 <tr><td>K4 ZOOM</td><td>zooms around the selected marker (on both pages)</td></tr>
-<tr><td>ALGO</td><td>moves the selected marker</td></tr>
+<tr><td>TARGET</td><td>moves the selected marker</td></tr>
 <tr><td>White keys</td><td>16 places across the view: a tap places the selected marker there. Hold one key and tap a second to place both</td></tr>
 <tr><td>F1 / F2</td><td>select START / END (what the keys place)</td></tr>
 <tr><td>B1 / B2</td><td>page 1 (START, END, ZOOM) / page 2 (BPM, STEPS, GAIN, ZOOM)</td></tr>
 <tr><td>B9 AUTO BPM</td><td>sets BPM from the file's name tag, else fits a whole number of bars to the trim at the tempo nearest the project's</td></tr>
 <tr><td>B10 RECALC</td><td>recalculates STEPS from the trim and the BPM</td></tr>
 <tr><td>B11 held</td><td>hear the trim, looping, until you let go</td></tr>
-<tr><td>PRESETS</td><td>change the track's sample; the pool list pops up</td></tr>
+<tr><td>PAGE</td><td>change the track's sample; the pool list pops up</td></tr>
 </table>
 
 <h3 id="sounds-slice">The SLICE editor</h3>
-<p>Press <kbd>FILE</kbd> once more. SLICE cuts the sample into up to 32 slices for the RAZOR and R.POLY machines (the table is kept per track and saved with the project).</p>
+<p>Press <kbd>SAMPLES</kbd> once more. SLICE cuts the sample into up to 32 slices for the RAZOR and R.POLY machines (the table is kept per track and saved with the project).</p>
 <table>
 <tr><th>Control</th><th>Does</th></tr>
-<tr><td>ALGO</td><td>select the slice</td></tr>
+<tr><td>TARGET</td><td>select the slice</td></tr>
 <tr><td>K1 / K2</td><td>SLCE START / SLCE END of the selected slice</td></tr>
 <tr><td>K3 PLAY, K4 ZOOM</td><td>the slice's play mode; the view zoom (K4 on every page)</td></tr>
 <tr><td>B1 / B2 / B3</td><td>page 1 (start, end, play, zoom) / page 2 (SNAP MODE, CHOKE, PITCH) / page 3 (COUNT, TRANS SENS)</td></tr>
@@ -308,11 +441,11 @@ ol.steps li{margin:6px 0}
 <tr><td>White keys</td><td>play the slices (the slice machines play the pad; any other machine hears it as a preview). SHIFT + a key mutes the slice</td></tr>
 <tr><td>B11 held</td><td>hear the selected slice, looping</td></tr>
 </table>
-<p>The selected slice is the bright block; the other slices' edges sit behind the waveform in grey. SEL stays on the editor's own pages; the FILE button leaves (next: the SAMPLER, then BROWSE).</p>
+<p>The selected slice is the bright block; the other slices' edges sit behind the waveform in grey. LANE stays on the editor's own pages; the SAMPLES button leaves (next: the SAMPLER, then BROWSE).</p>
 
 <h3 id="sounds-sampler">The SAMPLER</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADDElEQVR42u3cAbZEIBQGYFuwhdnC3YItzBbu/pcwplS3hIQKf+8580J9TlMkLx17ob82CKkDDPhSWK3qDcwqNn6oVb08GrWe2W4z60ya28BsctR5uIxNvJ8y1Vti68yWG8G2qMVx2CK3CXu2RWthse9N4aDwyhV1YXgq5AAOm5OtdOwX9e1gXCReBJcLgAFfCRPRuExxEnHKztVl8M9MZ6TX6TjVhdX2SSEdUZ90CJ5+XOZ2jaaagUnsS/nudOTkFbcp5bZgPgH2CtYcBHPyd3w5rJqPgE2ccmuXypw4DoftuAaMiwRgwE/ogdhIF18yNny/8QUwYMCAAQMGvADT1HcH/FQY3VvAjxzLpDNPmarVpLZjwIVgc2kE/FwYzQntGDBgwK3D6N4CBgz43vBnDObT/bUrw67rXEdKxuUwXnXY5v5G2C0mvrPSLF1BgwOrCn8+tmTfCPtVKgd2lUqjy5ULcB346srVBFz0BNIufPQisXYCUevqwqIj8DYY3VvAgAEDbhT+yMA8yPAfCBThvChgwIBPhXHKBAwYMODG4W+lALgczGaCo5msTN4MykgYxp//r3r0Lua9Jsyv/CdVvQs7N7UizG4qp5wlu5hawxROpN2G9UE3AFMwdXe54AaTWMHkT5begAeef8e14Mhk5YTKlZjE+5bcuboeLJsQUVrlGmxzkpOldzanWnBu8P5pqOT1+DBsxq63nz37+wk4fLw1f8wFuCrsiPVnVmFeCo4/+ojtDrgivFS55s+e/bxG2O0SLkdqNeAL4PRnz7MTyLHKBbgYvFS51mvMZVcnwKfD7+tl0kpYHkvQtzCZSQEXht9Xq1/Yjlm+jo6819Nt3JibgTWbLGUoYqgPk/8KQpZDTyujZGKALfGdj83DtDLAZoqavWXnAFs1mEsWNXMbcPiqyZVBNq85ydcgEt0FfuNFYn5b2nWJcDxp6hgI4ELw2q3oBrx2twO4STj1HjOhcgFuFN5dueTOeeNcgIvAclww4wQSq1SAm4Pf1svM+y+hzeGm5QC4OIwBtmfDP9Vy+pzedYFsAAAAAElFTkSuQmCC" alt="SAMPLER armed for the next bar; the white keys are the level meter" width="240" height="240"><figcaption>SAMPLER armed for the next bar; the white keys are the level meter</figcaption></figure>
-<p>The last FILE sub-mode records the host's audio input (or the master output) into the next free pool slot, tagged with the tempo and saved to <code>data/elasticat/rec/</code>.</p>
+<p>The last SAMPLES sub-mode records the host's audio input (or the master output) into the next free pool slot, tagged with the tempo and saved to <code>data/elasticat/rec/</code>.</p>
 <table>
 <tr><th>Control</th><th>Does</th></tr>
 <tr><td>B11</td><td>arm. Recording starts on the next bar (at once when stopped); B11 again disarms, or stops at the end of the bar</td></tr>
@@ -325,7 +458,7 @@ ol.steps li{margin:6px 0}
 
 <section id="seq">
 <h2>Sequencing</h2>
-<p>Each of the six tracks has its own pattern (length, rate and 128 steps) in each of 64 patterns, A1 to D16. The <strong>selected track</strong> is the one the keys and knobs edit: pick it with SHIFT + W1–W6, SHIFT + PRESETS, or in MIX.</p>
+<p>Each of the six tracks has its own pattern (length, rate and 128 steps) in each of 64 patterns, A1 to D16. The <strong>selected track</strong> is the one the keys and knobs edit: pick it with SHIFT + W1–W6, SHIFT + PAGE, or in MIX.</p>
 
 <h3 id="seq-loop">LOOP ENGINE (HOME)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAGFBMVEX28u7Nyr3/aRiclYtaXVI5jf8xMCkAAAAZijTnAAADKElEQVR42u3ciYGrIBAGYFqwhbRAC7bwWkgL0/6LXAOeQAzDyo+bAxS/7CxGM8ZVlJTptyWSFGDAP4VN0+SfTe6OTKt5sm3LpwznV+tq4jD5Fgrr52mK7rktG/aTh8m++A5g2oV9eDerKAr1dBbqzmAeU1WB5p4Bpm7gyQ17HvwUoau2Qtj9Zh42T4Rh7CQGgtsVwIB/CjtcKXdzk6ms2m2zMjfb3bVl/Qb686O1uYnCvpOKJ8WrStoUt6z7XLva6sskC0dhC6G2T9JQqyjUHlYqqeeFWhzeC3U06rjmBxKlMJXALtjisB84PLBUCK+KsBBaxZuRf0EZg0tvNicReLT36vUhSYNiSMAt4eslX6/7bcCA28FKAWZYKcDZO0H1RPhs7t+BbY3hvbmA9+F0rix8vbIaeF0D3BMc122tDt6u53nwMdUbfNUhhnNXvq3FdcDSMNdtLR9e9+wXPu+Qwjx/r5b2XC/p6z3AZyt7vVy6OAP29bNaL7Bt3qst8Hre0bLXtaXeD7xfLHxnASwHjzWqR3vnGm3vNN4RCA5vnw6P92lx9IwA0k3Pg8fL3iJDP/ZZGJxpG+1s6jPPmBO+jkG/+Z4R4Hbw9yv5txSJbykCxlUDubCL3NlDfvyP+wEGDPhWOIO69QFwexgX0wEGXJ6H8GcGZlcAPw3ubFS/hQrgdjDZy3PDhYz+otXjMn+m5Yfeb7c4X+96UZaudmsiWZivVuWLVq96W9j14lVcw/ZFC8Pc3T6cx2z2nU2oy+CZ1n9jGZioNNQBdgsXhHrm92pR2G5KlLs5mXgtg0vHXal4cxKCa4sJtcT++Gt4/e2QIrj2lBDgxnBd/w9c94oB/yVYbHABBgz4tp1EbVfAjeHxjjL1STnOJRi4Lg0BuDk83qgeEA7JNU62ZX8w165LljZzMkIUDjlB/+8GdV6WLCTYLrMXvcEh1eTidgXP7s4nXwrgNMEmB7vwtgl1lEQVg7UuHlzJ5kS6ZHPqAUZmr+IjTHrxK+AO4VvSTfxvagE/CRYbXIAF4HSAAe4O/jrd1HzvBLgMHu8oszZnZA/oKwrg5jASbM+G/wPWwVdy41MaWwAAAABJRU5ErkJggg==" alt="LOOP ENGINE: the waveform between the loop brackets, the step strip, the page's four values" width="240" height="240"><figcaption>LOOP ENGINE: the waveform between the loop brackets, the step strip, the page's four values</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr2clYtaXVL/ODExMCkAAABwQ+pEAAADCklEQVR42u3cgZWrIBAFUFqwBVqwhd9CWpj+S/gLwoCuCMNGQHm4iRqClzMhUSdxFe3Kcm+JJAUY8K2wfWjxS4u7I/uoXSC7sq0Le7dtePEKz/rC5LbIMEXTfs0/Vuy69m7JayPAdApzyP1T5KF2MMeYlqHhEKKqQEdDUxjqBrDbvLv3IT4ZbOJ3U/bt1APGTmIiuF0BDPhOWClFdjJzs+56s627ZfvEUCcqWpubtjezYqauMG/QzRmOGBVNcthA2i642QiwimC37V2o3XJ1qHewHgE+CXUcbB6AdaEm0WvcDI43zqFVhw7VfOBweLeFAeDJPquPhyQNiiUBt4R7DC3AgAEDBvwdWGUPEpR6G5zbcO4Z6dr3wqn6ceHrTdfXA24Lp5oqlaPr63vD55VK5ej6+hHg35VK5ej6+jHgY7X6Va67Jun6OHD8BHVaJF1L148F50tp19L1T4NLO5eufSN8XQADBvwE+F2fXG/bO811BDLXUeZsZxJznS3OlhFAumlueL7s7WwZ+tm+hcFXfIABAwY8Cnx+vEIdfqUIGPDd8D9TErOCkm0HGDDgr8L72gL4jzPA7WHCxXSAAQMGPDb86VQAt4MpXMToL2q0F7Gmy/ozmT/6fLancvPsiDJN13XlUd0L9pdw+gtWt6VMawdTcTPuM/WHiS8+D/Or1r6xC3Xodx42L9I6ABxFqjDUDJMMdsHuDW/x0ty6aHCtDFNZs7O3Uy+4tvzAffbHf4b998v+JoBD0+Pcbyr54xTAbeEACmGKmu9voQNXgwtwc1iWId8NrnM4vUnAXWDpdyAWposBdjVeATeGb9tJXPx0EnBLeL6jzLpcgjtpM0XeFHBjeL5RPR/MWTJNVJAm252Y6zh3U5iKWPvDu8QLFWfJOMGm+T/ZPQWO//FeQSZ0dXc+wVaWez1JsPWDKYIFmdC6UB+zt71g4iQqid5OMaz1U2Bk9kRwOBmVnQEBbgxXp5vihAPgR8DidFNdjwF3gyvSTd/5AAE88k6itingxjAye0iwIbOHBNuz4P8p2lnrPrln+wAAAABJRU5ErkJggg==" alt="A step selected (white): the loop keys write into it" width="240" height="240"><figcaption>A step selected (white): the loop keys write into it</figcaption></figure>
@@ -333,13 +466,13 @@ ol.steps li{margin:6px 0}
 <p>The track's sample, its machine and warp, and the loop keys.</p>
 <table>
 <tr><th>Control</th><th>Does</th></tr>
-<tr><td>B1 LOOP, B2 MACHINE, B3 WARP, B4 RANGE</td><td>the pages. Tapped again, a key steps the page's lanes. Held, B1 picks the loop mode, B2 the machine, B3 the warp mode, B4 the voice mode (MONO / POLY) from a list; turn SEL or K1 while holding</td></tr>
+<tr><td>B1 LOOP, B2 MACHINE, B3 WARP, B4 RANGE</td><td>the pages. Tapped again, a key steps the page's lanes. Held, B1 picks the loop mode, B2 the machine, B3 the warp mode, B4 the voice mode (MONO / POLY) from a list; turn LANE or K1 while holding</td></tr>
 <tr><td>White keys (blue, LIVE)</td><td>the <strong>loop keys</strong>: 16 divisions of the loop. Hold one to loop it, two or more to span them; the span never shrinks while you hold. Let go and the playhead returns as RET MODE says. LIVE, the keys also <strong>set the track's loop</strong> to what you played. Stopped, they audition</td></tr>
-<tr><td>ALGO</td><td>select a step on the shown page (its column turns white; full left = LIVE)</td></tr>
+<tr><td>TARGET</td><td>select a step on the shown page (its column turns white; full left = LIVE)</td></tr>
 <tr><td>White keys (red, a step selected)</td><td>still play live, and each entry is <strong>written into the selected steps</strong> as a region lock and a trig. On the RANGE page the entry is a range lock instead</td></tr>
 <tr><td>B11 held (yellow)</td><td>select steps with the keys; B1–B8 the pages; F1 clears the selected steps, F2 goes LIVE</td></tr>
 <tr><td>K1–K4</td><td>the page's values; with steps selected they lock onto all of them</td></tr>
-<tr><td>PRESETS</td><td>the step page</td></tr>
+<tr><td>PAGE</td><td>the step page</td></tr>
 <tr><td>B6–B10</td><td>the modulation sources (see Modulation)</td></tr>
 </table>
 <p>The waveform shows the loop range; the brackets are the track's region (static while playing) and the bright span is what the engine plays now. With the GRAIN warp each grain is drawn where it reads, with a blue head at its leading end. Slice machines turn the white keys into velocity-sensitive slice pads.</p>
@@ -352,12 +485,12 @@ ol.steps li{margin:6px 0}
 <h3 id="seq-keys">KEYBOARD (HOME again)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr2clYs5jf9aXVIxMCkAAADwEAJiAAACkklEQVR42u3cgXmDIBAGUFZghVuhK7hCVrj9Rwgih8SogBUw8GMSEtvry0dA5aJV/FF02RJICjDgorBdpddn5sH+kpa3Yp9r7gdmqwnsFndbAtz6rmDehVkCtL6j6/0AHDS11p3BWhpTUB00b38wdhIDwfUKYMAlYTUvyj6aF3e/E5rvZG60rpqfN4d5rW92ydpM6xuxa5rC0sKqQGfbwnMzt4eliVWB8ZXyGbeBbXsXGE0ynJj4cBxXh7GTGACWw7CvSu/9zNR/c8kJ0B+vAAMGDBgwYMCAAQMGDBgwYMCAW8E6p3JwdpwGDBgwYMCAAV+Cp2nKg/cCAD8axnDqAsbXuIABAwYMGPDTYLeXP6sSSjSue5hMJadGHpw61yEsp0ZS7aZuD9Nw8BifsZzOTlx5OO3BCdStld9kAq4G49AHMGDAgAEDBgy4MPxqVADXg3lzcbKfPNNRt5jMMt/49VouhfShfg56Fmq+9PS9uhUcXrhKfolEO5jd1Z++isLLm34Q7JNgx9ES7Jr6A6ZzeP6QpofBaU3tYebcpp7WbXUzOLw4WXpLZDjZ9nKwjMLr47g+fLEYuM3++DZY2ZIF54YAbgYvsSrzPxhYOC8EcCNYegjgfmEMpxFg7BZHgcc5yqSTcpxLcJO2a6GAK8Pjzp0GGscuoUZpIeHEXPJyyz0tdJNuagYz58A2+xIkXxISL4+DKR2e3INtasnLcVJT7yTYmsHXmlraOTH8IIlaHeYw2503nIjC3OvvwMNtq7fT1NR5iZvC8O6fiB32Aq4Mf4OZ8HamGw8HXBmWniE9Im3meQrH/gTgqnBI5eSP/t25AFeDwy169k5iv1/m7Z0AF4eR2YsXn266doIR4OowEmx9w28Dw0KLA5ppKAAAAABJRU5ErkJggg==" alt="KEYBOARD: the held note fills blue; the step strip below" width="240" height="240"><figcaption>KEYBOARD: the held note fills blue; the step strip below</figcaption></figure>
 
-<p>The keybed plays the selected track chromatically (C4 on W5; F1 / F2 move the octave). Stopped, a held key plays the loop at that pitch. With a step selected (ALGO), a key <strong>writes a note</strong> on that step and moves on to the next (ADVANCE in LOOP SETUP; SHIFT + key does the other). On slice tracks B1–B10 pick the slice and a quick click on B11 steps the slice bank. The sounding key fills in the mode's colour; a selected step's note shows white.</p>
+<p>The keybed plays the selected track chromatically (C4 on W5; F1 / F2 move the octave). Stopped, a held key plays the loop at that pitch. With a step selected (TARGET), a key <strong>writes a note</strong> on that step and moves on to the next (ADVANCE in LOOP SETUP; SHIFT + key does the other). On slice tracks B1–B10 pick the slice and a quick click on B11 steps the slice bank. The sounding key fills in the mode's colour; a selected step's note shows white.</p>
 
 <h3 id="seq-locks">Locks, copy and undo</h3>
 <ul>
 <li><strong>Locks stick</strong> as on an Elektron: a locked value holds until a later trig without that lock puts the track value back. SLIDE (TRIG, lane 2) glides between locked values.</li>
-<li><strong>Hold a step + PRESETS</strong> locks a pool slot on it: that step plays another sample.</li>
+<li><strong>Hold a step + PAGE</strong> locks a pool slot on it: that step plays another sample.</li>
 <li><strong>F1 + a knob</strong> clears that parameter's locks (on the held steps, else the whole track); <strong>F2 + a knob</strong> clears its modulation.</li>
 <li><strong>Copy / cut / paste</strong>: with F1 (copy) or F2 (cut) on, tap a step to take it into the buffer, tap another to paste. The same works on whole pages (PAGES, black keys) and patterns (PATTERN LAUNCH, white keys). The buffer empties when F1 / F2 turns off.</li>
 <li><strong>SHIFT + F1 / F2</strong> undo and redo, gesture by gesture, with the gesture's name in the header.</li>
@@ -370,25 +503,25 @@ ol.steps li{margin:6px 0}
 
 <section id="sound">
 <h2>Shaping the sound</h2>
-<p>Each track runs: sample → <strong>FILTER</strong> → <strong>INSERT 1</strong> → <strong>INSERT 2</strong> → <strong>AMP</strong> (level, pan) → the mix, with sends to the S1 and S2 buses and the master insert after that. FILTER (B1 the type held, B2 its envelope, B3 mix) and AMP (B1 the envelope mode held, B2 AMP ENV, B3 MOD ENV) are the SEL and ENV buttons. All their values lock on steps.</p>
+<p>Each track runs: sample → <strong>FILTER</strong> → <strong>INSERT 1</strong> → <strong>INSERT 2</strong> → <strong>AMP</strong> (level, pan) → the mix, with sends to the S1 and S2 buses and the master insert after that. FILTER (B1 the type held, B2 its envelope, B3 mix) and AMP (B1 the envelope mode held, B2 AMP ENV, B3 MOD ENV) are the FILTER and AMP buttons. All their values lock on steps.</p>
 
 <h3 id="sound-mod">Modulation</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADSklEQVR42u2bjZmDIAyGWSEruAIruEJXYP8RTvkNFhXaqwH94ForZ3hpJITEp8pkhX5bGEkBDPBPwbaJwqel2j87CsPOjW2zRzLVKCfhBNyX6wAce3RDMBSqBRsG58c6cKgRTL2ATREcVczUH171qqYjVXcAzirlg/hA1d2CvZJzcyqBG82J2M1id1MaDCfxIPB1BeDrwC+hAvClYJU+KcWb1oaXrb59PdrPb50of2WhTBNRX2ClsiE4EB+Wh/qOVbEDxW/cnJUVrFTeJgvOVJ1ARXAaZ7wX6SbEMY0Efp2Ai6p2TWrPNKtm9aVgbx/OILImZ07MxFRxyQlG1m5OQmA4ibuDn7jZW1awGKGS8XFZ3ODHzAzFyG5b4hWGypBp6gu8oFNwTpk4hRg2ZlDKPVPI3bhT7g7WyGWa5k2RBUdVv4MNpag9BtgFNRPLZowA5owN2FClqg/+uT+rxcDMnDbyMXV6CGZZpTHACMwBvq0//r7sdlRyppLguGh+DQ4dbV0C0ZE/FgA7Da2nW2WV2u4A/ndVi02u3s1J0I7hJAC+nT82UnY8PrjRSciBpdziDH88HngeBgwnATDi49H31fN/aa/dHxv4Y/hjxMfwxwADDH8Mf/wUf/z/qQix5Av8MfwxwPDHeH58o+fHRur5sSxYID4eHzyPAoaTABj++AbxMZ4fIz5GfIz4GL8/xg+t+vuFl9brn3FvdevEajivVxTT9aLe6ETBVthWUy/twUFMNyyq8uBValVVLTgIe7AfeK1odo+lwF5jDarOwEa3qHrma7UQ2KlZt5iT1Zc3J62bJhc3Jynwp2UBy/jjr8HK05UtJms5BTuR9Mq7COepHWBhcDqGq0/AWxH+ntpK3wBgIXAuVTG5zsFpkgHcBbjcy+WzGuAfgNNKz697X9kPnETZvwDcCfh5u8wlqtbtuQS/oQ+lTRTgi8HPm9VPtGM7wdLxOMzmgXnrUH0VB8ccivaJFF2VJRsczLIoJxlRl2D7DGyXnU7AIWX0c1Ub0wE4mlE1+Atz6gH8ZCexzREdBzEAjwTO8wUcBvA9wHu53qq0McBDgEsZg7PFA+DRwPnjn8u9E8AXbgSessvczwsR7WeSAB4JjATbvcF/BkqPqT+7kcAAAAAASUVORK5CYII=" alt="MODULATION: the matrix, one route per row" width="240" height="240"><figcaption>MODULATION: the matrix, one route per row</figcaption></figure>
-<p>On every track page the black keys <strong>B6–B10 are the sources</strong>: LFO 1, LFO 2, MOD ENV, VEL, AT. <strong>Hold a source and turn any value knob</strong>: the first detent makes the route, the next set its depth. F2 held while turning removes it. Steps held as well make depth locks. The MOD button (MODULATION) has the MATRIX (B1: eight slots, SEL the row, K1 source, K2 destination, K3 depth), the LFO pages (B6, B7), VELOCITY (B9), and the four <strong>macros</strong> M1–M4 (B2–B5, overview on B11), which are sources too and lockable values.</p>
+<p>On every track page the black keys <strong>B6–B10 are the sources</strong>: LFO 1, LFO 2, MOD ENV, VEL, AT. <strong>Hold a source and turn any value knob</strong>: the first detent makes the route, the next set its depth. F2 held while turning removes it. Steps held as well make depth locks. The MOD button (MODULATION) has the MATRIX (B1: eight slots, LANE the row, K1 source, K2 destination, K3 depth), the LFO pages (B6, B7), VELOCITY (B9), and the four <strong>macros</strong> M1–M4 (B2–B5, overview on B11), which are sources too and lockable values.</p>
 
 <h3 id="sound-fx">FX</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAAC7klEQVR42u3biZmDIBAGUFqghW2BFtKCLUz/JWy4hsEjooly+JNoiPnwuQSUYY2iLOlrk5AUYMCXwm6T5tw7q13O59PHLs+HR2VUKEEM6wZg3iOF/UXYP/mdz1HaZQEcHwzrVmBR1aww7J4kPjtW1fpTVTcA61S9DMv1MVg3C+vYUSQcu1bsFHnjolI4/GVa9NjaMC4SD4LvS4Dvg6dKCXB7sFJ5TrmUXgGPA3tseSDb6Y/Ti1Nl2FaV8hnOc/WpEWG7Uu4RDsRvyPe6hJXqHp5kLappr6pHgOV6Hy5tXB9OILVg14Wm1I3yxqUGhAtPmbE5yXXJRWL9c8DtwRje9gsjTAUMGPB+SvNr6fRRGTbGvBeX4bxxG9LrWDBZyD0oLMZnKHxokx+Ip9chYPcMS/S4qseE5dpkFX3RCaQW7LoQpW6UwcYMCF+c1hsj4JFgDH0AAwYMuH14beqlNpyFLvTrUV6DsAxdDMVgbeVyfm5A3yDMoYuAaWxYhC7m8tglO4FUgmXoYq4OXZqAEUkAxggEMGDAgBE7tRE7/XDo0yC8FsIsxrd3xU63wGshzKKqx4JXQhhDlWKnW2DETogkAGMEAhgwYMCAAQMGjN8fA17+ToKDtuw/19sDdLLxuYu4Kd47ysX3i4bhfV043g5pigJyXzrAlO6mLCzqD7oybLI5p/0gjLKq9t9QyZdEYfamPiyqukDOGtfxqn6JOZBq8MH6in1iDp/ux7fDdHo+uNL1+GvY/+bRvsZFueNJ2+OWBSyLyF0Abgz2yHJJ+1jfVwbPiwJuCp43otSUCuCtooAbg8X7Y41ru10CbgzOm9P8IlEEf3N1Anw5/LxRpjmVQtB2rijgm+HntWrAe559WDQG5kbem1QwFfHqEbbr0J3EL8WHhaewEnCZO59g6waWVU2Hq5qoS/iL7tQh/OyLxPFhLeD+4Dy6BTwi/HlmGfAI8N6cFOD+4eUcM+Cx4OeNMj9NKm3fYAS4JxgTbB3A/665gKd7x2E+AAAAAElFTkSuQmCC" alt="FX INSERT 1: LOFI and its four values" width="240" height="240"><figcaption>FX INSERT 1: LOFI and its four values</figcaption></figure>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr2clYv/aRhaXVIxMCkAAAANW7m/AAADjklEQVR42u2bjbmrIAyGu4IrZIWu4ApdIfuPcFQI/0WgR6D1o9erRwmvT0gkRHywV5Zri0N6AAzwpeDj1GKOtsPlOJLT+26RarUor0WDGAyWllnjDNj9W4QrwZ4sC20GsKNqQxNtW1FeWlS9KEBa1ROAjYIWT+lW8XWq9rpMODOAtSP5YNcZjEvVg9kDR+40AoxB4kbgfgXgnuA1KHkjO7+aai8+BzDAl4JZNl3LNG3jUhsCpK/KSYHw/m9v1YLV38f/48Gm6rGn55PCuMXGALSV+Krc1341hMg5ZnNDw8H8DuyGdzGYvQ7wwKYD1wise3Qs2Fc1P5+cUGZsXG5H+O7E5ucbV76P+4JFOW/BrsPkr2bACXcaAg4fZwbc+1kN8FXgqGzgawpRPsoEuCP4gwLwV4A/sDeAAQYYYID7gem01NUrC/YABvi/wIv7ltYHbwd8bMehPpcAJ+rJRQPW01M9GR4LNr9Q1Ww29dOMWJ2JeuYOyU3IrG7yZRx4sVuoagXyGkwZVKKeb3nJdNM4sH1tGbkTxypMGVeiHofuxKuTx5sEHLmTHshUc0k3Ka23umnk4WAMEvcE4zUuwAB/F/jwcfVwZ3LnVRVpUTU66JivqI3RYD2i6buoAGsBEwMUNzEFmBrAdrCwYPoa8H36mGpdIVA1Oe5U7JIjwfd7VudW973eFj5dXJiXBRhggP8TjPAWYIB/YO5ETnhqE6KFoQ/ZPZEJgSYHm7DU3ZeS7a5OdihYXmKwVXNxlEs2zCVnKjM5+H59rN2IPbeqUDV94k4jwPd7Vr+aihJvlwUYYID/E4zwFmCAAQZ4dvBrUAG4H1jmluS9lM0VtVjoiAIi0ZNXP6v98nYoWN5YUWI18ltpBQ5FT256Nd8czwG25DxYhB0wExep2n4KPQeYq40rFD2Zk8t3oqPBYf6h1CfEnRpEB4Nbi8xjuo/HH4MfR9n3aqsAt4oC3B2sj1vAbaIAdweLhah9k3HViQLcHewbWKVxtYgC3B1sLaPRuACeHHy/KDP3RUkuv68C+iZRgDuD72fVNwRTYnURFU3MU6KZyflqkxFDwanVI0TnWbLdnZILT6YHs7vK6DzlJF/0mnQThfdMNQm2IeDU6qIyVadEqTyJOgpMVJVk8xNs1aIzgO+b2WsAt4oC3B1cO/9ITlMBBhhggAG+FIxh8dfB94syW1fubttni34B7gZGgu23wX/5vAAdDpsVDgAAAABJRU5ErkJggg==" alt="FX SENDS: the routing picture and the four levels" width="240" height="240"><figcaption>FX SENDS: the routing picture and the four levels</figcaption></figure>
-<p>The FX button: B1 / B2 select INSERT 1 / INSERT 2 (tap again for their knob pages; hold for the effect type), B3 / B4 the send buses, B5 steps SENDS (the routing picture: K1 and K2 the inserts' MIX, K3 and K4 the send levels, ALGO the send tap PRE / POST) and MASTER (the master effect and the load meter), B11 the FX MIX page. Eighteen effects: DELAY, REVERB, LOFI, COMP, DESTROY, ECHO, BLACKHOLE, CHORUS, FLANGER, PHASER, DJ EQ, DUCK, TAPE ECHO, CASSETTE, MOTION, RINGS, LIMIT. On SENDS, hold an effect's key and turn K1 to move it to the other slot.</p>
+<p>The FX button: B1 / B2 select INSERT 1 / INSERT 2 (tap again for their knob pages; hold for the effect type), B3 / B4 the send buses, B5 steps SENDS (the routing picture: K1 and K2 the inserts' MIX, K3 and K4 the send levels, TARGET the send tap PRE / POST) and MASTER (the master effect and the load meter), B11 the FX MIX page. Eighteen effects: DELAY, REVERB, LOFI, COMP, DESTROY, ECHO, BLACKHOLE, CHORUS, FLANGER, PHASER, DJ EQ, DUCK, TAPE ECHO, CASSETTE, MOTION, RINGS, LIMIT. On SENDS, hold an effect's key and turn K1 to move it to the other slot.</p>
 </section>
 
 <section id="arrange">
 <h2>Arranging</h2>
 <h3 id="arrange-mix">MIX and PAGES (EDIT)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAACr0lEQVR42u3ai5WDIBAFUFuwBVugBVqwhem/hJWvA6ISVoGER/YYR8WbRY0wZqKgzO8WJk2AAb8Kq0VmsZ4jPUfzox+DuoK1RA5WU5ofhqlDeI7gZ1t67hAmdnI939Qdwi9fTv4wdgLjJjEQXK8ABgwYMGDAgAeH161sb1LSg4EpqcBsBhgwYMCAC+BpKzVg6/QG/zv4BjhoqRfh67O6GYwvEMCAAQMGDBgwYMCAAQMGDBgwYMCAAQMGDPh1GD/HGAAOfptK7sewdmZZkovjakFgzp9UALgNvM7zKoS9vNWbCvSOVLAsfM22qQ/0fDKQMhUAbgfjchoAxm1xYHjaC+Avh4UQ28QuUoFeoGC7iYH1Grcd2ywKiO+NgjV79cawivhKN1FNPJmJ32z/gGzvQSCI7U2wqfsXO4GDir6pNUwc5rs8D1J76xv2l1Pc1ETicETigxAfhX0+dXI1g1PN5s0TON3U4jToCMZNYlgYnb1Cwx8taQvgX4M7O6vXRgVwPdh3R01f3bxfFrm91N+WSzK92KBvfFtV7o8G2sK2WxL0+q5qW5i9MmHzoTuAbf80GG+d1HaVbVMHQ7n7qodj3Ar+rKk97KtlN7Xcv6vbwW7sLOIR9vU1UQizpm4Fl5Zj9rvS/fgB2PTXXQcltwev4dLOPuCqsKvrsiws23IHlw/mAFeF95MLMGDA3wrHN4eqNwnAlToCo/UyRXbhuQQ7aMvbOCyAq8Mjjp2Gg+1gXIjDA+e7gXmq6sW4Xu7JiKZwmHwR/lnkXZbMpyLidET3sMuCBrXFTYLNNfWx6lVThwm2drBPrOXBrKlTVUV2ErUZzDOhudeES7B9XrUHeLzv6tJn8XoI80S/GnAFOG9YejJMBQwYMGDAVWDcFn8dHq+XWfYrIQ2XVgVcGUaC7bfhP3XZrt9JbV3kAAAAAElFTkSuQmCC" alt="MIX: the nine targets with their levels; the selected one bright" width="240" height="240"><figcaption>MIX: the nine targets with their levels; the selected one bright</figcaption></figure><figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAACG0lEQVR42u3bh4GDIBhAYVZghazACqzgCuw/wqkUwZz9jiIPY8/PpwhRkyhMkuT/pkgSwMD/Cs+L5DI1DsIit2A7L9f7kZsPQSZ+i925CmAjLeBM3yW5bromIGm0WdYnsKwFTop6nvVZmoPqkhR1YM2yfr+oK4BXxb0vG7kBx4eiTtgXWwiXYXuOK5dJi33ZlrDeH8YwKgxzkugIzpeAc8JiSR3Cn083sB19wdJf/cnVzOrjYCPtRABnhucp4FfDNCfgl8PDmPzwALZvSiI+nyWP7YjisNt74BfDPV5ldnUnwW1qX3DW5lQSDl8GAb8WDj9SAL8Wpjn1ABc7SdQAx5fn8fAvV1QAR5UL+JVwf1eZ3MIAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAzcPD4UScD54PM5q6pUa+3nCTs9Lf0167KbX+BcpF+LD1VGNmkK11r5Wl4Xn3nHKHMHawz7Ivs7AdqMrgJVJc9kuN+2DXVEr5UOO4ekg6Upgs4JPVq7rRa2Xz+pycNyElDpXufQ3fL05lYLvJvfXzvzn48ewiB6LvfJA3QwLAdwAbKL4i7AQwI3AxSoXcOZ2fDUP4HbgBycJcfuZeOCscH9XmSpJZ79LcDdte2k7FDgz3F+tBj7yps5VrjuhZmgRnoYdwYMb3IDtY7HNwc+K2pgm4QfNqUGYkwQwMDAwMDAwMDAwMDDw6+AfCr8WHQ0nW1UAAAAASUVORK5CYII=" alt="PAGES: each step page as a row; the loop in the header" width="240" height="240"><figcaption>PAGES: each step page as a row; the loop in the header</figcaption></figure>
-<p><strong>MIX</strong>: W1–W9 are T1–T6, S1, S2, MST. Tap to select, hold to mute, SHIFT + key to solo. B1–B8 set the track's rate (1/8 … 4X), B9 / B10 step it, B11 is the CAT (the dancing-cat visualiser). PRESETS selects the track. The knobs are LEVEL, PAN, SEND 1, SEND 2 (MASTER: BPM, SWING, GLO LENGTH).</p>
-<p><strong>PAGES</strong>: the black keys are the step pages with the same gestures as B11's (tap, hold to mute, double-tap to solo, two held to loop). K1 LEN, K2 RATE, PRESETS the page; the loop reads in the header (LOOP ALL, LOOP 1-2). F1 / F2 copy and cut whole pages.</p>
-<p><strong>F3</strong> (SHIFT + SEQ, or F1 + F2): the timing menu with SEL tempo, ALGO swing, PRESETS to name the pattern, K1 / K2 the track's LENGTH and RATE, K3 / K4 the global length and the launch quantize.</p>
+<p><strong>MIX</strong>: W1–W9 are T1–T6, S1, S2, MST. Tap to select, hold to mute, SHIFT + key to solo. B1–B8 set the track's rate (1/8 … 4X), B9 / B10 step it, B11 is the CAT (the dancing-cat visualiser). PAGE selects the track. The knobs are LEVEL, PAN, SEND 1, SEND 2 (MASTER: BPM, SWING, GLO LENGTH).</p>
+<p><strong>PAGES</strong>: the black keys are the step pages with the same gestures as B11's (tap, hold to mute, double-tap to solo, two held to loop). K1 LEN, K2 RATE, PAGE the page; the loop reads in the header (LOOP ALL, LOOP 1-2). F1 / F2 copy and cut whole pages.</p>
+<p><strong>F3</strong> (SHIFT + SEQ, or F1 + F2): the timing menu with LANE tempo, TARGET swing, PAGE to name the pattern, K1 / K2 the track's LENGTH and RATE, K3 / K4 the global length and the launch quantize.</p>
 
 <h3 id="arrange-pat">PATTERN LAUNCH (SEQ)</h3>
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAFVBMVEX28u7Nyr3/aRiclYtaXVIxMCkAAABC38wVAAADQklEQVR42u3ci5mrIBAG0LRgC9sCLdhCWqD/EjaI4AwvgUTGx09uojeEHJeMyvDFvDQr07GFSC/AgA+Fl6cmB2vzTx8HTyeAzfrkYL3ejoInK8vDvqvdfw+Dp9PBk30c39WD4bWTnwLjJPEgeFyRhN/5slP5yhet//IFsBQ8TXzJYPuk3Ski2K6tQRPCds08+ucAy8Dm/ew9AbtKtl0OMUu6zmAHAj4F7MgkbCuTwbUFVSK4bOW2BCwKb0eJbHCRqsbg2g4lgMXhIH6KlRxOniQAnwjG8PbOMLLF+q4GfDU4maUUK12ZZ/toSiRkKgGPhzOjm2Ll9s7uPSPYVdIXARaDk1lKsdK9t4ubZGjZylJwAR4GJ2cb4uBKwNtRInn4qItqwMPglhSmCd4/SQA+GMbw9s7w87JFwM+Bs4kIH7sGLwgHtqxtoSXg8XB2jEJPbGHGkqgMtolWsu0CLAFnco0wQwngMH1hcNgyHVyAh8GFg0ABDoe2ieBKjn4By8GJ4OIV7AX9lYDHwxjeAgYM+GpwQ5YSjH+bWsaHTMCD4GKu0ZjC7CQ/PLgAD4TjRCSbpQSjm95KwKPhOMsoZCm9lSwsAcvAVYlI9ujSkcIAHgZjeAv4bvBfd3l3F8BjYexOgO8Gv4UK4HHw53NW6nM3H/iy/NyUWp6zD1GZtRm4afMFJNtUKd9sp5im63hPFl5ubqm2DSi1XmHSVO+6dpv1CeC1kfIrZCN0+tv4FF6b1MB2WC8P+3sdTIOrvavn7VgtCysSWH5dFfcJ39WqCQ66WgLuLV99Q1IYpldpN8L2YkB3LSjgk8L8Kt4mOPxNBsCnhenvLTTC9BpuwCeGvw4urYWiGnAb3HGSAHwR+HmjTKX65kGXxLyvKeDB8BNzp8fBSpOkXO/NlPHEXLP5OJ+kl6YiZnFYBbedOQU/S+ZgMkfn/4aLwHWzKHaCjXZ1MBuZ/6SiCTYpWOnfdLWq6epoElUApvtBJex3J7oLqevAj5zZ48PbukHuB+Y/6wf4tHCYotK0tSK4ejJcwINhOm3cDH8b1YAHwfFvbTacJGq3E7AgzH8PuZ7+wUkC8CD4eaPM3m842gE9Ka3TTYCHwZhguzf8D2jAI9f2QMngAAAAAElFTkSuQmCC" alt="PATTERN LAUNCH: A3 playing, A4 queued" width="240" height="240"><figcaption>PATTERN LAUNCH: A3 playing, A4 queued</figcaption></figure>
@@ -404,13 +537,13 @@ ol.steps li{margin:6px 0}
 <figure><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwBAMAAADMe/ShAAAAGFBMVEX28u7Nyr3/aRiclYv/ODFaXVIxMCkAAACnAws1AAACZElEQVR42u3bgXWDIBCAYVZwha7gCq7QFbIC6zeCBwfBJH3PiFx+iGio6ddHQI6YOl+k6RPJt5IDtgc7V+z7wuGHkxxNW+FDbTrwsq3Zv6KmdG6EnctwOOoLeznTJzPnKZXb35Dqn8Dl6wMWwXTUH/ZN2FfNLvA7TT3FXzsYLE0sjZua+gVcvEHPO1c3OJ4gZWpWeWmuj8PkDdhreOfK1Q1mdvoi+LwEfB7883M7PQGPDztXH8X9OiMC24LXfWvrD7vbWhPPDHndh5OcVVjAW/4j5PmxcNW5+sJug52CnVn4dlZTV5NEd7gYTtveJnz8JVO6UT1JAFuBCW+vBbNMBf5f+r0nKeNzqS3rgUeFNac3Xco5feH5nsNj2x7rYuWy3B/LfR8OR4d1DnVzXeOXrVi23IR1J5JOdUF4RcKmmlrDShZ4r6kHgstmbTS+qHsN/dipXneubrBvw9VwWhbd3EPDx08S9VbWA48ME94CA9uF0xd68ncVgE3BwunvKfSFZymK8DYHgTbhhyWMBHsHwLud6xpwvUy1D/tPwrmDdYbnOQ8nXw6nQ9zLwWdcMqep0yQBTJQJDAy8OyXo8C5fNnK4Bzw6nP8Tp7X1h/NHxHENI7d7WreA7MA5nNUBX+P2gE34yS0go7B/cgvoHxeQ68L5Y4ijhtPl4Y9PEuVz4PFhwltgYG/6vhOwTfi0QOB9WMIbFeroEMgePDfzQZ+RXxMulioKns3C3/ceyzJ01gu4s4ZTD/i8SQLYLkx4CwwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM/AL+Ax5OdFcBQ5BbAAAAAElFTkSuQmCC" alt="SHIFT + HOME: LOOP SETUP" width="240" height="240"><figcaption>SHIFT + HOME: LOOP SETUP</figcaption></figure>
 <table>
 <tr><th>Where</th><th>What</th></tr>
-<tr><td>SHIFT + ARP: APP SETTINGS</td><td>THEME, KNOB SPEED, AUTO-PREVIEW, AFTERTOUCH, METRO SOUND, MIDI CC, INTRO, MODE LOCK. Global, kept across projects and power cycles. SEL the row, K1 the value, F2 keeps, F1 reverts</td></tr>
+<tr><td>SHIFT + ARP: APP SETTINGS</td><td>THEME, KNOB SPEED, AUTO-PREVIEW, AFTERTOUCH, METRO SOUND, MIDI CC, INTRO, MODE LOCK. Global, kept across projects and power cycles. LANE the row, K1 the value, F2 keeps, F1 reverts</td></tr>
 <tr><td>SHIFT + HOME: LOOP SETUP</td><td>the machine, warp mode, voice mode, KEYBOARD's ADVANCE</td></tr>
 <tr><td>SHIFT + EDIT: project settings</td><td>NAME, GLO BPM, BPM, RETURN MODE</td></tr>
-<tr><td>SHIFT + FX / SEL / ENV</td><td>the FX, filter and amp settings</td></tr>
+<tr><td>SHIFT + FX / FILTER / AMP</td><td>the FX, filter and amp settings</td></tr>
 <tr><td>REC held</td><td>the record settings (in the SAMPLER: the recorder's setup)</td></tr>
 </table>
-<p><strong>Saving.</strong> SHIFT + FILE saves the project to <code>data/elasticat/projects/PROJ-nnn.ecp</code>; a project also saves itself two seconds after the last edit while stopped, and power-on reloads the last one. Open another from BROWSE: B1 up to the top level, PROJECTS/, then B10. SHIFT + B5 memorizes the project to RAM and SHIFT + B4 recalls it, for quick A/B comparisons.</p>
+<p><strong>Saving.</strong> SHIFT + SAMPLES saves the project to <code>data/elasticat/projects/PROJ-nnn.ecp</code>; a project also saves itself two seconds after the last edit while stopped, and power-on reloads the last one. Open another from BROWSE: B1 up to the top level, PROJECTS/, then B10. SHIFT + B5 memorizes the project to RAM and SHIFT + B4 recalls it, for quick A/B comparisons.</p>
 </section>
 
 <section id="ref">
@@ -418,7 +551,7 @@ ol.steps li{margin:6px 0}
 <h3>The header</h3>
 <p>Left: the target (T1 … MST). Middle: the mode and page, or a message, or what a held key will do (shown after a quarter second so a quick tap never flashes it; sticky SHIFT / F1 / F2 show at once). Right: the page number, the selected step (S09), or F1 / F2 while sticky.</p>
 <h3>Hold menus</h3>
-<p>LOOP ENGINE's B1–B5 and FX's B1–B5 open a list while held; SEL or K1 moves the cursor and letting go picks. A quick tap still opens the key's page.</p>
+<p>LOOP ENGINE's B1–B5 and FX's B1–B5 open a list while held; LANE or K1 moves the cursor and letting go picks. A quick tap still opens the key's page.</p>
 <h3>Where things are kept</h3>
 <table>
 <tr><th>Thing</th><th>Where</th></tr>

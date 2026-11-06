@@ -1221,3 +1221,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   keybed (0.6.43). The header asks with the back / OK arrows: OCT- / OCT+ are no / yes in the browsers.
 - Tests: test_file (the root, UP, OCT), test_proj (LOAD through PROJECTS with the question, SAVE +1, NEW), the
   scripts' FILE taps one more (past PROJECTS).
+
+## 39. 0.6.43: PROJECTS' keys, FILE/SAMPLES (owner, 2026-11-05)
+
+- PROJECTS: the white keys do nothing (they edited the track's steps) and are dark. B11 does nothing there either
+  (the owner saw it open the slice editor; not reproduced in the harness or the player: watching).
+- The browser's header is FILE/SAMPLES (it said FILE/BROWSE).
+- The name keybed, RENAME and RANDOM are 0.6.44.

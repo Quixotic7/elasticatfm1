@@ -792,6 +792,7 @@ static void white_down(int k, int i, int vel, int lean)
             ec_pat_white(i);
             return;
         case EC_MODE_SAMPLER: A->key_role[k] = R_SWALLOW; return;   /* (the input's VU) */
+        case EC_MODE_PROJECTS: A->key_role[k] = R_SWALLOW; return;  /* 0.6.43 (owner): the white keys do nothing */
         case EC_CAT_FILE:
             if (ec_file_page() == EC_PIC_EDITOR) { /* the editor: the trim */
                 ec_file_white(i, 1);

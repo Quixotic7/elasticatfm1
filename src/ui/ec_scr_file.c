@@ -49,7 +49,8 @@ void ec_scr_file_browser(const ec_app_t *a, const ec_page_t *pg)
     const int nf = ec_file_next_free();
     char t[32], r[16], buf[64];
     int i;
-    snprintf(t, sizeof t, "%s/%s", ec_cat_tag(EC_CAT_FILE), pg->title ? pg->title : "BROWSE");
+    (void)pg;
+    snprintf(t, sizeof t, "%s/SAMPLES", ec_cat_tag(EC_CAT_FILE));   /* 0.6.43 (owner): FILE's halves: SAMPLES, PROJECTS */
     if (n > 0)
         snprintf(r, sizeof r, "%d/%d", a->cursor + 1, n);
     else

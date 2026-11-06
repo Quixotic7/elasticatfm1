@@ -266,6 +266,11 @@ static void leds_white(void)
             ec_plat_led_lower(i, EC_LED_OFF);
         return;
     }
+    if (mode == EC_MODE_PROJECTS && !A->fn) {      /* 0.6.43: the white keys do nothing there: dark */
+        for (i = 0; i < EC_NLOWER; i++)
+            ec_plat_led_lower(i, EC_LED_OFF);
+        return;
+    }
     if (mode == EC_MODE_SAMPLER && !A->fn) {       /* the input's VU: -48 .. 0 dB, the top four in full */
         const int lit = (int)floorf(ec_sampler_vu() * 16.0f + 0.5f);
         for (i = 0; i < EC_NLOWER; i++)

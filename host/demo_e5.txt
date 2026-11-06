@@ -77,15 +77,21 @@ png 10300:12_f3_rate.png
 turn K2@10350:4
 press OCT-@10400+60
 
-# ---- name the pattern: SEQ held = F3, PRESETS = the name; KN3 = a random name, KN1 / KN2 edit; F2 keeps it
+# ---- name the pattern: SEQ held = F3, PRESETS = the name (0.6.47: FIZZ's keybed, a rolled name selected); K4 rolls
+# another; typing replaces it: E L A S T I C (B5 W1 B1 W8 W9 B9 B3); OCT+ keeps it
 press GLO@10450+500
 press SEQ@10550+60   # (0.6.15: SHIFT + SEQ = the settings; a hold picks a mode)
 turn PRESETS@11000:1
-turn K3@11200:1
+turn K4@11200:1
 png 11300:14_name_random.png
-turn K1@11400:-3
-turn K2@11500:5
-png 11600:15_name_edit.png
+upper 4@11350+30
+lower 0@11400+30
+upper 0@11450+30
+lower 7@11500+30
+lower 8@11550+30
+upper 8@11600+30
+upper 2@11650+30
+png 11700:15_name_edit.png
 press OCT+@11800+60
 png 12000:16_pattern_named.png
 

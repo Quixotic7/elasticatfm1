@@ -372,7 +372,10 @@ static void leds_black(void)
     int i;
     uint8_t l[EC_NBKEY];
     memset(l, EC_LED_OFF, sizeof l);
-    if (A->e5.naming || P->as_open || P->rs_open || UX->f3) {
+    if (A->e5.naming) {                            /* 0.6.47: all eleven lit, the key typed bright a moment */
+        for (i = 0; i < EC_NBKEY; i++)
+            l[i] = A->e5.name_key == i && A->ms - A->e5.name_key_ms < 250u ? EC_LED_LIT : EC_LED_40;
+    } else if (P->as_open || P->rs_open || UX->f3) {
     } else if (A->fn && (mode == EC_CAT_FILE || mode == EC_MODE_SAMPLER)) {
         l[10] = EC_LED_LIT;                                            /* purge */
     } else if (A->fn) {
@@ -583,10 +586,10 @@ static void knob_labels(void)
     char b[12];
     L(EC_LBL_KNOB0 + 7, "VOL");
     if (A->e5.naming) {
-        static const char *const NK[4] = {"POS", "CHAR", "RANDOM", "DEL / SPC"};
-        L(EC_LBL_KNOB0 + EC_E_SELECT, "POS");
-        L(EC_LBL_KNOB0 + EC_E_ALGO, "");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, "");
+        static const char *const NK[4] = {"CHAR", "", "", "ROLL"};   /* 0.6.47 (FIZZ's keybed) */
+        L(EC_LBL_KNOB0 + EC_E_SELECT, "CHAR");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, "CURSOR");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, "ROLL");
         for (k = 0; k < 4; k++)
             L(EC_LBL_KNOB0 + EC_E_K1 + k, NK[k]);
         return;
@@ -732,6 +735,9 @@ static void button_labels(void)
     if (A->e5.confirm) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "NO");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "YES");
+    } else if (A->e5.naming) {                     /* 0.6.47: the keybed */
+        L(EC_LBL_BTN0 + EC_B_OCTDN, A->fn ? "CLEAR" : "DELETE");
+        L(EC_LBL_BTN0 + EC_B_OCTUP, "OK");
     } else if (popup) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "BACK");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "OK");
@@ -779,7 +785,10 @@ static void white_labels(void)
     char b[12];
     for (i = 0; i < EC_NLOWER; i++) {
         b[0] = 0;
-        if (A->e5.naming || P->as_open || P->rs_open)
+        if (A->e5.naming)                          /* 0.6.47: the keybed's letters */
+            snprintf(b, sizeof b, "%s", ec_e5_name_key_char(0, i, A->fn)[0] == ' ' ? "SPACE"
+                                       : ec_e5_name_key_char(0, i, A->fn));
+        else if (P->as_open || P->rs_open)
             ;
         else if (mode == EC_MODE_SAMPLER && !A->fn)
             snprintf(b, sizeof b, "%ddB", -48 + 3 * (i + 1));   /* (the VU's scale) */
@@ -856,7 +865,9 @@ static void black_labels(void)
     for (i = 0; i < EC_NBKEY; i++) {
         const char *s = "";
         b[0] = 0;
-        if (A->e5.naming || P->as_open || P->rs_open || UX->f3)
+        if (A->e5.naming)                          /* 0.6.47: the keybed's letters */
+            s = ec_e5_name_key_char(1, i, A->fn);
+        else if (P->as_open || P->rs_open || UX->f3)
             ;
         else if (A->fn && (mode == EC_CAT_FILE || mode == EC_MODE_SAMPLER))
             s = i == 10 ? "PURGE" : "";

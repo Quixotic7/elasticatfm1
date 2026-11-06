@@ -53,6 +53,8 @@ int ec_pf_list_find(const char *name);           /* its row, -1 */
 void ec_pf_save_as(const char *name, const char *done);   /* SAVE +1 / over another: the project written as that file,
                                                              * now its own; done: the header's message */
 void ec_pf_name_plus(const char *base, char *out);   /* "NAME 2", "NAME 3" ..: the first one not in the list */
+void ec_pf_rename(const char *old, const char *nw);   /* 0.6.47: old NULL / "": the open project */
+void ec_pf_unique(const char *base, char *out);      /* 0.6.47: base, or base + the next free number */
 void ec_pf_delete(const char *name);           /* 0.6.45: the file and its hidden copy */
 void ec_pf_new(void);                           /* a new project (saved first: the current one's edits) */
 int ec_pf_busy_new(void);                       /* 0.6.46: a NEW still landing (its sample, its file) */

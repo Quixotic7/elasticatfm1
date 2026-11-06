@@ -233,8 +233,20 @@ Inside one: **F1 = back / cancel, F2 = OK / yes, HOME closes**. F1 is lit and F2
 
 ### Naming
 
-F3 + PRESETS names the pattern; the project settings' NAME (hold EDIT) names the project. K1 / SEL the place, K2 the
-character, K3 a random name, K4 left = delete, right = insert a space. **F2 keeps it**, F1 or HOME cancels.
+F3 + PRESETS names the pattern; the project settings' NAME (hold EDIT) names the project (its file follows);
+PROJECTS' B2 renames a project file. 0.6.47 (owner): **FIZZ's typewriter keybed** for all of them:
+
+- **B1..B11 type A..K, W1..W16 type L..Z and SPACE**; the screen draws the keybed with a letter on every key (the key
+  typed glows) and every key is lit. **SHIFT held**: the black keys 0..9 and -, the white keys . ' & ! # + ( ) _ ~ ,
+  = @ $ % and SPACE (only characters a file name can hold). 16 characters.
+- **The suggested name starts selected** (a cream band): OK keeps it, **the first key typed replaces it**.
+- **PRESETS (or K4) right rolls a new name every detent** (namesizer pairs mostly, now and then a phonic or cosmic word:
+  FIZZ's roller), the die beside it; **left walks back** through the last ten names (the dots under the name);
+  right then goes forward through them before rolling new ones. A name you typed or edited is kept among them.
+- **ALGO** moves the cursor (typing inserts there); **SEL / K1** turns the character under it (at the end: one more).
+- **OCT-** deletes the character before the cursor (a selected name: all of it; an empty name: cancel);
+  **SHIFT + OCT-** clears. **OCT+ (or FILE) = OK**, **HOME** cancels.
+- A project or file name taken by another file gets the next free number.
 
 ## Copy / cut / paste (F1 / F2 on)
 
@@ -1302,7 +1314,8 @@ OK, F1 back, HOME closes.
 | B9 | **SAVE AS** (+1): the current project saved as a new file, its name plus the next free number (PROJ-001 2), which is now the project; the old file stays; 0.6.45: the cursor goes to the copy, the header says SAVED +1 |
 | B1 | **NEW**: asks (NEW PROJECT?); yes: the edits saved, an empty project (the folder's first file on T1) under the next free name; it stays in PROJECTS |
 | B6 | 0.6.45 (0.6.46: B6): **DELETE** the project under the cursor: asked (DELETE X?, GONE FOR GOOD); the open project deleted stays open, unsaved (EDITED; its next save makes a new file) |
-| B2 / B3 | RENAME / a RANDOM name (0.6.47) |
+| B2 | 0.6.47: **RENAME** the project under the cursor: the name keybed (above, Naming); OK renames its file (the open project: saved under the new name, the old file deleted) |
+| B3 | 0.6.47: **RANDOM**: the project under the cursor renamed at once with a rolled name |
 
   The top line: the project you work on and EDITED / SAVED. The lower half: the project under the cursor, its name
   big, its 64 patterns as blocks (written cream, the one it opens on in the accent), its tempo and samples.

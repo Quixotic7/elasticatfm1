@@ -78,6 +78,10 @@ void ec_clip_paste_slice(const ec_clip_slice_t *c, ec_slicemap_t *m, int slice);
 /* ---- names ---- */
 #define EC_NAME_CHARS " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.!#+&"
 void ec_e5_random_name(char *out, int cap, uint32_t *rng);   /* namesizer: "descriptor thing" (<= 16) */
+/* 0.6.47: FIZZ's roller (a namesizer pair, a phonic word, a cosmic word), 16 characters, upper case; not avoid */
+void ec_name_phonic(char *out, int cap, uint32_t *rng);
+void ec_name_word(char *out, int cap, uint32_t *rng);
+void ec_name_roll(char *out, int cap, uint32_t *rng, const char *avoid);
 
 /* ---- quick undo (lib/undo.lua): gesture-coalesced, 16 deep ---- */
 enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1: several params at once */,

@@ -197,14 +197,43 @@ void ec_prj_oct(int up)
         ec_pn_enter(EC_CAT_FILE);                  /* back: SAMPLES */
 }
 
-/* 0.6.47: the name keybed; until then a message */
+/* 0.6.47 (owner): B2 RENAME: the name keybed on the project under the cursor */
 void ec_prj_rename(const char *name)
 {
-    (void)name;
-    ec_app_message("RENAME: SOON");
+    if (!name || !name[0]) {
+        ec_app_message("NO PROJECT");
+        return;
+    }
+    ec_e5_name_file(name);
 }
+
+/* the keybed's OK: old (NULL: the open project) takes the name; a name another file has gets the next free number */
+void ec_prj_named(const char *old, const char *nw)
+{
+    const char *from = old ? old : ec_pf_name();
+    char n[EC_PF_NAME];
+    if (from[0] && !strcmp(from, nw)) {
+        ec_app_message("SAME NAME");
+        return;
+    }
+    ec_pf_unique(nw, n);
+    if (!old || !strcmp(old, ec_pf_name()))
+        snprintf(A->proj.e5.name, sizeof A->proj.e5.name, "%.*s", EC_NAME - 1, n);
+    ec_pf_rename(from, n);
+    snprintf(g.want, sizeof g.want, "%s", n);      /* (the cursor follows it) */
+    g.want_gen = 0;
+}
+
+/* B3 RANDOM: the project under the cursor gets a rolled name at once */
 void ec_prj_random(const char *name)
 {
-    (void)name;
-    ec_app_message("RANDOM: SOON");
+    static uint32_t rng;
+    char b[EC_NAME];
+    if (!name || !name[0]) {
+        ec_app_message("NO PROJECT");
+        return;
+    }
+    rng ^= A->ms * 2654435761u + 0x7f4a7c15u;
+    ec_name_roll(b, sizeof b, &rng, name);
+    ec_prj_named(name, b);
 }

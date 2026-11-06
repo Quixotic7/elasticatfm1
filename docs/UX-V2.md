@@ -1227,7 +1227,7 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - PROJECTS: the white keys do nothing (they edited the track's steps) and are dark. B11 does nothing there either
   (the owner saw it open the slice editor; not reproduced in the harness or the player: watching).
 - The browser's header is FILE/SAMPLES (it said FILE/BROWSE).
-- The name keybed, RENAME and RANDOM are 0.6.47.
+- The name keybed, RENAME and RANDOM: 0.6.47 (section 43).
 
 ## 40. 0.6.44: SAMPLES' OCT+ and B11 toggle the pool, B11 held previews (owner, 2026-11-05)
 
@@ -1255,3 +1255,17 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - **The user drives mode changes**: a load (and NEW) stays in FILE/PROJECTS; it no longer jumps to LOOP ENGINE.
 - Loading (and NEW): a pop-up over the card, the dancing cat (MIX's CAT sprite, alone) at 10 fps, at least 1.2 s
   and as long as the load lasts; the header LOADING, then NAME LOADED.
+
+## 43. 0.6.47: FIZZ's name keybed, RENAME, RANDOM, files named after their projects (owner, 2026-11-05)
+
+- Every name (a pattern's, the project's, a project file's) is typed on FIZZ's typewriter keybed: B1..B11 A..K,
+  W1..W16 L..Z and SPACE, SHIFT the digits and file-safe signs; the suggested name selected (the first key replaces
+  it); PRESETS / K4 right rolls (FIZZ's roller ported: namesizer pairs, phonic and cosmic words), left walks back
+  through the last ten; ALGO the cursor, SEL / K1 the character; OCT- delete (empty: cancel), SHIFT + OCT- clear,
+  OCT+ / FILE OK, HOME cancel. The keybed on screen (two rows, as the FM-1's), the typed key glowing, all keys lit.
+- PROJECTS: B2 RENAME (the keybed on the project under the cursor; OK renames its file: the open project is saved
+  under the new name and the old file deleted, another one copied and the old deleted), B3 RANDOM (renamed at once).
+- Files are their projects' names: a project's first save (and NEW) takes its name, else a rolled one; a name another
+  file has gets the next free number (only a trailing " N" counts as a number: PROJ-001 -> PROJ-001 2).
+- Tests: test_proj's keybed (typing, OCT-, rename, roll back, RANDOM), names (rolled, a taken name numbered), the
+  e5 demo types its pattern name (ELASTIC).

@@ -92,6 +92,8 @@ void ec_e5_tick(void)
 {
     if (E->preview && A->seq.playing)
         preview_stop();                          /* the transport owns playback now */
+    if (E->naming && E->name_key >= 0 && A->ms - E->name_key_ms < 400u)
+        A->redraw = 1;                           /* 0.6.47: the typed key's glow fades */
 }
 
 /* ------------------------------------------------------------------------------------------- undo --- */
@@ -226,43 +228,179 @@ void ec_e5_recall_memo(void)
 }
 
 /* ------------------------------------------------------------------------------------------- naming --- */
-static void name_open(int kind, int pat)
+/* 0.6.47 (owner): FIZZ's typewriter keybed for every name (a pattern's, the project's, a project file's): B1..B11 =
+ * A..K, W1..W16 = L..Z and SPACE (SHIFT: 0..9 and -, the signs); the suggested name starts selected, the first key
+ * replaces it; PRESETS / K4 right rolls a new name every detent (FIZZ's roller), left walks back through the last ten;
+ * ALGO the cursor, SEL / K1 the character under it; OCT- deletes (a selected name: all of it; an empty one: cancel),
+ * SHIFT + OCT- clears; OCT+ (or FILE) OK, HOME cancels. Only file-safe characters (no / : * ? " < > | \) */
+static const char *const NK_BLACK = "ABCDEFGHIJK", *const NK_BLACK_SH = "0123456789-";
+static const char *const NK_WHITE = "LMNOPQRSTUVWXYZ ", *const NK_WHITE_SH = ".'&!#+()_~,=@$% ";
+
+const char *ec_e5_name_key_char(int upper, int i, int shift)
 {
-    const char *src = kind == EC_NM_PROJECT ? A->proj.e5.name : A->proj.pe5[pat].name;
-    int n;
+    static char b[2];
+    const char *set = upper ? (shift ? NK_BLACK_SH : NK_BLACK) : (shift ? NK_WHITE_SH : NK_WHITE);
+    b[0] = i >= 0 && i < (int)strlen(set) ? set[i] : 0;
+    b[1] = 0;
+    return b;
+}
+
+static void hist_push(const char *n)
+{
+    int k;
+    if (!n[0] || (E->name_nh && !strcmp(E->name_hist[E->name_nh - 1], n)))
+        return;
+    if (E->name_nh == 10) {
+        for (k = 1; k < 10; k++)
+            memcpy(E->name_hist[k - 1], E->name_hist[k], EC_NAME);
+        E->name_nh--;
+    }
+    snprintf(E->name_hist[E->name_nh++], EC_NAME, "%s", n);
+    E->name_hp = E->name_nh - 1;
+}
+
+static void name_set(const char *n, int sel)
+{
+    snprintf(E->name, sizeof E->name, "%s", n);
+    E->name_cur = (int)strlen(E->name);
+    E->name_sel = sel;
+    A->redraw = 1;
+}
+
+static void name_open_with(int kind, int pat, const char *src)
+{
     E->naming = kind;
     E->name_pat = pat;
-    memset(E->name, ' ', EC_NAME - 1);
-    E->name[EC_NAME - 1] = 0;
-    n = (int)strlen(src);
-    memcpy(E->name, src, (size_t)(n > EC_NAME - 1 ? EC_NAME - 1 : n));
-    E->name_cur = clampi(n, 0, EC_NAME - 2);
+    E->name_nh = E->name_hp = 0;
+    E->name_rolled = 0;
+    E->name_key = -1;
+    E->rng ^= A->ms * 2654435761u + 0x5bd1e995u;
     A->ux.f3 = 0;                                /* (F3 + PRESETS: the name screen replaces F3) */
-    E->rng ^= A->ms * 2654435761u;
-    A->redraw = 1;
+    if (src && src[0])
+        name_set(src, 1);
+    else {                                       /* no name yet: a suggestion */
+        char b[EC_NAME];
+        ec_name_roll(b, sizeof b, &E->rng, 0);
+        name_set(b, 1);
+        E->name_rolled = 1;
+    }
+    hist_push(E->name);
+}
+
+static void name_open(int kind, int pat)
+{
+    name_open_with(kind, pat, kind == EC_NM_PROJECT ? A->proj.e5.name : A->proj.pe5[pat].name);
 }
 
 void ec_e5_name_pattern(void) { name_open(EC_NM_PATTERN, A->proj.current); }
 
+void ec_e5_name_file(const char *file)
+{
+    snprintf(E->name_file, sizeof E->name_file, "%s", file ? file : "");
+    name_open_with(EC_NM_FILE, 0, file);
+}
+
 void ec_e5_name_close(int accept)
 {
+    const int kind = E->naming;
     if (accept) {
         char b[EC_NAME];
-        int n = EC_NAME - 1;
-        memcpy(b, E->name, sizeof b);
+        int n, st = 0;
+        snprintf(b, sizeof b, "%s", E->name);
+        while (b[st] == ' ')
+            st++;
+        memmove(b, b + st, strlen(b + st) + 1);
+        n = (int)strlen(b);
         while (n > 0 && b[n - 1] == ' ')
-            n--;
-        b[n] = 0;
-        if (E->naming == EC_NM_PROJECT)
-            memcpy(A->proj.e5.name, b, sizeof b);
-        else
+            b[--n] = 0;
+        E->naming = EC_NM_NONE;
+        if (kind == EC_NM_PATTERN) {
             memcpy(A->proj.pe5[E->name_pat].name, b, sizeof b);
-        toast(n ? "NAMED" : "NAME CLEARED");
-        dirty();
-    } else
+            toast(n ? "NAMED" : "NAME CLEARED");
+            dirty();
+        } else if (!n)
+            msg("NO NAME: KEPT");                /* (a project or file needs one) */
+        else if (kind == EC_NM_PROJECT)
+            ec_prj_named(0, b);                  /* the open project (its file follows) */
+        else
+            ec_prj_named(E->name_file, b);
+    } else {
+        E->naming = EC_NM_NONE;
         msg("CANCELLED");
-    E->naming = EC_NM_NONE;
+    }
     A->redraw = 1;
+}
+
+static void name_type(const char *c)
+{
+    int n;
+    if (!c[0])
+        return;
+    if (E->name_sel) {                           /* the first key replaces the selected name */
+        E->name[0] = 0;
+        E->name_cur = 0;
+        E->name_sel = 0;
+    }
+    n = (int)strlen(E->name);
+    if (n >= EC_NAME - 1) {
+        msg("16 CHARACTERS");
+        return;
+    }
+    memmove(E->name + E->name_cur + 1, E->name + E->name_cur, (size_t)(n - E->name_cur + 1));
+    E->name[E->name_cur++] = c[0];
+    E->name_rolled = 0;
+    A->redraw = 1;
+}
+
+void ec_e5_name_back(int clear)
+{
+    const int n = (int)strlen(E->name);
+    if (clear || E->name_sel) {
+        if (!n && !clear) {
+            ec_e5_name_close(0);
+            return;
+        }
+        E->name[0] = 0;
+        E->name_cur = 0;
+        E->name_sel = 0;
+        E->name_rolled = 0;
+        A->redraw = 1;
+        return;
+    }
+    if (!n) {                                    /* an empty name: OCT- is no */
+        ec_e5_name_close(0);
+        return;
+    }
+    if (E->name_cur > 0) {
+        memmove(E->name + E->name_cur - 1, E->name + E->name_cur, (size_t)(n - E->name_cur + 1));
+        E->name_cur--;
+    }
+    E->name_rolled = 0;
+    A->redraw = 1;
+}
+
+static void name_roll(int det)
+{
+    if (det > 0) {
+        if (!E->name_sel)                        /* a name typed or edited is kept among them */
+            hist_push(E->name);
+        for (; det > 0; det--) {
+            if (E->name_hp < E->name_nh - 1)
+                E->name_hp++;                    /* forward through the ones seen first */
+            else {
+                char b[EC_NAME];
+                ec_name_roll(b, sizeof b, &E->rng, E->name);
+                hist_push(b);
+                E->name_rolled = 1;
+            }
+        }
+    } else {
+        if (!E->name_sel)
+            hist_push(E->name);
+        E->name_hp = E->name_hp + det < 0 ? 0 : E->name_hp + det;
+        E->name_rolled = 0;
+    }
+    name_set(E->name_hist[E->name_hp], 1);
 }
 
 static int char_index(char c)
@@ -277,45 +415,40 @@ static int char_index(char c)
 
 static void name_knob(int role, int det)
 {
-    const int n = (int)strlen(EC_NAME_CHARS), last = EC_NAME - 2;
-    int k;
+    const int n = (int)strlen(E->name), ns = (int)strlen(EC_NAME_CHARS);
     switch (role) {
-    case EC_E_SELECT:
-    case EC_E_K1: E->name_cur = clampi(E->name_cur + det, 0, last); break;
-    case EC_E_K2: {
-        const int c = char_index(E->name[E->name_cur]);
-        E->name[E->name_cur] = EC_NAME_CHARS[((c + det) % n + n) % n];
-    } break;
-    case EC_E_K3: {
-        char b[EC_NAME];
-        int len;
-        ec_e5_random_name(b, sizeof b, &E->rng);
-        memset(E->name, ' ', EC_NAME - 1);
-        len = (int)strlen(b);
-        memcpy(E->name, b, (size_t)len);
-        E->name_cur = clampi(len, 0, last);
-    } break;
-    case EC_E_K4:
-        if (det < 0) {                           /* backspace */
-            for (; det < 0; det++) {
-                const int at = E->name_cur > 0 ? E->name_cur - 1 : 0;
-                for (k = at; k < EC_NAME - 2; k++)
-                    E->name[k] = E->name[k + 1];
-                E->name[EC_NAME - 2] = ' ';
-                if (E->name_cur > 0)
-                    E->name_cur--;
-            }
-        } else {                                 /* insert a space */
-            for (; det > 0; det--) {
-                for (k = EC_NAME - 2; k > E->name_cur; k--)
-                    E->name[k] = E->name[k - 1];
-                E->name[E->name_cur] = ' ';
-            }
-        }
+    case EC_E_ALGO:                              /* the cursor */
+        E->name_sel = 0;
+        E->name_cur = clampi(E->name_cur + det, 0, n);
         break;
+    case EC_E_SELECT:
+    case EC_E_K1: {                              /* the character under the cursor (at the end: one more) */
+        int c;
+        E->name_sel = 0;
+        if (E->name_cur >= n) {
+            if (n >= EC_NAME - 1)
+                break;
+            E->name[n] = ' ';
+            E->name[n + 1] = 0;
+        }
+        c = char_index(E->name[E->name_cur]);
+        E->name[E->name_cur] = EC_NAME_CHARS[((c + det) % ns + ns) % ns];
+        E->name_rolled = 0;
+    } break;
+    case EC_E_PRESETS:
+    case EC_E_K4: name_roll(det); break;
     default: break;
     }
     A->redraw = 1;
+}
+
+static void name_key(int upper, int i)
+{
+    name_type(ec_e5_name_key_char(upper, i, A->fn));
+    E->name_key = upper ? i : 11 + i;
+    E->name_key_ms = A->ms ? A->ms : 1;
+    if (A->fn)
+        A->ux.shift_used = 1;                    /* (SHIFT is only the second set while typing) */
 }
 
 /* 0.3.0: the open question's answer (F2 yes; F1, HOME, any other button no). 0.6.0 asks none: kept for the pop-up */
@@ -331,8 +464,8 @@ void ec_e5_answer(int yes)
 
 int ec_e5_upper(int i, int down)
 {
-    (void)i;
-    (void)down;
+    if (E->naming && down)
+        name_key(1, i);                          /* 0.6.47: B1..B11 type */
     return E->naming != 0;
 }
 
@@ -374,9 +507,9 @@ int ec_e5_lower_down(int k, int i, int vel)
     (void)vel;
     if (E->naming) {
         A->key_role[k] = R5_SWALLOW;
+        name_key(0, i);                          /* 0.6.47: W1..W16 type */
         return 1;
     }
-    (void)i;
     return 0;
 }
 
@@ -652,8 +785,8 @@ int ec_e5_leds_lower(void)
 {
     int i;
     if (E->naming) {
-        for (i = 0; i < EC_NLOWER; i++)
-            ec_plat_led_lower(i, i == E->name_cur ? EC_LED_MID : EC_LED_OFF);
+        for (i = 0; i < EC_NLOWER; i++)          /* 0.6.47: all sixteen lit, the key typed bright a moment */
+            ec_plat_led_lower(i, E->name_key == 11 + i && A->ms - E->name_key_ms < 250u ? EC_LED_LIT : EC_LED_40);
         return 1;
     }
     if (ec_e5_page_visible()) {

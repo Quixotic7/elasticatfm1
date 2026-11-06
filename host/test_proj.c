@@ -20,6 +20,7 @@
 #include "ec_projfile.h"
 
 static const char *root;
+static char g_first[64] = "PROJ-001";   /* 0.6.47: the first project's file (a rolled name since 0.6.47) */
 static uint8_t img[EC_PLAT_FLASH_SIZE];
 
 static uint8_t *read_file(const char *name, int hidden, uint32_t *n)
@@ -156,18 +157,19 @@ static void test_save_reboot(void)
     const int saves = A->saves;
     edit(133, 4);
     ticks = timed_save(&saving_all);
+    snprintf(g_first, sizeof g_first, "%s", ec_pf_name());   /* 0.6.47: its name (the boot's autosave rolled it) */
     CHECK(saving_all && ticks >= 3, "SHIFT + SAVE: SAVING in the header until it landed (%d ticks)", ticks);
-    CHECK(A->saves == saves + 1 && !strcmp(A->msg, "SAVED") && !strcmp(ec_pf_name(), "PROJ-001"),
+    CHECK(A->saves == saves + 1 && !strcmp(A->msg, "SAVED") && !strcmp(ec_pf_name(), g_first),
           "it landed: SAVED, the name PROJ-001 (%s, %s)", A->msg, ec_pf_name());
-    d = read_file("PROJ-001", 0, &n);
+    d = read_file(g_first, 0, &n);
     pk = ec_pf_pack(&pn);
     CHECK(d && n == pn && !memcmp(d, pk, n) && ec_project_check(d, n) == (int32_t)n,
           "/data/projects/PROJ-001.ecp = the packed record (%u bytes)", n);
-    CHECK(!file_exists("PROJ-001", 1), "the hidden copy deleted");
+    CHECK(!file_exists(g_first, 1), "the hidden copy deleted");
     CHECK(flash_magic(ECLP), "the flash holds the name record");
     free(d);
     reboot();
-    CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm == 133 &&
+    CHECK(!strcmp(ec_pf_name(), g_first) && (int)A->proj.bpm == 133 &&
               A->proj.pat[A->proj.current].tr[0].steps[4].trig,
           "reboot: PROJ-001 loaded by its name (bpm %g)", A->proj.bpm);
     for (i = 0; i < 100 && A->slot[0].state != EC_SL_READY; i++)
@@ -176,7 +178,9 @@ static void test_save_reboot(void)
     {
         char b[4096];
         C->ui_info(b, sizeof b);
-        CHECK(strstr(b, "pfile:PROJ-001 psave:0 pload:0") != NULL, "ui_info pfile:PROJ-001");
+        char want[96];
+        snprintf(want, sizeof want, "pfile:%s psave:0 pload:0", g_first);
+        CHECK(strstr(b, want) != NULL, "ui_info %s", want);
     }
 }
 
@@ -221,7 +225,7 @@ static void test_big(void)
           A->msg);
     CHECK(A->seq.playing && out_peak(f0, frames) > 1000 && out_peak(frames - 44100 / 50, frames) > 100,
           "the audio kept running while it saved (peak %d over %d ms)", out_peak(f0, frames), ticks);
-    d = read_file("PROJ-001", 0, &n);
+    d = read_file(g_first, 0, &n);
     CHECK(d && n == pn && !memcmp(d, pk, n), "PROJ-001.ecp = the pack, byte for byte (%u)", n);
     free(d);
     keep = malloc(pn);
@@ -237,7 +241,7 @@ static void test_big(void)
 static void test_failed_write(void)
 {
     uint32_t n, n1, rn;
-    uint8_t *old = read_file("PROJ-001", 0, &n1), *d;
+    uint8_t *old = read_file(g_first, 0, &n1), *d;
     const int chunks = (int)((n1 + EC_PF_CHUNK - 1) / EC_PF_CHUNK);   /* (the hidden copy's write requests) */
     /* 1. ENOSPC in the middle of the hidden copy: PROJ-001.ecp untouched */
     const int saves = A->saves;
@@ -247,11 +251,11 @@ static void test_failed_write(void)
     until_saved();
     CHECK(A->msg_alert && !strcmp(A->msg, "NOT SAVED: DISK FULL") && A->saves == saves,
           "ENOSPC mid-write: the error in ALERT (%s)", A->msg);
-    d = read_file("PROJ-001", 0, &n);
+    d = read_file(g_first, 0, &n);
     CHECK(d && old && n == n1 && !memcmp(d, old, n), "PROJ-001.ecp is the old file, intact");
     free(d);
     reboot();
-    CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm != 97 && !ec_pf_from_tmp(),
+    CHECK(!strcmp(ec_pf_name(), g_first) && (int)A->proj.bpm != 97 && !ec_pf_from_tmp(),
           "reboot: the old project loads (bpm %g)", A->proj.bpm);
     /* 2. EIO in the middle of PROJ-001.ecp itself (after the whole hidden copy): the hidden copy loads */
     edit(97, 6);
@@ -259,19 +263,19 @@ static void test_failed_write(void)
     shift_save();
     until_saved();
     CHECK(A->msg_alert && !strcmp(A->msg, "NOT SAVED: IO ERROR"), "EIO mid-write: the error in ALERT (%s)", A->msg);
-    d = read_file("PROJ-001", 0, &n);
+    d = read_file(g_first, 0, &n);
     CHECK(d && ec_project_check(d, n) < 0, "PROJ-001.ecp is broken (%u bytes)", n);
     free(d);
-    CHECK(file_exists("PROJ-001", 1), "the hidden copy is there");
+    CHECK(file_exists(g_first, 1), "the hidden copy is there");
     reboot();
-    CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm == 97 && ec_pf_from_tmp(),
+    CHECK(!strcmp(ec_pf_name(), g_first) && (int)A->proj.bpm == 97 && ec_pf_from_tmp(),
           "reboot: the hidden copy loads (bpm %g)", A->proj.bpm);
     /* 3. the next save writes PROJ-001.ecp first (the hidden copy stays whole until it lands) */
     ec_app_mark_dirty();
     shift_save();
     until_saved();
-    d = read_file("PROJ-001", 0, &n);
-    CHECK(!A->msg_alert && d && ec_project_check(d, n) == (int32_t)n && !file_exists("PROJ-001", 1),
+    d = read_file(g_first, 0, &n);
+    CHECK(!A->msg_alert && d && ec_project_check(d, n) == (int32_t)n && !file_exists(g_first, 1),
           "the next save repairs PROJ-001.ecp, the hidden copy deleted (%s)", A->msg);
     free(d);
     reboot();
@@ -299,8 +303,8 @@ static void test_old_flash(int v1)
     shift_save();
     until_saved();
     snprintf(want, sizeof want, "%s", ec_pf_name());
-    CHECK(!strncmp(want, "PROJ-", 5) && file_exists(want, 0) && flash_magic(ECLP),
-          "the next save makes the file %s; the flash keeps only the name", want);
+    CHECK(want[0] && file_exists(want, 0) && flash_magic(ECLP),
+          "the next save makes the file %s (0.6.47: its name, else a rolled one); the flash keeps only the name", want);
     reboot();
     CHECK(!strcmp(ec_pf_name(), want) && (int)A->proj.bpm == (v1 ? 88 : 111), "reboot: %s loads from its file",
           ec_pf_name());
@@ -336,23 +340,23 @@ static void test_browser_load(void)
     for (i = 0; i < 100 && ec_pf_list_busy(); i++)
         run(5);
     run(20);
-    CHECK(mode() == EC_MODE_PROJECTS && ec_pf_list_find("PROJ-001") >= 0 && ec_pf_list_find(other) >= 0,
+    CHECK(mode() == EC_MODE_PROJECTS && ec_pf_list_find(g_first) >= 0 && ec_pf_list_find(other) >= 0,
           "FILE, FILE: PROJECTS lists the project files (mode %d, %d: %s ..)", mode(), ec_pf_list_count(),
           ec_pf_list_name(0));
     turn(FM1P_E_SELECT, -40);
-    for (i = 0; i < 40 && strcmp(ec_pf_list_name(ec_prj_cursor()), "PROJ-001"); i++)
+    for (i = 0; i < 40 && strcmp(ec_pf_list_name(ec_prj_cursor()), g_first); i++)
         turn(FM1P_E_SELECT, 1);
     press(FM1P_B_OCTUP, 40);                       /* OCT+ = LOAD: edits not saved, so it asks */
-    CHECK(ec_prj_ask() == EC_PRJ_ASK_LOAD && !strcmp(ec_prj_target(), "PROJ-001"), "OCT+: LOAD PROJ-001? (%d %s)",
+    CHECK(ec_prj_ask() == EC_PRJ_ASK_LOAD && !strcmp(ec_prj_target(), g_first), "OCT+: LOAD PROJ-001? (%d %s)",
           ec_prj_ask(), ec_prj_target());
     press(FM1P_B_OCTUP, 40);                       /* yes */
-    for (i = 0; i < 500 && (ec_pf_saving() || ec_pf_loading() || strcmp(ec_pf_name(), "PROJ-001")); i++)
+    for (i = 0; i < 500 && (ec_pf_saving() || ec_pf_loading() || strcmp(ec_pf_name(), g_first)); i++)
         run(5);
     run(50);
-    CHECK(!strcmp(ec_pf_name(), "PROJ-001") && (int)A->proj.bpm == 97 && mode() == EC_MODE_PROJECTS,
+    CHECK(!strcmp(ec_pf_name(), g_first) && (int)A->proj.bpm == 97 && mode() == EC_MODE_PROJECTS,
           "OCT+ yes: PROJ-001 open (bpm %g), still PROJECTS (0.6.46: mode %d)", A->proj.bpm, mode());
     reboot();
-    CHECK(!strcmp(ec_pf_name(), "PROJ-001"), "the flash now names PROJ-001 (%s)", ec_pf_name());
+    CHECK(!strcmp(ec_pf_name(), g_first), "the flash now names PROJ-001 (%s)", ec_pf_name());
     {
         uint32_t n;
         uint8_t *d = read_file(other, 0, &n);
@@ -365,25 +369,37 @@ static void test_browser_load(void)
 }
 
 /* ------------------------------------------------------------------------------------------- names --- */
+/* 0.6.47 (owner): a file is its project's name; a name taken gets the next free number; no name: a rolled one */
 static void test_next_free(void)
 {
-    uint32_t n;
-    uint8_t *d = read_file("PROJ-001", 0, &n);
     char m[EC_PF_NAME];
-    write_file("PROJ-004", d, n);                  /* PROJ-001, 002, 004: 003 is the gap */
-    free(d);
-    if (file_exists("PROJ-003", 0)) {
-        char p[1024];
-        snprintf(p, sizeof p, "%s/data/elasticat/projects/PROJ-003.ecp", root);
-        remove(p);
-    }
-    CHECK(file_exists("PROJ-002", 0), "PROJ-002 exists");
+    CHECK(file_exists(g_first, 0), "PROJ-001 exists");
     fresh_boot();
     edit(120, 2);
     shift_save();
     until_saved();
+    {   /* the open project renamed to a name another file has: the next free number; its old file gone */
+        char plus[EC_PF_NAME], was[EC_PF_NAME];
+        int i;
+        snprintf(was, sizeof was, "%s", ec_pf_name());
+        ec_pf_list_refresh();
+        for (i = 0; i < 100 && ec_pf_list_busy(); i++)
+            run(5);
+        ec_pf_name_plus(g_first, plus);
+        ec_prj_named(0, g_first);
+        for (i = 0; i < 400 && (ec_pf_saving() || file_exists(was, 0)); i++)
+            run(5);
+        snprintf(m, sizeof m, "%s", ec_pf_name());
+        CHECK(!strcmp(m, plus) && file_exists(plus, 0) && !file_exists(was, 0) && !strcmp(A->proj.e5.name, plus),
+              "renamed to a taken name: the next free number (%s, %s), %s gone", m, plus, was);
+    }
+    fresh_boot();
+    edit(121, 3);
+    shift_save();
+    until_saved();
     snprintf(m, sizeof m, "%s", ec_pf_name());
-    CHECK(!strcmp(m, "PROJ-003") && file_exists("PROJ-003", 0), "a new project: the lowest free name (%s)", m);
+    CHECK(m[0] && strncmp(m, "PROJ", 4) && file_exists(m, 0) && !strcmp(A->proj.e5.name, m),
+          "no name: a rolled one, the project's name too (%s)", m);
 }
 
 /* ------------------------------------------------------------------------------------------- the largest --- */
@@ -497,6 +513,56 @@ static void test_changed_elsewhere(void)
     shift_save();
     until_saved();
     CHECK(!strcmp(ec_pf_name(), name2) && !strcmp(A->msg, "SAVED"), "the next save is plain (%s)", A->msg);
+}
+
+/* 0.6.47 (owner): FIZZ's keybed: B2 RENAME types a name (B1 A .. W1 L ..), OCT- deletes, OCT+ renames the file;
+ * PRESETS rolls forward and back; B3 RANDOM renames at once */
+static void wait_files(void)
+{
+    int i;
+    for (i = 0; i < 400 && (ec_pf_saving() || ec_pf_list_busy()); i++)
+        run(5);
+    run(40);
+    for (i = 0; i < 100 && ec_pf_list_busy(); i++)
+        run(5);
+}
+static void test_keybed(void)
+{
+    char was[EC_PF_NAME], r1[EC_NAME], r2[EC_NAME];
+    wait_files();
+    ec_pn_enter(EC_MODE_PROJECTS);
+    ec_pf_list_refresh();
+    wait_files();
+    snprintf(was, sizeof was, "%s", ec_pf_list_name(ec_prj_cursor()));
+    B(2, 40);                                      /* RENAME */
+    CHECK(A->e5.naming == EC_NM_FILE && A->e5.name_sel && !strcmp(A->e5.name, was),
+          "B2: the keybed on %s, its name selected (%s)", was, A->e5.name);
+    turn(FM1P_E_PRESETS, 1);
+    snprintf(r1, sizeof r1, "%s", A->e5.name);
+    turn(FM1P_E_PRESETS, 1);
+    snprintf(r2, sizeof r2, "%s", A->e5.name);
+    turn(FM1P_E_PRESETS, -1);
+    CHECK(strcmp(r1, was) && strcmp(r2, r1) && !strcmp(A->e5.name, r1) && A->e5.name_sel,
+          "PRESETS: two names rolled (%s, %s), back one: %s", r1, r2, A->e5.name);
+    W(1, 40);                                      /* L: replaces the selected name */
+    B(1, 40);                                      /* A */
+    B(2, 40);                                      /* B */
+    CHECK(!strcmp(A->e5.name, "LAB"), "typed: LAB (%s)", A->e5.name);
+    press(FM1P_B_OCTDN, 40);
+    CHECK(!strcmp(A->e5.name, "LA"), "OCT-: LA (%s)", A->e5.name);
+    press(FM1P_B_OCTUP, 40);
+    wait_files();
+    CHECK(!A->e5.naming && file_exists("LA", 0) && !file_exists(was, 0) && ec_pf_list_find("LA") >= 0,
+          "OCT+: %s renamed LA (the old file gone)", was);
+    {
+        int i;
+        for (i = 0; i < 60 && strcmp(ec_pf_list_name(ec_prj_cursor()), "LA"); i++)
+            turn(FM1P_E_SELECT, 1);
+    }
+    B(3, 40);                                      /* RANDOM */
+    wait_files();
+    CHECK(!file_exists("LA", 0) && ec_pf_list_count() > 0 && ec_pf_list_find("LA") < 0,
+          "B3: LA renamed at random (the cursor on %s)", ec_pf_list_name(ec_prj_cursor()));
 }
 
 /* 0.6.45 (owner): the list by name with the numbers in order (a name, then 2, 3 .. 10), DELETE and OVERWRITE asked */
@@ -632,6 +698,7 @@ int main(int argc, char **argv)
     test_changed_elsewhere();
     test_projects_mode();
     test_projects_sort();
+    test_keybed();
     C->shutdown();
     printf("test_proj: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

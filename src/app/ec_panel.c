@@ -441,9 +441,16 @@ static void shift_black(int key, int down)
 static int popup_button(int b)
 {
     const int f = b == EC_B_OCTDN || b == EC_B_OCTUP;
-    if (A->e5.naming) {
-        if (f || b == EC_B_HOME)
-            ec_e5_name_close(b == EC_B_OCTUP);
+    if (A->e5.naming) {                            /* 0.6.47 (owner, FIZZ's keybed): OCT+ / FILE OK, OCT- delete (SHIFT:
+                                                    * clear; an empty name: no), HOME cancel */
+        if (b == EC_B_OCTUP || b == EC_B_SAVE)
+            ec_e5_name_close(1);
+        else if (b == EC_B_OCTDN) {
+            if (A->fn)
+                UX->shift_used = 1;
+            ec_e5_name_back(A->fn);
+        } else if (b == EC_B_HOME)
+            ec_e5_name_close(0);
         return b != EC_B_PLAY && b != EC_B_FN;     /* the transport stays live, the rest waits */
     }
     if (A->e5.confirm) {

@@ -381,8 +381,9 @@ int ec_prj_popup_frame(void);                 /* 0.6.46: the loading pop-up's fr
 void ec_prj_select(int d);
 void ec_prj_black(int key);
 void ec_prj_oct(int up);
-void ec_prj_rename(const char *name);         /* 0.6.47: the name keybed */
+void ec_prj_rename(const char *name);         /* 0.6.47: the name keybed on a project file */
 void ec_prj_random(const char *name);
+void ec_prj_named(const char *old, const char *nw);   /* 0.6.47: the keybed's OK (old NULL: the open project) */
 #define EC_FILE_UP (-2)                       /* 0.6.42: ec_file_entry's file for the UP row */
 void ec_file_open(void);                      /* 0.6.42: OCT+: the row under the cursor (UP, a folder, a file) */
 int ec_file_b11_previewing(void);              /* 0.6.44: SAMPLES' B11 held: previewing */

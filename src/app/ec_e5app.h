@@ -12,7 +12,7 @@
 #include "ec_scene.h"
 
 enum { EC_PM_SELECT, EC_PM_LOOP, EC_PM_RATE, EC_NPM };       /* the PAGE overlay's modes */
-enum { EC_NM_NONE, EC_NM_PATTERN, EC_NM_PROJECT };           /* what the naming screen names */
+enum { EC_NM_NONE, EC_NM_PATTERN, EC_NM_PROJECT, EC_NM_FILE };   /* what the naming screen names (0.6.47: a file) */
 
 typedef struct {
     /* scenes */
@@ -34,9 +34,16 @@ typedef struct {
     /* naming */
     int naming;                  /* EC_NM_* */
     int name_pat;
-    char name[EC_NAME];          /* 16 characters, space padded while editing */
-    int name_cur;
+    char name[EC_NAME];          /* 0.6.47: the name as typed (no padding), 16 characters at most */
+    int name_cur;                /* the cursor: typing inserts there */
     uint32_t rng;
+    int name_sel;                /* 0.6.47 (owner, FIZZ): the suggested / rolled name is selected: a key replaces it */
+    int name_rolled;             /* the die shows (a rolled name) */
+    char name_hist[10][EC_NAME]; /* the last ten names seen (PRESETS left walks back) */
+    int name_nh, name_hp;
+    int name_key;                /* the key typed last (0..10 B1..B11, 11..26 W1..W16), -1; its glow */
+    uint32_t name_key_ms;
+    char name_file[32];          /* EC_NM_FILE: the project file renamed (EC_PF_NAME) */
     /* step preview (stopped) */
     int preview;                 /* 0 none, 1 slices, 2 loop keys */
     uint32_t preview_bits;
@@ -53,7 +60,10 @@ void ec_e5_memorize(void);                               /* 0.6.0: SHIFT + B3 */
 void ec_e5_recall_memo(void);                            /* 0.6.0: SHIFT + B4 */
 void ec_e5_name_pattern(void);                           /* 0.6.0: F3 + PRESETS */
 void ec_e5_xf_apply(float pos);                          /* 0.6.0: the crossfader to pos (CROSSFADER's glide) */
-void ec_e5_name_close(int accept);                       /* 0.3.0: naming: OCT+ keeps, OCT- / HOME cancel */
+void ec_e5_name_close(int accept);                       /* 0.3.0: naming: OCT+ keeps, HOME cancels */
+void ec_e5_name_file(const char *file);                  /* 0.6.47: the keybed on a project file's name (RENAME) */
+void ec_e5_name_back(int clear);                         /* 0.6.47: OCT-: delete (empty: cancel); SHIFT: clear */
+const char *ec_e5_name_key_char(int upper, int i, int shift);   /* 0.6.47: the keybed's character on a key */
 void ec_e5_page_key(int i, int mode);                    /* 0.3.0: F3's lower keys (EC_PM_SELECT / EC_PM_LOOP) */
 int ec_e5_lower_down(int k, int i, int vel);
 int ec_e5_lower_up(int k, int i);

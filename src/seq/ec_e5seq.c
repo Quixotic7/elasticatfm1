@@ -535,6 +535,96 @@ void ec_e5_random_name(char *out, int cap, uint32_t *rng)
     snprintf(out, (size_t)cap, "%s", b);
 }
 
+/* 0.6.47 (owner): FIZZ's name roller (FMToneSeq core/seq/names.c, the owner's own port of namesizer.lua's
+ * phonic_nonsense and new_word; phonic_nonsense adapts github.com/euangoddard/phonic-nonsense by Euan Goddard, credited
+ * there), at Elasticat's 16 characters: a namesizer pair six times in ten, a phonic word two, a cosmic word two */
+static const char *const NM_CONS[] = {"b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "r", "s", "t", "v",
+                                      "w", "x", "y", "z"};
+static const char *const NM_VOW[] = {"a", "e", "i", "o", "u"};
+static const char *const NM_FUNKY[] = {"ca", "lll", "moo", "fu", "cha", "cream", "choc", "silk", "ice", "eee", "goo",
+    "two", "zzz", "boo", "cats", "boom", "ch", "ck", "digi", "ome", "sh", "ish", "ed", "milk", "cyber", "punk",
+    "delta", "epsi", "beta", "fire", "uzz"};
+static const char *const NM_START[] = {"j", "qu", "", "m", "s", "d", "t", "n", "p", "g", "c", "k", "b", "f", "l", "h",
+    "sh", "r", "v", "y", "w", "th", "z", "ch", "bl", "br", "cl", "cr", "dr", "fl", "fr", "gl", "gr", "pl", "pr", "sl",
+    "sm", "sn", "sp", "st", "sw", "tr", "tw"};
+static const char *const NM_MID[] = {"ee", "igh", "oo", "ar", "or", "air", "ir", "ou", "oy", "ea", "oi", "aw", "ur",
+    "ow", "ai", "oa", "ew", "a", "e", "i", "o", "u"};
+static const char *const NM_END[] = {"ss", "ll", "ck", "ng", "nk", "x", "m", "s", "d", "t", "n", "p", "g", "c", "k",
+    "b", "f", "l", "h", "sh", "r", "v", "y", "w", "th", "z", "ch"};
+static const char *const NM_VCE[] = {"d", "k", "f", "l", "m", "n", "p", "t", "v"};
+static const char *const NM_COMP[] = {"are", "er", "ow", "ew", "ire", "ear", "ure"};
+#define NM_N(a) ((uint32_t)(sizeof(a) / sizeof((a)[0])))
+#define NM_PICK(r, a) ((a)[xs(r) % NM_N(a)])
+static float nm_unit(uint32_t *r) { return (float)(xs(r) >> 8) / 16777216.f; }
+
+static void nm_finish(char *w, char *out, int cap)
+{
+    size_t n, i;
+    for (i = 0; w[i]; i++)
+        if (w[i] >= 'a' && w[i] <= 'z')
+            w[i] = (char)(w[i] - 32);
+    n = strlen(w);
+    if (n > EC_NAME - 1)
+        w[n = EC_NAME - 1] = 0;
+    while (n && (w[n - 1] == '-' || w[n - 1] == ' '))
+        w[--n] = 0;
+    snprintf(out, (size_t)cap, "%s", w);
+}
+
+void ec_name_phonic(char *out, int cap, uint32_t *rng)
+{
+    const float r = nm_unit(rng);
+    char w[40] = "";
+    int k;
+    for (k = 0; k < 8 && !w[0]; k++) {
+        if (r < 0.1f)
+            snprintf(w, sizeof w, "%s%s%s", NM_PICK(rng, NM_START), NM_PICK(rng, NM_MID), NM_PICK(rng, NM_END));
+        else if (r < 0.2f)
+            snprintf(w, sizeof w, "%s%s%se", NM_PICK(rng, NM_START), NM_PICK(rng, NM_VOW), NM_PICK(rng, NM_VCE));
+        else
+            snprintf(w, sizeof w, "%s%s", NM_PICK(rng, NM_START), NM_PICK(rng, NM_COMP));
+    }
+    nm_finish(w, out, cap);
+}
+
+void ec_name_word(char *out, int cap, uint32_t *rng)
+{
+    char w[64];
+    int k;
+    for (k = 0; k < 8; k++) {
+        const int length = 4 + (int)(xs(rng) % 5u);
+        const int hyphen = nm_unit(rng) > 0.5f, hypheni = (length + 1) / 2;
+        int i, b = 1, n = 0;
+        for (i = 1; i <= length && n < 48; i++) {
+            const char *piece = hyphen && i == hypheni ? "-" : nm_unit(rng) < 0.2f ? NM_PICK(rng, NM_FUNKY)
+                                : b ? NM_PICK(rng, NM_CONS) : NM_PICK(rng, NM_VOW);
+            memcpy(w + n, piece, strlen(piece));
+            n += (int)strlen(piece);
+            b = nm_unit(rng) > 0.5f;
+        }
+        w[n] = 0;
+        if (n <= EC_NAME - 1)
+            break;
+    }
+    nm_finish(w, out, cap);
+}
+
+void ec_name_roll(char *out, int cap, uint32_t *rng, const char *avoid)
+{
+    int tries;
+    for (tries = 0; tries < 6; tries++) {
+        const uint32_t r = xs(rng) % 10u;
+        if (r < 6)
+            ec_e5_random_name(out, cap, rng);
+        else if (r < 8)
+            ec_name_phonic(out, cap, rng);
+        else
+            ec_name_word(out, cap, rng);
+        if (out[0] && (!avoid || strcmp(out, avoid)))
+            return;
+    }
+}
+
 /* ------------------------------------------------------------------------------------------- undo --- */
 void ec_undo_clear(ec_undo_t *u) { memset(u, 0, sizeof *u); }
 

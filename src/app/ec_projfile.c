@@ -19,7 +19,7 @@ static uint8_t g_pack[EC_PF_PACK_MAX];  /* the packed project: a save's snapshot
 
 /* the save: MKDIR, (LIST: the next free name), (CHECK: NAME.ecp is still what this instance last read or wrote),
  * WRITE the first copy, WRITE the second, DELETE the hidden one */
-enum { SV_IDLE, SV_MKDIR, SV_LIST, SV_CHECK, SV_WRITE, SV_DELETE };
+enum { SV_IDLE, SV_MKDIR, SV_LIST, SV_CHECK, SV_WRITE, SV_DELETE, SV_RN_READ, SV_RN_WRITE };   /* (0.6.47: a rename) */
 /* the load: READ NAME.ecp, else READ the hidden copy; WAIT: no folder yet (power-on before the folder is allowed) */
 enum { LD_IDLE, LD_READ, LD_WAIT };
 
@@ -57,8 +57,9 @@ static struct {
     int as;                      /* 0.6.45: the save is a save-as: its own message (SAVED +1, SAVED OVER IT) */
     char as_msg[20];
     ec_fsreq_t dreq;             /* 0.6.45: a delete: NAME.ecp, then its hidden copy */
-    int dstep;
+    int dstep, dquiet;
     char dname[EC_PF_NAME];
+    char rn_old[EC_PF_NAME], rn_new[EC_PF_NAME], del_after[EC_PF_NAME];   /* 0.6.47: a rename */
     ec_fsreq_t kreq;
     int kstate;                  /* 0 idle, 1 reading, 2 read */
     uint32_t kat;
@@ -321,10 +322,11 @@ void ec_pf_name_plus(const char *base, char *out)
     char b[EC_PF_NAME];
     int l, n;
     snprintf(b, sizeof b, "%s", base && base[0] ? base : "PROJ");
-    l = (int)strlen(b);                             /* "SPICY WALRUS 2" -> "SPICY WALRUS" */
+    l = (int)strlen(b);                             /* "SPICY WALRUS 2" -> "SPICY WALRUS" (0.6.47: only a " N" goes:
+                                                     * "PROJ-001" stays) */
     while (l > 0 && b[l - 1] >= '0' && b[l - 1] <= '9')
         l--;
-    if (l > 0 && l < (int)strlen(b) && b[l - 1] == ' ')
+    if (l > 1 && l < (int)strlen(b) && b[l - 1] == ' ')
         b[l - 1] = 0;
     for (n = 2; n < 1000; n++) {
         char num[8];
@@ -333,19 +335,6 @@ void ec_pf_name_plus(const char *base, char *out)
         keep = 16 - (int)strlen(num);              /* (16: the names' room, EC_NAME - 1) */
         snprintf(out, EC_PF_NAME, "%.*s%s", keep, b, num);
         if (ec_pf_list_find(out) < 0)
-            return;
-    }
-}
-
-/* the lowest PROJ-nnn not in the list */
-static void next_free(char *out)
-{
-    int n, i;
-    for (n = 1; n < 100000; n++) {
-        snprintf(out, EC_PF_NAME, "PROJ-%03d", n);
-        for (i = 0; i < g_nnames && strcmp(g_names[i], out); i++)
-            ;
-        if (i == g_nnames)
             return;
     }
 }
@@ -396,6 +385,12 @@ static void save_done(int ok, const char *err_what, int32_t err)
         A->saves++;
         disk_set(g_pack, g.len);                    /* 0.6.36: NAME.ecp is this save */
         g.conflict = 0;
+        if (g.del_after[0]) {                       /* 0.6.47: renamed: the old file goes, quietly */
+            snprintf(g.dname, sizeof g.dname, "%s", g.del_after);
+            g.del_after[0] = 0;
+            g.dstep = 1;
+            g.dquiet = 1;
+        }
         if (g.as)                                   /* 0.6.45: what kind of save it was (the name: NOW, the cursor) */
             ec_app_message(g.as_msg);
         else if (!g.quiet)
@@ -404,6 +399,7 @@ static void save_done(int ok, const char *err_what, int32_t err)
         ec_pf_list_refresh();
     } else {
         say_error(err_what, err);
+        g.del_after[0] = 0;                         /* (0.6.47: a failed rename keeps the old file) */
         g.again = 0;                                /* (no retry loop: the next edit or SHIFT + SAVE tries again) */
         g.open_after = 0;
     }
@@ -474,7 +470,17 @@ static void save_tick(void)
             save_done(0, "NOT SAVED", g.lerr);
             return;
         }
-        next_free(g.name);
+        {   /* 0.6.47 (owner): the file is the project's name (else a rolled one), the next free number if taken */
+            static uint32_t rng;
+            char b[EC_NAME];
+            rng ^= A->ms * 2654435761u + 0x9e3779b9u;
+            if (A->proj.e5.name[0])
+                snprintf(b, sizeof b, "%s", A->proj.e5.name);
+            else
+                ec_name_roll(b, sizeof b, &rng, 0);
+            ec_pf_unique(b, g.name);
+            snprintf(A->proj.e5.name, sizeof A->proj.e5.name, "%.*s", EC_NAME - 1, g.name);
+        }
         g.tmp_good = 0;
         save_writes();
         return;
@@ -514,6 +520,7 @@ static void save_tick(void)
             if (!g.hidden[g.copy] && g.ncopies == 2)
                 g.tmp_good = 1;                     /* NAME.ecp broken now; the hidden copy (just written) is whole */
             save_done(0, "NOT SAVED", g.req.result ? g.req.result : FS_ENOSPC);
+            g.del_after[0] = 0;
             return;
         }
         g.at += (uint32_t)g.req.result;
@@ -536,9 +543,98 @@ static void save_tick(void)
         g.req.state = EC_FSR_IDLE;                  /* (a hidden copy that stays is harmless: NAME.ecp is read first) */
         save_done(1, 0, 0);
         return;
+    case SV_RN_READ:                                /* 0.6.47: another project renamed: its file read whole .. */
+        if (g.req.state == EC_FSR_IDLE) {
+            const uint32_t room = (uint32_t)sizeof g_pack - g.at;
+            path_of(path, sizeof path, g.rn_old, 0);
+            ec_fs_start(&g.req, FS_READ, path, (int64_t)g.at, g_pack + g.at,
+                        (int32_t)(room < READ_CHUNK ? room : READ_CHUNK));
+        }
+        if (ec_fs_update(&g.req) != EC_FSR_DONE)
+            return;
+        g.req.state = EC_FSR_IDLE;
+        if (g.req.result > 0 && g.at + (uint32_t)g.req.result < sizeof g_pack) {
+            g.at += (uint32_t)g.req.result;
+            return;
+        }
+        if (g.req.result < 0 || ec_project_check(g_pack, g.at) <= 0) {
+            g.sv = SV_IDLE;
+            say_error("NOT RENAMED", g.req.result < 0 ? g.req.result : FS_EIO);
+            return;
+        }
+        g.len = g.at;
+        g.at = 0;
+        g.sv = SV_RN_WRITE;
+        return;
+    case SV_RN_WRITE:                               /* .. written under the new name, then the old one deleted */
+        if (g.req.state == EC_FSR_IDLE) {
+            const uint32_t n = g.len - g.at < EC_PF_CHUNK ? g.len - g.at : EC_PF_CHUNK;
+            path_of(path, sizeof path, g.rn_new, 0);
+            ec_fs_start(&g.req, FS_WRITE, path, g.at ? (int64_t)g.at : -1, g_pack + g.at, (int32_t)n);
+        }
+        if (ec_fs_update(&g.req) != EC_FSR_DONE)
+            return;
+        g.req.state = EC_FSR_IDLE;
+        if (g.req.result <= 0) {
+            g.sv = SV_IDLE;
+            say_error("NOT RENAMED", g.req.result ? g.req.result : FS_ENOSPC);
+            return;
+        }
+        g.at += (uint32_t)g.req.result;
+        if (g.at < g.len)
+            return;
+        g.sv = SV_IDLE;
+        snprintf(g.dname, sizeof g.dname, "%s", g.rn_old);
+        g.dstep = 1;
+        g.dquiet = 1;
+        ec_app_message("RENAMED");
+        if (g.again) {                              /* (a save asked for meanwhile) */
+            g.again = 0;
+            g.quiet = g.again_quiet;
+            save_start();
+        }
+        return;
     default:
         return;
     }
+}
+
+/* 0.6.47 (owner): a project file renamed: the open one is saved under the new name (then the old file goes); another
+ * one copied to the new name (then the old one goes); an open project not saved yet just takes the name */
+void ec_pf_rename(const char *old, const char *nw)
+{
+    if (!nw || !nw[0] || (old && !strcmp(old, nw)))
+        return;
+    if (g.sv != SV_IDLE || g.ld != LD_IDLE || g.dstep) {
+        ec_app_alert("BUSY: TRY AGAIN");
+        return;
+    }
+    if (!old || !old[0] || !strcmp(old, g.name)) {
+        if (!g.name[0]) {
+            snprintf(g.name, sizeof g.name, "%s", nw);
+            snprintf(g.as_msg, sizeof g.as_msg, "NAMED");
+            g.as = 1;
+            g.disk_known = 0;
+            ec_pf_save(0);
+            return;
+        }
+        snprintf(g.del_after, sizeof g.del_after, "%s", g.name);
+        ec_pf_save_as(nw, "RENAMED");
+        return;
+    }
+    snprintf(g.rn_old, sizeof g.rn_old, "%s", old);
+    snprintf(g.rn_new, sizeof g.rn_new, "%s", nw);
+    g.at = 0;
+    g.sv = SV_RN_READ;
+}
+
+/* 0.6.47: a name for a new file: base when no project has it, else base with the next free number */
+void ec_pf_unique(const char *base, char *out)
+{
+    if (base && base[0] && ec_pf_list_find(base) < 0)
+        snprintf(out, EC_PF_NAME, "%s", base);
+    else
+        ec_pf_name_plus(base, out);
 }
 
 /* ------------------------------------------------------------------------------------------- the load --- */
@@ -716,6 +812,7 @@ void ec_pf_delete(const char *name)
     }
     snprintf(g.dname, sizeof g.dname, "%s", name);
     g.dstep = 1;
+    g.dquiet = 0;
     if (!strcmp(name, g.name)) {
         g.name[0] = 0;
         g.disk_known = 0;
@@ -747,11 +844,12 @@ static void delete_tick(void)
         return;
     }
     g.dstep = 0;
-    {
+    if (!g.dquiet) {
         char m[48];
         snprintf(m, sizeof m, "DELETED %s", g.dname);
         ec_app_message(m);
     }
+    g.dquiet = 0;
     ec_pf_list_refresh();
 }
 

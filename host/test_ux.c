@@ -285,8 +285,8 @@ static void test_settings(void)
     turn(FM1P_E_PRESETS, 1);
     run(20);
     CHECK(A->e5.naming == EC_NM_PATTERN && !A->ux.f3, "F3 + PRESETS: the pattern's name");
-    press(FM1P_B_OCTDN, 40);
-    CHECK(!A->e5.naming, "F1: naming cancelled");
+    press(FM1P_B_HOME, 40);                        /* 0.6.47: OCT- deletes now (FIZZ's keybed); HOME cancels */
+    CHECK(!A->e5.naming, "HOME: naming cancelled");
     btn(FM1P_B_GLO, 1);
     run(20);
     press(FM1P_B_SEQ, 40);

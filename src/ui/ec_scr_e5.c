@@ -7,6 +7,7 @@
 
 #include "ec_gfx.h"
 #include "ec_scr_e5.h"
+#include "ec_ui_kit.h"
 
 #define W EC_GW
 #define H EC_GH
@@ -128,63 +129,50 @@ static void scene_screen(const ec_app_t *a)
 /* ------------------------------------------------------------------------------------------- naming --- */
 static void name_screen(const ec_app_t *a)
 {
-    const char *set = EC_NAME_CHARS;
-    const int nset = (int)strlen(set);
+    /* 0.6.47 (owner, FIZZ's keybed): the name (selected while suggested / rolled: the first key replaces it), the die
+     * when rolled, the last ten names as dots, the length; the keybed: B1..B11 over W1..W16 (two rows, as the FM-1's),
+     * a letter on every key (SHIFT: the second set), the key typed last glowing. On the 2-unit lattice */
+    static const int BK[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};   /* the white key each black key follows */
+    static const char *const TN[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
     const ec_e5app_t *e = &a->e5;
-    char t[24], b[4];
-    int k, ci = 0;
-    const char *p;
-    if (e->naming == EC_NM_PROJECT)
-        snprintf(t, sizeof t, "NAME/PROJECT");
-    else
-        snprintf(t, sizeof t, "NAME/P%02d", e->name_pat + 1);
-    ec_screens_header(a, t, 1, "");
-    for (k = 0; k < EC_NAME - 1; k++) {                           /* the 16 places */
-        const int x = 4 + k * 7, cur = k == e->name_cur;
-        b[0] = e->name[k];
-        b[1] = 0;
-        if (cur)
-            R(EC_C_L3, x - 1, 21, 7, 14);
-        ec_gfx_text_al(x + 3, 23, b, 2, cur ? EC_C_ACC : EC_C_L15, EC_AL_CENTER);
-        R(cur ? EC_C_ACC : EC_C_L3, x, 35, 5, 2);
+    const int n = (int)strlen(e->name), big = n <= 12, cw = big ? 8 : 4, sh = a->fn;
+    const int glow = e->name_key >= 0 && a->ms - e->name_key_ms < 250u;
+    char b[24];
+    int k;
+    ec_kit_header(TN[a->bus ? EC_NTRACK - 1 + a->bus : a->track],
+                  e->naming == EC_NM_PATTERN ? "PATTERN NAME" : e->naming == EC_NM_FILE ? "RENAME" : "PROJECT NAME",
+                  "", "", 0, 1);
+    if (e->name_sel && n)                          /* selected: a cream band, the name dark */
+        R(EC_C_L15, 2, 16, (n * cw) + 2, big ? 14 : 10);
+    ec_gfx_text_al(3, big ? 18 : 18, e->name, big ? 2 : 1, e->name_sel ? EC_C_BG : EC_C_L15, EC_AL_LEFT);
+    if (!e->name_sel) {                            /* the cursor: a bar under its place */
+        const int x = 2 + e->name_cur * cw;
+        R(EC_C_ACC, x, big ? 32 : 26, cw - (big ? 2 : 0) > 2 ? cw - 2 : 2, 2);
     }
-    p = strchr(set, e->name[e->name_cur]);
-    ci = p && e->name[e->name_cur] ? (int)(p - set) : 0;
-    for (k = -3; k <= 3; k++) {                                   /* the character wheel (KN2) */
-        const int x = W / 2 + k * 15;
-        const char c = set[((ci + k) % nset + nset) % nset];
-        b[0] = c == ' ' ? '_' : c;
-        b[1] = 0;
-        if (!k) {
-            R(EC_C_L15, x - 7, 44, 14, 16);
-            T2(EC_C_BG, b, x, 47, EC_AL_CENTER);
-        } else
-            T2(abs(k) == 1 ? EC_C_L8 : abs(k) == 2 ? EC_C_L5 : EC_C_L3, b, x, 47, EC_AL_CENTER);
+    if (e->name_rolled) {                          /* the die it rolled with */
+        R(EC_C_SPECIAL, 104, 16, 14, 14);
+        R(EC_C_BG, 106, 18, 2, 2), R(EC_C_BG, 114, 18, 2, 2), R(EC_C_BG, 110, 22, 2, 2);
+        R(EC_C_BG, 106, 26, 2, 2), R(EC_C_BG, 114, 26, 2, 2);
     }
-    /* the four cells: POS, CHAR, NAME (namesizer), DEL */
-    R(EC_C_L3, 0, 76, W, 2);                                      /* the kit's rules (ec_kit_cells) */
-    R(EC_C_L3, 59, 76, 2, 44);
-    {
-        static const char *const LB[4] = {"POS", "CHAR", "RAND", "DEL"};
-        for (k = 0; k < 4; k++) {
-            const int x = (k % 2) * 61 + 3, y = k < 2 ? 79 : 101;
-            char tag[4], val[8];
-            snprintf(tag, sizeof tag, "K%d", k + 1);
-            T(EC_C_L8, LB[k], x, y, EC_AL_LEFT);
-            T(EC_C_L5, tag, x + 54, y, EC_AL_RIGHT);
-            if (k == 0) {
-                snprintf(val, sizeof val, "%02d", e->name_cur + 1);
-                T2(EC_C_L15, val, x, y + 7, EC_AL_LEFT);
-            } else if (k == 1) {
-                snprintf(val, sizeof val, "%s", e->name[e->name_cur] == ' ' ? "SPC" : (char[2]){e->name[e->name_cur], 0});
-                T2(EC_C_L15, val, x, y + 7, EC_AL_LEFT);
-            } else if (k == 2) {                                  /* a die: dark pips on a block (0.6.1) */
-                R(EC_C_L15, x, y + 6, 12, 12);
-                R(EC_C_BG, x + 2, y + 8, 2, 2), R(EC_C_BG, x + 8, y + 8, 2, 2), R(EC_C_BG, x + 5, y + 11, 2, 2);
-                R(EC_C_BG, x + 2, y + 14, 2, 2), R(EC_C_BG, x + 8, y + 14, 2, 2);
-            } else
-                T2(EC_C_L15, "< >", x, y + 7, EC_AL_LEFT);
-        }
+    for (k = 0; k < e->name_nh; k++)               /* the last ten names: where you are among them */
+        R(k == e->name_hp && e->name_sel ? EC_C_L15 : EC_C_L5, 2 + k * 6, 38, 4, 2);
+    snprintf(b, sizeof b, "%d/16", n);
+    T(n >= EC_NAME - 1 ? EC_C_ALERT : EC_C_L5, b, W - 2, 44, EC_AL_RIGHT);
+    if (sh)
+        T(EC_C_ACC, "SHIFT", 2, 44, EC_AL_LEFT);
+    for (k = 0; k < 11; k++) {                     /* the black keys */
+        const int x = 12 + BK[k] * 6 + 2, lit = glow && e->name_key == k;
+        R(lit ? EC_C_ACC : EC_C_L3, x, 56, 4, 24);
+        T(lit ? EC_C_BG : EC_C_L15, ec_e5_name_key_char(1, k, sh), x + 2, 72, EC_AL_CENTER);
+    }
+    for (k = 0; k < 16; k++) {                     /* the white keys */
+        const int x = 12 + k * 6, lit = glow && e->name_key == 11 + k;
+        const char *c = ec_e5_name_key_char(0, k, sh);
+        R(lit ? EC_C_ACC : EC_C_L12, x, 84, 4, 32);
+        if (c[0] == ' ')
+            R(EC_C_BG, x, 110, 4, 2);              /* SPACE */
+        else
+            T(EC_C_BG, c, x + 2, 106, EC_AL_CENTER);
     }
 }
 

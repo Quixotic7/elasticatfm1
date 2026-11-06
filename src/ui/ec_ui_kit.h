@@ -16,6 +16,12 @@
  * before the box), and the box at the right: arrows (a pop-up's back / OK, a wider box), else held > 0 (the count
  * of held steps on LOCK), else page ("1", "A"; NULL / "" none) */
 void ec_kit_header(const char *target, const char *title, const char *page, const char *right, int held, int arrows);
+/* 0.6.40: with a second dark box after the target (the step page, "S1"; NULL / "": none); the title follows it */
+void ec_kit_header2(const char *target, const char *steps, const char *title, const char *page, const char *right,
+                    int held, int arrows);
+#define EC_KIT_STEPBOX_X 16  /* 0.6.40: the step page box: x 16..27 (a 2-unit gap after the target's 0..13) */
+#define EC_KIT_STEPBOX 12
+#define EC_KIT_STEPOFF 14    /* the title / message bar move right by this beside it */
 /* a pop-up's two arrows (back, OK), 18 x 6 units from (x, y), in 2-unit steps */
 void ec_kit_arrows(int x, int y, int c);
 

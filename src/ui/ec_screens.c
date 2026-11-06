@@ -60,11 +60,18 @@ void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, con
     const int popup = ec_app_popup(a);
     const int held = a->step_held && !a->bus && !popup ? __builtin_popcount(a->step_held) : 0;
     const int bar = ec_hdr_title(title, line, sizeof line);
-    fit(buf, sizeof buf, line, 17);
-    ec_kit_header(target_name(a), buf, page, ec_hdr_custom() ? "" : right, held, popup);
+    char sp[8] = "";
+    int off = 0;
+    if (a == &ec_app && !a->bus && !popup && !a->settings && ec_lp_active()) {   /* 0.6.40 (owner): the step page
+                                                    * PRESETS turns (LOOP ENGINE, TRIG, KEYBOARD) */
+        snprintf(sp, sizeof sp, "S%d", a->step_page + 1);
+        off = EC_KIT_STEPOFF;
+    }
+    fit(buf, sizeof buf, line, off ? 15 : 17);
+    ec_kit_header2(target_name(a), sp, buf, page, ec_hdr_custom() ? "" : right, held, popup);
     if (ec_hdr_custom()) {                         /* the message / held key's line on its bar */
-        R(bar, 14, 0, W - 14 - (popup ? 21 : 11), 10);
-        T(EC_C_BG, buf, 17, 3, EC_AL_LEFT);
+        R(bar, 14 + off, 0, W - 14 - off - (popup ? 21 : 11), 10);
+        T(EC_C_BG, buf, 17 + off, 3, EC_AL_LEFT);
     }
     if (a == &ec_app && a->pn.f_sticky && !popup && !held) {   /* 0.6.12 (owner): sticky F1 / F2 stays in view in
                                                     * the box at the right, on the accent, whatever the line says */

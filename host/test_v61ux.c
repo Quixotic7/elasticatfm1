@@ -14,6 +14,8 @@
 #include "ec_gfx.h"
 #include "ec_internal.h"
 #include "ec_mtx.h"
+#include "ec_mode.h"
+#include "ec_ui_kit.h"
 #include "fm1core.h"
 
 static int fails, checks;
@@ -341,7 +343,7 @@ static void test_held(void)
         {EC_MODE_KEYBOARD, K_WK, 1, 450, "NOTE F3", EC_C_L12},
         {EC_CAT_SRC, K_WK, 3, 450, "LOOP KEY 3", EC_C_L12},
     };
-    int i, bar;
+    int i, bar, bx;
     A->proj.pat[A->proj.current].tr[0].v[EC_P_PATTERN_STEPS] = 32;   /* (PAGES: two pages) */
     for (i = 0; i < (int)(sizeof H / sizeof H[0]); i++) {
         const held_t *h = &H[i];
@@ -351,7 +353,8 @@ static void test_held(void)
         CHECK(!ec_hdr_custom() || h->kind == K_SHIFTBK || (h->want[0] == 'F' && h->want[2] == ' '),
               "[%s] a tap (60 ms): no held text yet (%s)", h->want, hdr(0));   /* (0.6.12: F1 / F2 at once) */
         run(290);                                              /* (0.6.14: past the 300 ms quick click) */
-        CHECK(!strcmp(hdr(&bar), h->want) && bar == h->bar && px(14, 0) == h->bar,
+        bx = ec_lp_active() && !A->bus ? 14 + EC_KIT_STEPOFF : 14;   /* 0.6.40: after the step page box */
+        CHECK(!strcmp(hdr(&bar), h->want) && bar == h->bar && px(bx, 0) == h->bar,
               "[%s] held 350 ms: the header says it (\"%s\", bar %d)", h->want, hdr(0), bar);
         CHECK(mode() == h->mode || h->kind == K_BTN, "[%s] held: the mode stays", h->want);
         run(h->hold - 250);

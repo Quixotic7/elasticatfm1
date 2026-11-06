@@ -1188,3 +1188,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   that F1 + K1 could not find: NO LOCK).
 - F1 + a knob clears slice locks too: with pads held, those slices' lock of that param; with nothing held, every
   step's and every slice's. test_loopstep checks it.
+
+## 36. 0.6.40: the step page in the header, B11 + PRESETS / ALGO (owner, 2026-11-05)
+
+- The header has a second dark box beside the track's (T1 | S1): the step page PRESETS turns (S1 = steps 1-16, S2 =
+  17-32 ..), on every page where PRESETS turns the step page (the track pages and KEYBOARD). The title follows it.
+- B11 held + PRESETS = the zoom (as K3); on slice tracks the zoom is the pads' bank: right = SLICES 17-32, left =
+  SLICES 1-16, one click, and it no longer writes the track's LOOP DIV (the loop keys' division).
+- B11 held + ALGO = the pattern length, as K1.

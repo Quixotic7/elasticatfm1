@@ -407,6 +407,15 @@ static void goto_source(int i)
 static void zoom(int det)
 {
     float *v = ec_app_params(A);
+    {
+        const int m = iv(v, EC_P_MACHINE);
+        if (m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY) {   /* 0.6.40 (owner): slice tracks: the pads' bank,
+                                                    * 1-16 / 17-32 (LOOP DIV is the loop keys', not touched) */
+            P->zoom_half = det > 0;
+            ec_app_message(P->zoom_half ? "SLICES 17-32" : "SLICES 1-16");
+            return;
+        }
+    }
     const int div = iv(v, EC_P_LOOP_DIVISION);
     const int at = div == 32 ? (P->zoom_half ? 2 : 1) : 0;
     const int to = at + (det > 0 ? 1 : -1) < 0 ? 0 : at + (det > 0 ? 1 : -1) > 2 ? 2 : at + (det > 0 ? 1 : -1);
@@ -519,12 +528,16 @@ int ec_src_knob(int role, int det)
 {
     const int mode = ec_app_mode();
     int id;
-    if (ec_lp_b11_held() && role == EC_E_K3) {     /* 0.6.6: LOOP ENGINE: B11 held + K3 = the zoom (0.6.14: was K1) */
+    if (ec_lp_b11_held() && (role == EC_E_K3 || role == EC_E_PRESETS)) {   /* 0.6.6: LOOP ENGINE: B11 held + K3 = the
+                                                    * zoom (0.6.14: was K1); 0.6.40 (owner): + PRESETS too (slice
+                                                    * tracks: the pads' bank) */
         ec_lp_b11_used();
         for (; det; det += det > 0 ? -1 : 1)       /* a detent a step */
             zoom(det);
         return 1;
     }
+    if (ec_lp_b11_held() && role == EC_E_ALGO)    /* 0.6.40 (owner): B11 held + ALGO = K1, the length */
+        role = EC_E_K1;
     if ((ec_lp_b11_held() || ec_app_mode() == EC_MODE_PAGES) && (role == EC_E_K1 || role == EC_E_K2) && !A->bus) {   /* 0.6.14 (owner): B11 held (PAGES: always): K1
                                                     * the pattern length, K2 the track rate (the pages panel) */
         float *v = ec_app_params(A);

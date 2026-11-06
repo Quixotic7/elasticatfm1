@@ -30,11 +30,22 @@ void ec_kit_arrows(int x, int y, int c)
 
 void ec_kit_header(const char *target, const char *title, const char *page, const char *right, int held, int arrows)
 {
+    ec_kit_header2(target, 0, title, page, right, held, arrows);
+}
+
+void ec_kit_header2(const char *target, const char *steps, const char *title, const char *page, const char *right,
+                    int held, int arrows)
+{
     const int box = arrows ? 21 : 11;
+    const int sb = steps && steps[0] ? EC_KIT_STEPBOX : 0;   /* (2-unit lattice: a gap of 2, an even width) */
     R(EC_C_L12, 0, 0, W, 10);
     R(EC_C_BG, 0, 0, 14, 10);
     T(EC_C_L12, target ? target : "", 7, 3, 1, EC_AL_CENTER);
-    T(EC_C_BG, title ? title : "", 17, 3, 1, EC_AL_LEFT);
+    if (sb) {                                      /* 0.6.40 (owner): the step page beside the target, its own box */
+        R(EC_C_BG, EC_KIT_STEPBOX_X, 0, sb, 10);
+        T(EC_C_L12, steps, EC_KIT_STEPBOX_X + sb / 2, 3, 1, EC_AL_CENTER);
+    }
+    T(EC_C_BG, title ? title : "", 17 + (sb ? EC_KIT_STEPOFF : 0), 3, 1, EC_AL_LEFT);
     R(held && !arrows ? EC_C_LOCK : EC_C_BG, W - box, 0, box, 10);
     if (arrows)
         ec_kit_arrows(W - 19, 2, EC_C_L15);

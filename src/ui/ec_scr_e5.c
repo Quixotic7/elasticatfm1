@@ -135,29 +135,43 @@ static void name_screen(const ec_app_t *a)
     static const int BK[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};   /* the white key each black key follows */
     static const char *const TN[9] = {"T1", "T2", "T3", "T4", "T5", "T6", "S1", "S2", "MST"};
     const ec_e5app_t *e = &a->e5;
-    const int n = (int)strlen(e->name), big = n <= 12, cw = big ? 8 : 4, sh = a->fn;
+    const int n = (int)strlen(e->name), cw = 8, sh = a->fn;   /* 0.6.48 (owner): one size, always the big one */
+    const int vis = 14, first = n <= vis ? 0 : e->name_cur < n - vis ? e->name_cur : n - vis;   /* (a longer old name
+                                                    * scrolls: the cursor in view) */
     const int glow = e->name_key >= 0 && a->ms - e->name_key_ms < 250u;
     char b[24];
     int k;
     ec_kit_header(TN[a->bus ? EC_NTRACK - 1 + a->bus : a->track],
                   e->naming == EC_NM_PATTERN ? "PATTERN NAME" : e->naming == EC_NM_FILE ? "RENAME" : "PROJECT NAME",
                   "", "", 0, 1);
-    if (e->name_sel && n)                          /* selected: a cream band, the name dark */
-        R(EC_C_L15, 2, 16, (n * cw) + 2, big ? 14 : 10);
-    ec_gfx_text_al(3, big ? 18 : 18, e->name, big ? 2 : 1, e->name_sel ? EC_C_BG : EC_C_L15, EC_AL_LEFT);
-    if (!e->name_sel) {                            /* the cursor: a bar under its place */
-        const int x = 2 + e->name_cur * cw;
-        R(EC_C_ACC, x, big ? 32 : 26, cw - (big ? 2 : 0) > 2 ? cw - 2 : 2, 2);
+    {
+        char shown[EC_NAME];
+        const int m = n - first < vis ? n - first : vis;
+        snprintf(shown, sizeof shown, "%.*s", m, e->name + first);
+        if (e->name_sel && n)                      /* selected: a cream band, the name dark */
+            R(EC_C_L15, 0, 16, (m * cw) + 4, 14);
+        ec_gfx_text_al(2, 18, shown, 2, e->name_sel ? EC_C_BG : EC_C_L15, EC_AL_LEFT);
+        if (!e->name_sel)                          /* the cursor: a bar under its place */
+            R(EC_C_ACC, 2 + (e->name_cur - first) * cw, 32, cw - 2, 2);
     }
-    if (e->name_rolled) {                          /* the die it rolled with */
-        R(EC_C_SPECIAL, 104, 16, 14, 14);
-        R(EC_C_BG, 106, 18, 2, 2), R(EC_C_BG, 114, 18, 2, 2), R(EC_C_BG, 110, 22, 2, 2);
-        R(EC_C_BG, 106, 26, 2, 2), R(EC_C_BG, 114, 26, 2, 2);
+    if (e->name_rolled) {                          /* 0.6.48 (owner): the die, ACTION blue, tumbling as it rolls */
+        static const uint16_t PIPS[7] = {0, 0x10, 0x44, 0x54, 0x145, 0x155, 0x16d};   /* (a 3x3 grid, bit 0 top left) */
+        const uint32_t t = a->ms - e->name_roll_ms;
+        const int rolling = t < 600u;
+        const int face = rolling ? 1 + (int)((t / 70u + (uint32_t)e->name_face * 3u) % 6u) : e->name_face;
+        const int dy = rolling && (t / 70u) & 1u && t < 450u ? -2 : 0;   /* (a hop, a shuffle: in its own row) */
+        const int dx = rolling ? ((t / 70u) & 2u ? -2 : 0) : 0;
+        const int x0 = 104 + dx, y0 = 36 + dy;
+        int p;
+        R(EC_C_ACTION, x0, y0, 14, 14);
+        for (p = 0; p < 9; p++)
+            if (PIPS[face] >> p & 1u)
+                R(EC_C_BG, x0 + 2 + (p % 3) * 4, y0 + 2 + (p / 3) * 4, 2, 2);
     }
     for (k = 0; k < e->name_nh; k++)               /* the last ten names: where you are among them */
         R(k == e->name_hp && e->name_sel ? EC_C_L15 : EC_C_L5, 2 + k * 6, 38, 4, 2);
-    snprintf(b, sizeof b, "%d/16", n);
-    T(n >= EC_NAME - 1 ? EC_C_ALERT : EC_C_L5, b, W - 2, 44, EC_AL_RIGHT);
+    snprintf(b, sizeof b, "%d/14", n);             /* (0.6.48: beside the die, under the name) */
+    T(n >= EC_NAME_KEYBED ? EC_C_ALERT : EC_C_L5, b, 98, 44, EC_AL_RIGHT);
     if (sh)
         T(EC_C_ACC, "SHIFT", 2, 44, EC_AL_LEFT);
     for (k = 0; k < 11; k++) {                     /* the black keys */

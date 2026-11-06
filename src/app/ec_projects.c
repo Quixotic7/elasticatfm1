@@ -153,7 +153,6 @@ void ec_prj_black(int key)
     switch (key) {
     case 1: ask(EC_PRJ_ASK_NEW, ""); break;
     case 2: ec_prj_rename(g.sel); break;
-    case 3: ec_prj_random(g.sel); break;
     case 6:                                        /* 0.6.45 (owner): DELETE, asked (0.6.46: B6) */
         if (g.sel[0])
             ask(EC_PRJ_ASK_DELETE, g.sel);
@@ -224,16 +223,3 @@ void ec_prj_named(const char *old, const char *nw)
     g.want_gen = 0;
 }
 
-/* B3 RANDOM: the project under the cursor gets a rolled name at once */
-void ec_prj_random(const char *name)
-{
-    static uint32_t rng;
-    char b[EC_NAME];
-    if (!name || !name[0]) {
-        ec_app_message("NO PROJECT");
-        return;
-    }
-    rng ^= A->ms * 2654435761u + 0x7f4a7c15u;
-    ec_name_roll(b, sizeof b, &rng, name);
-    ec_prj_named(name, b);
-}

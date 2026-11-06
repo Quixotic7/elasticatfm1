@@ -516,7 +516,7 @@ static void test_changed_elsewhere(void)
 }
 
 /* 0.6.47 (owner): FIZZ's keybed: B2 RENAME types a name (B1 A .. W1 L ..), OCT- deletes, OCT+ renames the file;
- * PRESETS rolls forward and back; B3 RANDOM renames at once */
+ * PRESETS rolls forward and back (0.6.48: K2 / K4 too; B3 RANDOM gone) */
 static void wait_files(void)
 {
     int i;
@@ -554,15 +554,19 @@ static void test_keybed(void)
     wait_files();
     CHECK(!A->e5.naming && file_exists("LA", 0) && !file_exists(was, 0) && ec_pf_list_find("LA") >= 0,
           "OCT+: %s renamed LA (the old file gone)", was);
-    {
+    {   /* 0.6.48 (owner): one RENAME key; K2 (or K4) rolls in the keybed; 14 characters */
         int i;
         for (i = 0; i < 60 && strcmp(ec_pf_list_name(ec_prj_cursor()), "LA"); i++)
             turn(FM1P_E_SELECT, 1);
+        B(3, 40);
+        CHECK(!A->e5.naming && file_exists("LA", 0), "B3: nothing (one RENAME key)");
+        B(2, 40);
+        turn(FM1P_E_K2, 1);
+        CHECK(A->e5.naming && strcmp(A->e5.name, "LA") && A->e5.name_rolled && (int)strlen(A->e5.name) <= 14,
+              "K2: a rolled name, 14 at most (%s)", A->e5.name);
+        press(FM1P_B_HOME, 40);
+        CHECK(!A->e5.naming && file_exists("LA", 0), "HOME: cancelled, LA kept");
     }
-    B(3, 40);                                      /* RANDOM */
-    wait_files();
-    CHECK(!file_exists("LA", 0) && ec_pf_list_count() > 0 && ec_pf_list_find("LA") < 0,
-          "B3: LA renamed at random (the cursor on %s)", ec_pf_list_name(ec_prj_cursor()));
 }
 
 /* 0.6.45 (owner): the list by name with the numbers in order (a name, then 2, 3 .. 10), DELETE and OVERWRITE asked */

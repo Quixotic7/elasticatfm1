@@ -465,7 +465,7 @@ static void leds_black(void)
         } break;
         case EC_MODE_PROJECTS:                     /* 0.6.42: the actions; a question waits: dark (OCT- / OCT+) */
             if (!ec_prj_ask()) {
-                l[0] = l[1] = l[2] = EC_LED_40;
+                l[0] = l[1] = EC_LED_40;            /* (0.6.48: B3 RANDOM gone: in the keybed) */
                 l[5] = l[8] = l[9] = EC_LED_40;    /* (0.6.46: B6 DELETE, B9 SAVE AS, B10 SAVE) */
                 l[10] = EC_LED_LIT;                /* LOAD */
             }
@@ -586,7 +586,7 @@ static void knob_labels(void)
     char b[12];
     L(EC_LBL_KNOB0 + 7, "VOL");
     if (A->e5.naming) {
-        static const char *const NK[4] = {"CHAR", "", "", "ROLL"};   /* 0.6.47 (FIZZ's keybed) */
+        static const char *const NK[4] = {"CHAR", "ROLL", "", "ROLL"};   /* 0.6.47 (FIZZ's keybed); 0.6.48: K2 rolls too */
         L(EC_LBL_KNOB0 + EC_E_SELECT, "CHAR");
         L(EC_LBL_KNOB0 + EC_E_ALGO, "CURSOR");
         L(EC_LBL_KNOB0 + EC_E_PRESETS, "ROLL");
@@ -928,7 +928,7 @@ static void black_labels(void)
                     s = i == 9 ? "ASSIGN" : i == 10 ? "PREVIEW" : "";
             } break;
             case EC_MODE_PROJECTS: {               /* 0.6.42 */
-                static const char *const PK[11] = {"NEW", "RENAME", "RANDOM", "", "", "DELETE", "", "", "SAVE AS",
+                static const char *const PK[11] = {"NEW", "RENAME", "", "", "", "DELETE", "", "", "SAVE AS",
                                                    "SAVE", "LOAD"};   /* 0.6.46 */
                 s = PK[i];
             } break;

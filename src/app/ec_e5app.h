@@ -34,7 +34,8 @@ typedef struct {
     /* naming */
     int naming;                  /* EC_NM_* */
     int name_pat;
-    char name[EC_NAME];          /* 0.6.47: the name as typed (no padding), 16 characters at most */
+#define EC_NAME_KEYBED 14         /* 0.6.48 (owner): the keybed types / rolls 14 characters (one font size on screen) */
+    char name[EC_NAME];          /* 0.6.47: the name as typed (no padding); 0.6.48: 14 typed (16 kept from before) */
     int name_cur;                /* the cursor: typing inserts there */
     uint32_t rng;
     int name_sel;                /* 0.6.47 (owner, FIZZ): the suggested / rolled name is selected: a key replaces it */
@@ -44,6 +45,8 @@ typedef struct {
     int name_key;                /* the key typed last (0..10 B1..B11, 11..26 W1..W16), -1; its glow */
     uint32_t name_key_ms;
     char name_file[32];          /* EC_NM_FILE: the project file renamed (EC_PF_NAME) */
+    uint32_t name_roll_ms;       /* 0.6.48 (owner): the die's tumble (from this roll) */
+    int name_face;               /* the face it lands on (1..6) */
     /* step preview (stopped) */
     int preview;                 /* 0 none, 1 slices, 2 loop keys */
     uint32_t preview_bits;

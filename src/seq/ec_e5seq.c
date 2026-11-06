@@ -611,18 +611,22 @@ void ec_name_word(char *out, int cap, uint32_t *rng)
 
 void ec_name_roll(char *out, int cap, uint32_t *rng, const char *avoid)
 {
+    char t[EC_NAME];
     int tries;
-    for (tries = 0; tries < 6; tries++) {
+    for (tries = 0; tries < 24; tries++) {   /* (0.6.48: only a name that fits cap - 1 whole: never cut) */
         const uint32_t r = xs(rng) % 10u;
         if (r < 6)
-            ec_e5_random_name(out, cap, rng);
+            ec_e5_random_name(t, sizeof t, rng);
         else if (r < 8)
-            ec_name_phonic(out, cap, rng);
+            ec_name_phonic(t, sizeof t, rng);
         else
-            ec_name_word(out, cap, rng);
-        if (out[0] && (!avoid || strcmp(out, avoid)))
+            ec_name_word(t, sizeof t, rng);
+        if (t[0] && (int)strlen(t) < cap && (!avoid || strcmp(t, avoid))) {
+            snprintf(out, (size_t)cap, "%s", t);
             return;
+        }
     }
+    snprintf(out, (size_t)cap, "%s", t);
 }
 
 /* ------------------------------------------------------------------------------------------- undo --- */

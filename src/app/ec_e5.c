@@ -92,8 +92,9 @@ void ec_e5_tick(void)
 {
     if (E->preview && A->seq.playing)
         preview_stop();                          /* the transport owns playback now */
-    if (E->naming && E->name_key >= 0 && A->ms - E->name_key_ms < 400u)
-        A->redraw = 1;                           /* 0.6.47: the typed key's glow fades */
+    if (E->naming && ((E->name_key >= 0 && A->ms - E->name_key_ms < 400u) ||
+                      (E->name_rolled && A->ms - E->name_roll_ms < 700u)))
+        A->redraw = 1;                           /* 0.6.47: the typed key's glow fades; 0.6.48: the die tumbles */
 }
 
 /* ------------------------------------------------------------------------------------------- undo --- */
@@ -280,9 +281,11 @@ static void name_open_with(int kind, int pat, const char *src)
         name_set(src, 1);
     else {                                       /* no name yet: a suggestion */
         char b[EC_NAME];
-        ec_name_roll(b, sizeof b, &E->rng, 0);
+        ec_name_roll(b, EC_NAME_KEYBED + 1, &E->rng, 0);
         name_set(b, 1);
         E->name_rolled = 1;
+        E->name_roll_ms = A->ms ? A->ms : 1;
+        E->name_face = 1 + (int)(E->rng % 6u);
     }
     hist_push(E->name);
 }
@@ -342,8 +345,8 @@ static void name_type(const char *c)
         E->name_sel = 0;
     }
     n = (int)strlen(E->name);
-    if (n >= EC_NAME - 1) {
-        msg("16 CHARACTERS");
+    if (n >= EC_NAME_KEYBED) {
+        msg("14 CHARACTERS");
         return;
     }
     memmove(E->name + E->name_cur + 1, E->name + E->name_cur, (size_t)(n - E->name_cur + 1));
@@ -389,9 +392,11 @@ static void name_roll(int det)
                 E->name_hp++;                    /* forward through the ones seen first */
             else {
                 char b[EC_NAME];
-                ec_name_roll(b, sizeof b, &E->rng, E->name);
+                ec_name_roll(b, EC_NAME_KEYBED + 1, &E->rng, E->name);
                 hist_push(b);
                 E->name_rolled = 1;
+                E->name_roll_ms = A->ms ? A->ms : 1;   /* 0.6.48: the die tumbles, then lands */
+                E->name_face = 1 + (int)(E->rng % 6u);
             }
         }
     } else {
@@ -426,7 +431,7 @@ static void name_knob(int role, int det)
         int c;
         E->name_sel = 0;
         if (E->name_cur >= n) {
-            if (n >= EC_NAME - 1)
+            if (n >= EC_NAME_KEYBED)
                 break;
             E->name[n] = ' ';
             E->name[n + 1] = 0;
@@ -436,6 +441,7 @@ static void name_knob(int role, int det)
         E->name_rolled = 0;
     } break;
     case EC_E_PRESETS:
+    case EC_E_K2:                                /* 0.6.48 (owner): K2 or K4 roll */
     case EC_E_K4: name_roll(det); break;
     default: break;
     }

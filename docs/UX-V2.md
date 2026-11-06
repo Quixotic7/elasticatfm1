@@ -1269,3 +1269,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   file has gets the next free number (only a trailing " N" counts as a number: PROJ-001 -> PROJ-001 2).
 - Tests: test_proj's keybed (typing, OCT-, rename, roll back, RANDOM), names (rolled, a taken name numbered), the
   e5 demo types its pattern name (ELASTIC).
+
+## 44. 0.6.48: one RENAME key, K2 / K4 roll, one font size, the rolling die (owner, 2026-11-06)
+
+- PROJECTS: B2 RENAME only (B3 RANDOM gone: in the keybed K2 or K4, as PRESETS, roll names).
+- The keybed's name is always the big font: 14 characters typed or rolled (the roller keeps only names that fit
+  whole); an older, longer name scrolls with the cursor.
+- The die is ACTION blue, under the name beside the count, and tumbles each roll (faces flipping, a hop) for 0.6 s
+  before it lands on a face.

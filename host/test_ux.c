@@ -2093,6 +2093,76 @@ static void test_rate_change(void)
     ec_seq_touch(&A->seq, A->track);
 }
 
+/* 0.6.89 (owner): B11 held: B1..B8 the pages (8 of 128 steps), the same in LOOP ENGINE and KEYBOARD */
+static void test_b11_pages(void)
+{
+    float *v;
+    int m, k, ok;
+    for (m = 0; m < 2; m++) {
+        if (m)
+            to(EC_MODE_KEYBOARD);
+        else
+            ec_pn_goto(EC_CAT_SRC, ec_src_loop_page());
+        ec_pn_select_target(0);
+        v = ec_app_params(A);
+        v[EC_P_MACHINE] = EC_MACH_LOOP;
+        v[EC_P_PATTERN_STEPS] = 80;                /* five pages */
+        v[EC_P_KB_LAYOUT] = 2;                     /* (KEYBOARD: IN SCALE) */
+        v[EC_P_KB_SCALE] = 2;
+        clear_steps();
+        ec_seq_touch(&A->seq, A->track);
+        A->step_page = 0;
+        key(1, bkey(11), 1);
+        run(450);
+        CHECK(!ec_lp_b11_text(), "%s, B11 held: nothing said yet", m ? "KEYBOARD" : "LOOP ENGINE");
+        CHECK(led_key(1, bkey(1)) == FM1P_LED_LIT && led_key(1, bkey(2)) == FM1P_LED_DIM &&
+                  led_key(1, bkey(6)) == FM1P_LED_FAINT,
+              "%s, B11 held: the black keys show the pages (B1 %d, B2 %d, B6 past the end %d)", m ? "KEYBOARD" : "LOOP",
+              led_key(1, bkey(1)), led_key(1, bkey(2)), led_key(1, bkey(6)));
+        for (k = 1, ok = 1; k <= 5; k++) {
+            char want[16];
+            tapkey(1, bkey(k), 40);
+            snprintf(want, sizeof want, "PAGE %d", k);
+            ok &= A->step_page == k - 1 && ec_lp_b11_text() && !strcmp(ec_lp_b11_text(), want);
+        }
+        CHECK(ok, "B1..B5: the pages, the header says PAGE n and keeps it (%s)", ec_lp_b11_text() ? ec_lp_b11_text() : "-");
+        tapkey(1, bkey(8), 40);
+        CHECK(A->step_page == 7 && v[EC_P_PATTERN_STEPS] == 128 && !strcmp(ec_lp_b11_text(), "PAGE 8"),
+              "B8 past the end: the track grows to 8 pages (%g steps)", v[EC_P_PATTERN_STEPS]);
+        tapkey(0, wkey(3), 40);
+        CHECK(ec_lp_b11_text() && !strcmp(ec_lp_b11_text(), "STEP 115"), "a step key: STEP 115 (%s)",
+              ec_lp_b11_text() ? ec_lp_b11_text() : "-");
+        run(1200);
+        CHECK(ec_lp_b11_text() && !strcmp(ec_lp_b11_text(), "STEP 115"), "still said a second later");
+        key(1, bkey(11), 0);
+        run(50);
+        CHECK(!ec_lp_b11_text(), "B11 up: gone");
+        ec_lp_target_to(0);
+        if (!m) {                                  /* STEP latched: B11 held = the loop keys: "LOOP 0:16" */
+            v[EC_P_LOOP_DIVISION] = 16;
+            tapkey(1, bkey(11), 40);
+            key(1, bkey(11), 1);
+            run(450);
+            key(0, wkey(1), 1);
+            run(20);
+            key(0, wkey(2), 1);
+            run(20);
+            CHECK(ec_lp_b11_text() && !strcmp(ec_lp_b11_text(), "LOOP 0:16"), "loop keys 1-2: LOOP 0:16 (%s)",
+                  ec_lp_b11_text() ? ec_lp_b11_text() : "-");
+            key(0, wkey(1), 0);
+            key(0, wkey(2), 0);
+            key(1, bkey(11), 0);
+            run(50);
+            tapkey(1, bkey(11), 40);               /* (unlatch) */
+            v[EC_P_LOOP_START] = 0;
+            v[EC_P_LOOP_END] = 128;
+        }
+        v[EC_P_PATTERN_STEPS] = 16;
+        A->step_page = 0;
+        ec_seq_touch(&A->seq, A->track);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -2145,6 +2215,7 @@ int main(int argc, char **argv)
     test_slice_poly();
     test_chords();
     test_rate_change();
+    test_b11_pages();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

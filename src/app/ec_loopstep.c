@@ -129,6 +129,15 @@ static void sync_target(void)
 int ec_lp_target(void) { return ec_lp_sel_mode() && ec_lp_first() >= 0 ? ec_lp_first() + 1 : 0; }
 int ec_lp_step_layer(void) { return ec_lp_sel_mode() && (g.latched ^ g.b11); }
 int ec_lp_b11_held(void) { return g.b11 && ec_lp_sel_mode(); }
+/* 0.6.89 (owner): while B11 is held the header keeps what the last key did there ("PAGE 3", "STEP 5", "LOOP 0:16")
+ * until B11 comes up */
+static char g_b11_text[24];
+void ec_lp_b11_say(const char *t)
+{
+    if (g.b11)
+        snprintf(g_b11_text, sizeof g_b11_text, "%s", t);
+}
+const char *ec_lp_b11_text(void) { return ec_lp_b11_held() && g_b11_text[0] ? g_b11_text : 0; }
 void ec_lp_b11_used(void) { g.b11_used = 1; }
 uint32_t ec_lp_keys(void) { return g.keys; }
 
@@ -168,6 +177,7 @@ void ec_lp_live(void)
 
 int ec_lp_b11(int down)
 {
+    g_b11_text[0] = 0;                             /* 0.6.89: a new hold says nothing yet */
     if (down) {
         const int m = ec_app_mode();
         if (P->f_sticky && (m == EC_CAT_SRC || m == EC_CAT_TRIG || m == EC_MODE_KEYBOARD)) {
@@ -313,6 +323,11 @@ int ec_lp_white(int k, int i, int down, int vel)
         g.skeys |= 1u << i;
         sel_set(idx, 1);
         sync_target();
+        {
+            char b[16];
+            snprintf(b, sizeof b, "STEP %d", idx + 1);   /* 0.6.89 */
+            ec_lp_b11_say(b);
+        }
     }
     return 1;
 }
@@ -397,6 +412,18 @@ void ec_lp_loop_note(int i, int down)
             write_live(lo, hi, 0);                 /* (quietly: the header keeps its held-key text) */
         else
             write_entry(lo, hi, 0);
+        if (g.b11 && !slice_track()) {             /* 0.6.89 (owner): B11 held: "LOOP 0:16" / "RANGE 0:32" (its values) */
+            char b[24];
+            if (g.range)
+                snprintf(b, sizeof b, "RANGE %d:%d", lo * 8, (hi + 1) * 8);
+            else {
+                const int div = clampi((iv(ec_app_params(A), EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);
+                const int half = div > 16 && P->zoom_half ? 16 : 0;
+                const int k0 = clampi(lo + 1 + half, 1, div), k1 = clampi(hi + 1 + half, 1, div);
+                snprintf(b, sizeof b, "LOOP %d:%d", (k0 - 1) * 128 / div, k1 * 128 / div);
+            }
+            ec_lp_b11_say(b);
+        }
         A->redraw = 1;
         return;
     }

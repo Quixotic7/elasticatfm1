@@ -304,6 +304,8 @@ void ec_lp_algo(int det);                     /* ALGO: one step selected, below 
 int ec_lp_b11(int down);                      /* B11: held = the other layer, a quick click latches it; 1 = a quick
                                                * click on a page that keeps B11's own tap (the caller does it) */
 int ec_lp_b11_held(void);                     /* B11 physically held */
+void ec_lp_b11_say(const char *t);             /* 0.6.89: the header while B11 is held (kept until it comes up) */
+const char *ec_lp_b11_text(void);             /* 0.6.89: that text, 0 none / B11 up */
 void ec_lp_b11_used(void);                    /* something done while B11 was down: not a quick click */
 void ec_lp_clear(void);                       /* B11 + OCT-: the selected steps cleared */
 void ec_lp_live(void);                        /* 0.6.14: B11 + OCT+: LIVE */

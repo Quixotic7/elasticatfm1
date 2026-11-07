@@ -1670,3 +1670,14 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   Start and pattern restarts reset it (as before). Swing and micro timing work from the origin.
 - Tests: test_ux test_rate_change (fails without the fix). The ux_demo test now has its own folder: it shared
   ux_folder with the ux test, and both save /data/ui.bin (the "power-on: LOOP ENGINE" flake of 0.6.81-0.6.87).
+
+## 85. 0.6.89: B11 held: the same in KEYBOARD, all 8 pages, a header that stays (owner, 2026-11-07)
+
+- KEYBOARD: B11 held shows the pages on the black keys' LEDs as LOOP ENGINE does (it lit the scale's notes of the
+  STEP layer); B1..B8 pick the pages there too.
+- B11 held + a page key past the track's length: the track grows to that page (all 8 pages reachable); those
+  keys' LEDs are faint.
+- While B11 is held the header keeps what its last key did until B11 comes up: "PAGE 3" (a page key; a page loop /
+  mute says its own), "STEP 5" (a step key), "LOOP 0:16" (loop keys, in 0..128 loop units), "RANGE 0:32". Nothing
+  pressed yet: as before.
+- test_ux test_b11_pages (LOOP ENGINE and KEYBOARD).

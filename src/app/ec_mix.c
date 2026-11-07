@@ -130,6 +130,7 @@ static void pages_set(uint16_t mask, const char *fmt, int n)
     ec_app_mark_dirty();
     snprintf(b, sizeof b, fmt, n);
     ec_app_message(b);
+    ec_lp_b11_say(b);                          /* 0.6.89 */
     A->redraw = 1;
 }
 
@@ -184,6 +185,7 @@ void ec_pages_black_down(int key)
             char b[24];
             snprintf(b, sizeof b, "LOOP PAGES %d-%d", lo + 1, hi + 1);
             ec_app_message(b);
+            ec_lp_b11_say(b);                          /* 0.6.89 */
         }
     }
 }
@@ -197,6 +199,23 @@ void ec_pages_black_up(int key)
     pg.held &= (uint16_t)~bit;
     if (pg.used & bit) {
         pg.used &= (uint16_t)~bit;
+        return;
+    }
+    if (i >= pages && i < 8 && ec_lp_b11_held()) {   /* 0.6.89 (owner): B11 held: a page past the end adds the pages
+                                                    * up to it (all 8 reachable) */
+        float *v = ec_app_params(A);
+        char b[16];
+        ec_app_undo_track("PAGES", 0x9A6E5u);
+        v[EC_P_PATTERN_STEPS] = (float)((i + 1) * 16);
+        ec_seq_timing_changed(&A->seq);
+        ec_seq_touch(&A->seq, A->track);
+        ec_app_mark_dirty();
+        A->step_page = i;
+        A->step_held = 0;
+        snprintf(b, sizeof b, "PAGE %d", i + 1);
+        ec_app_message(b);
+        ec_lp_b11_say(b);
+        A->redraw = 1;
         return;
     }
     if (i >= pages)
@@ -218,6 +237,7 @@ void ec_pages_black_up(int key)
         A->step_held = 0;
         snprintf(b, sizeof b, "PAGE %d", i + 1);
         ec_app_message(b);
+        ec_lp_b11_say(b);                          /* 0.6.89: kept while B11 is held */
         pg.last_pg = i;
         pg.last_ms = A->ms;
         A->redraw = 1;
@@ -249,6 +269,7 @@ void ec_pages_hold_tick(void)
                     else
                         snprintf(b, sizeof b, in ? "PAGE %d MUTED" : "PAGE %d ON", i + 1);
                     ec_app_message(b);
+                    ec_lp_b11_say(b);                          /* 0.6.89 */
                 }
                 A->redraw = 1;
             }

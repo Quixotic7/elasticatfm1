@@ -449,7 +449,16 @@ static void leds_black(void)
             }
         } break;
         case EC_MODE_KEYBOARD:
-            if (ec_kb_slice_track()) {
+            if (ec_lp_b11_held() && !A->bus) {      /* 0.6.89 (owner): B11 held: the pages, as LOOP ENGINE's */
+                const int pages = ec_pages_count();
+                const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
+                for (i = 0; i < 10; i++) {
+                    const int in = (m >> i) & 1u;
+                    l[i] = i >= 8 ? EC_LED_OFF : i >= pages ? EC_LED_FAINT
+                           : i == A->step_page ? (in || blink(200) ? EC_LED_LIT : EC_LED_OFF) : in ? EC_LED_DIM : EC_LED_OFF;
+                }
+                l[10] = EC_LED_LIT;
+            } else if (ec_kb_slice_track()) {
                 const float *v = ec_app_params(A);
                 const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32), sel = iv(v, EC_P_SLICE_INDEX);
                 for (i = 0; i < 10; i++) {
@@ -547,10 +556,11 @@ static void leds_black(void)
             } else if (ec_lp_b11_held() && !A->bus) {     /* 0.6.13 / 0.6.14: B11 held: the pages on B1..B10 */
                 const int pages = ec_pages_count();
                 const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
-                for (i = 0; i < 10; i++) {         /* 0.6.14 (owner): a muted page dark; the shown one muted blinks */
+                for (i = 0; i < 10; i++) {         /* 0.6.14 (owner): a muted page dark; the shown one muted blinks;
+                                                    * 0.6.89: the pages past the length faint (a click adds them) */
                     const int in = (m >> i) & 1u;
-                    l[i] = i >= pages ? EC_LED_OFF : i == A->step_page ? (in || blink(200) ? EC_LED_LIT : EC_LED_OFF)
-                                                                       : in ? EC_LED_DIM : EC_LED_OFF;
+                    l[i] = i >= 8 ? EC_LED_OFF : i >= pages ? EC_LED_FAINT
+                           : i == A->step_page ? (in || blink(200) ? EC_LED_LIT : EC_LED_OFF) : in ? EC_LED_DIM : EC_LED_OFF;
                 }
             } else if (ec_src_mode(mode)) {
                 int cur = -1;

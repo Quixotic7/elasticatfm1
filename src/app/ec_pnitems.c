@@ -18,7 +18,7 @@ static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x;
 
 /* 0.6.66 (owner): KEYBOARD's knob pages past its own three (NOTES, SCALE, SOUND): every lane of TRIG mode's pages
  * (the trig, its conditions and ratchets, the playhead) and of LOOP ENGINE's WARP page (the track's warp mode) */
-typedef struct { int cat, page, lane; } kbv_t;
+typedef struct { int cat, page, lane, key; } kbv_t;   /* key: the IN SCALE black key (0 B1 ..) */
 #define KB_VIEWS 16
 static int kb_views(kbv_t *o)
 {
@@ -28,13 +28,19 @@ static int kb_views(kbv_t *o)
     for (p = 0; p < ec_cat_pages(EC_CAT_TRIG, v) && n < KB_VIEWS; p++) {
         ec_page_items(EC_CAT_TRIG, p, v, 0, &t);
         for (l = 0; l * 4 < t.n && n < KB_VIEWS; l++)
-            o[n].cat = EC_CAT_TRIG, o[n].page = p, o[n++].lane = l;
+            o[n].cat = EC_CAT_TRIG, o[n].page = p, o[n].lane = l, o[n++].key = 0;
     }
-    p = ec_cat_key_page(EC_CAT_SRC, 4);
-    if (p >= 0) {
-        ec_page_items(EC_CAT_SRC, p, v, 0, &t);
-        for (l = 0; l * 4 < t.n && n < KB_VIEWS; l++)
-            o[n].cat = EC_CAT_SRC, o[n].page = p, o[n++].lane = l;
+    {                                              /* 0.6.74: LOOP ENGINE's MACHINE (B3), then WARP (B4) */
+        static const int KEYS[2] = {3, 4};
+        int j;
+        for (j = 0; j < 2; j++) {
+            p = ec_cat_key_page(EC_CAT_SRC, KEYS[j]);
+            if (p < 0)
+                continue;
+            ec_page_items(EC_CAT_SRC, p, v, 0, &t);
+            for (l = 0; l * 4 < t.n && n < KB_VIEWS; l++)
+                o[n].cat = EC_CAT_SRC, o[n].page = p, o[n].lane = l, o[n++].key = KEYS[j] - 1;
+        }
     }
     return n;
 }
@@ -45,17 +51,43 @@ int ec_kb_pages(void)
     return EC_KB_PAGES + (A->bus ? 0 : kb_views(o));
 }
 
-/* the first page of a group: 0 NOTES .. 2 SOUND, 3 TRIG, 4 WARP; its name (a message, a black key's label) */
-int ec_kb_group_page(int g)
+/* 0.6.74 (owner): IN SCALE's black keys as LOOP ENGINE's: B1 TRIG, B3 MACHINE, B4 WARP; LOOP's B2 (LOOP) and B5
+ * (RANGE) make no sense here, so they hold KEYBOARD's own pages: B2 NOTES then SOUND, B5 SCALE. Page p's key (0..4),
+ * -1 none */
+int ec_kb_page_key(int p)
 {
     kbv_t o[KB_VIEWS];
-    const int n = A->bus ? 0 : kb_views(o);
+    if (p == 0 || p == 2)
+        return 1;
+    if (p == 1)
+        return 4;
+    if (A->bus || p < EC_KB_PAGES || p - EC_KB_PAGES >= kb_views(o))
+        return -1;
+    return o[p - EC_KB_PAGES].key;
+}
+
+/* the first page of black key g (0..4) on IN SCALE, -1 none */
+int ec_kb_group_page(int g)
+{
+    int p;
+    if (g == 1)
+        return 0;
+    for (p = 0; p < ec_kb_pages(); p++)
+        if (ec_kb_page_key(p) == g)
+            return p;
+    return -1;
+}
+
+/* the next page of key g after page `from` (wraps inside the key's pages), -1 none */
+int ec_kb_group_next(int g, int from)
+{
+    const int n = ec_kb_pages();
     int i;
-    if (g < EC_KB_PAGES)
-        return g;
-    for (i = 0; i < n; i++)
-        if ((g == EC_KB_PAGES && o[i].cat == EC_CAT_TRIG) || (g == EC_KB_PAGES + 1 && o[i].cat == EC_CAT_SRC))
-            return EC_KB_PAGES + i;
+    for (i = 1; i <= n; i++) {
+        const int p = ((from + i) % n + n) % n;
+        if (ec_kb_page_key(p) == g)
+            return p;
+    }
     return -1;
 }
 

@@ -209,6 +209,8 @@ static void leds_loop(void)
 /* 0.6.57 (owner): a step's note on KEYBOARD's keys: the selected step's (ALGO) blinks, as LOOP's selected step does;
  * playing LIVE, the note of the step playing now lights. -1000: none (a step without a trig) */
 uint8_t ec_kb_key_led(int k, uint8_t base);
+#define KB_LED_ROOT 179                            /* 0.6.74 (owner): KEYBOARD: the root 70 %, */
+#define KB_LED_SCALE 77                            /*   the scale's other notes 30 % */
 static int step_note(int idx)
 {
     const ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
@@ -244,7 +246,7 @@ static void leds_keyboard(void)
         const int k = ec_key_of_lower(i), sm = ec_kb_semis(k);
         /* 0.6.62 (owner): the root mid, the scale's notes dim, the others faint (CHROM: every note dim, C mid) */
         const int root = sm != EC_KB_NONE && ((sm - ec_kb_root()) % 12 + 12) % 12 == 0;
-        uint8_t l = ec_kb_key_led(k, root ? EC_LED_MID : sm != EC_KB_NONE && ec_kb_in_scale(sm) ? EC_LED_DIM
+        uint8_t l = ec_kb_key_led(k, root ? KB_LED_ROOT : sm != EC_KB_NONE && ec_kb_in_scale(sm) ? KB_LED_SCALE
                                                                                                 : EC_LED_OFF);   /* 0.6.65
                                                     * (owner): out of the scale off, the root brighter */
         if (ec_lp_is_sel(A->step_page * 16 + i))   /* 0.6.60 (owner): the selected step blinks on its key (its place
@@ -463,13 +465,12 @@ static void leds_black(void)
                         const int sm = i < 10 ? ec_kb_semis(ec_key_of_upper(i)) : EC_KB_NONE;
                         if (i < 10)
                             l[i] = ec_kb_key_led(ec_key_of_upper(i),
-                                                 ((sm - ec_kb_root()) % 12 + 12) % 12 == 0 ? EC_LED_MID : EC_LED_DIM);
+                                                 ((sm - ec_kb_root()) % 12 + 12) % 12 == 0 ? KB_LED_ROOT : KB_LED_SCALE);
                         continue;
                     }
                     if (ec_kb_scale_layout()) {    /* 0.6.62: IN SCALE: B1..B3 the pages, B6..B10 the mod sources */
-                        const int g0 = i < EC_KB_PAGES + 2 ? ec_kb_group_page(i) : -1;
-                        const int g1 = i + 1 < EC_KB_PAGES + 2 ? ec_kb_group_page(i + 1) : -1;
-                        l[i] = g0 >= 0 ? (P->kb_page >= g0 && (g1 < 0 || P->kb_page < g1) ? EC_LED_LIT : EC_LED_DIM)
+                        const int g0 = i < 5 ? ec_kb_group_page(i) : -1;   /* 0.6.74: LOOP's keys */
+                        l[i] = g0 >= 0 ? (ec_kb_page_key(P->kb_page) == i ? EC_LED_LIT : EC_LED_DIM)
                                : i >= 5 && i <= 9 ? (A->mk.held == EC_MK_LFO1 + i - 5 ? EC_LED_LIT : EC_LED_MID)
                                                   : EC_LED_OFF;
                         continue;
@@ -478,7 +479,7 @@ static void leds_black(void)
                         if (ec_key_upper(k) == i) {
                             const int sm = ec_kb_semis(k);
                             const int rt = ((sm - ec_kb_root()) % 12 + 12) % 12 == 0;
-                            l[i] = ec_kb_key_led(k, rt ? EC_LED_MID : ec_kb_in_scale(sm) ? EC_LED_DIM : EC_LED_OFF);
+                            l[i] = ec_kb_key_led(k, rt ? KB_LED_ROOT : ec_kb_in_scale(sm) ? KB_LED_SCALE : EC_LED_OFF);
                         }
                 }
             break;
@@ -963,8 +964,8 @@ static void black_labels(void)
                     snprintf(b, sizeof b, "%s%d", NN[(sm % 12 + 12) % 12], 4 + (int)floorf((float)sm / 12.0f));
                     s = b;
                 } else if (ec_kb_scale_layout()) {   /* 0.6.62: IN SCALE: the shortcuts */
-                    static const char *const PGN[EC_KB_PAGES + 2] = {"NOTES", "SCALE", "SOUND", "TRIG", "WARP"};
-                    s = i < EC_KB_PAGES + 2 ? PGN[i] : i >= 5 && i <= 9 ? ec_mk_key_name(EC_MK_LFO1 + i - 5) : "";
+                    static const char *const PGN[5] = {"TRIG", "NOTES", "MACHINE", "WARP", "SCALE"};   /* 0.6.74 */
+                    s = i < 5 ? PGN[i] : i >= 5 && i <= 9 ? ec_mk_key_name(EC_MK_LFO1 + i - 5) : "";
                 } else {
                     const int sm = ec_kb_semis(ec_key_of_upper(i));
                     snprintf(b, sizeof b, "%s%d", NN[(sm % 12 + 12) % 12], 4 + (int)floorf((float)sm / 12.0f));

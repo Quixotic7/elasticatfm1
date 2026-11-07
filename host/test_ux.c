@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "ec_app.h"
+#include "ec_holdmenu.h"
 #include "ec_browse.h"
 #include "ec_fs_native.h"
 #include "fm1core.h"
@@ -1476,10 +1477,25 @@ static void test_062(void)
               ec_kb_semis(ec_key_of_lower(7)) == 21 && ec_kb_semis(ec_key_of_upper(0)) == EC_KB_NONE,
           "A MINOR, IN SCALE: W1 A, W3 C, W8 the next A; the black keys play nothing (%d %d %d)",
           ec_kb_semis(ec_key_of_lower(0)), ec_kb_semis(ec_key_of_lower(2)), ec_kb_semis(ec_key_of_lower(7)));
-    CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "NOTES") && lbl(FM1CORE_LBL_BLACK0 + 5, "LFO 1"),
-          "IN SCALE: B1 NOTES, B6 LFO 1 (%s, %s)", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 5));
-    tapkey(1, 2, 40);                              /* B3: SOUND */
-    CHECK(A->pn.kb_page == 2 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CUTOFF"), "B3: the SOUND page");
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "TRIG") && lbl(FM1CORE_LBL_BLACK0 + 1, "NOTES") &&
+              lbl(FM1CORE_LBL_BLACK0 + 2, "MACHINE") && lbl(FM1CORE_LBL_BLACK0 + 3, "WARP") &&
+              lbl(FM1CORE_LBL_BLACK0 + 4, "SCALE") && lbl(FM1CORE_LBL_BLACK0 + 5, "LFO 1"),
+          "0.6.74 IN SCALE: B1..B5 as LOOP ENGINE's, B2 / B5 KEYBOARD's own, B6 LFO 1 (%s %s %s %s %s)",
+          L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 1), L(FM1CORE_LBL_BLACK0 + 2), L(FM1CORE_LBL_BLACK0 + 3),
+          L(FM1CORE_LBL_BLACK0 + 4));
+    ec_kb_page(0, 1);
+    tapkey(1, 1, 40);                              /* B2 on NOTES: SOUND */
+    CHECK(A->pn.kb_page == 2 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CUTOFF"), "B2 again: the SOUND page");
+    tapkey(1, 4, 40);                              /* B5: SCALE */
+    CHECK(A->pn.kb_page == 1, "B5: the SCALE page");
+    tapkey(1, 2, 40);                              /* B3: MACHINE */
+    CHECK(ec_kb_page_key(A->pn.kb_page) == 2, "B3: a MACHINE page (%d)", A->pn.kb_page);
+    key(1, 2, 1);                                  /* B3 held: LOOP ENGINE's MACHINE menu */
+    run(EC_HOLD_MS + 100);
+    CHECK(ec_hm_shown() && ec_hm_armed() == 3, "B3 held: the MACHINE menu");
+    key(1, 2, 0);
+    run(20);
+    CHECK(!ec_hm_shown(), "let go: the menu goes");
     key(1, 5, 1);                                  /* B6 held: LFO 1 */
     run(20);
     CHECK(A->mk.held == EC_MK_LFO1, "B6 held: LFO 1 (a mod source)");
@@ -1597,8 +1613,8 @@ static void test_kb_more(void)
         for (i = 0; i < pg.n; i++) {
             if (pg.it[i].kind == EC_IT_PARAM && pg.it[i].id == EC_P_TRIG_CHANCE && trig < 0)
                 trig = p;
-            if (pg.it[i].kind == EC_IT_PARAM && EC_PARAMS[pg.it[i].id].kind == EC_PK_NUM && p >= ec_kb_group_page(4) &&
-                ec_kb_group_page(4) >= 0 && warp < 0)
+            if (pg.it[i].kind == EC_IT_PARAM && EC_PARAMS[pg.it[i].id].kind == EC_PK_NUM && p >= ec_kb_group_page(3) &&
+                ec_kb_group_page(3) >= 0 && warp < 0)
                 warp = p;
         }
     }

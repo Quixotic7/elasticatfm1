@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "ec_app.h"
+#include "ec_holdmenu.h"
 
 #define A (&ec_app)
 #define P (&ec_app.pn)
@@ -117,9 +118,20 @@ void ec_kb_page(int d, int absolute)
  * the knob's param, as the source keys elsewhere) */
 static void scale_black(int up, int down)
 {
-    if (up >= 0 && up < EC_KB_PAGES + 2) {         /* 0.6.66: B4 TRIG, B5 WARP too */
-        if (down && ec_kb_group_page(up) >= 0)
-            ec_kb_page(ec_kb_group_page(up), 1);
+    if (up >= 0 && up < 5) {                       /* 0.6.74 (owner): as LOOP ENGINE's B1..B5: a hold its menu
+                                                    * (ADVANCE, LOOP MODE, MACHINE, WARP MODE, VOICE MODE), a quick
+                                                    * click the key's pages (B2 NOTES / SOUND, B5 SCALE: KEYBOARD's) */
+        if (down) {
+            ec_src_arm_loop_menu(up + 1);
+            return;
+        }
+        if (ec_hm_armed() == up + 1 && ec_hm_up(up + 1))
+            return;                                /* (the menu picked) */
+        {
+            const int p = ec_kb_page_key(P->kb_page) == up ? ec_kb_group_next(up, P->kb_page) : ec_kb_group_page(up);
+            if (p >= 0)
+                ec_kb_page(p, 1);
+        }
         return;
     }
     if (up >= 5 && up <= 9) {

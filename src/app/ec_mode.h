@@ -280,6 +280,7 @@ void ec_pn_loop_text(char *out, int cap);     /* 0.6.14: the pages looped: ALL, 
 int ec_pages_count(void);                     /* the selected track's pattern pages */
 /* ---- ec_keyboard.c ---- */
 void ec_kb_key(int k, int down, int vel);     /* any of the 27 keys (k: the note key) */
+void ec_src_arm_loop_menu(int key);           /* 0.6.74: LOOP ENGINE's hold menu on black key 1..5 */
 void ec_kb_oct(int d);
 void ec_kb_target(int det);                   /* ALGO */
 void ec_kb_bank_next(void);                   /* 0.6.14: B11's quick click on a slice track: the next bank */
@@ -312,7 +313,9 @@ int ec_kb_semis(int k);                       /* key k's note in semitones from 
 #define EC_KB_NONE (-1000)                    /* 0.6.62: no note (IN SCALE's black keys) */
 #define EC_KB_PAGES 3                         /* 0.6.62: NOTES, SCALE, SOUND (its own; 0.6.66: then TRIG's, WARP's) */
 int ec_kb_pages(void);                        /* 0.6.66: KEYBOARD's knob pages, the borrowed ones too */
-int ec_kb_group_page(int g);                  /* 0.6.66: the first page of group g (0..2 its own, 3 TRIG, 4 WARP), -1 */
+int ec_kb_group_page(int g);                  /* 0.6.74: the first page of IN SCALE black key g (0 B1 .. 4 B5), -1 */
+int ec_kb_group_next(int g, int from);        /* 0.6.74: key g's next page after `from` (wraps), -1 */
+int ec_kb_page_key(int p);                    /* 0.6.74: page p's black key (0..4), -1 */
 const char *ec_kb_page_name(int p);           /* 0.6.66: "SCALE", "TRIG 2", "WARP 1" .. */
 int ec_kb_step_notes(void);                   /* 0.6.64: STEP layer: B1..B10 play the scale */
 int ec_kb_scale_layout(void);                 /* 0.6.62: IN SCALE (a loop track) */

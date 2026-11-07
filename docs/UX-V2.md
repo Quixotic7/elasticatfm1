@@ -1540,3 +1540,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - KEYBOARD draws LOOP ENGINE's own step strip: every step (the trigs, the empty steps' floors, the playhead) in the
   layer's colour, blue LIVE, red with steps selected, yellow on the STEP layer, the selected steps white. (It drew
   the trigs white with the floors in the colour.)
+
+## 70. 0.6.74: IN SCALE's black keys as LOOP ENGINE's; the root's LED brighter (owner, 2026-11-06)
+
+- KEYBOARD, IN SCALE: B1..B5 sit where LOOP ENGINE's do, with LOOP's hold menus: B1 TRIG (hold: ADVANCE), B3
+  MACHINE (hold: MACHINE), B4 WARP (hold: WARP MODE). LOOP's B2 (LOOP) and B5 (RANGE) cover the loop ranges, which
+  KEYBOARD does not use, so they hold KEYBOARD's own pages: B2 NOTES, then SOUND on the next click (hold: LOOP MODE),
+  B5 SCALE (hold: VOICE MODE). A click on the key of the page shown steps through that key's pages (TRIG's lanes,
+  MACHINE's). KEYBOARD's knob pages gain LOOP ENGINE's MACHINE page. B6..B10 stay the mod sources.
+- KEYBOARD's LEDs: the root at 70 %, the scale's other notes at 30 % (were 38 % / 16 %), out of the scale off.

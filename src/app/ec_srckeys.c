@@ -329,6 +329,13 @@ static void arm_menu(int mode, int key)
     }
 }
 
+/* 0.6.74: KEYBOARD's IN SCALE black keys B1..B5 hold LOOP ENGINE's menus */
+void ec_src_arm_loop_menu(int key)
+{
+    arm_menu(EC_CAT_SRC, key);
+    A->redraw = 1;
+}
+
 static int special(int mode)
 {
     return mode == EC_CAT_FILT || mode == EC_CAT_SRC || mode == EC_CAT_TRIG || ec_cat_key_page(mode, 11) >= 0;

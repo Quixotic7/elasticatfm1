@@ -241,6 +241,51 @@ int ec_step_lock_clear(ec_step_t *s, int id)
 
 void ec_step_clear(ec_step_t *s) { memset(s, 0, sizeof *s); }
 
+/* 0.6.82 (owner): a step's notes: NOTE, then NOTE2..NOTE8 (a chord, VOICE MODE POLY) */
+int ec_step_notes(const ec_step_t *s, float *out)
+{
+    int k, n = 0;
+    float x;
+    for (k = 0; k < EC_STEP_NOTES; k++)
+        if (ec_step_lock_get(s, EC_P_NOTE + k, &x)) {
+            if (out)
+                out[n] = x;
+            n++;
+        }
+    return n;
+}
+
+/* one note: NOTE = semis, the chord's others gone; -1 locks full */
+int ec_step_note_set(ec_step_t *s, float semis)
+{
+    int k;
+    for (k = 1; k < EC_STEP_NOTES; k++)
+        ec_step_lock_clear(s, EC_P_NOTE + k);
+    return ec_step_lock_set(s, EC_P_NOTE, semis);
+}
+
+/* a note into the step's chord (a note already there: nothing); full (EC_STEP_NOTES): the oldest goes; -1 locks full */
+int ec_step_note_add(ec_step_t *s, float semis)
+{
+    float nt[EC_STEP_NOTES];
+    int n = ec_step_notes(s, nt), k;
+    for (k = 0; k < n; k++)
+        if (nt[k] == semis)
+            return 0;
+    if (n == EC_STEP_NOTES) {                      /* the oldest out, the rest down one */
+        for (k = 1; k < n; k++)
+            nt[k - 1] = nt[k];
+        n--;
+    }
+    nt[n++] = semis;
+    for (k = 0; k < EC_STEP_NOTES; k++)
+        ec_step_lock_clear(s, EC_P_NOTE + k);
+    for (k = 0; k < n; k++)
+        if (ec_step_lock_set(s, EC_P_NOTE + k, nt[k]) < 0)
+            return -1;
+    return 0;
+}
+
 int ec_step_reset_active(const ec_step_t *s, const float *v, int reset_id)
 {
     float x;

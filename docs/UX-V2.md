@@ -1611,3 +1611,16 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   ends the slice it started.
 - Tests: test_ux test_slice_poly (POLY two voices, MONO one, KEYBOARD's release), test_proj test_poly_machines;
   test_e6 / test_v020 / test_rec moved off the retired machines.
+
+## 78. 0.6.82: chords on TRIG (owner, 2026-11-06)
+
+- TRIG + VOICE MODE POLY: a step holds up to 8 notes (NOTE, NOTE2..NOTE8; a ninth drops the oldest). KEYBOARD keys
+  held together write one chord on the target step (the target moves on once every key is up); CAPTURE writes keys
+  held together on one step as a chord. MONO and the other machines stay one note per step.
+- Playing: the first note plays the track as before; the chord's other notes each sound as a voice over the same
+  loop region (the step's loop lock, else the track's), from its start, at PITCH + the note, for the step's length.
+  Live: on a POLY TRIG track the first key held plays the track, each further key its own voice while held.
+- The NOTE cell (B1's TRIG page) shows a chord as "C4+".
+- LOOP stays one playhead (no chords); slice tracks: several slices, one pitch each (0.6.81).
+- test_ux test_chords.
+- Open: ux failed twice in a parallel run right after a build and could not be reproduced (watch for it).

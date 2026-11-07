@@ -129,6 +129,7 @@ typedef struct {
     int kb_bank;               /* the slice bank (10 a bank) */
     int kb_page;               /* 0.6.62: KEYBOARD's knob page (EC_KB_PAGES) */
     int8_t kb_semis[32];       /* the note a key started (its release) */
+    int8_t kb_voice[32];       /* 0.6.82: POLY TRIG: the voice slot a key past the first plays (0: the track's own) */
     int8_t kb_slice[32];       /* 0.6.81: slice tracks: the slice a key started (its release ends that one), 0 none */
     uint32_t kb_held;          /* 0.6.1: the keys held (bit k), the last one pressed (the header) */
     int kb_last;
@@ -325,6 +326,7 @@ int ec_kb_in_scale(int semis);                /* 0.6.62: the note is in the trac
 int ec_kb_root(void);                         /* 0.6.62: the scale's root, 0 = C */
 void ec_kb_page(int d, int absolute);         /* 0.6.62: KEYBOARD's knob page (SEL by d; absolute: page d) */
 int ec_kb_lit_key(void);                      /* the key lit as sounding (the note + PITCH), -1 none */
+int ec_kb_chords(void);                       /* 0.6.82: VOICE MODE POLY on a loop track: keys together = a chord */
 const char *ec_kb_held_text(void);            /* the header's text: the notes held ("C4 E4"), "SLICE 3", 0 */
 /* ---- ec_xfd.c ---- */
 void ec_xfd_white(int i, int down, int lean);

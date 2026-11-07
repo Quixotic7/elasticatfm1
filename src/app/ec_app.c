@@ -326,6 +326,15 @@ void ec_app_item_format(const ec_app_t *a, const ec_item_t *it, float x, char *o
     if (it->kind == EC_IT_PARAM) {
         ec_param_format(def_id(a, it->id), x, iv(ec_project_track((ec_project_t *)&a->proj, a->track)->v,
                                                  EC_P_ENV_RANGE), out, cap);
+        if (it->id == EC_P_NOTE && !a->bus) {      /* 0.6.82 (owner): a chord on the step shown: "C#4+" */
+            const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];
+            int s = ec_app_target_step(a), i;
+            for (i = 0; s < 0 && i < EC_NLOWER; i++)
+                if (a->step_held >> i & 1u)
+                    s = a->step_page * 16 + i;
+            if (s >= 0 && s < EC_MAXSTEPS && ec_step_notes(&tr->steps[s], 0) > 1 && strlen(out) + 1 < (size_t)cap)
+                strcat(out, "+");
+        }
         return;
     }
     if (it->kind == EC_IT_GLOBAL) {

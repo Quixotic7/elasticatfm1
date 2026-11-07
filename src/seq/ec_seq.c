@@ -217,6 +217,52 @@ static int evaluate_trig(ec_seq_t *s, int t, const ec_step_t *rec)
 }
 
 /* ------------------------------------------------------------------------------------------- triggering --- */
+/* 0.6.82 (owner): TRIG, VOICE MODE POLY: a chord's other notes (NOTE2..) each a voice over the same loop region (the
+ * step's loop lock, else the track's), from its start, pitched to its note on top of PITCH; voice slot k + 1 (a
+ * TRIG track has no slices), so the next chord takes each slot over */
+static void chord_voice(ec_seq_t *s, int t, int slot, float start, float end, float pitch, float vel, int length)
+{
+    ec_event_t e = ev0(EC_EV_SLICE_ON, t);
+    e.slice = slot;
+    e.start = start;
+    e.end = end;
+    e.pitch = pitch;
+    e.velocity = vel;
+    e.mode = 3;                                    /* loop */
+    e.length = length;
+    emit(s, &e);
+}
+
+static void chord_voices(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note)
+{
+    const float *v = ptr(s, t)->v;
+    float nt[EC_STEP_NOTES];
+    const int n = rec && iv(v, EC_P_TRIG_POLY) == 2 && iv(v, EC_P_MACHINE) == EC_MACH_LOOP_TRIG ? ec_step_notes(rec, nt)
+                                                                                               : 0;
+    int k;
+    for (k = 1; k < n; k++)
+        chord_voice(s, t, k + 1, field(rec, v, EC_P_LOOP_START), field(rec, v, EC_P_LOOP_END),
+                    field(rec, v, EC_P_PITCH) + nt[k], field(rec, v, EC_P_VELOCITY),
+                    (int)(note > 0x7FFFFFFF ? 0x7FFFFFFF : note));
+}
+
+/* 0.6.82: a live KEYBOARD key past the first on a POLY TRIG track: its own voice while held (slot 9 + its index) */
+void ec_seq_chord_key(ec_seq_t *s, int t, int slot, float semis, int pressed, float vel)
+{
+    const float *v;
+    if (t < 0 || t >= EC_NTRACK || slot < 1 || slot > 32)
+        return;
+    v = ptr(s, t)->v;
+    if (pressed)
+        chord_voice(s, t, slot, v[EC_P_LOOP_START], v[EC_P_LOOP_END], ec_seq_value(s, t, EC_P_PITCH) + semis, vel,
+                    (int)(60.0 * s->fs));
+    else {
+        ec_event_t e = ev0(EC_EV_SLICE_OFF, t);
+        e.slice = slot;
+        emit(s, &e);
+    }
+}
+
 static void fire_slices(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note)
 {
     const float *v = ptr(s, t)->v;
@@ -445,6 +491,7 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
             if (ec_step_lock_get(rec, EC_P_LOOP_END, &x))
                 e.end = x;
             emit(s, &e);
+            chord_voices(s, t, rec, note);          /* 0.6.82: POLY: the chord's other notes */
         }
     } else if (is_slice(m)) {
         if (fires)
@@ -507,6 +554,7 @@ static void retrigger_ratchet(ec_seq_t *s, int t)
         if (ec_step_lock_get(rec, EC_P_LOOP_END, &x))
             e.end = x;
         emit(s, &e);
+        chord_voices(s, t, rec, note);              /* 0.6.82 */
     } else if (is_slice(m))
         fire_slices(s, t, rec, note);
     st->last_fire = s->now;

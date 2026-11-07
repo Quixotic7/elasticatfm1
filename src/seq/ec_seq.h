@@ -149,6 +149,7 @@ void ec_seq_timing_changed(ec_seq_t *s);
 void ec_seq_loop_key(ec_seq_t *s, int track, int key, int pressed);              /* 1..32 */
 void ec_seq_slice_pad(ec_seq_t *s, int track, int slice, int pressed, float vel);/* 1..32 */
 void ec_seq_keyboard(ec_seq_t *s, int track, float semis, int pressed, float vel);
+void ec_seq_chord_key(ec_seq_t *s, int track, int slot, float semis, int pressed, float vel);   /* 0.6.82: a POLY TRIG chord key */
 void ec_seq_keyboard_retune(ec_seq_t *s, int track, float semis);   /* 0.6.67: a key still held takes the note back */
 
 /* ---- 0.6.0: live recording (docs/UX-V2.md 4). The app owns the modes (CAPTURE / FIXED / OVERDUB), what gets

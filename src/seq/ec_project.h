@@ -147,6 +147,10 @@ int ec_step_has_content(const ec_step_t *s);
 int ec_step_lock_get(const ec_step_t *s, int id, float *val);   /* 1 if locked */
 int ec_step_lock_set(ec_step_t *s, int id, float val);          /* 0 ok, -1 full */
 int ec_step_lock_clear(ec_step_t *s, int id);                   /* 1 if it was locked */
+#define EC_STEP_NOTES 8                                          /* 0.6.82: a chord's notes (NOTE..NOTE8) */
+int ec_step_notes(const ec_step_t *s, float *out);              /* 0.6.82: its notes (out: EC_STEP_NOTES), count */
+int ec_step_note_set(ec_step_t *s, float semis);                /* 0.6.82: one note (the chord's others cleared) */
+int ec_step_note_add(ec_step_t *s, float semis);                /* 0.6.82: a note into the chord (8: the oldest out) */
 void ec_step_clear(ec_step_t *s);
 int ec_step_reset_active(const ec_step_t *s, const float *v, int reset_id);
 int ec_step_is_ghost(const ec_step_t *s, const float *v);

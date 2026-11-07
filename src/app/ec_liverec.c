@@ -287,7 +287,15 @@ void ec_liverec_note(int semis, int slice, int vel)
     if (!hit(&step, &mu))
         return;
     s = trig_at(step, mu, vel);
-    locked(s, EC_P_NOTE, (float)clampi(semis, -36, 36));   /* 0.6.80: the NOTE */
+    {                                              /* 0.6.80: the NOTE; 0.6.82: POLY, keys held together on one step:
+                                                    * a chord */
+        static int last = -1;
+        const int chord = !slice && ec_kb_chords() && __builtin_popcount(P->kb_held) > 1 && step == last;
+        if ((chord ? ec_step_note_add(s, (float)clampi(semis, -36, 36))
+                   : ec_step_note_set(s, (float)clampi(semis, -36, 36))) < 0)
+            ec_app_message("LOCKS FULL");
+        last = step;
+    }
     if (slice > 0)
         s->slices = 1u << (clampi(slice, 1, 32) - 1);   /* (one note per step, as step entry) */
     written(step, 1);

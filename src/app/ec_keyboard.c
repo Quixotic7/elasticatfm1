@@ -169,19 +169,30 @@ void ec_kb_target(int det)
     A->redraw = 1;
 }
 
+/* 0.6.82 (owner): VOICE MODE POLY on a loop track: keys held together are one chord on one step */
+int ec_kb_chords(void)
+{
+    return !A->bus && iv(ec_app_params(A), EC_P_MACHINE) == EC_MACH_LOOP_TRIG &&
+           iv(ec_app_params(A), EC_P_TRIG_POLY) == 2;   /* (TRIG only: LOOP is one playhead, slices one pitch each) */
+}
+static int g_chord_idx = -1;                       /* the step a chord being entered writes into (-1 none) */
+static int g_chord_adv;                            /* its advance, once every key is up */
+
 /* one note on the target step: its trig, pitch (and slice, velocity) */
 static void enter_step(int semis, int slice, int vel)
 {
     ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
     const int len = ec_seq_pattern_steps(&A->seq, A->track);
-    const int idx = clampi(P->target, 1, len) - 1;
+    const int chord = ec_kb_chords() && g_chord_idx >= 0 && __builtin_popcount(P->kb_held) > 1;
+    const int idx = chord ? g_chord_idx : clampi(P->target, 1, len) - 1;
     ec_step_t *s = &tr->steps[idx];
     int adv = ec_as->advance != 0;
     ec_undo_steps(&E->undo, &A->proj, A->track, idx / 16, (uint16_t)(1u << (idx % 16)), "NOTE", 0xD00u + (uint32_t)idx,
                   A->ms);
     E->undo.last_key = 0;
     s->trig = 1;
-    if (ec_step_lock_set(s, EC_P_NOTE, (float)clampi(semis, -36, 36)) < 0)   /* 0.6.80: the NOTE, not PITCH */
+    if ((chord ? ec_step_note_add(s, (float)clampi(semis, -36, 36))
+               : ec_step_note_set(s, (float)clampi(semis, -36, 36))) < 0)   /* 0.6.80: the NOTE, not PITCH */
         ec_app_message("LOCKS FULL");
     if (slice > 0)
         s->slices = 1u << (slice - 1);             /* one note per step: the slice replaces the step's */
@@ -193,10 +204,30 @@ static void enter_step(int semis, int slice, int vel)
     ec_app_mark_dirty();
     if (A->fn)                                     /* SHIFT + the key: the other */
         adv = !adv;
+    if (ec_kb_chords()) {                          /* 0.6.82: a chord: the target moves once every key is up */
+        if (!chord)
+            g_chord_idx = idx;
+        g_chord_adv = adv;
+        return;
+    }
     if (adv) {
         ec_lp_target_to(P->target % len + 1);     /* 0.6.54 (QA C5): the selection moves with it (ALGO's start) */
         A->step_page = (P->target - 1) / 16;
     }
+}
+
+/* 0.6.82: every key up after a chord's entry: the target moves on (ADVANCE) */
+static void chord_done(void)
+{
+    const int len = ec_seq_pattern_steps(&A->seq, A->track);
+    if (g_chord_idx < 0 || P->kb_held)
+        return;
+    g_chord_idx = -1;
+    if (g_chord_adv && P->target && len > 0) {
+        ec_lp_target_to(P->target % len + 1);
+        A->step_page = (P->target - 1) / 16;
+    }
+    A->redraw = 1;
 }
 
 void ec_kb_key(int k, int down, int vel)
@@ -216,11 +247,16 @@ void ec_kb_key(int k, int down, int vel)
             P->kb_held &= ~(1u << k);
             if (slice && P->kb_slice[k] > 0)       /* 0.6.81: the slice this key started (not the one picked now) */
                 ec_seq_slice_pad(&A->seq, A->track, P->kb_slice[k], 0, 0);
-            else if (!slice)
+            else if (P->kb_voice[k] > 0) {         /* 0.6.82: a chord key's own voice */
+                ec_seq_chord_key(&A->seq, A->track, P->kb_voice[k], 0, 0, 0);
+                P->kb_voice[k] = 0;
+            } else if (!slice)
                 ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
             P->kb_slice[k] = 0;
             ec_liverec_key(k, 0);                  /* 0.6.59: live REC: the note's length */
-            if (!slice && P->kb_held) {            /* 0.6.67: keys overlapping: the newest still held sounds */
+            chord_done();                          /* 0.6.82 */
+            if (!slice && P->kb_held && !ec_kb_chords()) {   /* 0.6.67: keys overlapping: the newest still held sounds
+                                                    * (0.6.82: POLY: each key its own voice instead) */
                 int j, best = -1;
                 for (j = 0; j < EC_NKEY && j < 32; j++)
                     if ((P->kb_held >> j & 1u) && (best < 0 || P->kb_stamp[j] > P->kb_stamp[best]))
@@ -278,7 +314,17 @@ void ec_kb_key(int k, int down, int vel)
         const int semis = ec_kb_snap(ec_kb_semis(k));   /* 0.6.69: outside the scale: its nearest note */
         P->kb_semis[k] = (int8_t)clampi(semis, -60, 60);
         P->kb_slice[k] = (int8_t)(slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0);
-        ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
+        P->kb_voice[k] = 0;
+        if (ec_kb_chords() && A->seq.tr[A->track].kb_down > 0) {   /* 0.6.82: POLY TRIG: a key past the first sounds
+                                                    * as its own voice (the first plays the track) */
+            int j, slot = 9;
+            for (j = 0; j < EC_NKEY && j < 32; j++)
+                if (P->kb_voice[j] >= slot && P->kb_voice[j] < 32)
+                    slot = P->kb_voice[j] + 1;
+            P->kb_voice[k] = (int8_t)(slot < 32 ? slot : 32);
+            ec_seq_chord_key(&A->seq, A->track, P->kb_voice[k], (float)semis, 1, (float)vel / 127.0f);
+        } else
+            ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
         if (entry)
             enter_step(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
         else {                                     /* live REC: the note (pitch, velocity, slice) */

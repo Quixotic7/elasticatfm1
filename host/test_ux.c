@@ -1958,6 +1958,79 @@ static void test_slice_poly(void)
     ec_seq_touch(&A->seq, A->track);
 }
 
+/* 0.6.82 (owner): TRIG + VOICE MODE POLY: keys held together write one chord; its notes sound as voices; "C#4+" */
+static void test_chords(void)
+{
+    ec_track_status_t st;
+    ec_page_t pg;
+    float *v, nt[EC_STEP_NOTES];
+    char val[24];
+    int n, i;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_LOOP_TRIG;
+    v[EC_P_TRIG_POLY] = 2;
+    v[EC_P_KB_LAYOUT] = 1;
+    v[EC_P_KB_SCALE] = 1;
+    A->pn.oct = 0;
+    clear_steps();
+    ec_seq_touch(&A->seq, A->track);
+    ec_lp_target_to(1);
+    run(20);
+    key(0, wkey(5), 1);                            /* C4 */
+    run(20);
+    key(0, wkey(7), 1);                            /* E4, C4 still held */
+    run(20);
+    key(0, wkey(9), 1);                            /* G4 */
+    run(20);
+    n = ec_step_notes(step(0), nt);
+    CHECK(n == 3 && nt[0] == 0 && nt[1] == 4 && nt[2] == 7 && A->pn.target == 1,
+          "POLY: three keys held = one chord on step 1 (%d notes), the target waits", n);
+    key(0, wkey(5), 0);
+    key(0, wkey(7), 0);
+    key(0, wkey(9), 0);
+    run(20);
+    CHECK(A->pn.target == 2, "every key up: the target moves on (%d)", A->pn.target);
+    ec_pn_goto(EC_CAT_TRIG, 0);                    /* B1's TRIG page: NOTE first */
+    ec_lp_target_to(1);
+    run(20);
+    ec_app_page(A, &pg);
+    for (i = 0; i < pg.n && !(pg.it[i].kind == EC_IT_PARAM && pg.it[i].id == EC_P_NOTE); i++)
+        ;
+    if (i < pg.n)
+        ec_app_item_format(A, &pg.it[i], 0.0f, val, sizeof val);
+    else
+        snprintf(val, sizeof val, "-");
+    CHECK(!strcmp(val, "C4+") && pg.it[0].id == EC_P_NOTE, "the TRIG page's first cell: NOTE C4+ (%s)", val);
+    ec_lp_target_to(0);
+    to(EC_MODE_KEYBOARD);
+    press(FM1P_B_PLAY, 40);
+    for (i = 0; i < 100; i++) {
+        run_audio(10);
+        ec_dsp_track_status(A->dsp, A->track, &st);
+        if (st.voices >= 2)
+            break;
+    }
+    CHECK(st.voices >= 2, "playing: the chord's other notes sound as voices (%d)", st.voices);
+    press(FM1P_B_PLAY, 40);
+    run_audio(400);
+    clear_steps();
+    ec_seq_touch(&A->seq, A->track);
+    key(0, wkey(5), 1);                            /* live: C4 then E4 held */
+    run_audio(30);
+    key(0, wkey(7), 1);
+    run_audio(60);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(st.voices == 1 && st.reader_on, "live: the first key plays the track, the second a voice (%d)", st.voices);
+    key(0, wkey(7), 0);
+    key(0, wkey(5), 0);
+    run_audio(400);
+    v[EC_P_TRIG_POLY] = 1;
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    ec_seq_touch(&A->seq, A->track);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -2008,6 +2081,7 @@ int main(int argc, char **argv)
     test_algo_preview();
     test_restart();
     test_slice_poly();
+    test_chords();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

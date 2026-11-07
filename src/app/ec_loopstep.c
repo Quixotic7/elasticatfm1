@@ -266,8 +266,14 @@ static void write_entry(int lo, int hi, int say)
     g.undo = 1;
     if (g.range)
         snprintf(b, sizeof b, "RANGE %d-%d > %d", lo + 1, hi + 1, n);
-    else if (k0 == k1)
-        snprintf(b, sizeof b, "LOOP %d > %d STEP%s", k0, n, n == 1 ? "" : "S");
+    else if (slice_track()) {                      /* 0.6.56 (QA C17): a slice track names its slices (the bank's) */
+        const int s0 = lo + 1 + half, s1 = hi + 1 + half;
+        if (s0 == s1)
+            snprintf(b, sizeof b, "SLICE %d > %d", s0, n);
+        else
+            snprintf(b, sizeof b, "SLICE %d-%d > %d", s0, s1, n);
+    } else if (k0 == k1)
+        snprintf(b, sizeof b, "LOOP %d > %d", k0, n);   /* (0.6.56: short enough for the header) */
     else
         snprintf(b, sizeof b, "LOOP %d-%d > %d", k0, k1, n);
     if (say)

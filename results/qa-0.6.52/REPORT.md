@@ -1,6 +1,6 @@
 # QA pass, Elasticat 0.6.52 (2026-11-06)
 
-**Outcome:** A1-A5 fixed in 0.6.53 (docs/UX-V2.md §49, test_proj); C1, C2, C4, C5, C7 in 0.6.54 (§50); B1-B10 (with C9 and the mod-key track change) in 0.6.55 (§51). The rest is open.
+**Outcome:** A1-A5 fixed in 0.6.53 (docs/UX-V2.md §49, test_proj); C1, C2, C4, C5, C7 in 0.6.54 (§50); B1-B10 (with C9 and the mod-key track change) in 0.6.55 (§51); C3, C6, C10-C12, C14-C17, D1 (headroom + limiter), D2 (no autosave while playing: already), D6 (COUNT), D7, D8 in 0.6.56 (§52).
 
 main at fc47945. Five parallel sweeps, about 140 scripted harness runs plus sanitizer builds and loader fuzzing:
 

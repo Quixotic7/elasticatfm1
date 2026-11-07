@@ -571,7 +571,8 @@ static void button_down(int b)
             A->dirty_ms = A->ms;
         break;
     case EC_B_REC:
-        if (ec_app_mode() == EC_CAT_FILE)          /* (FILE: nothing) */
+        if (ec_app_mode() == EC_CAT_FILE || ec_app_mode() == EC_MODE_PROJECTS)   /* (FILE: nothing; 0.6.56, QA C14:
+                                                    * PROJECTS too) */
             break;
         if (A->fn)
             ec_liverec_settings();
@@ -628,7 +629,8 @@ static void button_up(int b)
         }
     } break;
     case EC_B_REC:
-        if (P->rec_down && !P->rec_used)
+        if (P->rec_down && !P->rec_used && ec_app_mode() != EC_MODE_SAMPLER)   /* 0.6.56 (QA C14): the SAMPLER's
+                                                    * REC is its recorder's (held: the setup), never live REC */
             ec_liverec_toggle();
         P->rec_down = 0;
         break;
@@ -1021,8 +1023,8 @@ static void presets(int d)
         ec_pn_select_target(cur + (d > 0 ? 1 : -1));
         return;
     }
-    if (A->bus)
-        return;
+    if (A->bus || ((mode == EC_CAT_XFD || mode == EC_CAT_PAT) && !A->settings))
+        return;                                    /* 0.6.56 (QA C17): XFADE / PATTERN: never the track's sample */
     if ((ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held) {   /* 0.6.14: every track page, PAGES */
         step_page_turn(d);                         /* 0.6.14 (owner): PRESETS turns the step page (SLOT is a param) */
         return;
@@ -1251,7 +1253,8 @@ static void knob(int r, int d)
             ec_file_algo(d);                       /* 0.6.15: the browser: CW adds to the pool, CCW removes */
         else if (mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR)   /* 0.6.15: the EDITOR: the selected marker */
             ec_app_edit_slot(P->ed_point ? EC_S_TRIM_END : EC_S_TRIM_START, d, ec_ux_accel(r, 200, d));
-        else if (mode == EC_CAT_FILE || ec_lp_active())
+        else if (mode == EC_CAT_FILE || ec_lp_active() || mode == EC_CAT_MASTER || mode == EC_CAT_XFD ||
+                 mode == EC_CAT_PAT)                /* 0.6.56 (QA C17): MIX, XFADE, PATTERN: no hidden step page */
             ;                                      /* (the other FILE pages; 0.6.52 (owner): the track pages, where
                                                     * PRESETS turns the step page: nothing) */
         else {                                     /* the step page */

@@ -11,7 +11,7 @@ python3 "$(dirname "$0")/make_demo_folder.py" "$B/e3_folder" >/dev/null
 mkdir -p "$OUT"
 rm -f "$B/e3_flash.bin"
 "$B/ec_run" --layout test --folder "$B/e3_folder" --out "$OUT" --script "$(dirname "$0")/demo_e3.txt" --wav "$OUT/e3_demo.wav" \
-    --flash "$B/e3_flash.bin" --rms-from 5000 --min-rms 0.012 --expect-ui ready:1 --expect-ui dirty:0
+    --flash "$B/e3_flash.bin" --rms-from 5000 --min-rms 0.006 --expect-ui ready:1 --expect-ui dirty:0
 # power on again: T1's auto-chopped razor table is back (LOOP ENGINE, then FILE's B4 = RAZOR; ALGO skips the intro)
 "$B/ec_run" --layout test --folder "$B/e3_folder" --flash "$B/e3_flash.bin" --ms 3000 --png-scale 2 \
     --turn ALGO@1000:1 --png-at 1400:"$OUT/e3_reload_src.png" --press SAVE@1600 \

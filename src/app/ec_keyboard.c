@@ -72,6 +72,8 @@ static void enter_step(int semis, int slice, int vel)
         s->slices = 1u << (slice - 1);             /* one note per step: the slice replaces the step's */
     if (vel != 100)
         ec_step_lock_set(s, EC_P_VELOCITY, (float)vel / 127.0f);
+    else
+        ec_step_lock_clear(s, EC_P_VELOCITY);     /* 0.6.56 (QA C15): a full-velocity note replaces a softer one's */
     ec_seq_touch(&A->seq, A->track);
     ec_app_mark_dirty();
     if (A->fn)                                     /* SHIFT + the key: the other */

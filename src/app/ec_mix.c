@@ -151,7 +151,13 @@ void ec_pages_black_down(int key)
     pg.held |= bit;
     pg.used &= (uint16_t)~bit;
     pg.ms[i] = A->ms;
-    if (others && i < 8) {                         /* two keys held: the loop between them (past the end: longer) */
+    if (others && i >= 10) {                       /* 0.6.56 (QA C6): B11 with a key held: nothing (and no hold-mute) */
+        pg.used |= pg.held;
+        pg.last_pg = -1;
+        return;
+    }
+    if (others) {                                  /* two keys held: the loop between them (past the end: longer);
+                                                    * 0.6.56 (QA C6): B9 / B10 second too, as they work first */
         int lo = i, hi = i, k;
         uint16_t m = 0;
         for (k = 0; k < EC_NBKEY; k++)

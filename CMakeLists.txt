@@ -152,7 +152,7 @@ if(Python3_FOUND)
                      ${_tf}/audio/testloop_bpm120.wav)
     add_test(NAME e0_run
              COMMAND ec_run --folder ${_tf} --ms 6000 --press PLAY@1000 --turn K1@2000:3 --key 9@2500
-                     --rms-from 1200 --min-rms 0.02 --expect-ui file:testloop_bpm120.wav --expect-ui load:done
+                     --rms-from 1200 --min-rms 0.01 --expect-ui file:testloop_bpm120.wav --expect-ui load:done
                      --expect-ui play:1 --wav ${CMAKE_BINARY_DIR}/e0_run.wav --png ${CMAKE_BINARY_DIR}/e0_run.png)
     set_tests_properties(e0_run PROPERTIES DEPENDS e0_testloop)
 endif()
@@ -162,7 +162,7 @@ add_test(NAME e1_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e1.sh $
 # an E2 save
 add_test(NAME e5_demo COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/host/render_e5.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/e5)
 add_test(NAME e0_nofolder
-         COMMAND ec_run --ms 3000 --press PLAY@500 --rms-from 800 --min-rms 0.02 --expect-ui scan:nofolder
+         COMMAND ec_run --ms 3000 --press PLAY@500 --rms-from 800 --min-rms 0.01 --expect-ui scan:nofolder
                  --expect-ui "file:BUILTIN LOOP")
 # E4: FX on every slot, the sends, the master insert and MOD through panel input (results/e4); the model side
 add_test(NAME seq_e4 COMMAND ec_test_seq_e4)

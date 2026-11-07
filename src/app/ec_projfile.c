@@ -495,7 +495,13 @@ static void save_tick(void)
             else
                 ec_name_roll(b, sizeof b, &rng, 0);
             ec_pf_unique(b, g.name);
-            snprintf(A->proj.e5.name, sizeof A->proj.e5.name, "%.*s", EC_NAME - 1, g.name);
+            if (strcmp(A->proj.e5.name, g.name)) {  /* 0.6.56 (QA C11): packed before the name was chosen: again */
+                int32_t n;
+                snprintf(A->proj.e5.name, sizeof A->proj.e5.name, "%.*s", EC_NAME - 1, g.name);
+                n = ec_project_save(&A->proj, g_pack, sizeof g_pack);
+                if (n > 0)
+                    g.len = (uint32_t)n;
+            }
         }
         g.tmp_good = 0;
         save_writes();
@@ -718,6 +724,8 @@ static void load_done(uint32_t n)
     g.from_tmp = g.ld_tmp;
     replace(n);
     snprintf(g.name, sizeof g.name, "%s", g.ld_name);
+    snprintf(A->proj.e5.name, sizeof A->proj.e5.name, "%.*s", EC_NAME - 1, g.name);   /* 0.6.56 (QA C11): the file's
+                                                    * name is the project's (an older copy may say another) */
     g.tmp_good = g.ld_tmp;
     g.conflict = 0;
     if (g.ld_tmp)
@@ -825,6 +833,8 @@ void ec_pf_save_as(const char *name, const char *done)
         return;
     }
     snprintf(g.name, sizeof g.name, "%s", name);
+    snprintf(A->proj.e5.name, sizeof A->proj.e5.name, "%.*s", EC_NAME - 1, name);   /* 0.6.56 (QA C11): the record
+                                                    * says the file's name (SAVE AS +1, OVERWRITE, RENAME) */
     snprintf(g.as_msg, sizeof g.as_msg, "%s", done ? done : "SAVED");
     g.as = 1;
     g.disk_known = 0;                               /* (a new file, or one the user chose to write over) */
@@ -852,6 +862,8 @@ void ec_pf_delete(const char *name)
         g.conflict = 0;
         g.tmp_good = 0;
         A->dirty = 1;                               /* (EDITED: not in any file now) */
+        A->save_failed = 1;                         /* 0.6.56 (QA C10): autosave waits for an edit (it wrote the */
+        A->save_fail_ms = A->dirty_ms;              /* file straight back); SHIFT + SAVE saves it */
     }
 }
 

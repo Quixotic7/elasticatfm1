@@ -297,6 +297,18 @@ static void test_free_purge(void)
           "SHIFT + F2: freed again (state %d)", A->slot[2].state);
     B(9, 40);
     CHECK(!strcmp(A->msg, "NOT IN THE POOL"), "B9 again: not in the pool (%s)", A->msg);
+    {   /* 0.6.56 (QA C12): a LOAD skips a free slot a track points at (the freed one stays silent) */
+        const float s0 = trk(4)->v[EC_P_SLOT];
+        trk(4)->v[EC_P_SLOT] = 3;                  /* T5 on the freed slot 3 */
+        B(10, 40);                                 /* d_perc16 again */
+        settle(200);
+        CHECK(ec_file_pooled("/audio/d_perc16_bpm120.wav") != 2 && ec_file_pooled("/audio/d_perc16_bpm120.wav") >= 0,
+              "LOAD after FREE: not into slot 3, T5's (slot %d)", ec_file_pooled("/audio/d_perc16_bpm120.wav") + 1);
+        if (ec_file_pooled("/audio/d_perc16_bpm120.wav") >= 0)
+            ec_file_free_slot(ec_file_pooled("/audio/d_perc16_bpm120.wav"));
+        trk(4)->v[EC_P_SLOT] = s0;
+        settle(50);
+    }
     /* purge: T1 on slot 2 (chords), slot 1 (drums) locked on a step of pattern A3, slot 4 (bass) used by nothing */
     trk(0)->v[EC_P_SLOT] = 2;
     for (i = 1; i < EC_NTRACK; i++)
@@ -858,6 +870,32 @@ static void test_undo_pass(void)
     ec_razor_redistribute(rz, 16);
     trk(t)->v[EC_P_SLICE_COUNT] = 4;
     before = *rz;
+    {   /* 0.6.56 (owner): COUNT 16 -> 10 -> 16 keeps the six slices it hid, where they were (EVEN respreads) */
+        ec_razor_t c16;
+        trk(t)->v[EC_P_SLICE_COUNT] = 16;
+        rz->start[11] = 70.5f;                     /* slice 12 moved by hand */
+        c16 = *rz;
+        B(3, 40);                                  /* page 3: COUNT */
+        turn(FM1P_E_K1, -6);
+        run(20);
+        CHECK(ec_rzui_count(A) == 10, "COUNT 10 (%d)", ec_rzui_count(A));
+        turn(FM1P_E_K1, 6);
+        run(20);
+        CHECK(ec_rzui_count(A) == 16 && !memcmp(rz, &c16, sizeof c16) && rz->start[11] == 70.5f,
+              "COUNT back to 16: slices 11-16 as they were (slice 12 at %g)", rz->start[11]);
+        trk(t)->v[EC_P_SLICE_COUNT] = 4;
+        before = *rz;
+    }
+    {   /* 0.6.56 (QA C16): a grid slice track: the editor shows its grid; table edits say GRID SLICES */
+        const float m0 = trk(t)->v[EC_P_MACHINE];
+        ec_razor_t g0 = *rz;
+        trk(t)->v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;
+        B(9, 40);
+        CHECK(!memcmp(rz, &g0, sizeof g0) && !strcmp(A->msg, "GRID SLICES") &&
+                  fabsf(ec_rzui_view(A)->end[0] - 32.0f) < 0.01f,
+              "GRID SLICE: EVEN refused (%s), the view is the grid (slice 1 ends %g)", A->msg, ec_rzui_view(A)->end[0]);
+        trk(t)->v[EC_P_MACHINE] = m0;
+    }
     B(9, 40);                                      /* EVEN: 4 */
     CHECK(memcmp(rz, &before, sizeof before) != 0, "B9 EVEN changed the table");
     shift_down(1);

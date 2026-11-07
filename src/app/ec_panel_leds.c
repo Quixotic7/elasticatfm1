@@ -604,12 +604,15 @@ static void knob_labels(void)
     }
     if ((ec_lp_b11_held() || mode == EC_MODE_PAGES) && !A->bus && !A->settings) {   /* 0.6.14: B11 held (PAGES:
                                                     * always): LEN, RATE, the zoom, the page */
-        static const char *const BK[4] = {"LEN", "RATE", "ZOOM", ""};
+        /* 0.6.56 (QA C17): what they do: B11 held, ALGO the length and PRESETS the zoom (0.6.40); PAGES, ALGO and
+         * PRESETS the page, no zoom */
+        static const char *const BK[4] = {"LEN", "RATE", "ZOOM", ""}, *const PG[4] = {"LEN", "RATE", "", ""};
+        const int pages = mode == EC_MODE_PAGES && !ec_lp_b11_held();
         L(EC_LBL_KNOB0 + EC_E_SELECT, "");
-        L(EC_LBL_KNOB0 + EC_E_ALGO, "STEP");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, "PAGE");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, pages ? "PAGE" : "LEN");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, pages ? "PAGE" : "ZOOM");
         for (k = 0; k < 4; k++)
-            L(EC_LBL_KNOB0 + EC_E_K1 + k, BK[k]);
+            L(EC_LBL_KNOB0 + EC_E_K1 + k, pages ? PG[k] : BK[k]);
         return;
     }
     if (P->as_open) {
@@ -640,8 +643,9 @@ static void knob_labels(void)
         L(EC_LBL_KNOB0 + EC_E_ALGO, A->fn ? "SWING" : ec_rzui_active(A) ? "SLICE" : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE ? "+/- POOL"
                                                     : mode == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR ? "MARKER"
                                                     : mode == EC_CAT_FILE ? "" : mode == EC_MODE_KEYBOARD || ec_lp_sel_mode() ? "TARGET"
-                                                    : ec_fx_on_sends() ? "SEND MODE" : ec_mk_route_src() ? "DEPTH" : ec_lp_active() ? "" : "STEP PG");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : mode == EC_CAT_FILE && (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) ? "PREVIEW" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
+                                                    : ec_fx_on_sends() ? "SEND MODE" : ec_mk_route_src() ? "DEPTH"
+                                                    : ec_lp_active() || mode == EC_CAT_MASTER || mode == EC_CAT_XFD || mode == EC_CAT_PAT ? "" : "STEP PG");
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, mode == EC_CAT_MASTER ? "TRACK" : mode == EC_CAT_XFD || mode == EC_CAT_PAT ? "" : mode == EC_CAT_FILE && (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL) ? "PREVIEW" : (ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held ? "PAGE" : A->fn ? "TRACK" : A->bus ? "" : A->step_held ? "LOCK SLOT" : "SLOT");
         if (A->fn)
             L(EC_LBL_KNOB0 + EC_E_SELECT, "BPM");
         else if (A->settings)

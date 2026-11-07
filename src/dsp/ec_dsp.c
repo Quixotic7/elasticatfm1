@@ -890,6 +890,9 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
 
     /* slice voices of this track (pre-filter, like the SC sourceGroup) */
     ec_voices_process(d, ti, L, R, n);
+    /* 0.6.56 (owner): 6 dB of headroom: the sources enter the chain (filter, drive, inserts, sends, the buses) at half
+     * level, so nothing inside clips; the neighbour's pass-through (already lowered) is not lowered again */
+    for (int i = 0; i < n; ++i) { L[i] *= EC_HEADROOM; R[i] *= EC_HEADROOM; }
 
     /* E3: neighbor -- the source is the LEFT track's whole output for this chunk (d->nbl / nbr, filled by
      * ec_dsp_process; that track then skips the master). A pass-through like \elasticatNeighborReader:
@@ -902,7 +905,7 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     if (p->machine == EC_MACH_INPUT && d->in) {
         const int m = d->in_frames - d->in_at < n ? d->in_frames - d->in_at : n;
         const float *x = d->in + 2 * d->in_at;
-        for (int i = 0; i < m; ++i) { L[i] += x[2 * i]; R[i] += x[2 * i + 1]; }
+        for (int i = 0; i < m; ++i) { L[i] += x[2 * i] * EC_HEADROOM; R[i] += x[2 * i + 1] * EC_HEADROOM; }
     }
 
     if (t->dk_left > 0) {
@@ -964,11 +967,14 @@ static void bus_peak(float *pk, const float *L, const float *R, int n)
     }
 }
 
+/* 0.6.56 (owner): the output's soft limiter: linear to half scale, then a smooth knee (slope 1 at the knee) that never
+ * reaches full scale (0.98), so the output never hard-clips */
 static inline float soft_limit(float x)
 {
+    const float k = 0.5f, c = 0.98f;
     float a = fabsf(x);
-    if (a <= 0.8f) return x;
-    float y = 0.8f + 0.2f * ec_tanh((a - 0.8f) * 5.f);
+    if (a <= k) return x;
+    float y = k + (c - k) * ec_tanh((a - k) / (c - k));
     return x < 0.f ? -y : y;
 }
 

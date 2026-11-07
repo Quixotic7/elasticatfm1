@@ -151,7 +151,8 @@ static void slots_in_use(uint8_t *used)
             continue;
         for (t = 0; t < EC_NTRACK; t++) {
             const ec_ptrack_t *tr = &pt->tr[t];
-            used[clampi((int)floorf(tr->v[EC_P_SLOT] + 0.5f), 1, EC_NSLOT) - 1] = 1;
+            if (tr->v[EC_P_SLOT] >= 0.5f)          /* (0.6.56: SLOT OFF points at none) */
+                used[clampi((int)floorf(tr->v[EC_P_SLOT] + 0.5f), 1, EC_NSLOT) - 1] = 1;
             for (i = 0; i < EC_MAXSTEPS; i++)
                 for (k = 0; k < tr->steps[i].nlock; k++)
                     if (tr->steps[i].lock_id[k] == EC_P_SLOT)
@@ -161,6 +162,19 @@ static void slots_in_use(uint8_t *used)
 }
 
 static void preview_drop(void);
+
+/* 0.6.56 (QA C12): a LOAD's slot: the first free one no track or step lock points at (a slot FREE emptied stays the
+ * tracks' silence until the user sets them; a new file never plays on them by itself), else the first free one */
+static int next_free_unused(void)
+{
+    uint8_t used[EC_NSLOT];
+    int s;
+    slots_in_use(used);
+    for (s = 0; s < EC_NSLOT; s++)
+        if (!slot_has(s) && !used[s])
+            return s;
+    return ec_file_next_free();
+}
 
 int ec_file_purge(void)
 {
@@ -642,7 +656,7 @@ static void load(void)
         return;
     }
     k = ec_file_pooled(path);
-    s = k >= 0 ? k : ec_file_next_free();
+    s = k >= 0 ? k : next_free_unused();
     if (s < 0) {
         ec_app_alert("FULL");
         return;

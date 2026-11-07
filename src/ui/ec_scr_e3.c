@@ -22,7 +22,7 @@ static const float *tv(const ec_app_t *a) { return a->proj.pat[a->proj.current].
 /* the visible part of track space at the zoom: centred on the last edited point, else the selected slice */
 static void view(const ec_app_t *a, float *v0, float *v1)
 {
-    const ec_razor_t *rz = &a->proj.razor[a->track];
+    const ec_razor_t *rz = ec_rzui_view(a);   /* 0.6.56: a grid track: its grid */
     const int k = ec_rzui.sel - 1;
     const float w = 128.0f / (float)ec_rzui.zoom;
     float c = ec_rzui.focus >= 0 && ec_rzui.focus_slice == ec_rzui.sel ? ec_rzui.focus
@@ -48,7 +48,7 @@ static int slice_at(const ec_razor_t *rz, int count, float x)
 
 void ec_scr_razor(const ec_app_t *a, const ec_page_t *pg)
 {
-    const ec_razor_t *rz = &a->proj.razor[a->track];
+    const ec_razor_t *rz = ec_rzui_view(a);   /* 0.6.56: a grid track: its grid */
     const ec_ss_sample_t *smp = ec_app_track_sample(a, a->track);
     const int count = ec_rzui_count(a);
     const int sel = ec_rzui.sel < 1 ? 1 : ec_rzui.sel > count ? count : ec_rzui.sel;

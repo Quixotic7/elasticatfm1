@@ -21,6 +21,8 @@ int ec_rzui_active(const ec_app_t *a);                 /* the RAZOR page is on s
 void ec_rzui_autochop(ec_app_t *a);                    /* 0.6.15: B10: slices at the transients (SENS) */
 void ec_rzui_even(ec_app_t *a);                        /* 0.6.15: B9: COUNT even slices */
 void ec_rzui_preview(ec_app_t *a, int slice);          /* 0.6.15: a slice through the preview player (any machine) */
+int ec_rzui_grid(const ec_app_t *a);                   /* 0.6.56: a grid slice machine (COUNT even slices) */
+const ec_razor_t *ec_rzui_view(const ec_app_t *a);     /* 0.6.56: the slices the track plays (the grid, else the table) */
 int ec_rzui_count(const ec_app_t *a);                  /* slices in use (slice_count) */
 /* cells (EC_IT_RAZOR) */
 float ec_rzui_value(const ec_app_t *a, int id);

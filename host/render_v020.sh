@@ -11,7 +11,7 @@ mkdir -p "$OUT"
 rm -f "$B/v020_flash.bin"
 "$B/ec_run" --layout test --folder "$B/v020_folder" --out "$OUT" --script "$(dirname "$0")/demo_v020.txt" \
     --wav "$OUT/v020_demo.wav" --flash "$B/v020_flash.bin" --info-at 16900 \
-    --rms-from 9600 --min-rms 0.02 --expect-ui ready:3 --expect-ui missing:0 --expect-ui dirty:0 \
+    --rms-from 9600 --min-rms 0.01 --expect-ui ready:3 --expect-ui missing:0 --expect-ui dirty:0 \
     --expect-ui patterns:2 >"$B/v020_run1.txt"
 cat "$B/v020_run1.txt"
 # the state to find again: the scene counts, the fader, the patterns, the samples
@@ -20,4 +20,4 @@ set --
 for w in $want; do set -- "$@" --expect-ui "$w"; done
 "$B/ec_run" --layout test --folder "$B/v020_folder" --flash "$B/v020_flash.bin" --ms 4000 --png-scale 2 \
     --press PLAY@1500 --png-at 1600:"$OUT/13_reboot.png" --press ARP@2000 \
-    --png-at 2900:"$OUT/14_reboot_scene.png" --rms-from 1600 --min-rms 0.02 "$@"
+    --png-at 2900:"$OUT/14_reboot_scene.png" --rms-from 1600 --min-rms 0.01 "$@"

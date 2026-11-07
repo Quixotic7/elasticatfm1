@@ -195,6 +195,14 @@ void ec_app_page(const ec_app_t *a, ec_page_t *out)
     ec_page_items_bus(a->cat, a->page[a->cat], v, a->bus, a->bus ? a->proj.bus[a->bus - 1] : 0, out);
     if (out->busv && out->pic == EC_PIC_FX)                         /* 0.6.3: K4 = the bus effect's MIX */
         ec_page_bus_k4(out, (int)(a->proj.bus[out->busv - 1][EC_P_FX_MACHINE] + 0.5f));
+    if (a->bus && a->cat == EC_CAT_MASTER) {                        /* 0.6.56 (QA C3): MIX with S1 / S2 / MST: the
+                                                                     * track cells (T1's values, knobs that did
+                                                                     * nothing) blank; only a bus's own (FX) params */
+        int i;
+        for (i = 0; i < out->n; i++)
+            if (out->it[i].kind == EC_IT_PARAM && !(EC_PARAMS[out->it[i].id].flags & EC_PF_FX))
+                out->it[i].kind = EC_IT_BLANK;
+    }
 }
 
 /* E4: a bus pseudo-track's FX params live in its record (project.bus), not in the selected track */
@@ -914,6 +922,8 @@ static int rnd_keep(int id, int flags)
     case EC_P_FX_MACHINE:
     case EC_P_INS2_MACHINE:
     case EC_P_AMP:
+    case EC_P_LFO1_DEPTH:                          /* 0.6.56 (owner): an LFO's level, as the volume: every route */
+    case EC_P_LFO2_DEPTH:                          /* from it would change */
     case EC_P_MUTE: return 1;
     default: return (EC_PARAMS[id].flags & EC_PF_MOMENT) != 0;
     }

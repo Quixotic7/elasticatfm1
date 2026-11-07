@@ -163,6 +163,38 @@ static void undoable(ec_app_t *a, const char *label, uint32_t key)   /* 0.6.16: 
     ec_undo_razor(&a->e5.undo, &a->proj, a->track, label, key, a->ms);
 }
 
+/* 0.6.56 (owner, QA C16): a grid slice machine (SLICE, S.POLY) always plays COUNT even slices; the editor shows that
+ * grid and its table edits say so instead of changing a table the track doesn't play */
+int ec_rzui_grid(const ec_app_t *a)
+{
+    const int m = (int)floorf(tv(a)[EC_P_MACHINE] + 0.5f);
+    return m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY && !ec_razor_is_razor(m);
+}
+
+const ec_razor_t *ec_rzui_view(const ec_app_t *a)
+{
+    static ec_razor_t g;
+    const ec_razor_t *rz = &a->proj.razor[a->track];
+    int k;
+    const int n = ec_rzui_count(a);
+    if (!ec_rzui_grid(a))
+        return rz;
+    g = *rz;
+    for (k = 0; k < EC_RZ_SLICES; k++) {
+        g.start[k] = k < n ? 128.0f * (float)k / (float)n : 128.0f;
+        g.end[k] = k < n ? 128.0f * (float)(k + 1) / (float)n : 128.0f;
+    }
+    return &g;
+}
+
+static int grid_refuses(ec_app_t *a)
+{
+    if (!ec_rzui_grid(a))
+        return 0;
+    say(a, "GRID SLICES");
+    return 1;
+}
+
 static void edit_point(ec_app_t *a, int which, int det, int mult)
 {
     ec_razor_t *rz = &a->proj.razor[a->track];
@@ -216,6 +248,8 @@ void ec_rzui_edit(ec_app_t *a, int id, int det, int mult)
 {
     ec_razor_t *rz = &a->proj.razor[a->track];
     const int k = sel(a) - 1;
+    if ((id == EC_RZ_START || id == EC_RZ_END) && grid_refuses(a))
+        return;
     switch (id) {
     case EC_RZ_START: edit_point(a, 0, det, mult); break;
     case EC_RZ_END: edit_point(a, 1, det, mult); break;
@@ -299,6 +333,8 @@ void ec_rzui_autochop(ec_app_t *a)
     float p[EC_RZ_ONSET_WINDOWS];
     double lo, hi;
     char m[32];
+    if (grid_refuses(a))
+        return;
     int n;
     if (!smp) {
         say(a, "NO SAMPLE");
@@ -325,6 +361,8 @@ void ec_rzui_even(ec_app_t *a)
     ec_razor_t *rz = &a->proj.razor[a->track];
     const int count = ec_rzui_count(a);
     char m[32];
+    if (grid_refuses(a))
+        return;
     undoable(a, "EVEN", 0);
     ec_razor_redistribute(rz, count);
     snprintf(m, sizeof m, "EVEN %d", count);
@@ -351,6 +389,8 @@ void ec_rzui_oct(ec_app_t *a, int up)
     ec_razor_t *rz = &a->proj.razor[a->track];
     const int s = sel(a), count = ec_rzui_count(a);
     char m[32];
+    if (grid_refuses(a))
+        return;
     if (up) {                                  /* OCT+: split the slice at the focus (else its middle) */
         const float x = U->focus_slice == s ? U->focus : -1;
         if (count >= EC_RZ_SLICES) {

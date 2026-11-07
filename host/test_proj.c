@@ -488,6 +488,7 @@ static void test_changed_elsewhere(void)
     snprintf(name, sizeof name, "%s", ec_pf_name());
     d = read_file(name, 0, &n);
     CHECK(d && ec_project_load(&other, d, n) == 0, "%s saved (%u bytes)", name, n);
+    CHECK(!strcmp(other.e5.name, name), "0.6.56 (QA C11): the record names its file (%s / %s)", other.e5.name, name);
     other.bpm = 77;                                /* the other tab's project */
     r = ec_project_save(&other, ob, sizeof ob);
     on = r > 0 ? (uint32_t)r : 0;

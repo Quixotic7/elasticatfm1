@@ -256,6 +256,8 @@ static void routes(const ec_app_t *a, int src, int small)
         float x;
         ec_dsp_track_status(a->dsp, a->track, &st);
         x = src >= EC_MS_LFO1 && src <= EC_MS_EXPR ? st.src[src - EC_MS_LFO1] : 0.0f;
+        if (!a->seq.playing)
+            x = 0.0f;                              /* 0.6.56 (owner): stopped, the meter rests (as the pictures) */
         {   /* 0.6.51: a unipolar meter at the right (from the bottom; a negative level hangs from the top) */
             const int mx = W - 6, top = VT - 8, bot = VB;
             const int h = (int)(clampf(x, -1, 1) * (bot - top));

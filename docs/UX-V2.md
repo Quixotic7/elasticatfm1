@@ -1363,3 +1363,30 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   redo swap it with the project. An entry whose snapshot the ring has reused says TOO OLD and changes nothing.
 - The e6_demo test has its own folder (it raced test_e6 over e6_folder's recordings).
 - test_file (test_undo_pass, test_free_purge) checks them.
+
+## 52. 0.6.56: headroom, the owner's design answers, the QA's smaller bugs (2026-11-06)
+
+- Headroom (owner): every source (the loop readers, the slice voices, the live input) enters its track's chain at
+  -6 dB, so the filter, drive, inserts, sends and buses never clip inside; the output's soft limiter is linear to
+  half scale, then a smooth knee that never reaches full scale (0.98). The QA's 6-track scenario: no sample at full
+  scale (it clipped 0.7 % before), peak 0.974. Everything is 6 dB quieter: the demos' RMS floors are halved.
+- No autosave while playing (as before: autosave runs only while stopped).
+- The LFO / MOD ENV / VEL meter rests while stopped (as the pictures since 0.6.51).
+- The dice (F1 + SEL) keep LFO 1's and LFO 2's levels (as the volume).
+- COUNT 16 -> 10 -> 16 in the SLICE editor gives back the six slices it hid, where they were (the table was always
+  kept; a test now holds it); EVEN respreads. Grid slice machines (SLICE, S.POLY: the LOOP pages' slice mode) always
+  play COUNT even slices: the SLICE editor now shows that grid on them, and its table edits (START / END, split,
+  delete, EVEN, AUTO-CHOP) say GRID SLICES instead of changing a table those tracks don't play (QA C16).
+- QA C3: MIX with S1 / S2 / MST: no track cells (they showed T1's and did nothing).
+- QA C6: PAGES: a span whose second key is B9 / B10 loops as the other order does; B11 with a key held does nothing
+  (it muted the held key's page).
+- QA C10: DELETE of the open project leaves it EDITED (autosave waits for an edit; it wrote the file straight back).
+- QA C11: a project's record names its file: the first save (packed again once named), SAVE AS +1, OVERWRITE, and a
+  load (the file's name wins over an older copy's).
+- QA C12: a LOAD takes the first free slot no track or step lock points at (after a FREE the track stays silent).
+- QA C14: REC does nothing in PROJECTS; in the SAMPLER a tap never arms live REC (held: the recorder's setup).
+- QA C15: KEYBOARD: a full-velocity note clears the step's softer velocity lock.
+- QA C17: labels: B11 held, ALGO LEN and PRESETS ZOOM; PAGES, ALGO / PRESETS PAGE and no K3 ZOOM; MIX / XFADE /
+  PATTERN, ALGO nothing (no hidden step page), XFADE / PATTERN PRESETS nothing (it changed the track's sample; the
+  slot walk is the EDITOR's PRESETS); a slice track's entry says SLICE 19 > 2; LOOP 3 > 2 fits the header.
+- test_ux (test_056), test_file, test_proj check them.

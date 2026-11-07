@@ -581,7 +581,12 @@ static void test_presets(void)
     s0 = ec_app_track_slot(A, A->track);
     CHECK(s0 == 0 && A->slot[2].state == EC_SL_READY,
           "FILE: B10 loads into the next free slot; the track stays on its own (0.6.32) (%d)", s0);
-    to(EC_CAT_XFD);                                           /* (0.6.14: track pages: the page; MIX: the track) */
+    {   /* (0.6.14: track pages: the page; MIX: the track; 0.6.56: XFADE / PATTERN nothing): the EDITOR's PRESETS */
+        int n;
+        for (n = 0; n < 6 && ec_file_page() != EC_PIC_EDITOR; n++)
+            press(FM1P_B_SAVE, 40);
+        CHECK(ec_file_page() == EC_PIC_EDITOR, "the trim EDITOR");
+    }
     turn(FM1P_E_PRESETS, 1);
     run(20);
     CHECK(ec_app_track_slot(A, A->track) == 1 && A->ux.to_ms && A->ux.to_kind == EC_TO_SAMPLE,
@@ -1305,6 +1310,49 @@ static void test_qa_quick(void)
     CHECK(rolled > 0 && !bad, "the dice: %d params rolled, %d off their step or range", rolled, bad);
 }
 
+/* 0.6.56 (owner / QA): the dice keep an LFO's level; MIX with a bus shows no track cells; REC in PROJECTS arms
+ * nothing; the B11 / PAGES / MIX / XFADE knob labels say what the knobs do */
+static void test_056(void)
+{
+    ec_page_t pg;
+    float *v;
+    int p, i, trk_cells = 0;
+    uint32_t rng = 99;
+    to(EC_CAT_MOD);
+    v = ec_app_params(A);
+    for (p = 0; p < 12; p++) {
+        ec_app_set_page(EC_CAT_MOD, p);
+        ec_app_page(A, &pg);
+        if (pg.pic == EC_PIC_LFO1)
+            break;
+    }
+    v[EC_P_LFO1_DEPTH] = 100;
+    ec_app_randomize_page(&rng);
+    CHECK(pg.pic == EC_PIC_LFO1 && v[EC_P_LFO1_DEPTH] == 100, "the dice on LFO 1: its level kept (%g)", v[EC_P_LFO1_DEPTH]);
+    ec_e5_undo(0);
+    to(EC_CAT_MASTER);
+    ec_pn_select_target(EC_NTRACK);                /* S1 */
+    run(20);
+    ec_app_page(A, &pg);
+    for (i = 0; i < pg.n; i++)
+        trk_cells += pg.it[i].kind == EC_IT_PARAM && !(EC_PARAMS[pg.it[i].id].flags & EC_PF_FX);
+    CHECK(A->bus == 1 && !trk_cells && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, ""),
+          "MIX on S1: no track cells (%d), ALGO no label (%s)", trk_cells, L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO));
+    ec_pn_select_target(0);
+    to(EC_CAT_XFD);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, ""),
+          "XFADE: ALGO / PRESETS unlabelled (%s / %s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO),
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS));
+    to(EC_MODE_PAGES);
+    CHECK(lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "PAGE") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K3, ""),
+          "PAGES: ALGO PAGE, K3 nothing (%s, %s)", L(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO), L(FM1CORE_LBL_KNOB0 + FM1P_E_K3));
+    ec_pn_enter(EC_MODE_PROJECTS);
+    run(200);
+    press(FM1P_B_REC, 40);
+    run(50);
+    CHECK(!A->pn.lr_on && !A->pn.lr_wait, "PROJECTS: REC arms nothing");
+}
+
 static void test_mod_display(void)
 {
     float *v, mv[EC_NP], base, lo = 1e9f, hi = -1e9f;
@@ -1424,6 +1472,7 @@ int main(int argc, char **argv)
     test_dice();
     test_mod_display();
     test_qa_quick();
+    test_056();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

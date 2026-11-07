@@ -79,6 +79,7 @@ static inline float ec_frand2(uint32_t *s)
 /* Interleaved int16 stereo frame access. */
 static inline float ec_s16(int16_t v) { return (float)v; }
 #define EC_S16_SCALE (1.f / 32768.f)
+#define EC_HEADROOM 0.5f      /* 0.6.56 (owner): the sources at -6 dB into the chain (no internal clipping) */
 
 /* Cubic read with indices clamped to [0, frames-1] (ElasticatReader peekBuf /
  * egPeek). Returns UNSCALED int16 units in *l, *r. */

@@ -150,6 +150,10 @@ static void to(int m)
         press(BTN_OF_MB[ec_mode_button(m)], 40);
     if (A->pn.cat)
         press(BTN_OF_MB[ec_mode_button(m)], 40);
+    if (m == EC_CAT_FILE) {                        /* 0.6.66: the button comes back where FILE was left: the browser */
+        ec_pn_enter(EC_CAT_SRC);
+        ec_pn_enter(EC_CAT_FILE);
+    }
     run(900);
 }
 static int bkey(int b) { return b - 1; }      /* B1..B11 -> upper index */
@@ -188,7 +192,9 @@ static void test_modes(void)
     CHECK(mode() == EC_MODE_KEYBOARD && A->scr == EC_MODE_KEYBOARD, "HOME again: KEYBOARD");
     press(FM1P_B_FX, 40);
     press(FM1P_B_HOME, 40);
-    CHECK(mode() == EC_CAT_SRC, "HOME from FX: LOOP ENGINE, always (0.6.11), not the sub-mode it was on");
+    CHECK(mode() == EC_MODE_KEYBOARD, "HOME from FX: KEYBOARD, the sub-mode it was left on (0.6.66, owner)");
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_CAT_SRC, "HOME again: LOOP ENGINE");
     press(FM1P_B_HOME, 40);
     CHECK(mode() == EC_CAT_TRIG, "HOME again: TRIG");
     press(FM1P_B_EDIT, 40);
@@ -216,8 +222,8 @@ static void test_modes(void)
     run(900);
     CHECK(led_btn(FM1P_B_ENV) == FM1P_LED_LIT && led_btn(FM1P_B_FX) == FM1P_LED_FAINT, "the mode's button lit (%d %d)",
           led_btn(FM1P_B_ENV), led_btn(FM1P_B_FX));
-    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "LOOP") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_EDIT, "MIX"),
-          "button labels: HOME %s EDIT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_HOME), L(FM1CORE_LBL_BTN0 + FM1P_B_EDIT));
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_HOME, "TRIG") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_EDIT, "MIX"),
+          "button labels: where each comes back (0.6.66): HOME %s EDIT %s", L(FM1CORE_LBL_BTN0 + FM1P_B_HOME), L(FM1CORE_LBL_BTN0 + FM1P_B_EDIT));
 }
 
 /* ------------------------------------------------------------------------------------------- settings --- */
@@ -1109,6 +1115,7 @@ static void test_file_keys(void)
 {
     to(EC_CAT_SRC);
     to(EC_CAT_FILE);                                          /* 0.6.15: the editors are FILE's sub-modes, on its button */
+    ec_pn_enter(EC_CAT_FILE);                                 /* (0.6.66: the button comes back where it was: BROWSE) */
     tapkey(1, bkey(5), 40);
     CHECK(ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE, "FILE B5: nothing (no page key)");
     press(FM1P_B_SAVE, 40);
@@ -1532,6 +1539,36 @@ static void test_kb_step_layer(void)
     clear_steps();
 }
 
+/* 0.6.66 (owner): KEYBOARD's pages reach TRIG's and WARP's params; HOME brings KEYBOARD back on its page */
+static void test_kb_more(void)
+{
+    ec_page_t pg;
+    int n, p, trig = -1, warp = -1, i;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    ec_app_params(A)[EC_P_MACHINE] = EC_MACH_LOOP;
+    n = ec_kb_pages();
+    for (p = 0; p < n; p++) {
+        ec_kb_page(p, 1);
+        ec_app_page(A, &pg);
+        for (i = 0; i < pg.n; i++) {
+            if (pg.it[i].kind == EC_IT_PARAM && pg.it[i].id == EC_P_TRIG_CHANCE && trig < 0)
+                trig = p;
+            if (pg.it[i].kind == EC_IT_PARAM && EC_PARAMS[pg.it[i].id].kind == EC_PK_NUM && p >= ec_kb_group_page(4) &&
+                ec_kb_group_page(4) >= 0 && warp < 0)
+                warp = p;
+        }
+    }
+    CHECK(n > 5 && trig >= EC_KB_PAGES && warp > trig, "KEYBOARD: %d pages, CHANCE on %d, the warp params from %d", n,
+          trig, warp);
+    ec_kb_page(trig, 1);
+    press(FM1P_B_FX, 40);
+    press(FM1P_B_HOME, 40);
+    CHECK(mode() == EC_MODE_KEYBOARD && A->pn.kb_page == trig, "FX, then HOME: KEYBOARD on the same page (%d)",
+          A->pn.kb_page);
+    ec_kb_page(0, 1);
+}
+
 static void test_bank16(void)
 {
     float *v;
@@ -1745,6 +1782,7 @@ int main(int argc, char **argv)
     test_056();
     test_kb_rec();
     test_bank16();
+    test_kb_more();
     test_kb_step_layer();
     test_clip_modes();
     test_062();

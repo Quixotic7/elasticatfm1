@@ -89,11 +89,11 @@ int ec_kb_semis(int k)
 /* 0.6.62 (owner): KEYBOARD's knob pages (SEL; IN SCALE: B1..B3 too): the notes, the scale, the sound */
 void ec_kb_page(int d, int absolute)
 {
-    static const char *const N[EC_KB_PAGES] = {"NOTES", "SCALE", "SOUND"};
-    const int p = absolute ? clampi(d, 0, EC_KB_PAGES - 1) : clampi(P->kb_page + d, 0, EC_KB_PAGES - 1);
+    const int np = ec_kb_pages();
+    const int p = absolute ? clampi(d, 0, np - 1) : clampi(P->kb_page + d, 0, np - 1);
     if (p != P->kb_page) {
         P->kb_page = p;
-        ec_app_message(N[p]);
+        ec_app_message(ec_kb_page_name(p));        /* (0.6.66: TRIG, COND, PLAYHEAD, WARP lanes after its own) */
     }
     A->redraw = 1;
 }
@@ -102,9 +102,9 @@ void ec_kb_page(int d, int absolute)
  * the knob's param, as the source keys elsewhere) */
 static void scale_black(int up, int down)
 {
-    if (up >= 0 && up < EC_KB_PAGES) {
-        if (down)
-            ec_kb_page(up, 1);
+    if (up >= 0 && up < EC_KB_PAGES + 2) {         /* 0.6.66: B4 TRIG, B5 WARP too */
+        if (down && ec_kb_group_page(up) >= 0)
+            ec_kb_page(ec_kb_group_page(up), 1);
         return;
     }
     if (up >= 5 && up <= 9) {

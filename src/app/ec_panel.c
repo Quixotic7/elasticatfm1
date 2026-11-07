@@ -156,8 +156,10 @@ void ec_pn_enter(int mode)
     P->cat = 0;
     if (was == EC_MODE_SAMPLER && mode != EC_MODE_SAMPLER)
         ec_sampler_enter(0);
-    if (was == EC_CAT_FILE && mode != EC_CAT_FILE)
+    if (was == EC_CAT_FILE && mode != EC_CAT_FILE) {
         ec_file_leave();                           /* the preview stops */
+        P->last_fpage = (int8_t)A->page[EC_CAT_FILE];   /* 0.6.66 (owner): FILE's button comes back to this page */
+    }
     if (mode == EC_CAT_FILE && was != EC_CAT_FILE) {
         int p;
         ec_liverec_stop();                         /* (no live REC inside FILE: a CAPTURE waiting ends) */
@@ -276,10 +278,20 @@ static void mode_tap(int b)
         return;
     }
     {
-        /* 0.6.11 (QA findings 2, 3): HOME and FILE from another mode always open their first sub-mode (LOOP ENGINE,
-         * FILE's BROWSE), so a blind press lands in one place; a tap again cycles. EDIT keeps MIX / PAGES as it was */
-        const int remembered = mb != EC_MB_HOME && mb != EC_MB_FILE;
-        ec_pn_enter(remembered && P->last[mb] >= 0 ? P->last[mb] : modes[0]);
+        /* 0.6.66 (owner's design rule): every mode button comes back to the mode it was left on, on its page (HOME's
+         * KEYBOARD, FILE's EDITOR ..): no menu diving. (0.6.11 opened HOME / FILE's first sub-mode.) */
+        const int m = P->last[mb] >= 0 ? P->last[mb] : modes[0];
+        if (mb == EC_MB_FILE && m == EC_CAT_FILE && P->last_fpage >= 0) {
+            const int pic = ec_page_pic(EC_CAT_FILE, P->last_fpage, 0);
+            if ((pic == EC_PIC_EDITOR || pic == EC_PIC_RAZOR) && (A->seq.playing || ec_seq_counting_in(&A->seq))) {
+                ec_pn_enter(EC_CAT_FILE);          /* the editors need a stop: BROWSE instead */
+                ec_app_message("STOP FIRST");
+                return;
+            }
+            ec_pn_goto(EC_CAT_FILE, P->last_fpage);
+            return;
+        }
+        ec_pn_enter(m);
     }
 }
 

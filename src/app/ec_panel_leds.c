@@ -467,7 +467,9 @@ static void leds_black(void)
                         continue;
                     }
                     if (ec_kb_scale_layout()) {    /* 0.6.62: IN SCALE: B1..B3 the pages, B6..B10 the mod sources */
-                        l[i] = i < EC_KB_PAGES ? (i == P->kb_page ? EC_LED_LIT : EC_LED_DIM)
+                        const int g0 = i < EC_KB_PAGES + 2 ? ec_kb_group_page(i) : -1;
+                        const int g1 = i + 1 < EC_KB_PAGES + 2 ? ec_kb_group_page(i + 1) : -1;
+                        l[i] = g0 >= 0 ? (P->kb_page >= g0 && (g1 < 0 || P->kb_page < g1) ? EC_LED_LIT : EC_LED_DIM)
                                : i >= 5 && i <= 9 ? (A->mk.held == EC_MK_LFO1 + i - 5 ? EC_LED_LIT : EC_LED_MID)
                                                   : EC_LED_OFF;
                         continue;
@@ -753,8 +755,8 @@ static const char *button_name(int mb)
     const int n = ec_button_modes(mb, modes, 8);
     const int cur = shown_mode();
     static const char *const D[EC_NMB] = {"", "FX", "FILTER", "AMP", "MOD", "MIX", "LOOP", "FILE", "XFADE", "PATTERN"};
-    /* 0.6.11: HOME and FILE from another mode open their first sub-mode (ec_panel.c mode_tap), EDIT its last */
-    const int opens = mb == EC_MB_HOME || mb == EC_MB_FILE ? (n > 0 ? modes[0] : -1) : P->last[mb];
+    /* 0.6.66 (owner): every button opens the mode it was left on (ec_panel.c mode_tap): its label says which */
+    const int opens = P->last[mb] >= 0 ? P->last[mb] : n > 0 ? modes[0] : -1;
     for (i = 0; i < n; i++)                        /* a button with sub-modes: the one it is on (or will open) */
         if (modes[i] == cur || (ec_mode_button(cur) != mb && modes[i] == opens)) {
             switch (modes[i]) {
@@ -961,8 +963,8 @@ static void black_labels(void)
                     snprintf(b, sizeof b, "%s%d", NN[(sm % 12 + 12) % 12], 4 + (int)floorf((float)sm / 12.0f));
                     s = b;
                 } else if (ec_kb_scale_layout()) {   /* 0.6.62: IN SCALE: the shortcuts */
-                    static const char *const PGN[EC_KB_PAGES] = {"NOTES", "SCALE", "SOUND"};
-                    s = i < EC_KB_PAGES ? PGN[i] : i >= 5 && i <= 9 ? ec_mk_key_name(EC_MK_LFO1 + i - 5) : "";
+                    static const char *const PGN[EC_KB_PAGES + 2] = {"NOTES", "SCALE", "SOUND", "TRIG", "WARP"};
+                    s = i < EC_KB_PAGES + 2 ? PGN[i] : i >= 5 && i <= 9 ? ec_mk_key_name(EC_MK_LFO1 + i - 5) : "";
                 } else {
                     const int sm = ec_kb_semis(ec_key_of_upper(i));
                     snprintf(b, sizeof b, "%s%d", NN[(sm % 12 + 12) % 12], 4 + (int)floorf((float)sm / 12.0f));

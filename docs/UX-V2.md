@@ -1480,3 +1480,16 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   The on-screen keyboard shows the scale: its white keys bright, the others dim, its sharps grey, the others black,
   the roots marked (drawn by each key's place on the keybed, whatever the STEP layer's black keys play).
 - KEYBOARD's LEDs: the notes out of the scale off, the root mid, the scale's other notes dim.
+
+## 62. 0.6.66: every mode button remembers its mode and page; KEYBOARD reaches TRIG and WARP (owner, 2026-11-06)
+
+- The owner's design rule: a mode button always comes back to the mode it was left on, on its page (HOME's
+  KEYBOARD on its knob page, FILE's EDITOR / PROJECTS / SAMPLER ..), so you can jump between modes without menu
+  diving. (0.6.11 opened HOME's LOOP ENGINE and FILE's BROWSE from another mode.) Tapping the lit button still steps
+  to its next mode. FILE left on an editor while playing: BROWSE and STOP FIRST (the editors need a stop). The
+  buttons' labels name the mode they come back to. The demo scripts pick HOME's / FILE's modes with the picker
+  (the button held + B1..B5).
+- KEYBOARD's knob pages (SEL) after NOTES, SCALE, SOUND: every lane of TRIG mode's pages (the trig, its conditions
+  and ratchets, the playhead) and of LOOP ENGINE's WARP page (the track's warp mode); the header names each. IN
+  SCALE: B4 TRIG, B5 WARP beside B1..B3.
+- test_ux (test_kb_more, the HOME / FILE checks), test_file check them.

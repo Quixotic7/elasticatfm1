@@ -169,6 +169,10 @@ static void to(int m)
         press(A->pn.f_sticky == 1 ? FM1P_B_OCTDN : FM1P_B_OCTUP, 40);
     for (n = 0; n < 5 && mode() != m; n++)
         press(BTN_OF_MB[ec_mode_button(m)], 40);
+    if (m == EC_CAT_FILE) {                        /* 0.6.66: the button comes back where FILE was left: the browser */
+        ec_pn_enter(EC_CAT_SRC);
+        ec_pn_enter(EC_CAT_FILE);
+    }
     run(900);
 }
 static void shift_down(int d)

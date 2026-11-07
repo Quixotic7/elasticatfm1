@@ -71,8 +71,10 @@ static void test_gating(void)
     CHECK(!A->seq.playing, "stopped from the SAMPLER");
     to(EC_CAT_SRC);
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "stopped, from LOOP ENGINE: FILE on BROWSE (%d)",
-          mode());
+    CHECK(mode() == EC_MODE_SAMPLER, "0.6.66 (owner): from LOOP ENGINE, FILE comes back to the SAMPLER it was left on "
+          "(%d)", mode());
+    ec_pn_enter(EC_CAT_FILE);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "BROWSE (%d)", mode());
     press(FM1P_B_PLAY, 40);
     CHECK(A->seq.playing, "inside BROWSE PLAY starts");
     press(FM1P_B_PLAY, 40);
@@ -90,10 +92,20 @@ static void test_gating(void)
     press(FM1P_B_REC, 40);
     press(FM1P_B_REC, 500);
     CHECK(!ec_liverec_on() && !A->pn.rs_open, "inside FILE REC does nothing (tap, hold)");
-    press(FM1P_B_SAVE, 40);
+    press(FM1P_B_SAVE, 40);                        /* (FILE: PROJECTS) */
     to(EC_CAT_SRC);
     press(FM1P_B_SAVE, 40);
-    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "FILE from another mode: BROWSE, never the EDITOR");
+    CHECK(mode() == EC_MODE_PROJECTS, "0.6.66 (owner): FILE from another mode comes back where it was (PROJECTS, %d)",
+          mode());
+    ec_pn_enter(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);
+    press(FM1P_B_SAVE, 40);                        /* the EDITOR, stopped */
+    to(EC_CAT_SRC);
+    press(FM1P_B_PLAY, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE && !strcmp(A->msg, "STOP FIRST"),
+          "left on the EDITOR, playing: FILE gives BROWSE and STOP FIRST (%s)", A->msg);
+    press(FM1P_B_PLAY, 40);
 }
 /* ------------------------------------------------------------------------------------------- the browser --- */
 static void test_folders(void)
@@ -222,6 +234,11 @@ static void test_load(void)
     to(EC_CAT_FILE);
     cursor_to("c_chords_bpm120.wav");
     settle(200);
+    if (A->pn.pv_handle < 0) {                     /* (0.6.66: FILE entered afresh: a move starts the preview) */
+        turn(FM1P_E_SELECT, 1);
+        turn(FM1P_E_SELECT, -1);
+        settle(300);
+    }
     h = A->pn.pv_handle;
     s = ec_file_next_free();
     CHECK(s == 1, "the next free slot: 2 (%d)", s + 1);

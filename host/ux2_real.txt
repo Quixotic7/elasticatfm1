@@ -125,9 +125,12 @@ turn K1@37600:3
 png 39600:Fx_screen.png
 
 # ---- HOME's three sub-modes on their remembered pages: LOOP ENGINE on WARP, TRIG on COND, KEYBOARD; AMP on AMP ENV
-press HOME@40400
-press HOME@41200
-press HOME@42000
+press HOME@40400+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@40420+40
+press HOME@41200+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@41220+40
+press HOME@42000+90   # (0.6.66: the button remembers its mode: the picker, B3)
+upper 2@42020+40
 press ENV@42800
 png 43800:Amp_screen.png
 press ENV@44200
@@ -138,13 +141,19 @@ png 44800:Mod_env_screen.png
 press SEL@45400
 press GLO@45800+300
 lower 1@45900
-press HOME@46400
-press HOME@46800
-press HOME@47200
+press HOME@46400+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@46420+40
+press HOME@46800+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@46820+40
+press HOME@47200+90   # (0.6.66: the button remembers its mode: the picker, B3)
+upper 2@47220+40
 upper 3@47600
-press HOME@48000
-press HOME@48400
-press HOME@48800
+press HOME@48000+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@48020+40
+press HOME@48400+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@48420+40
+press HOME@48800+90   # (0.6.66: the button remembers its mode: the picker, B3)
+upper 2@48820+40
 turn ALGO@49400:5
 png 50800:Keyboard_screen.png
 turn ALGO@51200:-5
@@ -218,9 +227,12 @@ press SAVE@82600
 press SAVE@82700   # (0.6.42: past PROJECTS)
 upper 2@82800
 press SEL@83200
-press SAVE@83600
-press SAVE@83800
-press SAVE@83950
+press SAVE@83600+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@83620+40
+press SAVE@83800+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@83820+40
+press SAVE@83950+90   # (0.6.66: the button remembers its mode: the picker, B5)
+upper 4@83970+40
 upper 10@84200
 png 85250:Sampler_screen.png
 
@@ -232,13 +244,15 @@ press REC@94800
 press GLO@95400+500
 press HOME@95600
 png 96400:AppSettings_screen.png
-press HOME@97000
+press HOME@97000+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@97020+40
 
 # ======== stopped: FILE (SAVE: BROWSE, always): /audio/kit (SEL, B2) loaded file by file (B10, SEL; 0.6.42: past the
 # UP row first), up
 # (B1), into /audio/breaks (SEL, B2), three loads; the EDITOR (B4) at 4X (B4), the trim (W2 START, F2, W15 END, F1)
 press PLAY@97600
-press SAVE@98000
+press SAVE@98000+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@98020+40
 turn SELECT@99000:1
 upper 1@99200
 turn SELECT@99400:1
@@ -314,7 +328,8 @@ turn SELECT@115400:2
 upper 9@115600
 turn SELECT@116000:-2
 png 117400:FileBrowser_screen.png
-press SAVE@117800
+press SAVE@117800+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@117820+40
 press SAVE@118000   # (0.6.42: past PROJECTS)
 turn K4@118200:1
 turn K4@118300:1
@@ -360,7 +375,8 @@ png 133400:Fx_two_inserts.png
 upper 1@133800
 png 134800:Fx_p2.png
 # ---- LOOP ENGINE (HOME from FILE: LOOP ENGINE, always): B3 held = the warp mode menu, K1 2
-press HOME@135200
+press HOME@135200+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@135220+40
 upper 2@136200+1000
 turn K1@136700:2
 png 137000:Loop_menu.png
@@ -381,9 +397,12 @@ png 140800:Record_settings.png
 press OCT-@141000
 # ======== 0.6.1 (v61b-file): FILE's EDITOR in END mode, the POOL page
 # ---- FILE (SAVE: BROWSE; SAVE again: the EDITOR, still 4X): F1 START + W3, F2 END + W13: the header says END
-press SAVE@142000
-press SAVE@142200
-press SAVE@142400   # (0.6.42: past PROJECTS)
+press SAVE@142000+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@142020+40
+press SAVE@142200+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@142220+40
+press SAVE@142400+90   # (0.6.66: the button remembers its mode: the picker, B3)   # (0.6.42: past PROJECTS)
+upper 2@142420+40
 press OCT-@142600
 lower 2@142800
 press OCT+@143200
@@ -428,9 +447,12 @@ turn K1@159400:1
 turn K1@159600:10
 png 160500:Fx_mod_held.png
 # ---- HOME (LOOP ENGINE, its last) then twice more: KEYBOARD; W8 held while stopped plays the loop at its pitch
-press HOME@161500
-press HOME@162000
-press HOME@162500
+press HOME@161500+90   # (0.6.66: the button remembers its mode: the picker, B1)
+upper 0@161520+40
+press HOME@162000+90   # (0.6.66: the button remembers its mode: the picker, B2)
+upper 1@162020+40
+press HOME@162500+90   # (0.6.66: the button remembers its mode: the picker, B3)
+upper 2@162520+40
 lower 7@163200+1500
 png 164000:Keyboard_held.png
 # ======== 0.6.3 (docs/UX-V2.md §10 "FX layout"): T1 (INSERT 1 LOFI, INSERT 2 BLACKHOLE from above); FX: B3 held +

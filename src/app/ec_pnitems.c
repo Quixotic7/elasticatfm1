@@ -16,6 +16,64 @@
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
 
+/* 0.6.66 (owner): KEYBOARD's knob pages past its own three (NOTES, SCALE, SOUND): every lane of TRIG mode's pages
+ * (the trig, its conditions and ratchets, the playhead) and of LOOP ENGINE's WARP page (the track's warp mode) */
+typedef struct { int cat, page, lane; } kbv_t;
+#define KB_VIEWS 16
+static int kb_views(kbv_t *o)
+{
+    const float *v = ec_app_params(A);
+    int n = 0, p, l;
+    ec_page_t t;
+    for (p = 0; p < ec_cat_pages(EC_CAT_TRIG, v) && n < KB_VIEWS; p++) {
+        ec_page_items(EC_CAT_TRIG, p, v, 0, &t);
+        for (l = 0; l * 4 < t.n && n < KB_VIEWS; l++)
+            o[n].cat = EC_CAT_TRIG, o[n].page = p, o[n++].lane = l;
+    }
+    p = ec_cat_key_page(EC_CAT_SRC, 4);
+    if (p >= 0) {
+        ec_page_items(EC_CAT_SRC, p, v, 0, &t);
+        for (l = 0; l * 4 < t.n && n < KB_VIEWS; l++)
+            o[n].cat = EC_CAT_SRC, o[n].page = p, o[n++].lane = l;
+    }
+    return n;
+}
+
+int ec_kb_pages(void)
+{
+    kbv_t o[KB_VIEWS];
+    return EC_KB_PAGES + (A->bus ? 0 : kb_views(o));
+}
+
+/* the first page of a group: 0 NOTES .. 2 SOUND, 3 TRIG, 4 WARP; its name (a message, a black key's label) */
+int ec_kb_group_page(int g)
+{
+    kbv_t o[KB_VIEWS];
+    const int n = A->bus ? 0 : kb_views(o);
+    int i;
+    if (g < EC_KB_PAGES)
+        return g;
+    for (i = 0; i < n; i++)
+        if ((g == EC_KB_PAGES && o[i].cat == EC_CAT_TRIG) || (g == EC_KB_PAGES + 1 && o[i].cat == EC_CAT_SRC))
+            return EC_KB_PAGES + i;
+    return -1;
+}
+
+const char *ec_kb_page_name(int p)
+{
+    static const char *const N[EC_KB_PAGES] = {"NOTES", "SCALE", "SOUND"};
+    static char b[24];
+    kbv_t o[KB_VIEWS];
+    ec_page_t t;
+    if (p < EC_KB_PAGES)
+        return N[p < 0 ? 0 : p];
+    if (A->bus || p - EC_KB_PAGES >= kb_views(o))
+        return "";
+    ec_page_items(o[p - EC_KB_PAGES].cat, o[p - EC_KB_PAGES].page, ec_app_params(A), 0, &t);
+    snprintf(b, sizeof b, "%s %d", t.title ? t.title : "", o[p - EC_KB_PAGES].lane + 1);
+    return b;
+}
+
 static void add(ec_page_t *o, int kind, int id, const char *label)
 {
     ec_item_t *it;
@@ -51,7 +109,7 @@ int ec_pn_page(void *vout)
             add(o, EC_IT_PARAM, EC_P_ENV_ATTACK, "ATTACK");
             add(o, EC_IT_PARAM, EC_P_ENV_RELEASE, "RELEASE");
             break;
-        default:
+        case 0:
             if (ec_kb_slice_track())
                 add(o, EC_IT_PARAM, EC_P_SLICE_INDEX, "SLICE");
             else
@@ -60,6 +118,17 @@ int ec_pn_page(void *vout)
             add(o, EC_IT_PARAM, EC_P_VELOCITY, "VEL");
             add(o, EC_IT_UX, EC_UX_TARGET, "STEP");
             break;
+        default: {                                 /* 0.6.66: a borrowed lane (TRIG, WARP) */
+            kbv_t vw[KB_VIEWS];
+            const int nv = kb_views(vw), k = P->kb_page - EC_KB_PAGES;
+            ec_page_t t;
+            int i;
+            if (k < 0 || k >= nv)
+                break;
+            ec_page_items(vw[k].cat, vw[k].page, ec_app_params(A), 0, &t);
+            for (i = vw[k].lane * 4; i < vw[k].lane * 4 + 4 && i < t.n && o->n < EC_PAGE_ITEMS; i++)
+                o->it[o->n++] = t.it[i];
+        } break;
         }
         return 1;
     case EC_MODE_PAGES:

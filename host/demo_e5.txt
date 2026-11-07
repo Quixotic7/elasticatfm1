@@ -138,7 +138,8 @@ upper 9@15800+60
 press GLO@16300+500
 press HOME@16400+60   # (0.6.15: SHIFT + HOME = the settings; a hold picks a mode)
 turn K1@16850:2
-press HOME@16950
+press HOME@16950+90   # (0.6.66: HOME remembers its mode: the picker, B1)
+upper 0@16970+40
 press PLAY@17220
 # hold pad 3 + KN1 (pitch) = that slice's lock; SELECT = SOURCE's lane 2, KN2 = CHOK (its choke group)
 lower 2@17300+900

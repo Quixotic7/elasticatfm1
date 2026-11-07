@@ -112,8 +112,10 @@ png 14200:12_amp_env.png
 #      third page = B3, hold the step + KN3)
 press GLO@14500+150
 lower 3@14550+60
-press HOME@14700
-press HOME@14800
+press HOME@14700+90   # (0.6.66: HOME remembers its mode: the picker, B1)
+upper 0@14720+40
+press HOME@14800+90   # (0.6.66: HOME remembers its mode: the picker, B2)
+upper 1@14820+40
 lower 0@14900+60
 lower 2@15000+60
 lower 4@15100+60
@@ -122,7 +124,8 @@ lower 8@15300+60
 lower 10@15400+60
 lower 12@15500+60
 lower 14@15600+60
-press HOME@15800
+press HOME@15800+90   # (0.6.66: HOME remembers its mode: the picker, B3)
+upper 2@15820+40
 turn ALGO@16000:1
 turn ALGO@16020:1
 turn ALGO@16040:1
@@ -157,8 +160,10 @@ turn ALGO@17365:-1
 turn ALGO@17370:-1
 turn ALGO@17375:-1
 upper 10@17400+60
-press HOME@17500
-press HOME@17700
+press HOME@17500+90   # (0.6.66: HOME remembers its mode: the picker, B1)
+upper 0@17520+40
+press HOME@17700+90   # (0.6.66: HOME remembers its mode: the picker, B2)
+upper 1@17720+40
 upper 2@17900+60
 lower 14@18000+500
 turn K3@18200:2
@@ -167,8 +172,10 @@ turn K3@18200:2
 press PLAY@18600
 press GLO@18700+150
 lower 0@18750+60
-press HOME@18900
-press HOME@19100
+press HOME@18900+90   # (0.6.66: HOME remembers its mode: the picker, B3)
+upper 2@18920+40
+press HOME@19100+90   # (0.6.66: HOME remembers its mode: the picker, B1)
+upper 0@19120+40
 png 20050:13_src_playing.png
 # the live loop-key scrub on T1: hold key 9, then 9 + 10, let go (the playhead boomerangs back)
 lower 8@20200+1000
@@ -186,8 +193,10 @@ png 23000:17_pattern_pending.png
 press GLO@24200+150
 lower 0@24250+60
 # T1 in TRIG (HOME: LOOP ENGINE, again: TRIG): trigs on 1 5 9 13 of pattern 2
-press HOME@24400
-press HOME@24550
+press HOME@24400+90   # (0.6.66: HOME remembers its mode: the picker, B1)
+upper 0@24420+40
+press HOME@24550+90   # (0.6.66: HOME remembers its mode: the picker, B2)
+upper 1@24570+40
 lower 0@24700+60
 lower 4@24800+60
 lower 8@24900+60

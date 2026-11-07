@@ -308,7 +308,10 @@ uint32_t ec_lp_keys(void);                    /* the entry's keys held now */
 int ec_kb_slice_track(void);
 int ec_kb_semis(int k);                       /* key k's note in semitones from C4, the octave applied */
 #define EC_KB_NONE (-1000)                    /* 0.6.62: no note (IN SCALE's black keys) */
-#define EC_KB_PAGES 3                         /* 0.6.62: NOTES, SCALE, SOUND */
+#define EC_KB_PAGES 3                         /* 0.6.62: NOTES, SCALE, SOUND (its own; 0.6.66: then TRIG's, WARP's) */
+int ec_kb_pages(void);                        /* 0.6.66: KEYBOARD's knob pages, the borrowed ones too */
+int ec_kb_group_page(int g);                  /* 0.6.66: the first page of group g (0..2 its own, 3 TRIG, 4 WARP), -1 */
+const char *ec_kb_page_name(int p);           /* 0.6.66: "SCALE", "TRIG 2", "WARP 1" .. */
 int ec_kb_step_notes(void);                   /* 0.6.64: STEP layer: B1..B10 play the scale */
 int ec_kb_scale_layout(void);                 /* 0.6.62: IN SCALE (a loop track) */
 int ec_kb_in_scale(int semis);                /* 0.6.62: the note is in the track's scale */

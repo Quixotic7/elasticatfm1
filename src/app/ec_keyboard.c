@@ -63,6 +63,20 @@ int ec_kb_in_scale(int semis)
             return 1;
     return 0;
 }
+/* 0.6.69 (owner): a scale on: a note outside it plays the nearest note in it (a tie: the lower) */
+int ec_kb_snap(int semis)
+{
+    int d;
+    if (semis == EC_KB_NONE || ec_kb_in_scale(semis))
+        return semis;
+    for (d = 1; d < 12; d++) {
+        if (ec_kb_in_scale(semis - d))
+            return semis - d;
+        if (ec_kb_in_scale(semis + d))
+            return semis + d;
+    }
+    return semis;
+}
 /* key k's note in semitones from C4: CHROMATIC the keybed (key 7 = C4); IN SCALE the white keys the scale's degrees up
  * from the root (W1 = the root at the octave shown), the black keys none (EC_KB_NONE: they are shortcuts) */
 int ec_kb_semis(int k)
@@ -244,7 +258,7 @@ void ec_kb_key(int k, int down, int vel)
         }
     }
     {
-        const int semis = ec_kb_semis(k);
+        const int semis = ec_kb_snap(ec_kb_semis(k));   /* 0.6.69: outside the scale: its nearest note */
         P->kb_semis[k] = (int8_t)clampi(semis, -60, 60);
         ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
         if (entry)

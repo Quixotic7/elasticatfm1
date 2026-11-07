@@ -1489,6 +1489,23 @@ static void test_062(void)
     k = ec_key_of_upper(0);
     CHECK(ec_kb_semis(k) != EC_KB_NONE && !ec_kb_scale_layout(), "CHROMATIC: the black keys play again (%d)",
           ec_kb_semis(k));
+    {                                              /* 0.6.69 (owner): A MINOR, CHROMATIC: C#4 plays C4, F#4 F4 */
+        int kk, cs = -1, fs = -1;
+        for (kk = 0; kk < EC_NKEY; kk++) {
+            if (ec_kb_semis(kk) == 1)
+                cs = kk;
+            if (ec_kb_semis(kk) == 6)
+                fs = kk;
+        }
+        CHECK(cs >= 0 && fs >= 0 && ec_kb_snap(1) == 0 && ec_kb_snap(6) == 5 && ec_kb_snap(2) == 2,
+              "a scale on: outside notes snap to the nearest (%d %d)", ec_kb_snap(1), ec_kb_snap(6));
+        key(1, ec_key_upper(cs), 1);
+        run(10);
+        CHECK(A->seq.tr[A->track].live_pitch_on && A->seq.tr[A->track].live_semis == 0, "C#4 pressed: C4 sounds (%g)",
+              A->seq.tr[A->track].live_semis);
+        key(1, ec_key_upper(cs), 0);
+        run(10);
+    }
     v[EC_P_KB_SCALE] = 1;
     v[EC_P_KB_ROOT] = 1;
     ec_kb_page(0, 1);

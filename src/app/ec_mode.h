@@ -316,6 +316,7 @@ int ec_kb_group_page(int g);                  /* 0.6.66: the first page of group
 const char *ec_kb_page_name(int p);           /* 0.6.66: "SCALE", "TRIG 2", "WARP 1" .. */
 int ec_kb_step_notes(void);                   /* 0.6.64: STEP layer: B1..B10 play the scale */
 int ec_kb_scale_layout(void);                 /* 0.6.62: IN SCALE (a loop track) */
+int ec_kb_snap(int semis);                    /* 0.6.69: the nearest note in the scale */
 int ec_kb_in_scale(int semis);                /* 0.6.62: the note is in the track's scale */
 int ec_kb_root(void);                         /* 0.6.62: the scale's root, 0 = C */
 void ec_kb_page(int d, int absolute);         /* 0.6.62: KEYBOARD's knob page (SEL by d; absolute: page d) */

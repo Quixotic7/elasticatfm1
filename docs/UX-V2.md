@@ -1508,3 +1508,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The keys are drawn plain again (white naturals, black sharps); a box at the foot of each key in the scale marks it:
   red, the root blue. No scale (CHROMATIC): only the root's box. (0.6.65 dimmed the keys out of the scale and greyed
   the sharps in it: hard to read.) The key sounding still fills in the layer's colour.
+
+## 65. 0.6.69: a scale on, KEYBOARD plays only its notes (owner, 2026-11-06)
+
+- CHROMATIC layout with a scale: a key outside the scale plays the nearest note in it (a tie: the lower), live, in
+  CAPTURE and on a target step; the header and the lit key show the note played. (IN SCALE and the STEP layer play
+  only the scale anyway.) `ec_kb_snap`.

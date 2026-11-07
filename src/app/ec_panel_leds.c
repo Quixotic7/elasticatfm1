@@ -229,7 +229,7 @@ uint8_t ec_kb_key_led(int k, uint8_t base)
     const int play = f < 0 && A->seq.playing ? step_note(ec_seq_step(&A->seq, A->track)) : -1000;
     const int semis = ec_kb_semis(k);
     if (sel != -1000 && semis == sel)
-        return blink(200) ? EC_LED_LIT : EC_LED_OFF;
+        return EC_LED_LIT;                         /* 0.6.60 (owner): the selected step's note: lit, steady */
     if (play != -1000 && semis == play)
         return EC_LED_LIT;
     return base;
@@ -243,7 +243,11 @@ static void leds_keyboard(void)
     for (i = 0; i < EC_NLOWER; i++) {
         const int k = ec_key_of_lower(i);
         const int c = ((ec_kb_semis(k) % 12) + 12) % 12 == 0;
-        ec_plat_led_lower(i, ec_kb_key_led(k, c ? EC_LED_DIM : EC_LED_FAINT));
+        uint8_t l = ec_kb_key_led(k, c ? EC_LED_DIM : EC_LED_FAINT);
+        if (ec_lp_is_sel(A->step_page * 16 + i))   /* 0.6.60 (owner): the selected step blinks on its key (its place
+                                                    * on the step page), as LOOP ENGINE's; over a lit note, lit / mid */
+            l = blink(200) ? EC_LED_LIT : l == EC_LED_LIT ? EC_LED_MID : EC_LED_OFF;
+        ec_plat_led_lower(i, l);
     }
 }
 

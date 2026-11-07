@@ -1424,3 +1424,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - Stopped, ALGO onto a step plays that step once for its length (a note at its pitch in its region, a slice step its
   slices); an empty step is silent.
 - test_liverec (the CAPTURE take, CAPTURED 16, the loop, QUANT 100, APPLY) and test_ux (test_algo_preview) check them.
+
+## 56. 0.6.60: KEYBOARD's LEDs, as the owner reads them (2026-11-06)
+
+- The selected step's note: its key lit, steady (0.6.57 blinked it). The selected step itself blinks on its own white
+  key (its place on the step page, as LOOP ENGINE's); a key that is both blinks lit / mid. Playing LIVE, the note of
+  the step playing now stays lit.

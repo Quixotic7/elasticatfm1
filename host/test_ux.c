@@ -1456,8 +1456,17 @@ static void test_kb_rec(void)
     l0 = ec_kb_key_led(kc, EC_LED_FAINT);
     A->ms = 200;
     l1 = ec_kb_key_led(kc, EC_LED_FAINT);
-    CHECK(kc >= 0 && l0 != l1 && (l0 == EC_LED_LIT || l1 == EC_LED_LIT), "the selected step's note blinks on its key "
-          "(%d / %d)", l0, l1);
+    CHECK(kc >= 0 && l0 == EC_LED_LIT && l1 == EC_LED_LIT, "0.6.60: the selected step's note lit, steady (%d / %d)", l0, l1);
+    {   /* and the selected step blinks on its own white key (its place on the step page) */
+        const int w = i - A->step_page * 16;
+        int lit = 0, off = 0, n;
+        for (n = 0; n < 40; n++) {
+            run(10);
+            lit += led_key(0, w) == FM1P_LED_LIT;
+            off += led_key(0, w) != FM1P_LED_LIT;
+        }
+        CHECK(w >= 0 && w < 16 && lit && off, "the selected step (%d) blinks on W%d (%d / %d)", i + 1, w + 1, lit, off);
+    }
     ec_lp_target_to(0);
     v[EC_P_PATTERN_STEPS] = 16;
     ec_seq_timing_changed(&A->seq);

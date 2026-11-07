@@ -232,6 +232,9 @@ int ec_fx_slot_machine(int slot);
 const char *ec_fx_slot_name(int slot);         /* "INSERT 1" .. "MASTER" */
 void ec_fx_sends_items(void *out);
 void ec_fx_setup_items(void *out);             /* (ec_page_t *) FX SETUP: the five slots' types, SEND MODE */
+void ec_fx_type_set(int slot, int type);       /* 0.6.92: a slot's effect type (1..EC_FX_COUNT) */
+void ec_fx_algo(int det);                     /* 0.6.92: EFFECTS: ALGO = the shown slot's level (MIX / the send) */
+void ec_fx_presets(int det);                  /* 0.6.92: EFFECTS: PRESETS = the shown slot's type */
 void ec_fx_type_step(int slot, int det);       /* a slot's effect type one on (INSERT 2: its params reset) */             /* (ec_page_t *) SENDS's cells */
 void ec_fx_send_mode(int det);                 /* SENDS: ALGO, the send mode PRE / POST */
 void ec_fx_swap_do(int which);                /* SENDS: swap the inserts (0) / the sends (1), no undo */

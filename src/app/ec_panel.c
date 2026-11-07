@@ -184,6 +184,9 @@ void ec_pn_enter(int mode)
     P->cat = 0;
     if (was == EC_MODE_SAMPLER && mode != EC_MODE_SAMPLER)
         ec_sampler_enter(0);
+    if (was == EC_CAT_FX && mode != EC_CAT_FX && mode != EC_CAT_MASTER && A->bus)
+        A->bus = 0;                                /* 0.6.92 (owner): a bus picked in FX stays there: the track
+                                                    * modes get the track back (they showed MIX for MST) */
     if (was == EC_CAT_FILE && mode != EC_CAT_FILE) {
         ec_file_leave();                           /* the preview stops */
         P->last_fpage = (int8_t)A->page[EC_CAT_FILE];   /* 0.6.66 (owner): FILE's button comes back to this page */
@@ -1068,6 +1071,11 @@ static void presets(int d)
     char lb[16], sub[16];
     const ec_ss_sample_t *x;
     const int mode = ec_app_mode();
+    if (ec_src_insert_page()) {                    /* 0.6.92 (owner): EFFECTS: the shown slot's type */
+        for (i = 0; i < steps; i++)
+            ec_fx_presets(d);
+        return;
+    }
     if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track, no pop-up (the
                                                     * header's target box says it); 0.6.54 (QA C2): before the bus
                                                     * return, so it walks on from S1 / S2 too */
@@ -1297,6 +1305,8 @@ static void knob(int r, int d)
             ec_rzui_select(A, d);                  /* 0.6.1: RAZOR: ALGO picks the slice (SEL turns the page) */
         else if (ec_fx_on_sends())
             ec_fx_send_mode(d);                    /* 0.6.3: FX SENDS: ALGO = the send mode PRE / POST */
+        else if (ec_src_insert_page())
+            ec_fx_algo(d);                         /* 0.6.92 (owner): EFFECTS: the shown slot's level */
         else if (ec_lp_sel_mode())
             ec_lp_algo(d); 
         else if (ec_mk_route_depth(d))

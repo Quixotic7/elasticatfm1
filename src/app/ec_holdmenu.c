@@ -78,6 +78,12 @@ void ec_hm_arm(int key, int kind, int id, const char *head)
     } else if (kind == EC_HM_ADVANCE) {
         g.n = 2;
         g.now = ec_as->advance ? 1 : 0;
+    } else if (kind == EC_HM_FXTYPE) {           /* 0.6.92 */
+        g.id = id;
+        g.n = EC_PARAMS[EC_P_FX_MACHINE].nopt;
+        g.now = ec_fx_slot_machine(id) - 1;
+        if (g.now < 0 || g.now >= g.n)
+            g.now = 0;
     } else {
         g.n = EC_PARAMS[g.id].nopt;
         g.now = iv(values()[g.id]) - 1;
@@ -124,7 +130,7 @@ const char *ec_hm_label(int i)
         return "";
     if (g.kind == EC_HM_ADVANCE)
         return i ? "ON" : "OFF";
-    if (g.id == EC_P_FX_MACHINE || g.id == EC_P_INS2_MACHINE)
+    if (g.kind == EC_HM_FXTYPE || g.id == EC_P_FX_MACHINE || g.id == EC_P_INS2_MACHINE)
         return i == 0 ? "NONE" : ec_fx_name(i + 1);   /* the long names: "TAPE ECHO" */
     return EC_PARAMS[g.id].opts[i];
 }
@@ -199,6 +205,10 @@ static void apply(void)
         return;
     if (g.kind == EC_HM_ADVANCE) {
         ec_pn_item_edit(EC_UX_ADVANCE, g.cur ? 1 : -1);
+        return;
+    }
+    if (g.kind == EC_HM_FXTYPE) {                 /* 0.6.92: the key's own slot */
+        ec_fx_type_set(g.id, val);
         return;
     }
     v = values();

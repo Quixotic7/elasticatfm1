@@ -104,7 +104,7 @@ int ec_fx_on_sends(void)
 
 int ec_fx_slot_machine(int slot)
 {
-    const float *v = ec_app_params(A);
+    const float *v = ec_project_track(&A->proj, A->track)->v;   /* 0.6.92: the inserts are the track's, always */
     if (slot >= 2 && slot <= 4)
         return iv(A->proj.bus[slot - 2], EC_P_FX_MACHINE);
     return iv(v, slot == 1 ? EC_P_INS2_MACHINE : EC_P_FX_MACHINE);
@@ -220,10 +220,14 @@ void ec_fx_setup_items(void *o)
 
 void ec_fx_type_step(int slot, int det)
 {
-    const int m = ec_fx_slot_machine(slot);
-    const int nm = m + (det > 0 ? 1 : -1);
-    float *v = ec_app_params(A);
-    if (nm < 1 || nm > EC_FX_COUNT || slot < 0 || slot > 4)
+    ec_fx_type_set(slot, ec_fx_slot_machine(slot) + (det > 0 ? 1 : -1));
+}
+
+/* 0.6.92: slot's effect type = nm (1..EC_FX_COUNT), whichever slot the knobs show (a bus: its record, A->bus or not) */
+void ec_fx_type_set(int slot, int nm)
+{
+    float *v = ec_project_track(&A->proj, A->track)->v;
+    if (nm < 1 || nm > EC_FX_COUNT || slot < 0 || slot > 4 || nm == ec_fx_slot_machine(slot))
         return;
     if (slot == 1) {                               /* INSERT 2: its MIX and P1..P8 to the machine's defaults */
         uint8_t ids[2 + EC_INS2_NP];
@@ -247,6 +251,47 @@ void ec_fx_type_step(int slot, int det)
     if (slot == ec_fx_slot())
         A->pn.ins_page = 0;
     ec_app_mark_dirty();
+}
+
+/* 0.6.92 (owner): the EFFECTS page, ALGO = the shown slot's level: an insert's MIX, a send's level from the track
+ * (SEND 1 / 2 of the track selected), MASTER its MIX */
+void ec_fx_algo(int det)
+{
+    const int slot = ec_fx_slot();
+    char val[24];
+    float x;
+    if (slot == 2 || slot == 3) {
+        const int b = A->bus, id = slot == 2 ? EC_P_SEND1 : EC_P_SEND2;
+        A->bus = 0;                                /* (the track's own send, though the knobs show the bus) */
+        ec_app_edit_param_f(id, det, ec_ux_accel(EC_E_ALGO, 100, det), 0);
+        x = ec_project_track(&A->proj, A->track)->v[id];
+        A->bus = b;
+        ec_param_format(id, x, 3, val, sizeof val);
+        ec_ux_takeover(slot == 2 ? "SEND 1" : "SEND 2", val, ec_param_frac(id, x));
+        return;
+    }
+    if (ec_fx_slot_machine(slot) == EC_FX_NONE)
+        return;
+    {
+        const int id = ec_src_ins_mix(slot);
+        const float *bv;
+        ec_app_edit_param_f(id, det, ec_ux_accel(EC_E_ALGO, 100, det), 0);
+        bv = ec_app_bus_params(A, id);
+        x = bv ? bv[id] : ec_app_params(A)[id];
+        ec_param_format(id, x, 3, val, sizeof val);
+        ec_ux_takeover("MIX", val, ec_param_frac(id, x));
+    }
+}
+
+/* 0.6.92 (owner): the EFFECTS page, PRESETS = the shown slot's effect type */
+void ec_fx_presets(int det)
+{
+    const int slot = ec_fx_slot();
+    char b[32];
+    ec_fx_type_step(slot, det);
+    snprintf(b, sizeof b, "%s %s", ec_fx_slot_name(slot),
+             ec_fx_slot_machine(slot) > 1 ? ec_fx_short_name(ec_fx_slot_machine(slot)) : "OFF");
+    ec_app_message(b);
 }
 
 /* SENDS (§10): K1 / K2 the inserts' MIX (in series: their "send"), K3 / K4 the send levels */
@@ -307,10 +352,9 @@ static void arm_menu(int mode, int key)
     if (mode == EC_CAT_FX) {                       /* 0.6.3: B1-B4 the slot's type, B5 on MASTER the master's */
         static const char *const HEAD[5] = {"INSERT 1 TYPE", "INSERT 2 TYPE", "SEND 1 TYPE", "SEND 2 TYPE",
                                             "MASTER TYPE"};
-        if (key >= 1 && key <= 4)
-            ec_hm_arm(key, key == 2 ? EC_HM_INS2 : EC_HM_PARAM, EC_P_FX_MACHINE, HEAD[key - 1]);
-        else if (key == 5 && A->bus == 3)
-            ec_hm_arm(key, EC_HM_PARAM, EC_P_FX_MACHINE, HEAD[4]);
+        if (key >= 1 && key <= 5)                  /* 0.6.92 (owner): each key its own slot's type (not the slot the
+                                                    * knobs show); B5 MASTER's from every FX page */
+            ec_hm_arm(key, EC_HM_FXTYPE, key - 1, HEAD[key - 1]);
         return;
     }
     if (mode != EC_CAT_SRC)

@@ -2180,6 +2180,88 @@ static void test_b11_pages(void)
     }
 }
 
+/* 0.6.92 (owner): FX: a muted track feeds no send; each type key changes its own slot; B5 is MASTER's from every FX
+ * page; EFFECTS: ALGO the shown slot's level, PRESETS its type; leaving FX gives the track modes the track back */
+static void test_fx_092(void)
+{
+    ec_bus_status_t bs;
+    float *tv;
+    float pk_on, pk_off;
+    int i;
+    ec_pn_select_target(0);
+    tv = ec_project_track(&A->proj, 0)->v;
+    tv[EC_P_MACHINE] = EC_MACH_LOOP;
+    tv[EC_P_SEND1] = 1.0f;
+    tv[EC_P_MUTE] = 0;
+    A->proj.bus[0][EC_P_FX_MACHINE] = EC_FX_DELAY;   /* (an empty bus returns nothing: a delay, no feedback) */
+    A->proj.bus[0][EC_P_DELAY_FEEDBACK] = 0;
+    ec_seq_touch(&A->seq, 0);
+    press(FM1P_B_PLAY, 40);
+    for (i = 0, pk_on = 0; i < 40; i++) {
+        run_audio(10);
+        ec_dsp_bus_status(A->dsp, 0, &bs);
+        if (bs.peak_l > pk_on)
+            pk_on = bs.peak_l;
+    }
+    tv[EC_P_MUTE] = 1;
+    ec_seq_touch(&A->seq, 0);
+    run_audio(2500);                               /* (the last echo out) */
+    for (i = 0, pk_off = 0; i < 20; i++) {
+        run_audio(10);
+        ec_dsp_bus_status(A->dsp, 0, &bs);
+        if (bs.peak_l > pk_off)
+            pk_off = bs.peak_l;
+    }
+    CHECK(pk_on > 0.001f && pk_off < 0.0001f, "a muted track feeds no send (S1 %g -> %g)", pk_on, pk_off);
+    press(FM1P_B_PLAY, 40);
+    tv[EC_P_MUTE] = 0;
+    tv[EC_P_SEND1] = 0;
+    ec_seq_touch(&A->seq, 0);
+
+    to(EC_CAT_FX);                                 /* INSERT 1 shown; B4 held: SEND 2's type */
+    ec_pn_goto(EC_CAT_FX, ec_fx_effects_page());
+    A->pn.ins_slot = 0;
+    A->proj.bus[1][EC_P_FX_MACHINE] = EC_FX_NONE;
+    tv[EC_P_FX_MACHINE] = EC_FX_NONE;
+    key(1, bkey(4), 1);
+    run(EC_HOLD_MS + 100);
+    turn(FM1P_E_K1, 1);
+    key(1, bkey(4), 0);
+    run(20);
+    CHECK(A->proj.bus[1][EC_P_FX_MACHINE] == EC_FX_DELAY && tv[EC_P_FX_MACHINE] == EC_FX_NONE,
+          "INSERT 1 shown, B4 held: SEND 2's type changes (%g), not INSERT 1's (%g)", A->proj.bus[1][EC_P_FX_MACHINE],
+          tv[EC_P_FX_MACHINE]);
+    A->proj.bus[2][EC_P_FX_MACHINE] = EC_FX_NONE;
+    key(1, bkey(5), 1);                            /* B5 held, not on MASTER: MASTER's type */
+    run(EC_HOLD_MS + 100);
+    turn(FM1P_E_K1, 2);
+    key(1, bkey(5), 0);
+    run(20);
+    CHECK(A->proj.bus[2][EC_P_FX_MACHINE] == EC_FX_REVERB, "B5 held from INSERT 1: MASTER's type (%g)",
+          A->proj.bus[2][EC_P_FX_MACHINE]);
+    A->pn.ins_slot = 0;
+    A->bus = 0;
+    turn(FM1P_E_PRESETS, 1);                       /* EFFECTS: PRESETS the shown slot's type */
+    CHECK(tv[EC_P_FX_MACHINE] == EC_FX_DELAY, "PRESETS: INSERT 1's type (%g)", tv[EC_P_FX_MACHINE]);
+    {
+        const float m0 = tv[ec_src_ins_mix(0)];
+        turn(FM1P_E_ALGO, 5);
+        CHECK(tv[ec_src_ins_mix(0)] != m0, "ALGO: INSERT 1's MIX (%g -> %g)", m0, tv[ec_src_ins_mix(0)]);
+    }
+    ec_pn_select_target(EC_NTRACK + 1);            /* S2 shown: ALGO = the track's SEND 2 */
+    turn(FM1P_E_ALGO, 5);
+    CHECK(tv[EC_P_SEND2] > 0 && A->bus == 2, "S2 shown: ALGO sets the track's SEND 2 (%g)", tv[EC_P_SEND2]);
+    ec_pn_select_target(EC_NTRACK + 2);            /* MST, then a track mode */
+    press(FM1P_B_HOME, 40);
+    CHECK(!A->bus && mode() != EC_CAT_MASTER, "leaving FX on MST: the track mode, on the track (bus %d, mode %d)",
+          A->bus, mode());
+    tv[EC_P_FX_MACHINE] = EC_FX_NONE;
+    tv[EC_P_SEND2] = 0;
+    for (i = 0; i < 3; i++)
+        A->proj.bus[i][EC_P_FX_MACHINE] = EC_FX_NONE;
+    ec_seq_touch(&A->seq, 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -2233,6 +2315,7 @@ int main(int argc, char **argv)
     test_chords();
     test_rate_change();
     test_b11_pages();
+    test_fx_092();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

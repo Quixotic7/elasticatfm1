@@ -14,7 +14,8 @@
 enum { EC_HM_PARAM,      /* a track param (an option list): id; FX's INS 1 type on a bus targets the bus's record */
        EC_HM_INS2,       /* INS 2's type (EC_P_INS2_MACHINE: picking resets its MIX and P1..P8, one undo) */
        EC_HM_ADVANCE,    /* KEYBOARD's ADVANCE (APP SETTINGS) */
-       EC_HM_SWAP };     /* FX SENDS (0.6.4): no list; held EC_HOLD_MS the key's box is raised, K1 moves it left / right
+       EC_HM_SWAP,       /* FX SENDS (0.6.4) */
+       EC_HM_FXTYPE };   /* 0.6.92: FX slot `id`'s effect type (0 INS 1 .. 4 MASTER), whichever slot the knobs show */     /* FX SENDS (0.6.4): no list; held EC_HOLD_MS the key's box is raised, K1 moves it left / right
                           * (each step swaps the pair: id 0 the inserts, 1 the sends); letting go = one undo */
 
 /* arm the menu on black key `key` (1..11): kind, the param (EC_HM_PARAM), the header while it shows */

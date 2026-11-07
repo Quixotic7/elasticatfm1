@@ -874,10 +874,10 @@ static void fam_render(ec_dsp_t *d, ec_track_t *t, int fam, double run, float *L
 }
 
 /* E4: one track's send taps into the S1 / S2 buses (\elasticatSendTap, levels ramped over the chunk) */
-static void send_taps(ec_dsp_t *d, const ec_track_t *t, float s10, float s20, const float *L, const float *R,
+static void send_taps(ec_dsp_t *d, float s10, float s20, float s11, float s21, const float *L, const float *R,
                       int n)
 {
-    float i1 = (t->snd1 - s10) / (float)n, i2 = (t->snd2 - s20) / (float)n, a = s10, b = s20;
+    float i1 = (s11 - s10) / (float)n, i2 = (s21 - s20) / (float)n, a = s10, b = s20;
     for (int i = 0; i < n; ++i) {
         a += i1; b += i2;
         d->s1l[i] += L[i] * a; d->s1r[i] += R[i] * a;
@@ -1052,12 +1052,14 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     t->snd1 = ec_lag(t->snd1, ec_clampf(p->send1_level, 0.f, 1.f), d->lag02, n);
     t->snd2 = ec_lag(t->snd2, ec_clampf(p->send2_level, 0.f, 1.f), d->lag02, n);
     int post = p->send_tap == 2, sends = s10 > 0.f || s20 > 0.f || t->snd1 > 0.f || t->snd2 > 0.f;
-    if (sends && !post) send_taps(d, t, s10, s20, L, R, n);
+    /* 0.6.92 (owner): a muted track sends nothing either (the levels follow the mute's fade) */
+    const float m0 = mute0, m1 = t->mute_gain;
+    if (sends && !post) send_taps(d, s10 * m0, s20 * m0, t->snd1 * m1, t->snd2 * m1, L, R, n);
     if (!ec_fx_bypassed(&t->fx, &p->fx))                          /* 0.6.1: an empty insert costs nothing */
         ec_fx_process(&t->fx, &p->fx, d->bpm, d->ml, d->mr, L, R, n);   /* duck key: the tracks mixed so far */
     if (!ec_fx_bypassed(&t->fx2, &p->fx2))                        /* 0.6.1: INS 2, after INS 1 */
         ec_fx_process(&t->fx2, &p->fx2, d->bpm, d->ml, d->mr, L, R, n);
-    if (sends && post) send_taps(d, t, s10, s20, L, R, n);
+    if (sends && post) send_taps(d, s10 * m0, s20 * m0, t->snd1 * m1, t->snd2 * m1, L, R, n);
     {
         float g0 = mute0 * 0.70710678f, g1 = t->mute_gain * 0.70710678f, gi = (g1 - g0) / (float)n, g = g0;
         for (int i = 0; i < n; ++i) { g += gi; L[i] *= g; R[i] *= g; }

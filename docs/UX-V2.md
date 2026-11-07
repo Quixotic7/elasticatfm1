@@ -1700,3 +1700,15 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   back to TAPE (the FFT budget covers the tracks only).
 - New events EC_EV_CHORD_ON / OFF; the track status counts chord_voices; the idle CPU saver waits for them.
 - test_ux test_chords.
+
+## 88. 0.6.92: FX fixes from the owner's jam (owner, 2026-11-07)
+
+- A muted track feeds no send (its send levels follow the mute's fade; they tapped before the mute).
+- FX's type hold menus: each key changes its own slot's type (B1 INSERT 1, B2 INSERT 2, B3 SEND 1, B4 SEND 2, B5
+  MASTER), whichever slot the knobs show (they changed the shown slot's); B5's MASTER type works from every FX page
+  (only on MASTER before). New hold-menu kind EC_HM_FXTYPE; ec_fx_type_set.
+- The EFFECTS page (SEL steps the slots): ALGO = the shown slot's level (an insert's MIX; SEND 1 / 2: the selected
+  track's send to it; MASTER: its MIX), PRESETS = the shown slot's effect type.
+- The "stuck" FX: picking S1 / S2 / MST in FX left that bus targeted, so every track mode after it showed MIX for the
+  bus (no params, every mode the same). Leaving FX for a track mode now gives the track back (MIX keeps the bus).
+- test_ux test_fx_092 (the mute fails without its fix).

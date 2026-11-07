@@ -1645,3 +1645,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   unchanged (armed; the first key clears the track and the take grows from step 1). (0.6.61 cleared the track at
   the first key while playing too.)
 - test_liverec test_capture_over_old.
+
+## 82. 0.6.86: B11 held: LEN on K1 / PRESETS, RATE on K2 / ALGO, the zoom on K4 (owner, 2026-11-07)
+
+- While B11 is held: K1 or PRESETS = the track's LENGTH, K2 or ALGO = its RATE, K4 = the zoom (slice tracks: the
+  pads' bank); K3 nothing. (0.6.40: ALGO the length, PRESETS / K3 the zoom.) The knob labels say so. PAGES mode
+  without B11 is unchanged (ALGO / PRESETS the page).
+- test_ux: the zoom on K4, PRESETS / ALGO = LEN / RATE.

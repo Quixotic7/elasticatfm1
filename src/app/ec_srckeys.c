@@ -549,16 +549,17 @@ int ec_src_knob(int role, int det)
 {
     const int mode = ec_app_mode();
     int id;
-    if (ec_lp_b11_held() && (role == EC_E_K3 || role == EC_E_PRESETS)) {   /* 0.6.6: LOOP ENGINE: B11 held + K3 = the
-                                                    * zoom (0.6.14: was K1); 0.6.40 (owner): + PRESETS too (slice
-                                                    * tracks: the pads' bank) */
+    if (ec_lp_b11_held() && role == EC_E_K4) {    /* 0.6.6: LOOP ENGINE: B11 held + a knob = the zoom (slice tracks:
+                                                    * the pads' bank); 0.6.86 (owner): K4 only */
         ec_lp_b11_used();
         for (; det; det += det > 0 ? -1 : 1)       /* a detent a step */
             zoom(det);
         return 1;
     }
-    if (ec_lp_b11_held() && role == EC_E_ALGO)    /* 0.6.40 (owner): B11 held + ALGO = K1, the length */
+    if (ec_lp_b11_held() && role == EC_E_PRESETS) /* 0.6.86 (owner): B11 held: PRESETS = K1 (LENGTH), ALGO = K2 (RATE) */
         role = EC_E_K1;
+    else if (ec_lp_b11_held() && role == EC_E_ALGO)
+        role = EC_E_K2;
     if ((ec_lp_b11_held() || ec_app_mode() == EC_MODE_PAGES) && (role == EC_E_K1 || role == EC_E_K2) && !A->bus) {   /* 0.6.14 (owner): B11 held (PAGES: always): K1
                                                     * the pattern length, K2 the track rate (the pages panel) */
         float *v = ec_app_params(A);

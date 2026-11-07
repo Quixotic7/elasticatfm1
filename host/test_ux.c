@@ -813,9 +813,9 @@ static void test_sources(void)
     v[EC_P_LOOP_DIVISION] = 16;
     key(1, bkey(11), 1);
     run(20);
-    turn(FM1P_E_K3, 1);
-    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11 + K3: 32, first half");
-    turn(FM1P_E_K3, 1);
+    turn(FM1P_E_K4, 1);
+    CHECK(v[EC_P_LOOP_DIVISION] == 32 && !A->pn.zoom_half, "LOOP ENGINE B11 + K4 (0.6.86): 32, first half");
+    turn(FM1P_E_K4, 1);
     run(60);
     CHECK(v[EC_P_LOOP_DIVISION] == 32 && A->pn.zoom_half && lbl(FM1CORE_LBL_WHITE0, "STEP 1"),
           "B11 + K3: the second half; while B11 is held the keys pick steps (W1 = %s)", L(FM1CORE_LBL_WHITE0));
@@ -824,10 +824,24 @@ static void test_sources(void)
     CHECK(lbl(FM1CORE_LBL_WHITE0, "L17"), "B11 let go: the second half's loop keys (W1 = %s)", L(FM1CORE_LBL_WHITE0));
     key(1, bkey(11), 1);
     run(20);
-    turn(FM1P_E_K3, -2);
+    turn(FM1P_E_K4, -2);
     key(1, bkey(11), 0);
     run(20);
-    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11 + K3 -2: back to 16");
+    CHECK(v[EC_P_LOOP_DIVISION] == 16 && !A->pn.zoom_half, "B11 + K4 -2: back to 16");
+    {                                              /* 0.6.86 (owner): B11 held: PRESETS = LENGTH, ALGO = RATE */
+        const float len0 = v[EC_P_PATTERN_STEPS], rate0 = v[EC_P_RATE];
+        key(1, bkey(11), 1);
+        run(20);
+        turn(FM1P_E_PRESETS, 1);
+        turn(FM1P_E_ALGO, 1);
+        CHECK(v[EC_P_PATTERN_STEPS] == len0 + 1 && v[EC_P_RATE] != rate0 && v[EC_P_LOOP_DIVISION] == 16 &&
+                  lbl(FM1CORE_LBL_KNOB0 + FM1P_E_PRESETS, "LEN") && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_ALGO, "RATE"),
+              "B11 + PRESETS: LEN %g, + ALGO: RATE %g (no zoom)", v[EC_P_PATTERN_STEPS], v[EC_P_RATE]);
+        turn(FM1P_E_PRESETS, -1);
+        turn(FM1P_E_ALGO, -1);
+        key(1, bkey(11), 0);
+        run(20);
+    }
     /* FX: the buses, the slot keys */
     to(EC_CAT_FX);
     tapkey(1, bkey(3), 40);
@@ -1740,11 +1754,11 @@ static void test_bank16(void)
     A->pn.zoom_half = 0;
     key(1, 10, 1);                                 /* B11 held */
     run(400);
-    turn(FM1P_E_K3, 1);
+    turn(FM1P_E_K4, 1);
     run(20);
-    CHECK(!A->pn.zoom_half && !strcmp(A->msg, "SLICES 1-16"), "16 slices: B11 + K3 stays on 1-16 (%s)", A->msg);
+    CHECK(!A->pn.zoom_half && !strcmp(A->msg, "SLICES 1-16"), "16 slices: B11 + K4 stays on 1-16 (%s)", A->msg);
     v[EC_P_SLICE_COUNT] = 32;
-    turn(FM1P_E_K3, 1);
+    turn(FM1P_E_K4, 1);
     run(20);
     CHECK(A->pn.zoom_half && !strcmp(A->msg, "SLICES 17-32"), "32 slices: 17-32 (%s)", A->msg);
     key(1, 10, 0);

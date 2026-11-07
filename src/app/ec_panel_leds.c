@@ -666,11 +666,12 @@ static void knob_labels(void)
                                                     * always): LEN, RATE, the zoom, the page */
         /* 0.6.56 (QA C17): what they do: B11 held, ALGO the length and PRESETS the zoom (0.6.40); PAGES, ALGO and
          * PRESETS the page, no zoom */
-        static const char *const BK[4] = {"LEN", "RATE", "ZOOM", ""}, *const PG[4] = {"LEN", "RATE", "", ""};
+        static const char *const BK[4] = {"LEN", "RATE", "", "ZOOM"}, *const PG[4] = {"LEN", "RATE", "", ""};
         const int pages = mode == EC_MODE_PAGES && !ec_lp_b11_held();
         L(EC_LBL_KNOB0 + EC_E_SELECT, "");
-        L(EC_LBL_KNOB0 + EC_E_ALGO, pages ? "PAGE" : "LEN");
-        L(EC_LBL_KNOB0 + EC_E_PRESETS, pages ? "PAGE" : "ZOOM");
+        L(EC_LBL_KNOB0 + EC_E_ALGO, pages ? "PAGE" : "RATE");   /* 0.6.86 (owner): ALGO = K2 (RATE), PRESETS = K1
+                                                    * (LEN), the zoom on K4 */
+        L(EC_LBL_KNOB0 + EC_E_PRESETS, pages ? "PAGE" : "LEN");
         for (k = 0; k < 4; k++)
             L(EC_LBL_KNOB0 + EC_E_K1 + k, pages ? PG[k] : BK[k]);
         return;

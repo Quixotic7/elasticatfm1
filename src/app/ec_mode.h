@@ -379,7 +379,7 @@ void ec_rs_knob(int role, int det);
 const char *ec_rs_row_label(int row);
 void ec_rs_row_value(int row, char *out, int cap);
 int ec_rs_row_dim(int row);
-#define EC_RS_NROW 7
+#define EC_RS_NROW 8
 /* ---- ec_file.c: FILE (docs/UX-V2.md §3) ---- */
 void ec_file_settings(void);                  /* FILE held / SHIFT + FILE: the recorder's setup (0.4's REC pop-up) */
 void ec_file_black(int key, int down);        /* FILE's and SAMPLER's black keys (SHIFT + B11: purge) */

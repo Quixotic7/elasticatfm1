@@ -101,7 +101,7 @@ static void test_recset(void)
           "K1: COUNT-IN only (%d)", A->proj.rec.countin);
     turn(FM1P_E_SELECT, 20);
     run(40);
-    CHECK(A->pn.rs_row == EC_RS_NROW - 1 && knob_lbl(0, "QUANTIZE"), "SEL past the end: the last row (%d)",
+    CHECK(A->pn.rs_row == EC_RS_NROW - 1 && knob_lbl(0, "NOTES"), "SEL past the end: the last row (%d)",
           A->pn.rs_row);
     CHECK(count(EC_C_L3, 4, 14, 100, 120) > 0, "the selected row is on screen (scrolled)");
     press(FM1P_B_OCTDN, 40);

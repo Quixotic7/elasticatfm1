@@ -284,35 +284,40 @@ static void written(int step, int trig)
     ec_app_mark_dirty();
 }
 
+/* 0.6.84 / 0.6.87: does a hit stack onto its step? POLY only: keys held together (a chord: the same step, or within
+ * 80 ms of the chord's first key, which then gives the step), or NOTES ADD and the step already plays something */
+static int stack_on(int *step, int *last, uint32_t *last_ms, int poly, int held_more)
+{
+    const ec_step_t *s = &ec_project_track(&A->proj, A->track)->steps[*step];
+    if (poly && held_more && *last >= 0 && (*step == *last || A->ms - *last_ms < 80)) {
+        *step = *last;
+        return 1;
+    }
+    *last = *step;
+    *last_ms = A->ms;
+    return poly && RS->add && (s->trig || s->slices);
+}
+
 void ec_liverec_note(int semis, int slice, int vel)
 {
     static int last = -1;                          /* 0.6.84: the step a chord being played writes into */
     static uint32_t last_ms;
-    const int poly = iv(ec_app_params(A), EC_P_TRIG_POLY) == 2;
-    int step, mu, chord;
+    const int poly = iv(ec_app_params(A), EC_P_TRIG_POLY) == 2 && (slice > 0 || ec_kb_chords());
+    int step, mu, stack;
     ec_step_t *s;
     if (!hit(&step, &mu))
         return;
-    /* 0.6.82 / 0.6.84 (owner): POLY, keys held together: one step (a key within 80 ms of the chord's first joins its
-     * step even when it falls nearer the next one) */
-    chord = poly && (slice > 0 || ec_kb_chords()) && __builtin_popcount(P->kb_held) > 1 && last >= 0 &&
-            (step == last || A->ms - last_ms < 80);
-    if (chord)
-        step = last;
-    else {
-        last = step;
-        last_ms = A->ms;
-    }
-    s = chord ? step_rec(step) : trig_at(step, mu, vel);
+    stack = stack_on(&step, &last, &last_ms, poly, __builtin_popcount(P->kb_held) > 1);
+    s = stack ? step_rec(step) : trig_at(step, mu, vel);
+    s->trig = 1;
     if (!slice) {
-        if ((chord ? ec_step_note_add(s, (float)clampi(semis, -36, 36))
+        if ((stack ? ec_step_note_add(s, (float)clampi(semis, -36, 36))
                    : ec_step_note_set(s, (float)clampi(semis, -36, 36))) < 0)   /* 0.6.80: the NOTE */
             ec_app_message("LOCKS FULL");
-    } else {                                       /* a slice: its pitch (one a step) and the slice; 0.6.84: POLY,
-                                                    * the slices held together stack */
-        if (!chord && ec_step_note_set(s, (float)clampi(semis, -36, 36)) < 0)
+    } else {                                       /* a slice: its pitch (one a step) and the slice; POLY: stacked */
+        if (!stack && ec_step_note_set(s, (float)clampi(semis, -36, 36)) < 0)
             ec_app_message("LOCKS FULL");
-        s->slices = (chord ? s->slices : 0u) | 1u << (clampi(slice, 1, 32) - 1);
+        s->slices = (stack ? s->slices : 0u) | 1u << (clampi(slice, 1, 32) - 1);
     }
     written(step, 1);
 }
@@ -324,12 +329,18 @@ void ec_liverec_loop(int key, int slice_track, int vel)
     ec_step_t *s;
     if (!hit(&step, &mu))
         return;
-    s = trig_at(step, mu, vel);
     key = clampi(key, 1, 32);
-    if (slice_track) {                             /* a pad: its slice (poly machines stack) */
-        const int poly = iv(v, EC_P_TRIG_POLY) == 2;   /* 0.6.81: VOICE MODE */
-        s->slices = (poly ? s->slices : 0u) | 1u << (key - 1);
-    } else {                                       /* the loop key's span (the loop keys' division, as E5's preview) */
+    if (slice_track) {                             /* a pad: its slice; 0.6.87: POLY stacks pads held together, and
+                                                    * onto a playing step with NOTES ADD; else it replaces */
+        static int last = -1;
+        static uint32_t last_ms;
+        const int poly = iv(v, EC_P_TRIG_POLY) == 2;
+        const int stack = stack_on(&step, &last, &last_ms, poly, __builtin_popcount(A->seq.tr[A->track].pads) > 1);
+        s = stack ? step_rec(step) : trig_at(step, mu, vel);
+        s->trig = 1;
+        s->slices = (stack ? s->slices : 0u) | 1u << (key - 1);
+    } else {
+        s = trig_at(step, mu, vel);                                       /* the loop key's span (the loop keys' division, as E5's preview) */
         const int div = clampi((iv(v, EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);
         const float units = 128.0f / (float)div;
         const int k = clampi(key, 1, div);
@@ -431,7 +442,7 @@ void ec_rs_close(int keep)
 const char *ec_rs_row_label(int row)
 {
     static const char *const L[EC_RS_NROW] = {"MODE", "LENGTH", "COUNT-IN", "METRONOME", "CLICK LVL", "AUTOMATION",
-                                              "QUANTIZE"};
+                                              "QUANTIZE", "NOTES"};   /* 0.6.87: NOTES REPLACE / ADD */
     return row >= 0 && row < EC_RS_NROW ? L[row] : "";
 }
 
@@ -460,6 +471,7 @@ void ec_rs_row_value(int row, char *out, int cap)
     } break;
     case 5: snprintf(out, (size_t)cap, "%s", r->automation ? "ON" : "OFF"); break;
     case 6: snprintf(out, (size_t)cap, "%s", r->hard ? "HARD" : "KEEP"); break;
+    case 7: snprintf(out, (size_t)cap, "%s", r->add ? "ADD" : "REPLACE"); break;
     default: out[0] = 0; break;
     }
 }
@@ -487,6 +499,7 @@ static void edit(int row, int d)
     } break;
     case 5: r->automation = d > 0; break;
     case 6: r->hard = d > 0; break;
+    case 7: r->add = d > 0; break;
     default: break;
     }
 }

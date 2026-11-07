@@ -1652,3 +1652,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   pads' bank); K3 nothing. (0.6.40: ALGO the length, PRESETS / K3 the zoom.) The knob labels say so. PAGES mode
   without B11 is unchanged (ALGO / PRESETS the page).
 - test_ux: the zoom on K4, PRESETS / ALGO = LEN / RATE.
+
+## 83. 0.6.87: REC SETUP's NOTES: REPLACE / ADD (owner, 2026-11-07)
+
+- A new REC SETUP row after QUANTIZE, NOTES (saved with the project's record settings; an older build ignores it):
+  REPLACE (default): a note or slice recorded onto a step replaces what the step played. ADD: with VOICE MODE POLY,
+  it goes onto the step (TRIG: into its chord, up to 8 notes; SLICE / RAZOR: the slices stack; LOOP ENGINE's pads
+  too). Keys held together always land together on one step (0.6.84), REPLACE or ADD. MONO is always REPLACE.
+- (0.6.81-0.6.86 stacked LOOP ENGINE's pads on POLY tracks always: that is now ADD's.)
+- Tests: test_liverec test_rec_notes, test_proj (saved), test_v61list (the last row is NOTES).

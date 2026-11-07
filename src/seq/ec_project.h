@@ -98,6 +98,7 @@ typedef struct {
     float metro_level;            /* the click's own level 0..1 (default 0.5) */
     uint8_t automation;           /* AUTOMATION: 1 = knob moves are recorded as locks (ghost locks; default on) */
     uint8_t hard;                 /* QUANTIZE: 0 = the offset kept as an EC_P_MICRO lock (default), 1 = hard */
+    uint8_t add;                  /* 0.6.87 NOTES: 0 REPLACE (a note replaces the step's), 1 ADD (POLY: onto the step) */
 } ec_recset_t;
 void ec_recset_default(ec_recset_t *r);
 

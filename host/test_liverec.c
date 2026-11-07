@@ -562,6 +562,51 @@ static void test_capture_poly(void)
     ec_seq_touch(&A->seq, 0);
 }
 
+/* 0.6.87 (owner): REC SETUP's NOTES: REPLACE (a note replaces the step's) / ADD (POLY: onto the step) */
+static void test_rec_notes(void)
+{
+    float nt[EC_STEP_NOTES];
+    int add, st, mu, n;
+    char b[16];
+    ec_rs_row_value(7, b, sizeof b);
+    CHECK(!strcmp(ec_rs_row_label(7), "NOTES") && !strcmp(b, "REPLACE"), "REC SETUP: NOTES, REPLACE by default (%s)", b);
+    for (add = 0; add < 2; add++) {
+        stop();
+        to(EC_MODE_KEYBOARD);
+        A->track = 0;
+        A->bus = 0;
+        clear_steps(0);
+        trk(0)->v[EC_P_MACHINE] = EC_MACH_LOOP_TRIG;
+        trk(0)->v[EC_P_TRIG_POLY] = 2;
+        trk(0)->v[EC_P_PATTERN_STEPS] = 16;
+        trk(0)->v[EC_P_KB_LAYOUT] = 1;
+        A->pn.oct = 0;
+        tstep(0, 8)->trig = 1;                     /* step 9: C4 already */
+        ec_step_note_set(tstep(0, 8), 0);
+        ec_seq_touch(&A->seq, 0);
+        A->proj.rec.mode = EC_REC_CAPTURE;
+        A->proj.rec.add = (uint8_t)add;
+        press(FM1P_B_PLAY, 40);
+        press(FM1P_B_REC, 40);                     /* playing: an overdub */
+        run_to_step(8.0);
+        expect_hit(&st, &mu);
+        key(0, 6, 1);                              /* E4 onto step 9 */
+        run(5);
+        key(0, 6, 0);
+        run(20);
+        n = ec_step_notes(tstep(0, st), nt);
+        CHECK(st == 8 && (add ? n == 2 && nt[0] == 0 && nt[1] == 4 : n == 1 && nt[0] == 4),
+              "NOTES %s: step %d holds %d note(s)", add ? "ADD" : "REPLACE", st + 1, n);
+        press(FM1P_B_REC, 40);
+        stop();
+    }
+    A->proj.rec.add = 0;
+    clear_steps(0);
+    trk(0)->v[EC_P_TRIG_POLY] = 1;
+    trk(0)->v[EC_P_MACHINE] = EC_MACH_LOOP;
+    ec_seq_touch(&A->seq, 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -578,6 +623,7 @@ int main(int argc, char **argv)
     test_fixed();
     test_click();
     test_capture_poly();
+    test_rec_notes();
     C->shutdown();
     printf("test_liverec: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

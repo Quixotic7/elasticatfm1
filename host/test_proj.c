@@ -828,7 +828,9 @@ static void test_poly_machines(void)
     ec_project_init(&pr);
     pr.pat[0].tr[0].v[EC_P_MACHINE] = EC_MACH_SLICE_POLY;
     pr.pat[0].tr[1].v[EC_P_MACHINE] = EC_MACH_RAZOR_POLY;
+    pr.rec.add = 1;                                /* 0.6.87: NOTES ADD is saved */
     n = ec_project_save(&pr, b, sizeof b);
+    CHECK(n > 16 && ec_project_load(&back, b, (uint32_t)n) == 0 && back.rec.add == 1, "REC NOTES ADD round-trips");
     CHECK(n > 16 && ec_project_load(&back, b, (uint32_t)n) == 0 &&
               back.pat[0].tr[0].v[EC_P_MACHINE] == EC_MACH_GRID_SLICE && back.pat[0].tr[0].v[EC_P_TRIG_POLY] == 2 &&
               back.pat[0].tr[1].v[EC_P_MACHINE] == EC_MACH_RAZOR_SLICE && back.pat[0].tr[1].v[EC_P_TRIG_POLY] == 2,

@@ -636,7 +636,7 @@ static int32_t emit(const ec_project_t *p, uint8_t *b, uint32_t cap, int ver)
     if (ver >= 2) {   /* 0.6.0 "ECRS": the record settings */
         const ec_recset_t *r = &p->rec;
         w32(&o, EC_CHUNK_REC);
-        w32(&o, 11);
+        w32(&o, 12);                               /* 0.6.87: + NOTES (an older build reads the first 11) */
         w8(&o, REC_CHUNK_VERSION);
         w8(&o, r->mode);
         w8(&o, r->bars);
@@ -645,6 +645,7 @@ static int32_t emit(const ec_project_t *p, uint8_t *b, uint32_t cap, int ver)
         wf(&o, r->metro_level);
         w8(&o, r->automation);
         w8(&o, r->hard);
+        w8(&o, r->add);
     }
     if (o.bad)
         return -1;
@@ -693,6 +694,7 @@ static void load_rec_chunk(ec_project_t *p, const uint8_t *b, uint32_t n)
     r->metro_level = lv == lv ? clampf(lv, 0, 1) : 0.5f;
     r->automation = b[9] ? 1 : 0;
     r->hard = b[10] ? 1 : 0;
+    r->add = n >= 12 && b[11] ? 1 : 0;            /* 0.6.87 */
 }
 
 /* 0.6.1: a record's header and checksum, without parsing it: its whole length, or -1 */

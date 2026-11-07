@@ -1687,7 +1687,9 @@ static void test_kb_more(void)
     {                                              /* 0.6.78 (owner): KEYBOARD: F1 held = F1, a quick click = OCT */
         const int o = A->pn.oct;
         btn(FM1P_B_OCTDN, 1);
-        run(EC_HOLD_MS + 100);
+        run(60);
+        CHECK(!ec_pn_f(1) && A->pn.oct == o, "0.6.79: KEYBOARD, F1 just pressed: nothing yet (no F1, no octave)");
+        run(EC_HOLD_MS + 40);
         CHECK(ec_pn_f(1) && A->pn.oct == o, "KEYBOARD: F1 held is F1 (the octave stays %d)", A->pn.oct);
         btn(FM1P_B_OCTDN, 0);
         run(20);

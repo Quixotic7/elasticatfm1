@@ -52,6 +52,33 @@ static int mb_of(int b)
     }
 }
 
+static void overlays_close(void);
+/* F1 / F2 on (held); both = F3 */
+static uint8_t f_pend;                             /* 0.6.79: KEYBOARD: F1 / F2 down, not held long enough yet */
+static void f_on(int bit)
+{
+    P->f_held |= bit;
+    if (P->f_held == 3) {                          /* F1 + F2: F3 */
+        ec_clip_reset();
+        P->f_sticky = 0;
+        P->f_used = 3;
+        overlays_close();
+        UX->f3 = 1;
+    }
+    A->redraw = 1;
+}
+
+/* 0.6.79 (owner): KEYBOARD's F1 / F2 come on only once held */
+static void f_gate(void)
+{
+    int bit;
+    for (bit = 1; bit <= 2; bit++)
+        if ((f_pend & bit) && A->ms - P->f_ms[bit - 1] >= EC_HOLD_MS) {
+            f_pend &= (uint8_t)~bit;
+            f_on(bit);
+        }
+}
+
 int ec_pn_f(int which)
 {
     if (ec_app_popup(A))                           /* 0.6.78 (owner): KEYBOARD has F1 / F2 too (held) */
@@ -554,18 +581,15 @@ static void button_down(int b)
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
             ec_e5_undo(b == EC_B_OCTUP);
-        } else {                                   /* 0.6.78 (owner): KEYBOARD too: held F1 / F2, a quick click the
-                                                    * octave (on release) */
-            P->f_held |= bit;
+        } else if (ec_app_mode() == EC_MODE_KEYBOARD) {   /* 0.6.79 (owner): KEYBOARD: nothing at the press; held
+                                                    * EC_HOLD_MS F1 / F2 come on (f_gate); let go before: the octave */
+            f_pend |= (uint8_t)bit;
             P->f_used &= ~bit;
             P->f_ms[bit - 1] = A->ms;
-            if (P->f_held == 3) {                  /* F1 + F2: F3 */
-                ec_clip_reset();
-                P->f_sticky = 0;
-                P->f_used = 3;
-                overlays_close();
-                UX->f3 = 1;
-            }
+        } else {
+            P->f_used &= ~bit;
+            P->f_ms[bit - 1] = A->ms;
+            f_on(bit);
         }
         A->redraw = 1;
         return;
@@ -631,14 +655,14 @@ static void button_up(int b)
     case EC_B_OCTDN:
     case EC_B_OCTUP: {
         const int bit = b == EC_B_OCTDN ? 1 : 2;
-        if (P->f_held & bit) {
+        if (f_pend & bit) {                        /* 0.6.79: KEYBOARD, let go before the hold: the octave */
+            f_pend &= (uint8_t)~bit;
+            ec_kb_oct(bit == 2 ? 1 : -1);
+            A->redraw = 1;
+        } else if (P->f_held & bit) {
             P->f_held &= ~bit;
-            if (!(P->f_used & bit) && A->ms - P->f_ms[bit - 1] < EC_HOLD_MS) {
-                if (ec_app_mode() == EC_MODE_KEYBOARD)   /* 0.6.78 (owner): KEYBOARD: a quick click = the octave */
-                    ec_kb_oct(bit == 2 ? 1 : -1);
-                else
-                    P->f_sticky = P->f_sticky & bit ? 0 : bit;   /* a tap: sticky (F1 and F2 one at a time) */
-            }
+            if (!(P->f_used & bit) && A->ms - P->f_ms[bit - 1] < EC_HOLD_MS && ec_app_mode() != EC_MODE_KEYBOARD)
+                P->f_sticky = P->f_sticky & bit ? 0 : bit;   /* a tap: sticky (F1 and F2 one at a time) */
             P->f_used &= ~bit;
             if (!(P->f_held | P->f_sticky))
                 ec_clip_reset();                   /* the buffer empties when F1 / F2 turns off */
@@ -1350,6 +1374,7 @@ void ec_pn_tick(const void *vin)
 {
     const ec_input_t *in = (const ec_input_t *)vin;
     int b, k, r;
+    f_gate();                                      /* 0.6.79: KEYBOARD's F1 / F2 held */
     if (in->btn_down || in->key_down) {
         ec_ui_touched();
         dismiss();

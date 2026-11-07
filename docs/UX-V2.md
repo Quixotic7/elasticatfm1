@@ -1582,3 +1582,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - HOME's modes (LOOP ENGINE, TRIG, KEYBOARD): B11 pressed turns a sticky F1 / F2 off (the copy buffer empties with
   it, as when F1 / F2 is tapped off).
 - test_ux test_kb_more checks both.
+
+## 75. 0.6.79: KEYBOARD's F1 / F2 come on only once held (owner, 2026-11-06)
+
+- KEYBOARD: pressing F1 / F2 does nothing at first; held EC_HOLD_MS (400 ms) F1 / F2 come on (the header shows
+  COPY / CUT then); let go before that: the octave (OCT -1 / +1 in the header, on release). Both held: F3.
+- test_ux test_kb_more: nothing 60 ms after the press, F1 on after the hold, the octave on a quick click.

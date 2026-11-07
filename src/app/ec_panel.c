@@ -170,6 +170,7 @@ static void overlays_close(void)
         ec_rs_close(1);
 }
 
+static int8_t f_forced = -1;                       /* 0.6.93: FILE opened BROWSE for this editor page (playing) */
 void ec_pn_enter(int mode)
 {
     const int was = ec_app_mode();
@@ -190,6 +191,10 @@ void ec_pn_enter(int mode)
     if (was == EC_CAT_FILE && mode != EC_CAT_FILE) {
         ec_file_leave();                           /* the preview stops */
         P->last_fpage = (int8_t)A->page[EC_CAT_FILE];   /* 0.6.66 (owner): FILE's button comes back to this page */
+        if (f_forced >= 0 && ec_page_pic(EC_CAT_FILE, A->page[EC_CAT_FILE], 0) == EC_PIC_FILE)
+            P->last_fpage = f_forced;              /* 0.6.93: BROWSE only stood in for the editor (playing): untouched,
+                                                    * the editor is still FILE's */
+        f_forced = -1;
     }
     if (mode == EC_CAT_FILE && was != EC_CAT_FILE) {
         int p;
@@ -261,7 +266,11 @@ static void mode_tap(int b)
         if (mb == EC_MB_FILE && P->last[mb] == EC_CAT_FILE && P->last_fpage >= 0) {
             const int pic = ec_page_pic(EC_CAT_FILE, P->last_fpage, 0);
             if ((pic == EC_PIC_EDITOR || pic == EC_PIC_RAZOR) && (A->seq.playing || ec_seq_counting_in(&A->seq))) {
-                ec_pn_enter(EC_CAT_FILE);          /* 0.6.16: the editors need a stop: BROWSE instead */
+                {
+                    const int8_t keep = P->last_fpage;
+                    ec_pn_enter(EC_CAT_FILE);      /* 0.6.16: the editors need a stop: BROWSE instead */
+                    f_forced = keep;               /* 0.6.93: the editor stays remembered */
+                }
                 ec_app_message("STOP FIRST");
                 return;
             }
@@ -315,7 +324,11 @@ static void mode_tap(int b)
         if (mb == EC_MB_FILE && m == EC_CAT_FILE && P->last_fpage >= 0) {
             const int pic = ec_page_pic(EC_CAT_FILE, P->last_fpage, 0);
             if ((pic == EC_PIC_EDITOR || pic == EC_PIC_RAZOR) && (A->seq.playing || ec_seq_counting_in(&A->seq))) {
-                ec_pn_enter(EC_CAT_FILE);          /* the editors need a stop: BROWSE instead */
+                {
+                    const int8_t keep = P->last_fpage;
+                    ec_pn_enter(EC_CAT_FILE);      /* the editors need a stop: BROWSE instead */
+                    f_forced = keep;               /* 0.6.93 (owner): the editor stays remembered (stopped: back to it) */
+                }
                 ec_app_message("STOP FIRST");
                 return;
             }

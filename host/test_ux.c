@@ -2249,8 +2249,10 @@ static void test_fx_092(void)
         CHECK(tv[ec_src_ins_mix(0)] != m0, "ALGO: INSERT 1's MIX (%g -> %g)", m0, tv[ec_src_ins_mix(0)]);
     }
     ec_pn_select_target(EC_NTRACK + 1);            /* S2 shown: ALGO = the track's SEND 2 */
+    A->ux.to_ms = 0;
     turn(FM1P_E_ALGO, 5);
-    CHECK(tv[EC_P_SEND2] > 0 && A->bus == 2, "S2 shown: ALGO sets the track's SEND 2 (%g)", tv[EC_P_SEND2]);
+    CHECK(tv[EC_P_SEND2] > 0 && A->bus == 2 && !A->ux.to_ms,
+          "S2 shown: ALGO sets the track's SEND 2 (%g), no pop-up (0.6.93)", tv[EC_P_SEND2]);
     ec_pn_select_target(EC_NTRACK + 2);            /* MST, then a track mode */
     press(FM1P_B_HOME, 40);
     CHECK(!A->bus && mode() != EC_CAT_MASTER, "leaving FX on MST: the track mode, on the track (bus %d, mode %d)",
@@ -2260,6 +2262,30 @@ static void test_fx_092(void)
     for (i = 0; i < 3; i++)
         A->proj.bus[i][EC_P_FX_MACHINE] = EC_FX_NONE;
     ec_seq_touch(&A->seq, 0);
+}
+
+/* 0.6.93 (owner): FILE left on the EDITOR, back while playing: BROWSE (the editors need a stop) without forgetting
+ * the EDITOR, which FILE opens again once stopped */
+static void test_file_memory(void)
+{
+    int p, ed = -1;
+    for (p = 0; p < ec_cat_pages(EC_CAT_FILE, 0); p++)
+        if (ec_page_pic(EC_CAT_FILE, p, 0) == EC_PIC_EDITOR)
+            ed = p;
+    if (A->seq.playing)
+        press(FM1P_B_PLAY, 40);
+    ec_pn_goto(EC_CAT_FILE, ed);
+    run(20);
+    press(FM1P_B_HOME, 40);
+    press(FM1P_B_PLAY, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_FILE, "playing: FILE opens BROWSE (%d)", ec_file_page());
+    press(FM1P_B_HOME, 40);
+    press(FM1P_B_PLAY, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(mode() == EC_CAT_FILE && ec_file_page() == EC_PIC_EDITOR, "stopped: FILE is back on the EDITOR (%d)",
+          ec_file_page());
+    press(FM1P_B_HOME, 40);
 }
 
 int main(int argc, char **argv)
@@ -2316,6 +2342,7 @@ int main(int argc, char **argv)
     test_rate_change();
     test_b11_pages();
     test_fx_092();
+    test_file_memory();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

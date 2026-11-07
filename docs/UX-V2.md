@@ -1712,3 +1712,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The "stuck" FX: picking S1 / S2 / MST in FX left that bus targeted, so every track mode after it showed MIX for the
   bus (no params, every mode the same). Leaving FX for a track mode now gives the track back (MIX keeps the bus).
 - test_ux test_fx_092 (the mute fails without its fix).
+
+## 89. 0.6.93: FILE keeps the editor while playing; FX ALGO without a pop-up (owner, 2026-11-07)
+
+- FILE left on the EDITOR / RAZOR and opened again while playing still opens BROWSE (STOP FIRST: the editors need a
+  stop), but no longer forgets the editor: left from that BROWSE untouched, FILE opens the editor again once stopped.
+- FX EFFECTS: ALGO changes the shown slot's level without the takeover pop-up (the page shows it).
+- test_ux test_file_memory, test_fx_092.

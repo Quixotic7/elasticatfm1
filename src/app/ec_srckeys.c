@@ -258,29 +258,14 @@ void ec_fx_type_set(int slot, int nm)
 void ec_fx_algo(int det)
 {
     const int slot = ec_fx_slot();
-    char val[24];
-    float x;
-    if (slot == 2 || slot == 3) {
-        const int b = A->bus, id = slot == 2 ? EC_P_SEND1 : EC_P_SEND2;
+    if (slot == 2 || slot == 3) {                  /* 0.6.93 (owner): no pop-up: the page shows the level */
+        const int b = A->bus;
         A->bus = 0;                                /* (the track's own send, though the knobs show the bus) */
-        ec_app_edit_param_f(id, det, ec_ux_accel(EC_E_ALGO, 100, det), 0);
-        x = ec_project_track(&A->proj, A->track)->v[id];
+        ec_app_edit_param_f(slot == 2 ? EC_P_SEND1 : EC_P_SEND2, det, ec_ux_accel(EC_E_ALGO, 100, det), 0);
         A->bus = b;
-        ec_param_format(id, x, 3, val, sizeof val);
-        ec_ux_takeover(slot == 2 ? "SEND 1" : "SEND 2", val, ec_param_frac(id, x));
-        return;
-    }
-    if (ec_fx_slot_machine(slot) == EC_FX_NONE)
-        return;
-    {
-        const int id = ec_src_ins_mix(slot);
-        const float *bv;
-        ec_app_edit_param_f(id, det, ec_ux_accel(EC_E_ALGO, 100, det), 0);
-        bv = ec_app_bus_params(A, id);
-        x = bv ? bv[id] : ec_app_params(A)[id];
-        ec_param_format(id, x, 3, val, sizeof val);
-        ec_ux_takeover("MIX", val, ec_param_frac(id, x));
-    }
+    } else if (ec_fx_slot_machine(slot) != EC_FX_NONE)
+        ec_app_edit_param_f(ec_src_ins_mix(slot), det, ec_ux_accel(EC_E_ALGO, 100, det), 0);
+    A->redraw = 1;
 }
 
 /* 0.6.92 (owner): the EFFECTS page, PRESETS = the shown slot's effect type */

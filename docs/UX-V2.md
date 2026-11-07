@@ -1687,3 +1687,16 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - B11 held (LOOP ENGINE, TRIG, KEYBOARD), B1..B8: a page past the track's length off (a click still adds it), a
   muted page 10 %, a page in the loop 80 %, the page shown flashing at 100 % (muted: 30 %). One function for every
   mode (b11_page_leds). test_ux test_b11_pages.
+
+## 87. 0.6.91: a chord's notes all sound through the warp engine (owner, 2026-11-07)
+
+- 0.6.82's extra chord notes were slice voices (a plain reader or grains), so on WAVETABLE and most warp modes the
+  second note sounded nothing like the first. Now each extra note (sequenced, or a live key past the first on a
+  POLY TRIG track) is a copy of the track's own engine, taken at its note-on: the same warp mode and state, its own
+  pitch, region (from its start), phase and envelope, following the track's params, mods and smoothers; it plays
+  for the step's length (live: while held) and fades out with the track's play-gate time; the track's next trig
+  ends the last chord's notes. Eight copies in all (the oldest is taken over).
+- The engine's arena grows 26 -> 32 MiB (the cart's MEMORY_MIB 272 -> 280). SPECTRAL FREEZE / FORMANT copies fall
+  back to TAPE (the FFT budget covers the tracks only).
+- New events EC_EV_CHORD_ON / OFF; the track status counts chord_voices; the idle CPU saver waits for them.
+- test_ux test_chords.

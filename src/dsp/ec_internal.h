@@ -437,6 +437,12 @@ struct ec_dsp {
            lag05[EC_KR + 1];
     ec_track_t tr[EC_TRACKS];
     ec_voice_t v[EC_VOICE_POOL];
+    /* 0.6.91 (owner): a chord's extra notes sound through the track's own warp engine: each is a copy of the track
+     * (taken at its note-on), rendered at its own pitch, mixed in before the filter */
+#define EC_CHORD_VOICES 8
+    ec_track_t cv[EC_CHORD_VOICES];
+    struct { int used, track, slot, on, left; float pitch, vel, gate; uint32_t serial; } cvm[EC_CHORD_VOICES];
+                          /* on: its gate open (left samples, -1 held); gate: the play gate, faded as the track's */
     ec_evq_t q;
     float  peak_l, peak_r;
     /* scratch */

@@ -434,6 +434,7 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
     }
 }
 
+static void chord_off(ec_dsp_t *d, int ti, int slot);
 static void ev_trig(ec_dsp_t *d, int ti, const ec_event_t *ev)
 {
     ec_track_t *t = &d->tr[ti];
@@ -458,7 +459,10 @@ static void ev_trig(ec_dsp_t *d, int ti, const ec_event_t *ev)
             }
         }
     } else if (m == EC_MACH_LOOP_TRIG) {
-        if (!(ev->flags & EC_TF_GHOST)) note_on(d, t, ev->length);
+        if (!(ev->flags & EC_TF_GHOST)) {
+            note_on(d, t, ev->length);
+            chord_off(d, ti, -1);                    /* 0.6.91: a new trig ends the last chord (as it ends its note) */
+        }
         t->seq_has_s = ev->start >= 0.f; t->seq_s = ev->start;
         t->seq_has_e = ev->end >= 0.f; t->seq_e = ev->end;
         resolve(t, &s, &e);
@@ -469,6 +473,55 @@ static void ev_trig(ec_dsp_t *d, int ti, const ec_event_t *ev)
                m == EC_MACH_RAZOR_SLICE || m == EC_MACH_RAZOR_POLY) {
         ec_voice_slice_on(d, ti, ev);
     }
+}
+
+/* 0.6.91: a chord's extra note: a copy of the track's engine, from the region's start */
+static void chord_on(ec_dsp_t *d, int ti, const ec_event_t *ev)
+{
+    ec_track_t *t = &d->tr[ti], *c;
+    int i, best = -1;
+    float s, e;
+    if (!t->has_smp || !is_loop_machine(t->p.machine)) return;
+    for (i = 0; i < EC_CHORD_VOICES && best < 0; ++i)          /* its slot, else a free one, else the oldest */
+        if (d->cvm[i].used && d->cvm[i].track == ti && d->cvm[i].slot == ev->slice) best = i;
+    for (i = 0; i < EC_CHORD_VOICES && best < 0; ++i)
+        if (!d->cvm[i].used) best = i;
+    if (best < 0) {
+        best = 0;
+        for (i = 1; i < EC_CHORD_VOICES; ++i)
+            if (d->cvm[i].serial < d->cvm[best].serial) best = i;
+    }
+    c = &d->cv[best];
+    memcpy(c, t, sizeof *c);
+    c->keys = 0; c->keys_span = 0; c->keys_anchor.valid = 0; c->seq_anchor.valid = 0;
+    c->audition = 0; c->live_gate = 0; c->prev_fam = FAM_NONE; c->mode_gain = 1.f;
+    c->seq_has_s = ev->start >= 0.f; c->seq_s = ev->start;
+    c->seq_has_e = ev->end >= 0.f; c->seq_e = ev->end;
+    resolve(c, &s, &e);
+    set_region_phase(c, s, e, 0.0);
+    c->p.pitch = ev->pitch;
+    c->pitch_lag = ec_clampf(ev->pitch, -48.f, 48.f);
+    ec_env_reset(&c->amp_env);
+    ec_env_trigger(&c->amp_env, &c->amp_spec, ev->length > 0 ? ev->length : -1, 0, d->fs);
+    d->cvm[best].used = 1;
+    d->cvm[best].track = ti;
+    d->cvm[best].slot = ev->slice;
+    d->cvm[best].pitch = ev->pitch;
+    d->cvm[best].vel = ec_clampf(ev->velocity, 0.f, 1.f);
+    d->cvm[best].serial = ++d->serial;
+    d->cvm[best].on = 1;
+    d->cvm[best].left = ev->length > 0 ? ev->length : -1;
+    d->cvm[best].gate = 0.f;
+}
+
+/* release (a timed note too: a key up, the transport stopping, the track's next trig) */
+static void chord_off(ec_dsp_t *d, int ti, int slot)
+{
+    for (int i = 0; i < EC_CHORD_VOICES; ++i)
+        if (d->cvm[i].used && d->cvm[i].track == ti && (slot < 0 || d->cvm[i].slot == slot)) {
+            ec_env_gate_off(&d->cv[i].amp_env, &d->cv[i].amp_spec, d->fs);
+            d->cvm[i].on = 0;                      /* (its play gate fades, as the track's when its trig ends) */
+        }
 }
 
 static void ev_region_release(ec_dsp_t *d, ec_track_t *t)
@@ -512,6 +565,7 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
             for (int i = 0; i < EC_TRACKS; ++i) {
                 ec_voice_release_all(d, i);
                 d->tr[i].lt_open = 0;
+                chord_off(d, i, -1);                  /* 0.6.91: the chord notes release too */
             }
         }
         break;
@@ -551,6 +605,8 @@ static void handle_event(ec_dsp_t *d, const ec_event_t *ev)
         case EC_EV_SLICE_ON: ec_voice_slice_on(d, ti, ev); break;
         case EC_EV_SLICE_OFF: ec_voice_release_slot(d, ti, ev->slice); break;
         case EC_EV_LOOP_KEY: ev_loop_key(d, t, ev); break;
+        case EC_EV_CHORD_ON: chord_on(d, ti, ev); break;      /* 0.6.91 */
+        case EC_EV_CHORD_OFF: chord_off(d, ti, ev->slice); break;
         case EC_EV_RELEASE_ALL: ec_voice_release_all(d, ti); break;
         default: break;
         }
@@ -833,7 +889,57 @@ static int track_has_voices(const ec_dsp_t *d, int ti)
 {
     for (int i = 0; i < EC_VOICE_POOL; ++i)
         if (d->v[i].used && d->v[i].track == ti) return 1;
+    for (int i = 0; i < EC_CHORD_VOICES; ++i)      /* 0.6.91: the chord copies too (the idle saver waits for them) */
+        if (d->cvm[i].used && d->cvm[i].track == ti) return 1;
     return 0;
+}
+
+/* 0.6.91: the track's chord notes for this chunk: each copy follows the track's params, mods and smoothers (its own
+ * pitch, region, phase and envelope), rendered by the same warp family, added in before the filter */
+static void chord_render(ec_dsp_t *d, int ti, float *L, float *R, int n)
+{
+    const ec_track_t *t = &d->tr[ti];
+    for (int k = 0; k < EC_CHORD_VOICES; ++k) {
+        ec_track_t *c = &d->cv[k];
+        if (!d->cvm[k].used || d->cvm[k].track != ti) continue;
+        if (!t->has_smp || t->smp.frames != c->smp.frames || !is_loop_machine(t->p.machine)) {
+            d->cvm[k].used = 0;                       /* (the sample or the machine changed: gone) */
+            continue;
+        }
+        {
+            const ec_anchor_t ka = c->keys_anchor;
+            const int hs = c->seq_has_s, he = c->seq_has_e;
+            const float ss = c->seq_s, se = c->seq_e;
+            c->p = t->p;
+            c->p.pitch = d->cvm[k].pitch;
+            c->keys_anchor = ka;
+            c->seq_has_s = hs; c->seq_has_e = he; c->seq_s = ss; c->seq_e = se;
+        }
+        c->amp_spec = t->amp_spec;
+        c->smp = t->smp;
+        c->frames = t->frames; c->brs = t->brs; c->steps_whole = t->steps_whole; c->src_bpm = t->src_bpm;
+        c->rate_lag = t->rate_lag; c->gsize_lag = t->gsize_lag; c->gspread_lag = t->gspread_lag;
+        c->gspeed_lag = t->gspeed_lag;
+        memcpy(c->mods, t->mods, sizeof c->mods);
+        c->pitch_lag = ec_lag(c->pitch_lag, ec_clampf(c->p.pitch, -48.f, 48.f), d->lag03, n);
+        if (d->cvm[k].on && d->cvm[k].left > 0 && (d->cvm[k].left -= n) <= 0)
+            d->cvm[k].on = 0;                      /* its length over */
+        fam_render(d, c, c->fam, 1.0, d->tl, d->tr2, n);
+        {
+            const float v = d->cvm[k].vel, g0 = d->cvm[k].gate;
+            const float g1 = ec_lag(g0, d->cvm[k].on ? 1.f : 0.f, d->lag01, n);
+            const float gi = (g1 - g0) / (float)n;
+            float g = g0;
+            for (int i = 0; i < n; ++i) {
+                const float a = ec_env_tick(&c->amp_env, &c->amp_spec, d->fs) * v * (g += gi);
+                L[i] += d->tl[i] * a;
+                R[i] += d->tr2[i] * a;
+            }
+            d->cvm[k].gate = g1;
+            if ((!d->cvm[k].on && g1 < 1e-4f) || c->amp_env.stage == ENV_DONE)
+                d->cvm[k].used = 0;                /* faded out (or its envelope ended) */
+        }
+    }
 }
 
 static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
@@ -910,6 +1016,7 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
 
     /* slice voices of this track (pre-filter, like the SC sourceGroup) */
     ec_voices_process(d, ti, L, R, n);
+    chord_render(d, ti, L, R, n);                  /* 0.6.91: a chord's extra notes, through the same warp engine */
     /* 0.6.56 (owner): 6 dB of headroom: the sources enter the chain (filter, drive, inserts, sends, the buses) at half
      * level, so nothing inside clips; the neighbour's pass-through (already lowered) is not lowered again */
     for (int i = 0; i < n; ++i) { L[i] *= EC_HEADROOM; R[i] *= EC_HEADROOM; }
@@ -1119,6 +1226,9 @@ void ec_dsp_track_status(const ec_dsp_t *d, int track, ec_track_status_t *st)
     st->region_end = (float)t->hi;
     st->reader_on = t->reader_on;
     st->keys_held = t->keys;
+    st->chord_voices = 0;                          /* 0.6.91 */
+    for (int k = 0; k < EC_CHORD_VOICES; ++k)
+        st->chord_voices += d->cvm[k].used && d->cvm[k].track == track;
     st->peak_l = t->peak_l;
     st->peak_r = t->peak_r;
     st->filter_env = t->f.env_semis;

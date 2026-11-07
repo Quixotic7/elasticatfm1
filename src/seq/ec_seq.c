@@ -223,13 +223,12 @@ static int evaluate_trig(ec_seq_t *s, int t, const ec_step_t *rec)
  * TRIG track has no slices), so the next chord takes each slot over */
 static void chord_voice(ec_seq_t *s, int t, int slot, float start, float end, float pitch, float vel, int length)
 {
-    ec_event_t e = ev0(EC_EV_SLICE_ON, t);
+    ec_event_t e = ev0(EC_EV_CHORD_ON, t);        /* 0.6.91: through the track's own warp engine */
     e.slice = slot;
     e.start = start;
     e.end = end;
     e.pitch = pitch;
     e.velocity = vel;
-    e.mode = 3;                                    /* loop */
     e.length = length;
     emit(s, &e);
 }
@@ -258,7 +257,7 @@ void ec_seq_chord_key(ec_seq_t *s, int t, int slot, float semis, int pressed, fl
         chord_voice(s, t, slot, v[EC_P_LOOP_START], v[EC_P_LOOP_END], ec_seq_value(s, t, EC_P_PITCH) + semis, vel,
                     (int)(60.0 * s->fs));
     else {
-        ec_event_t e = ev0(EC_EV_SLICE_OFF, t);
+        ec_event_t e = ev0(EC_EV_CHORD_OFF, t);
         e.slice = slot;
         emit(s, &e);
     }

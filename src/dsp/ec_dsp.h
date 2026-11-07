@@ -331,9 +331,15 @@ enum {
                              each press from the start with the envelopes, until
                              a release (value 0). */
     EC_EV_RELEASE_ALL = 18, /* release every slice voice of the track (gate off) */
-    EC_EV_MOD_TRIG = 19   /* E4 (\trModTrig): EC_TF_LFO retriggers the LFOs (TRIG / ONE /
+    EC_EV_MOD_TRIG = 19,  /* E4 (\trModTrig): EC_TF_LFO retriggers the LFOs (TRIG / ONE /
                              HOLD modes), EC_TF_MENV the mod envelope with gate `length`
                              samples (<= 0: held until EC_EV_NOTE_OFF) */
+    EC_EV_CHORD_ON = 20,  /* 0.6.91: a chord's extra note on a loop track: its own copy of the
+                             track's warp engine over the region start..end (0..128, < 0 the
+                             track's), from its start; slot `slice` (a new note on a slot takes
+                             it over), pitch (st, absolute), velocity, length (gate samples,
+                             <= 0 held until EC_EV_CHORD_OFF) */
+    EC_EV_CHORD_OFF = 21  /* 0.6.91: release chord slot `slice` */
 };
 
 /* event flags */
@@ -377,6 +383,7 @@ typedef struct ec_track_status {
     float region_start, region_end;  /* playing region, 0..1 of the sample */
     int   reader_on;        /* loop reader audible (playing or fading) */
     int   voices;           /* sounding slice voices (incl. releasing) */
+    int   chord_voices;     /* 0.6.91: sounding chord notes (copies of the warp engine) */
     int   voice_slice[EC_MAX_VOICES_TRACK];  /* slice index of voice i */
     float voice_pos[EC_MAX_VOICES_TRACK];    /* 0..1 within the sample */
     uint32_t keys_held;     /* loop keys bitmask (bit k-1) */
@@ -407,7 +414,7 @@ typedef struct ec_dsp ec_dsp_t;
  * memory (6 inserts, S1, S2, master): 17 523 904 bytes = 16.7 MiB in 0.2.0;
  * 0.6.1: 15 slots (two inserts a track). EC_DSP_MEM_MAX bounds it for static
  * arenas; ec_dsp.c fails to compile when ec_dsp_mem_size() > EC_DSP_MEM_MAX. */
-#define EC_DSP_MEM_MAX ((size_t)26u << 20)
+#define EC_DSP_MEM_MAX ((size_t)32u << 20)   /* 0.6.91: + 8 chord-note engine copies (~4.7 MB) */
 size_t ec_dsp_mem_size(void);
 /* Initialise in mem (ec_dsp_mem_size() bytes, 16-byte aligned) at rate fs.
  * Every track starts with ec_track_params_default(), no sample, 120 BPM,

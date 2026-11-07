@@ -2036,20 +2036,29 @@ static void test_chords(void)
     for (i = 0; i < 100; i++) {
         run_audio(10);
         ec_dsp_track_status(A->dsp, A->track, &st);
-        if (st.voices >= 2)
+        if (st.chord_voices >= 2)
             break;
     }
-    CHECK(st.voices >= 2, "playing: the chord's other notes sound as voices (%d)", st.voices);
+    CHECK(st.chord_voices >= 2 && st.voices == 0,
+          "playing: the chord's other notes sound through the warp engine (%d copies)", st.chord_voices);
     press(FM1P_B_PLAY, 40);
     run_audio(400);
     clear_steps();
     ec_seq_touch(&A->seq, A->track);
+    for (i = 0; i < 300; i++) {                    /* (the chord's copies release, then free themselves) */
+        ec_dsp_track_status(A->dsp, A->track, &st);
+        if (!st.chord_voices)
+            break;
+        run_audio(10);
+    }
+    CHECK(!st.chord_voices, "stopped: the chord's copies end (their release)");
     key(0, wkey(5), 1);                            /* live: C4 then E4 held */
     run_audio(30);
     key(0, wkey(7), 1);
     run_audio(60);
     ec_dsp_track_status(A->dsp, A->track, &st);
-    CHECK(st.voices == 1 && st.reader_on, "live: the first key plays the track, the second a voice (%d)", st.voices);
+    CHECK(st.chord_voices == 1 && st.reader_on, "live: the first key plays the track, the second an engine copy (%d)",
+          st.chord_voices);
     key(0, wkey(7), 0);
     key(0, wkey(5), 0);
     run_audio(400);

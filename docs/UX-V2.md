@@ -1390,3 +1390,13 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   PATTERN, ALGO nothing (no hidden step page), XFADE / PATTERN PRESETS nothing (it changed the track's sample; the
   slot walk is the EDITOR's PRESETS); a slice track's entry says SLICE 19 > 2; LOOP 3 > 2 fits the header.
 - test_ux (test_056), test_file, test_proj check them.
+
+## 53. 0.6.57: KEYBOARD live REC, its step strip and LEDs (owner, 2026-11-06)
+
+- Live REC in KEYBOARD records each note on the step where it is played, with a target step selected or not (it
+  wrote every note into the target step and advanced from there, so a 7-step pattern filled from its end).
+- KEYBOARD draws LOOP ENGINE's step strip (the playhead moving, trigs, ghosts, locks, the selection, velocity and
+  pitch marks) instead of its own thin row.
+- KEYBOARD's keys show a step's note: the selected step's (ALGO) blinks on its key, as LOOP's selected step does;
+  playing LIVE, the note of the step playing now lights. The black keys too.
+- test_ux (test_kb_rec) checks the recording and the blink.

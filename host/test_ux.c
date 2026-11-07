@@ -1353,6 +1353,60 @@ static void test_056(void)
     CHECK(!A->pn.lr_on && !A->pn.lr_wait, "PROJECTS: REC arms nothing");
 }
 
+/* 0.6.57 (owner): KEYBOARD: live REC writes where a note is played (a target step or not); the selected step's note
+ * blinks on its key */
+static void test_kb_rec(void)
+{
+    ec_ptrack_t *tr;
+    float *v;
+    int i, k, n = 0, kc = -1;
+    uint8_t l0, l1;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    v[EC_P_PATTERN_STEPS] = 7;
+    ec_seq_timing_changed(&A->seq);
+    clear_steps();
+    tr = ec_project_track(&A->proj, A->track);
+    ec_lp_target_to(7);                            /* ALGO had selected step 7 */
+    A->proj.rec.mode = EC_REC_CAPTURE;
+    press(FM1P_B_REC, 40);
+    run(50);
+    CHECK(A->pn.lr_on && A->pn.lr_wait, "REC: CAPTURE waits");
+    tapkey(0, wkey(5), 60);                        /* the first note starts playback */
+    run_audio(600);
+    tapkey(0, wkey(7), 60);
+    run_audio(100);
+    press(FM1P_B_PLAY, 40);                        /* stop: REC ends */
+    run(50);
+    for (i = 0; i < 7; i++)
+        n += tr->steps[i].trig;
+    CHECK(A->pn.target == 7 && n == 2 && !tr->steps[6].trig, "REC with a target: the notes where played (%d trigs, step 7 "
+          "%s), the target untouched (%d)", n, tr->steps[6].trig ? "written" : "empty", A->pn.target);
+    for (i = 0; i < 7 && !tr->steps[i].trig; i++)
+        ;
+    ec_lp_target_to(i + 1);                        /* the first recorded step selected */
+    {
+        float x = 0;
+        ec_step_lock_get(&tr->steps[i], EC_P_PITCH, &x);
+        for (k = 0; k < EC_NKEY && kc < 0; k++)
+            if (ec_key_lower(k) >= 0 && ec_kb_semis(k) == (int)floorf(x + 0.5f))
+                kc = k;
+    }
+    A->ms = 0;
+    l0 = ec_kb_key_led(kc, EC_LED_FAINT);
+    A->ms = 200;
+    l1 = ec_kb_key_led(kc, EC_LED_FAINT);
+    CHECK(kc >= 0 && l0 != l1 && (l0 == EC_LED_LIT || l1 == EC_LED_LIT), "the selected step's note blinks on its key "
+          "(%d / %d)", l0, l1);
+    ec_lp_target_to(0);
+    v[EC_P_PATTERN_STEPS] = 16;
+    ec_seq_timing_changed(&A->seq);
+    clear_steps();
+    run(100);
+}
+
 static void test_mod_display(void)
 {
     float *v, mv[EC_NP], base, lo = 1e9f, hi = -1e9f;
@@ -1473,6 +1527,7 @@ int main(int argc, char **argv)
     test_mod_display();
     test_qa_quick();
     test_056();
+    test_kb_rec();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

@@ -86,6 +86,7 @@ static void enter_step(int semis, int slice, int vel)
 
 void ec_kb_key(int k, int down, int vel)
 {
+    int entry;
     const int up = ec_key_upper(k);
     const int slice = ec_kb_slice_track();
     float *v = ec_app_params(A);
@@ -101,7 +102,9 @@ void ec_kb_key(int k, int down, int vel)
     }
     P->kb_held |= 1u << k;                         /* 0.6.1: the header's key */
     P->kb_last = k;
-    if (!P->target && !(slice && up == 10))
+    entry = P->target && !ec_liverec_on();         /* 0.6.57 (owner): live REC records what is played where it is
+                                                    * played, a target step or not (it wrote the target and advanced) */
+    if (!entry && !(slice && up == 10))
         ec_liverec_capture();                      /* live REC: CAPTURE's first note starts playback */
     if (slice && up >= 0) {                        /* slice tracks: the black keys pick the slice */
         const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
@@ -120,7 +123,7 @@ void ec_kb_key(int k, int down, int vel)
             ec_seq_touch(&A->seq, A->track);
             P->kb_semis[k] = 0;
             ec_seq_keyboard(&A->seq, A->track, 0, 1, (float)vel / 127.0f);   /* heard */
-            if (P->target)
+            if (entry)
                 enter_step(0, s, vel);
             else
                 ec_liverec_note(0, s, vel);        /* live REC: the slice */
@@ -132,7 +135,7 @@ void ec_kb_key(int k, int down, int vel)
         const int semis = ec_kb_semis(k);
         P->kb_semis[k] = (int8_t)clampi(semis, -60, 60);
         ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
-        if (P->target)
+        if (entry)
             enter_step(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
         else                                       /* live REC: the note (pitch, velocity, slice) */
             ec_liverec_note(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);

@@ -770,6 +770,10 @@ void ec_scr_pages_panel(const ec_app_t *a)
     R(EC_C_L3, 59, 97, 2, 23);
 }
 /* the step strip: this step page's trigs, ghosts, locks, the held step, the playhead; the pages under it */
+static void step_strip(const ec_app_t *a, int top, int bot, int pages_y);
+/* 0.6.57 (owner): KEYBOARD draws LOOP ENGINE's own strip (the playhead, ghosts, locks, the selection) */
+void ec_scr_step_strip(const ec_app_t *a, int top, int bot, int pages_y) { step_strip(a, top, bot, pages_y); }
+
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
 {
     const ec_ptrack_t *tr = &a->proj.pat[a->proj.current].tr[a->track];

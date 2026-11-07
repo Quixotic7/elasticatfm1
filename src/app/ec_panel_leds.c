@@ -206,6 +206,35 @@ static void leds_loop(void)
     }
 }
 
+/* 0.6.57 (owner): a step's note on KEYBOARD's keys: the selected step's (ALGO) blinks, as LOOP's selected step does;
+ * playing LIVE, the note of the step playing now lights. -1000: none (a step without a trig) */
+uint8_t ec_kb_key_led(int k, uint8_t base);
+static int step_note(int idx)
+{
+    const ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+    const ec_step_t *s;
+    float x;
+    if (idx < 0 || idx >= ec_seq_pattern_steps(&A->seq, A->track))
+        return -1000;
+    s = &tr->steps[idx];
+    if (!s->trig || ec_step_is_ghost(s, tr->v))
+        return -1000;
+    return ec_step_lock_get(s, EC_P_PITCH, &x) ? (int)floorf(x + 0.5f) : 0;
+}
+
+uint8_t ec_kb_key_led(int k, uint8_t base)
+{
+    const int f = ec_lp_first();
+    const int sel = f >= 0 ? step_note(f) : -1000;
+    const int play = f < 0 && A->seq.playing ? step_note(ec_seq_step(&A->seq, A->track)) : -1000;
+    const int semis = ec_kb_semis(k);
+    if (sel != -1000 && semis == sel)
+        return blink(200) ? EC_LED_LIT : EC_LED_OFF;
+    if (play != -1000 && semis == play)
+        return EC_LED_LIT;
+    return base;
+}
+
 static void leds_keyboard(void)
 {
     int i;
@@ -214,7 +243,7 @@ static void leds_keyboard(void)
     for (i = 0; i < EC_NLOWER; i++) {
         const int k = ec_key_of_lower(i);
         const int c = ((ec_kb_semis(k) % 12) + 12) % 12 == 0;
-        ec_plat_led_lower(i, c ? EC_LED_DIM : EC_LED_FAINT);
+        ec_plat_led_lower(i, ec_kb_key_led(k, c ? EC_LED_DIM : EC_LED_FAINT));
     }
 }
 
@@ -420,8 +449,13 @@ static void leds_black(void)
                 }
                 l[10] = EC_LED_MID;
             } else
-                for (i = 0; i < EC_NBKEY; i++)
+                for (i = 0; i < EC_NBKEY; i++) {   /* 0.6.57: the sharps light the step's note too */
+                    int k;
                     l[i] = EC_LED_FAINT;
+                    for (k = 0; k < EC_NKEY; k++)
+                        if (ec_key_upper(k) == i)
+                            l[i] = ec_kb_key_led(k, EC_LED_FAINT);
+                }
             break;
         case EC_CAT_XFD: {
             const ec_scenes_t *sc = &A->proj.e5.sc;

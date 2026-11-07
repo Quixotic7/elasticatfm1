@@ -160,17 +160,8 @@ static void keyboard_screen(const ec_app_t *a)
                 R(EC_C_L5, x + 1, 46, 3, 2);
         }
     }
-    for (i = 0; i < 16; i++) {                     /* the step strip: as LOOP ENGINE's, in the mode's colour; the
-                                                    * selected steps white */
-        const int idx = tpage * 16 + i, x = 3 + i * 7;
-        const int done = idx < len && (tr->steps[idx].trig || tr->steps[idx].slices);
-        const int sel = a == &ec_app && ec_lp_is_sel(idx);
-        if (idx >= len)
-            continue;
-        R(sel ? EC_C_L15 : tint, x, sel || done ? 58 : 64, 5, sel || done ? 8 : 2);
-    }
-    if (!a->pn.target)
-        T(EC_C_L8, "LIVE", W - 2, 59, EC_AL_RIGHT);
+    ec_scr_step_strip(a, 56, 68, 0);              /* 0.6.57 (owner): LOOP ENGINE's strip, the playhead moving */
+    (void)tpage;
     ec_app_page(a, &pg);
     if (a == &ec_app && ec_lp_b11_held() && !a->bus)   /* 0.6.14: B11 held: the pages panel */
         ec_scr_pages_panel(a);

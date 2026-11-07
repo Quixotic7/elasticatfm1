@@ -12,6 +12,7 @@
 #include "ec_click.h"
 #include "ec_fs.h"
 #include "ec_gfx.h"
+#include "ec_projfile.h"
 
 #define A (&ec_app)
 #define P (&ec_app.pn)
@@ -206,4 +207,128 @@ void ec_as_knob(int role, int det)
     if (ec_app_list_knob(role, det > 0 ? 1 : -1, &P->as_row, EC_AS_NROW))
         edit(P->as_row, det);
     A->redraw = 1;
+}
+
+/* ------------------------------------------------------------------------- 0.6.72: where the user was --- */
+/* 0.6.72 (owner): a restart comes back to the track (or bus), the mode and every mode's page (the mode buttons'
+ * memory, KEYBOARD's knob page and octave). Kept in the folder only (/data/ui.bin: it changes often, the flash is
+ * not for that), written a moment after a change; read at power-on and applied once the power-on project has landed,
+ * unless a key or button was pressed first (the user drives). */
+#define UI_FILE "/data/ui.bin"
+#define UI_MAGIC 0x49554345u                       /* "ECUI" */
+#define UI_VERSION 1
+typedef struct {
+    uint32_t magic;
+    uint16_t version, size;
+    int8_t target, mode, last_fpage, kb_page, oct;
+    uint8_t step_page;
+    int8_t last[EC_NMB];
+    uint8_t page[EC_NCAT];
+} ec_uist_t;
+
+static ec_fsreq_t u_req;
+static ec_uist_t u_buf, u_saved, u_new;
+static int u_phase;                                /* 0 read, 1 wait for the folder, 2 apply pending, 3 saving */
+static int u_writing, u_touched;
+static int32_t u_changed;
+static uint32_t u_next_ms;
+
+void ec_ui_touched(void) { u_touched = 1; }
+
+static void ui_snap(ec_uist_t *u)
+{
+    int i;
+    memset(u, 0, sizeof *u);
+    u->magic = UI_MAGIC;
+    u->version = UI_VERSION;
+    u->size = (uint16_t)sizeof *u;
+    u->target = (int8_t)(A->bus ? EC_NTRACK + A->bus - 1 : A->track);
+    u->mode = (int8_t)ec_app_mode();
+    u->last_fpage = P->last_fpage;
+    u->kb_page = (int8_t)P->kb_page;
+    u->oct = (int8_t)P->oct;
+    u->step_page = (uint8_t)A->step_page;
+    for (i = 0; i < EC_NMB; i++)
+        u->last[i] = (int8_t)P->last[i];
+    for (i = 0; i < EC_NCAT; i++)
+        u->page[i] = (uint8_t)clampi(A->page[i], 0, 255);
+}
+
+static void ui_apply(const ec_uist_t *u)
+{
+    int i, m = u->mode;
+    if (A->settings || P->as_open || P->rs_open || A->seq.playing)
+        return;
+    ec_pn_select_target(clampi(u->target, 0, EC_NTRACK + 2));
+    for (i = 0; i < EC_NCAT; i++) {
+        const int n = ec_cat_pages(i, ec_app_params(A));
+        if (n > 0)
+            ec_app_set_page(i, clampi(u->page[i], 0, n - 1));
+    }
+    if (m < 0 || m >= EC_NMODE)
+        m = EC_CAT_SRC;
+    if (m < EC_NCAT)
+        ec_pn_goto(m, A->page[m]);
+    else
+        ec_pn_enter(m);
+    for (i = 0; i < EC_NMB; i++)                   /* (after the mode: its button remembers it too) */
+        P->last[i] = u->last[i] >= -1 && u->last[i] < EC_NMODE ? u->last[i] : -1;
+    if (P->last[EC_MB_HOME] < 0)
+        P->last[EC_MB_HOME] = EC_CAT_SRC;
+    P->last_fpage = u->last_fpage;
+    P->oct = clampi(u->oct, -3, 3);
+    P->kb_page = clampi(u->kb_page, 0, ec_kb_pages() - 1);
+    A->step_page = clampi(u->step_page, 0, 7);     /* (ec_app_tick keeps it inside the track's length) */
+    A->redraw = 1;
+}
+
+void ec_ui_tick(void)
+{
+    if (u_phase == 1 && ec_fs_changed() != u_changed)
+        u_phase = 0;
+    if (u_phase == 0 || u_writing) {               /* a read or a write in flight */
+        if (u_req.state == EC_FSR_IDLE) {
+            if (u_phase == 0)
+                ec_fs_start(&u_req, FS_READ, UI_FILE, 0, &u_buf, (int32_t)sizeof u_buf);
+            else
+                ec_fs_start(&u_req, FS_WRITE, UI_FILE, -1, &u_new, (int32_t)sizeof u_new);
+        }
+        if (ec_fs_update(&u_req) != EC_FSR_DONE)
+            return;
+        u_req.state = EC_FSR_IDLE;
+        if (u_phase == 0) {
+            const int32_t r = u_req.result;
+            if (r == FS_ENOFOLDER) {
+                u_phase = 1;
+                u_changed = ec_fs_changed();
+                return;
+            }
+            u_phase = r == (int32_t)sizeof u_buf && u_buf.magic == UI_MAGIC && u_buf.version == UI_VERSION &&
+                              u_buf.size == sizeof u_buf
+                          ? 2
+                          : 3;
+        } else {
+            u_writing = 0;
+            u_saved = u_new;
+        }
+        return;
+    }
+    if (u_phase == 2) {                            /* applied once the power-on project is in */
+        if (u_touched) {
+            u_phase = 3;
+            return;
+        }
+        if (!ec_pf_boot_settled() || A->fresh)
+            return;
+        ui_apply(&u_buf);
+        u_phase = 3;
+        ui_snap(&u_saved);                         /* (nothing to write: it is what the file holds) */
+        return;
+    }
+    if (u_phase != 3 || (int32_t)(A->ms - u_next_ms) < 0)
+        return;
+    u_next_ms = A->ms + 500;
+    ui_snap(&u_new);
+    if (memcmp(&u_new, &u_saved, sizeof u_new))
+        u_writing = 1;
 }

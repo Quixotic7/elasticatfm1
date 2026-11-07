@@ -1347,6 +1347,7 @@ void ec_pn_tick(const void *vin)
     const ec_input_t *in = (const ec_input_t *)vin;
     int b, k, r;
     if (in->btn_down || in->key_down) {
+        ec_ui_touched();
         dismiss();
         P->down_ms = A->ms ? A->ms : 1;            /* 0.6.1: an older message gives way to a held key's text */
         P->hdr_late = 0;

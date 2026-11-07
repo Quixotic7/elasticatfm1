@@ -115,3 +115,6 @@ write(os.path.join(audio, 'b_bass_bpm120.wav'), bass())
 write(os.path.join(audio, 'c_chords_bpm120.wav'), chords())
 write(os.path.join(audio, 'd_perc16_bpm120.wav'), perc16())
 shutil.rmtree(os.path.join(root, 'data', 'elasticat', 'projects'), ignore_errors=True)
+# 0.6.72: where the last run left off (a restart restores it): every run starts as at a first power-on
+if os.path.exists(os.path.join(root, 'data', 'elasticat', 'ui.bin')):
+    os.remove(os.path.join(root, 'data', 'elasticat', 'ui.bin'))

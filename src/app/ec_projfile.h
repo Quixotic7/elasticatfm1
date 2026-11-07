@@ -40,6 +40,7 @@ void ec_pf_save(int quiet);
 /* LOAD from the browser: open /data/projects/<name>.ecp (FILE is stopped) */
 void ec_pf_open(const char *name);
 int ec_pf_saving(void);
+int ec_pf_boot_settled(void);                    /* 0.6.72: the power-on project landed (or none) */
 int ec_pf_loading(void);
 const char *ec_pf_name(void);         /* the current project's name, "" until its first save */
 

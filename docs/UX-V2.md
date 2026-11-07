@@ -1524,3 +1524,13 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 
 - KEYBOARD's on-screen keys: the scale's boxes are drawn first; the key played (and a selected step's note) fills the
   whole key over its box.
+
+## 68. 0.6.72: a restart comes back to where you were (owner, 2026-11-06)
+
+- The track (or S1 / S2 / MST), the mode, every mode's page, the mode buttons' memory (HOME's KEYBOARD, FILE's
+  page ..), KEYBOARD's knob page and octave and the step page are kept in the folder (`/data/ui.bin`, written half
+  a second after a change; not in the flash: it changes too often). At power-on they come back once the last
+  project has landed. A key or button pressed before that wins (the user drives): nothing is restored then.
+  Power-on with no ui.bin still opens LOOP ENGINE.
+- Checked with two ec_run passes on one folder (set T3, KEYBOARD's SCALE page, FILTER; restart: FILTER on T3, HOME
+  opens KEYBOARD on SCALE).

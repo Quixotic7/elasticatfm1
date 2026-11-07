@@ -1036,6 +1036,8 @@ void ec_pf_shutdown(void)
 }
 
 int ec_pf_saving(void) { return g.sv != SV_IDLE; }
+/* 0.6.72: the power-on project has landed (or there was none): last.txt read, no load running */
+int ec_pf_boot_settled(void) { return !g_last_read && !g_last_wait && g.ld == LD_IDLE; }
 int ec_pf_loading(void) { return g.ld != LD_IDLE; }
 const char *ec_pf_name(void) { return g.name; }
 const uint8_t *ec_pf_pack(uint32_t *n)

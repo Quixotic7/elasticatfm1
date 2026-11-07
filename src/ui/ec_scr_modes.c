@@ -186,7 +186,7 @@ static void keyboard_screen(const ec_app_t *a)
                 R(c, 3 + GAP[up] * 7 + 4, 20, 4, 18);
         }
         {                                          /* 0.6.68 (owner): a box at the foot of each key in the scale:
-                                                    * red, the root blue (no scale: the root only) */
+                                                    * the lock colour, the root blue (no scale: the root only) */
             const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f), root = a == &ec_app ? ec_kb_root() : 0;
             for (k = 0; k < EC_NKEY; k++) {
                 const int lo = ec_key_lower(k), up = ec_key_upper(k), sm = disp_semis(a, k);
@@ -196,7 +196,7 @@ static void keyboard_screen(const ec_app_t *a)
                 if (((sm - root) % 12 + 12) % 12 == 0)
                     c = EC_C_SRC;
                 else if (a == &ec_app && scl > 1 && ec_kb_in_scale(sm))
-                    c = EC_C_ALERT;
+                    c = EC_C_LOCK;                 /* 0.6.70 (owner): the parameter locks' colour */
                 else
                     continue;
                 if (lo >= 0)

@@ -1514,3 +1514,8 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - CHROMATIC layout with a scale: a key outside the scale plays the nearest note in it (a tie: the lower), live, in
   CAPTURE and on a target step; the header and the lit key show the note played. (IN SCALE and the STEP layer play
   only the scale anyway.) `ec_kb_snap`.
+
+## 66. 0.6.70: the scale's boxes in the lock colour (owner, 2026-11-06)
+
+- KEYBOARD's on-screen keys: the boxes under the scale's notes use the parameter locks' colour (EC_C_LOCK), not red;
+  the root's stays blue.

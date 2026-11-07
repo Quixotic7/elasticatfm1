@@ -32,6 +32,16 @@ static uint32_t g_served;
 static int32_t g_fail_op, g_fail_err;
 static int g_fail_after;
 
+/* 0.6.76, tests: the cart's own folder file `name` (under data/<id>/) as a host path, "" without a folder */
+const char *ec_fs_native_data_path(const char *name)
+{
+    static char p[PATH_MAX + 128];
+    if (!g_root[0])
+        return "";
+    snprintf(p, sizeof p, "%s/data/%s/%s", g_root, g_id, name);
+    return p;
+}
+
 void ec_fs_native_root(const char *root, const char *cart_id)
 {
     g_root[0] = 0;

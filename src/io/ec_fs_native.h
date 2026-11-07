@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 void ec_fs_native_root(const char *root, const char *cart_id);   /* NULL: no folder (FS_ENOFOLDER) */
+const char *ec_fs_native_data_path(const char *name);   /* 0.6.76, tests: data/<id>/name on the host */
 void ec_fs_native_pump(void);          /* between two ticks: complete what was requested before */
 void ec_fs_native_touch(void);         /* bump the folder-change counter */
 uint32_t ec_fs_native_served(void);    /* requests completed so far */

@@ -235,6 +235,15 @@ static uint32_t u_next_ms;
 
 void ec_ui_touched(void) { u_touched = 1; }
 
+/* 0.6.75: every power-on (the host's reset runs init again in the same process): read again, the clock from 0 */
+void ec_ui_init(void)
+{
+    ec_fs_cancel(&u_req);
+    memset(&u_req, 0, sizeof u_req);
+    u_phase = u_writing = u_touched = 0;
+    u_next_ms = 0;
+}
+
 static void ui_snap(ec_uist_t *u)
 {
     int i;

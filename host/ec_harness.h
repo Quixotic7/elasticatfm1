@@ -203,6 +203,9 @@ static void boot(const uint8_t *flash, uint32_t n)
     ms = 0;
     frames = 0;
     memset(outrec, 0, sizeof outrec);
+    if (ec_fs_native_data_path("ui.bin")[0])     /* 0.6.76: a test's power-on starts where a first one does (not
+                                                   * where the last run left off) */
+        remove(ec_fs_native_data_path("ui.bin"));
     C->init(0);
     run(1500);                                    /* the scan, T1's first file */
     turn(FM1P_E_ALGO, -1);                        /* (any knob skips the intro: ALGO at step page 1 clamps) */

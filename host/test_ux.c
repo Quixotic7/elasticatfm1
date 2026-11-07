@@ -1798,6 +1798,23 @@ static void test_mod_display(void)
     CHECK(mv[EC_P_FILTER_CUTOFF] == base, "the route gone: as set (%g)", mv[EC_P_FILTER_CUTOFF]);
 }
 
+/* 0.6.72 / 0.6.75 (owner): a restart (the host's reset: shutdown, then init in the same process) comes back to the
+ * track, the mode and its page */
+static void test_restart(void)
+{
+    int t;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(2);
+    ec_kb_page(1, 1);                                         /* SCALE */
+    run(1500);                                                /* (written half a second after the change) */
+    C->shutdown();
+    C->init(0);
+    for (t = 0; t < 60 && (mode() != EC_MODE_KEYBOARD || A->track != 2); t++)
+        run(100);
+    CHECK(mode() == EC_MODE_KEYBOARD && A->track == 2 && A->pn.kb_page == 1,
+          "a reset: KEYBOARD on T3, its SCALE page again (mode %d, T%d, page %d)", mode(), A->track + 1, A->pn.kb_page);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -1846,6 +1863,7 @@ int main(int argc, char **argv)
     test_clip_modes();
     test_062();
     test_algo_preview();
+    test_restart();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

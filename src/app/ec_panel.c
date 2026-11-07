@@ -79,6 +79,7 @@ void ec_pn_init(void)
     UX->pre_idx = -1;
     A->mk.held = A->mk.hot_id = -1;
     ec_as_load();
+    ec_ui_init();                                  /* 0.6.75: where the user was: read again at every power-on */
     ec_gfx_set_theme(ec_as->theme);
     P->pv_handle = -1;                             /* FILE: the browser at /audio, no preview */
     P->ed_hold = P->pool_carry = -1;

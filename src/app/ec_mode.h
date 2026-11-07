@@ -339,6 +339,7 @@ void ec_as_load(void);                        /* from ec_plat_settings (defaults
 void ec_as_open(void);
 void ec_as_close(int keep);                   /* F2 / HOME keep (and save), F1 back */
 void ec_ui_tick(void);                        /* 0.6.72: where the user was (/data/ui.bin): restored, saved */
+void ec_ui_init(void);                        /* 0.6.75: at every init (a reset too) */
 void ec_ui_touched(void);                     /* 0.6.72: a key or button: the user drives (no restore after it) */
 void ec_as_tick(void);                        /* 0.6.65: the folder's copy (read when the flash has none, written) */
 void ec_as_store(void);                       /* the live values (ec_app.pn.as) to the record */

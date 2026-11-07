@@ -1556,3 +1556,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   above it, apart from the step; the step itself is drawn as it is (a trig block or an empty floor), so clearing a
   selected step shows at once. (0.6.14 filled a selected trig white and drew an empty selected step as a white
   column, which hid what the step held.)
+
+## 72. 0.6.76: a reset comes back to where you were too (owner, 2026-11-06)
+
+- Bug: the host's reset runs the firmware's init again in the same process, and 0.6.72's restore kept its "done"
+  state (and its save timer, from the old clock) in statics, so after a reset nothing was restored (LOOP ENGINE on
+  T1) and nothing was saved for a while. `ec_ui_init` (from ec_pn_init) starts it over at every init.
+- test_ux test_restart: KEYBOARD on T3's SCALE page, shutdown + init: back there (fails without the fix).

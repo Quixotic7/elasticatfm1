@@ -133,6 +133,8 @@ static void boot(const uint8_t *flash, uint32_t n)
     ms = 0;
     frames = 0;
     memset(outrec, 0, sizeof outrec);
+    if (ec_fs_native_data_path("ui.bin")[0])     /* 0.6.76: no restore from the last run */
+        remove(ec_fs_native_data_path("ui.bin"));
     C->init(0);
 }
 

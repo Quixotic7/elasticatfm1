@@ -245,7 +245,8 @@ static void leds_keyboard(void)
         /* 0.6.62 (owner): the root mid, the scale's notes dim, the others faint (CHROM: every note dim, C mid) */
         const int root = sm != EC_KB_NONE && ((sm - ec_kb_root()) % 12 + 12) % 12 == 0;
         uint8_t l = ec_kb_key_led(k, root ? EC_LED_MID : sm != EC_KB_NONE && ec_kb_in_scale(sm) ? EC_LED_DIM
-                                                                                                : EC_LED_FAINT);
+                                                                                                : EC_LED_OFF);   /* 0.6.65
+                                                    * (owner): out of the scale off, the root brighter */
         if (ec_lp_is_sel(A->step_page * 16 + i))   /* 0.6.60 (owner): the selected step blinks on its key (its place
                                                     * on the step page), as LOOP ENGINE's; over a lit note, lit / mid */
             l = blink(200) ? EC_LED_LIT : l == EC_LED_LIT ? EC_LED_MID : EC_LED_OFF;
@@ -474,7 +475,8 @@ static void leds_black(void)
                     for (k = 0; k < EC_NKEY; k++)
                         if (ec_key_upper(k) == i) {
                             const int sm = ec_kb_semis(k);
-                            l[i] = ec_kb_key_led(k, ec_kb_in_scale(sm) ? EC_LED_DIM : EC_LED_FAINT);
+                            const int rt = ((sm - ec_kb_root()) % 12 + 12) % 12 == 0;
+                            l[i] = ec_kb_key_led(k, rt ? EC_LED_MID : ec_kb_in_scale(sm) ? EC_LED_DIM : EC_LED_OFF);
                         }
                 }
             break;

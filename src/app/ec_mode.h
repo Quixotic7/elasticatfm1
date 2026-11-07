@@ -329,6 +329,7 @@ void ec_pat_black(int key);
 void ec_as_load(void);                        /* from ec_plat_settings (defaults when unwritten or foreign) */
 void ec_as_open(void);
 void ec_as_close(int keep);                   /* F2 / HOME keep (and save), F1 back */
+void ec_as_tick(void);                        /* 0.6.65: the folder's copy (read when the flash has none, written) */
 void ec_as_store(void);                       /* the live values (ec_app.pn.as) to the record */
 void ec_as_knob(int role, int det);
 const char *ec_as_row_label(int row);

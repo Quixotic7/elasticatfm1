@@ -90,6 +90,15 @@ static void pages_screen(const ec_app_t *a)
 }
 
 /* ------------------------------------------------------------------------------------------- KEYBOARD --- */
+/* 0.6.65: the note a drawn key stands for: IN SCALE its scale note, else its place on the keybed (chromatic), whatever
+ * the black keys play (the STEP layer's scale notes are on them, not drawn) */
+static int disp_semis(const ec_app_t *a, int k)
+{
+    if (ec_kb_scale_layout())
+        return ec_kb_semis(k);
+    return k - 7 + 12 * a->pn.oct;
+}
+
 static void keyboard_screen(const ec_app_t *a)
 {
     const float *v = tv(a);
@@ -151,12 +160,18 @@ static void keyboard_screen(const ec_app_t *a)
             }
             T(EC_C_L15, nm, 2, 13, EC_AL_LEFT);
         }
-        for (i = 0; i < 16; i++) {
-            const int x = 3 + i * 7;
-            R(EC_C_L12, x, 20, 5, 30);              /* 0.6.1: 2-unit gaps */
+        for (i = 0; i < 16; i++) {                 /* 0.6.65 (owner): a scale: its notes bright, the others dim */
+            const int x = 3 + i * 7, sm = a == &ec_app ? disp_semis(a, ec_key_of_lower(i)) : 0;
+            R(a != &ec_app || sm == EC_KB_NONE || ec_kb_in_scale(sm) ? EC_C_L12 : EC_C_L5, x, 20, 5, 30);   /* 0.6.1:
+                                                    * 2-unit gaps */
         }
-        for (i = 0; i < 11 && !sl; i++)            /* the sharps between the naturals (F# G# A# C# D#) */
-            R(EC_C_BLACK, 3 + GAP[i] * 7 + 4, 20, 4, 18);
+        for (i = 0; i < 11 && !sl; i++) {          /* the sharps between the naturals (F# G# A# C# D#); 0.6.65: a scale's
+                                                    * sharps grey, the others black */
+            const int sm = a == &ec_app ? disp_semis(a, ec_key_of_upper(i)) : 0;
+            const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f);
+            R(a == &ec_app && scl > 1 && sm != EC_KB_NONE && ec_kb_in_scale(sm) ? EC_C_L8 : EC_C_BLACK,
+              3 + GAP[i] * 7 + 4, 20, 4, 18);
+        }
         for (k = 0; k < EC_NKEY; k++) {            /* each key: sounding = the mode's colour; a selected step's note =
                                                     * white (its PITCH lock) */
             const int lo = ec_key_lower(k), up = ec_key_upper(k);
@@ -165,7 +180,7 @@ static void keyboard_screen(const ec_app_t *a)
                 for (j = 0; j < len && c < 0; j++)
                     if (ec_lp_is_sel(j)) {
                         float x1;
-                        if (ec_step_lock_get(&tr->steps[j], EC_P_PITCH, &x1) && (int)floorf(x1 + 0.5f) == ec_kb_semis(k))
+                        if (ec_step_lock_get(&tr->steps[j], EC_P_PITCH, &x1) && (int)floorf(x1 + 0.5f) == disp_semis(a, k))
                             c = EC_C_L15;
                     }
             if (k == lit && c < 0)
@@ -179,11 +194,17 @@ static void keyboard_screen(const ec_app_t *a)
         }
         for (i = 0; i < 16; i++) {                 /* the Cs */
             const int x = 3 + i * 7;
-            if ((((ec_kb_semis(ec_key_of_lower(i)) - (a == &ec_app ? ec_kb_root() : 0)) % 12) + 12) % 12 == 0)
+            if ((((disp_semis(a, ec_key_of_lower(i)) - (a == &ec_app ? ec_kb_root() : 0)) % 12) + 12) % 12 == 0)
                 R(EC_C_L5, x + 1, 46, 3, 2);
         }
     }
     ec_scr_step_strip(a, 56, 68, 0);              /* 0.6.57 (owner): LOOP ENGINE's strip, the playhead moving */
+    for (i = 0; i < 16 && !a->bus; i++) {          /* 0.6.65 (owner): the empty steps in the layer's colour, as LOOP
+                                                    * ENGINE's ruler: blue LIVE, red steps selected, yellow STEP layer */
+        const int idx = a->step_page * 16 + i;
+        if (idx < len && !(tr->steps[idx].trig || tr->steps[idx].slices))
+            R(tint, 3 + i * 7, 66, 5, 2);
+    }
     (void)tpage;
     ec_app_page(a, &pg);
     if (a == &ec_app && ec_lp_b11_held() && !a->bus)   /* 0.6.14: B11 held: the pages panel */

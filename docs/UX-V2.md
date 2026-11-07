@@ -1467,3 +1467,16 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   track's scale up from its root (grouped, whatever the layout; CHROM: semitones), at the octave shown; a note
   enters the selected step as before. Their LEDs: the root mid, the others dim, the selected step's note lit; their
   labels the notes. (The black keys played the chromatic sharps there.) test_ux (test_kb_step_layer) checks it.
+
+## 61. 0.6.65: settings in the folder, KEYBOARD's scale on screen and LEDs (owner, 2026-11-06)
+
+- The host keeps a firmware's flash per version, so every new build started with fresh APP SETTINGS (ADVANCE back
+  on, the theme, knob speed ..). They live in the folder now (/data/settings.bin, written with every change) and
+  power-on reads them from there first; the flash is only the fallback with no folder (and gets the folder's copy).
+  The last project's name too: /data/last.txt first, the flash's name only when the folder has none; every save
+  points it at the file just written (SAVE AS +1, OVERWRITE, RENAME too). The REC setup is the project's (saved with
+  it: SHIFT + SAVE, or the autosave once stopped). test_proj (test_new_build) boots a new build on the same folder.
+- KEYBOARD: the empty steps in the layer's colour, as LOOP ENGINE's (blue LIVE, red steps selected, yellow STEP).
+  The on-screen keyboard shows the scale: its white keys bright, the others dim, its sharps grey, the others black,
+  the roots marked (drawn by each key's place on the keybed, whatever the STEP layer's black keys play).
+- KEYBOARD's LEDs: the notes out of the scale off, the root mid, the scale's other notes dim.

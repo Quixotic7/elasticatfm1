@@ -128,6 +128,7 @@ static int flash_name(char *out)
 static void load_start(const char *name, int boot);
 static ec_fsreq_t g_nreq;
 static char g_last[EC_PF_NAME + 2], g_last_written[EC_PF_NAME + 2];
+static char g_flash_last[EC_PF_NAME];                /* 0.6.65: the flash's name (when the folder has none) */
 static int g_last_write, g_last_read, g_last_wait;
 static uint32_t g_last_changed;
 
@@ -155,6 +156,8 @@ static void last_tick(void)
         if (r == FS_ENOFOLDER) {
             g_last_wait = 1;
             g_last_changed = (uint32_t)ec_fs_changed();
+        } else if (r <= 0 && g_flash_last[0] && g.ld == LD_IDLE && !g.name[0]) {
+            load_start(g_flash_last, 1);           /* 0.6.65: no last.txt: the flash's name */
         } else if (r > 0) {
             size_t n = (size_t)r < sizeof g_last - 1 ? (size_t)r : sizeof g_last - 1;
             g_last[n] = 0;
@@ -400,7 +403,9 @@ static void save_done(int ok, const char *err_what, int32_t err)
     if (ok) {
         A->saves++;
         A->save_failed = 0;
-        disk_set(g_pack, g.len);                    /* 0.6.36: NAME.ecp is this save */
+        disk_set(g_pack, g.len);
+        flash_set_name(g.name);                     /* 0.6.65 (owner): power-on (a new build too) opens what was just
+                                                    * saved (SAVE AS +1, OVERWRITE and RENAME left the old name) */                    /* 0.6.36: NAME.ecp is this save */
         g.conflict = 0;
         if (g.del_after[0]) {                       /* 0.6.47: renamed: the old file goes, quietly */
             snprintf(g.dname, sizeof g.dname, "%s", g.del_after);
@@ -983,11 +988,12 @@ int ec_pf_boot(void)
     memcpy(&magic, rec, 4);
     if (magic == EC_PROJECT_MAGIC)
         return EC_PF_BOOT_FLASH;                    /* 0.6.0 or older: loads once, the next save makes the file */
-    if (flash_name(name)) {
-        load_start(name, 1);
-        return EC_PF_BOOT_FILE;
-    }
-    g_last_read = 1;                                /* 0.6.31: the folder may know (it lands from ec_pf_tick) */
+    /* 0.6.65 (owner): the folder is the truth (/data/last.txt, read first): the flash's name only when the folder
+     * has none (the host keeps the flash per firmware version) */
+    g_flash_last[0] = 0;
+    if (flash_name(name))
+        snprintf(g_flash_last, sizeof g_flash_last, "%s", name);
+    g_last_read = 1;                                /* 0.6.31: the folder knows (it lands from ec_pf_tick) */
     return EC_PF_BOOT_NONE;
 }
 

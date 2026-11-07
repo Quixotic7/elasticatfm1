@@ -749,6 +749,43 @@ static void test_cut_record(void)
 }
 
 /* 0.6.53 (QA A5): the recorder's setup on a SLOT OFF track takes the next free slot, never slot 1 */
+/* 0.6.65 (owner): a new build starts with a fresh flash: the REC setup (in the project) and APP SETTINGS (in the
+ * flash, and 0.6.65 the folder too) come back */
+static void test_new_build(void)
+{
+    char name[EC_PF_NAME];
+    int i;
+    wait_files();
+    ec_pf_save_as("NEWBUILD", "SAVED");
+    until_saved();
+    wait_files();
+    A->proj.rec.mode = EC_REC_OVERDUB;
+    A->proj.rec.metro = EC_METRO_OFF;
+    A->proj.rec.hard = 1;
+    ec_app_mark_dirty();
+    A->pn.as.advance = 0;
+    ec_as_store();
+    run(3000);                                     /* (autosave) */
+    until_saved();
+    wait_files();
+    snprintf(name, sizeof name, "%s", ec_pf_name());
+    C->shutdown();                                 /* a new build: no flash (the folder as it is) */
+    boot(NULL, 0);
+    for (i = 0; i < 600 && (ec_pf_loading() || strcmp(ec_pf_name(), name)); i++)
+        run(5);
+    run(300);
+    CHECK(!strcmp(ec_pf_name(), name) && A->proj.rec.mode == EC_REC_OVERDUB && A->proj.rec.metro == EC_METRO_OFF &&
+              A->proj.rec.hard,
+          "a new build: %s and its REC setup come back (%s: %d %d %d)", name, ec_pf_name(), A->proj.rec.mode,
+          A->proj.rec.metro, A->proj.rec.hard);
+    CHECK(ec_as->advance == 0, "a new build: APP SETTINGS come back (ADVANCE %d)", ec_as->advance);
+    A->pn.as.advance = 1;
+    ec_as_store();
+    A->proj.rec.mode = EC_REC_CAPTURE;
+    A->proj.rec.metro = EC_METRO_REC;
+    A->proj.rec.hard = 0;
+}
+
 static void test_rec_slot_off(void)
 {
     const int t0 = A->track;
@@ -803,6 +840,7 @@ int main(int argc, char **argv)
     test_slot_default();
     test_cut_record();
     test_rec_slot_off();
+    test_new_build();
     test_changed_elsewhere();
     test_projects_mode();
     test_projects_sort();

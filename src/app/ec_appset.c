@@ -10,6 +10,7 @@
 
 #include "ec_app.h"
 #include "ec_click.h"
+#include "ec_fs.h"
 #include "ec_gfx.h"
 
 #define A (&ec_app)
@@ -36,17 +37,74 @@ static void defaults(ec_appset_t *s)
 
 static int clampi(int x, int lo, int hi) { return x < lo ? lo : x > hi ? hi : x; }
 
+/* 0.6.65 (owner): the host keeps a firmware's flash per version, so a new build starts with fresh settings: they also
+ * live in the folder (/data/settings.bin, written with every change) and come back from there when the flash has
+ * none */
+#define AS_FILE "/data/settings.bin"
+static ec_fsreq_t g_req;
+static ec_appset_t g_buf;
+static int g_read, g_write, g_wait;
+static int32_t g_changed;
+
+static int fix(ec_appset_t *s);
+
 void ec_as_load(void)
 {
     uint32_t size = 0;
     const uint8_t *rec = ec_plat_settings(&size);
     ec_appset_t s;
     defaults(&P->as);
+    g_read = 1;                                    /* (unless the flash has them) */
     if (!rec || size < sizeof s)
         return;
     memcpy(&s, rec, sizeof s);
-    if (s.magic != EC_AS_MAGIC || s.version != EC_AS_VERSION || s.size != sizeof s)
+    if (!fix(&s))
         return;                                    /* never written (0xFF), or another layout: the defaults */
+    P->as = s;                                     /* 0.6.65 (owner): until the folder's copy lands (it wins) */
+}
+
+void ec_as_tick(void)
+{
+    if (g_wait && ec_fs_changed() != g_changed) {  /* no folder at power-on: read once one is there */
+        g_wait = 0;
+        g_read = 1;
+    }
+    if (!g_read && !g_write)
+        return;
+    if (g_req.state == EC_FSR_IDLE) {
+        if (g_read)
+            ec_fs_start(&g_req, FS_READ, AS_FILE, 0, &g_buf, (int32_t)sizeof g_buf);
+        else {
+            g_buf = P->as;
+            ec_fs_start(&g_req, FS_WRITE, AS_FILE, -1, &g_buf, (int32_t)sizeof g_buf);
+        }
+    }
+    if (ec_fs_update(&g_req) != EC_FSR_DONE)
+        return;
+    g_req.state = EC_FSR_IDLE;
+    if (g_read) {
+        const int32_t r = g_req.result;
+        g_read = 0;
+        if (r == FS_ENOFOLDER) {
+            g_wait = 1;
+            g_changed = ec_fs_changed();
+        } else if (r == (int32_t)sizeof g_buf && fix(&g_buf) && !P->as_open) {
+            P->as = g_buf;                         /* the folder's: into this version's flash too */
+            ec_gfx_set_theme(P->as.theme);
+            ec_as_store();
+            g_write = 0;
+            A->redraw = 1;
+        } else if (r != FS_ENOFOLDER)
+            g_write = 1;                           /* no copy in the folder yet (or a stale one): this one goes there */
+    } else
+        g_write = 0;
+}
+
+static int fix(ec_appset_t *ps)
+{
+    ec_appset_t s = *ps;
+    if (s.magic != EC_AS_MAGIC || s.version != EC_AS_VERSION || s.size != sizeof s)
+        return 0;
     s.theme = (uint8_t)clampi(s.theme, 0, ec_gfx_themes() - 1);
     s.mode_lock = s.mode_lock == 1;              /* (0.6.0 wrote 0 here: MODE LOCK off) */
     s.knob = (uint8_t)clampi(s.knob, 0, 2);
@@ -57,7 +115,8 @@ void ec_as_load(void)
     s.intro = s.intro != 0;
     s.advance = s.advance != 0;
     s.glide &= 3;
-    P->as = s;
+    *ps = s;
+    return 1;
 }
 
 void ec_as_store(void)
@@ -73,6 +132,7 @@ void ec_as_store(void)
         return;
     memcpy(rec, &P->as, sizeof P->as);
     ec_plat_settings_changed();
+    g_write = 1;                                   /* 0.6.65: the folder's copy too */
 }
 
 void ec_as_open(void)

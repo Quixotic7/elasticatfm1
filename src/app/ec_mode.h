@@ -127,6 +127,7 @@ typedef struct {
     int oct;                   /* -3..3 */
     int target;                /* the target step 1..; 0 = live */
     int kb_bank;               /* the slice bank (10 a bank) */
+    int kb_page;               /* 0.6.62: KEYBOARD's knob page (EC_KB_PAGES) */
     int8_t kb_semis[32];       /* the note a key started (its release) */
     uint32_t kb_held;          /* 0.6.1: the keys held (bit k), the last one pressed (the header) */
     int kb_last;
@@ -306,6 +307,12 @@ void ec_lp_loop_note(int i, int down);        /* LOOP layer: a loop key (writes 
 uint32_t ec_lp_keys(void);                    /* the entry's keys held now */
 int ec_kb_slice_track(void);
 int ec_kb_semis(int k);                       /* key k's note in semitones from C4, the octave applied */
+#define EC_KB_NONE (-1000)                    /* 0.6.62: no note (IN SCALE's black keys) */
+#define EC_KB_PAGES 3                         /* 0.6.62: NOTES, SCALE, SOUND */
+int ec_kb_scale_layout(void);                 /* 0.6.62: IN SCALE (a loop track) */
+int ec_kb_in_scale(int semis);                /* 0.6.62: the note is in the track's scale */
+int ec_kb_root(void);                         /* 0.6.62: the scale's root, 0 = C */
+void ec_kb_page(int d, int absolute);         /* 0.6.62: KEYBOARD's knob page (SEL by d; absolute: page d) */
 int ec_kb_lit_key(void);                      /* the key lit as sounding (the note + PITCH), -1 none */
 const char *ec_kb_held_text(void);            /* the header's text for the last key held ("NOTE C#4", "SLICE 3"), 0 */
 /* ---- ec_xfd.c ---- */

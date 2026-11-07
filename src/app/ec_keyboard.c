@@ -25,7 +25,81 @@ int ec_kb_slice_track(void)
     return !A->bus && m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY;
 }
 
-int ec_kb_semis(int k) { return k - 7 + 12 * P->oct; }   /* key 7 = C4 */
+/* 0.6.62 (owner): the scales (semitones up from the root) */
+static const int8_t SC[][12] = {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, {0, 2, 4, 5, 7, 9, 11}, {0, 2, 3, 5, 7, 8, 10},
+                                {0, 2, 3, 5, 7, 9, 10}, {0, 1, 3, 5, 7, 8, 10}, {0, 2, 4, 6, 7, 9, 11},
+                                {0, 2, 4, 5, 7, 9, 10}, {0, 1, 3, 5, 6, 8, 10}, {0, 2, 3, 5, 7, 8, 11},
+                                {0, 2, 3, 5, 7, 9, 11}, {0, 2, 4, 7, 9}, {0, 3, 5, 7, 10}, {0, 3, 5, 6, 7, 10},
+                                {0, 2, 4, 6, 8, 10}};
+static const uint8_t SCN[] = {12, 7, 7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 6, 6};
+static int scale_of(int *n, const int8_t **st)
+{
+    const int sc = clampi(iv(ec_app_params(A), EC_P_KB_SCALE), 1, (int)sizeof SCN) - 1;
+    *n = SCN[sc];
+    *st = SC[sc];
+    return sc;
+}
+int ec_kb_root(void) { return A->bus ? 0 : clampi(iv(ec_app_params(A), EC_P_KB_ROOT), 1, 12) - 1; }
+int ec_kb_scale_layout(void)
+{
+    return !A->bus && !ec_kb_slice_track() && iv(ec_app_params(A), EC_P_KB_LAYOUT) == 2;
+}
+/* the note semis is in the scale (CHROM: all) */
+int ec_kb_in_scale(int semis)
+{
+    const int8_t *st;
+    int n, i, d;
+    scale_of(&n, &st);
+    d = ((semis - ec_kb_root()) % 12 + 12) % 12;
+    for (i = 0; i < n; i++)
+        if (st[i] == d)
+            return 1;
+    return 0;
+}
+/* key k's note in semitones from C4: CHROMATIC the keybed (key 7 = C4); IN SCALE the white keys the scale's degrees up
+ * from the root (W1 = the root at the octave shown), the black keys none (EC_KB_NONE: they are shortcuts) */
+int ec_kb_semis(int k)
+{
+    if (ec_kb_scale_layout()) {
+        const int8_t *st;
+        int n;
+        const int lo = ec_key_lower(k);
+        if (lo < 0)
+            return EC_KB_NONE;
+        scale_of(&n, &st);
+        return ec_kb_root() + 12 * (lo / n) + st[lo % n] + 12 * P->oct;
+    }
+    return k - 7 + 12 * P->oct;
+}
+
+/* 0.6.62 (owner): KEYBOARD's knob pages (SEL; IN SCALE: B1..B3 too): the notes, the scale, the sound */
+void ec_kb_page(int d, int absolute)
+{
+    static const char *const N[EC_KB_PAGES] = {"NOTES", "SCALE", "SOUND"};
+    const int p = absolute ? clampi(d, 0, EC_KB_PAGES - 1) : clampi(P->kb_page + d, 0, EC_KB_PAGES - 1);
+    if (p != P->kb_page) {
+        P->kb_page = p;
+        ec_app_message(N[p]);
+    }
+    A->redraw = 1;
+}
+
+/* IN SCALE's black keys: B1..B3 the knob pages (a click), B6..B10 the mod sources (held + a knob: that source onto
+ * the knob's param, as the source keys elsewhere) */
+static void scale_black(int up, int down)
+{
+    if (up >= 0 && up < EC_KB_PAGES) {
+        if (down)
+            ec_kb_page(up, 1);
+        return;
+    }
+    if (up >= 5 && up <= 9) {
+        if (down)
+            ec_mk_hold(EC_MK_LFO1 + (up - 5));
+        else
+            ec_mk_release();
+    }
+}
 
 void ec_kb_oct(int d)
 {
@@ -93,12 +167,20 @@ void ec_kb_key(int k, int down, int vel)
     if (A->bus)
         return;
     if (!down) {
+        if (ec_kb_scale_layout() && up >= 0 && !(P->kb_held >> k & 1u)) {
+            scale_black(up, 0);                    /* 0.6.62: a shortcut key up */
+            return;
+        }
         if (P->kb_held >> k & 1u) {
             P->kb_held &= ~(1u << k);
             ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
             ec_liverec_key(k, 0);                  /* 0.6.59: live REC: the note's length */
         }
         A->redraw = 1;
+        return;
+    }
+    if (ec_kb_scale_layout() && up >= 0) {         /* 0.6.62: IN SCALE: the black keys are shortcuts */
+        scale_black(up, 1);
         return;
     }
     P->kb_held |= 1u << k;                         /* 0.6.1: the header's key */
@@ -155,6 +237,12 @@ int ec_kb_lit_key(void)
     int k;
     if (A->bus || ec_kb_slice_track() || !A->seq.tr[A->track].live_pitch_on)
         return -1;
+    if (ec_kb_scale_layout()) {                    /* 0.6.62: IN SCALE: the white key that plays the note held */
+        for (k = 0; k < EC_NKEY; k++)
+            if (ec_key_lower(k) >= 0 && ec_kb_semis(k) == A->seq.tr[A->track].live_semis)
+                return k;
+        return -1;
+    }
     k = (int)floorf(ec_seq_value(&A->seq, A->track, EC_P_PITCH) + 0.5f) + 7 - 12 * P->oct;
     return k >= 0 && k < EC_NKEY ? k : -1;
 }

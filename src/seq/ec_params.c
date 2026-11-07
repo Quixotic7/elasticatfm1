@@ -43,6 +43,10 @@ static const char *const O_WAVE[] = {"SINE", "TRI", "SAW", "RSAW", "SQR", "RAND"
 static const char *const O_SPEED[] = {"8BAR", "4BAR", "2BAR", "1BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64"};
 static const char *const O_LFOMODE[] = {"FREE", "TRIG", "ONE", "HOLD"};
 static const char *const O_POLY[] = {"MONO", "POLY"};
+static const char *const O_SCALE[] = {"CHROM", "MAJOR", "MINOR", "DORIAN", "PHRYG", "LYDIAN", "MIXO", "LOCRIAN",
+                                      "HARMMIN", "MELMIN", "MAJPENT", "MINPENT", "BLUES", "WHOLE"};   /* 0.6.62 */
+static const char *const O_ROOT[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+static const char *const O_KLAY[] = {"CHROM", "SCALE"};
 static const char *const O_WTSHAPE[] = {"SINE", "TRI", "SAW", "S&H", "RAND"};   /* E3 */
 
 #define L EC_PF_LOCKABLE
@@ -296,6 +300,9 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_INS2_P8] = NUM("fx2_p8", "P8", 0, 128, 1, 0, EC_PF_INT, L),
     [EC_P_SLIDE] = BIN("trig_slide", "SLDE", 0, L | EC_PF_SEQ),
     [EC_P_QUANT] = NUM("rec_quantize", "QUANT", 0, 100, 1, 0, EC_PF_PCT100, EC_PF_SEQ),   /* 0.6.59 */
+    [EC_P_KB_SCALE] = OPT("kb_scale", "SCALE", 1, EC_PF_SEQ, O_SCALE),                     /* 0.6.62 */
+    [EC_P_KB_ROOT] = OPT("kb_root", "ROOT", 1, EC_PF_SEQ, O_ROOT),
+    [EC_P_KB_LAYOUT] = OPT("kb_layout", "LAYOUT", 1, EC_PF_SEQ, O_KLAY),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {

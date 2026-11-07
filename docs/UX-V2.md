@@ -1436,3 +1436,21 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - REC in CAPTURE while the transport runs stays armed until the first key (the tick ended the wait at once while
   playing, so the first key recorded over the old take: the old notes went on playing). test_liverec
   (test_capture_over_old) checks it armed while playing and while stopped.
+
+## 58. 0.6.62: live keys sound and override, black-key holds, KEYBOARD's pages and scales (owner, 2026-11-06)
+
+- TRIG, playing: a loop key or a KEYBOARD note held sounds from its region's start (as a trig's gate) until it comes
+  up; it was silent unless a step's gate was open, so a CAPTURE take on TRIG was silent while played.
+- A live loop key or KEYBOARD note held overrides the sequence on its track (its trigs don't fire) until it comes up;
+  slice tracks' pads as before.
+- Black keys with a hold (LOOP ENGINE's B1..B5 menus, FILTER / AMP's B1 quick setting, FX's slot types): the page
+  only on a quick click, on release; a hold that opened its menu or moved a knob leaves the page alone.
+- KEYBOARD: SEL turns its knob pages: NOTES (OCTAVE / SLICE, PITCH, VEL, STEP), SCALE (SCALE, ROOT, LAYOUT, LEN),
+  SOUND (CUTOFF, RESO, ATTACK, RELEASE).
+- Scales (the track's, saved): CHROM, MAJOR, MINOR, DORIAN, PHRYG, LYDIAN, MIXO, LOCRIAN, HARMMIN, MELMIN, MAJPENT,
+  MINPENT, BLUES, WHOLE, on any ROOT. CHROMATIC layout: the keybed as before, the root's keys mid, the scale's notes
+  dim, the others faint. IN SCALE layout (loop tracks): the 16 white keys play the scale's notes up from the root
+  (W1 the root at the octave shown), drawn as 16 keys with the roots marked; the black keys are shortcuts: B1..B3
+  the knob pages, B6..B10 the mod sources (LFO 1, LFO 2, ENV, VEL, AT: held + a knob maps it), B11 as before. The
+  header names the scale (A MINOR).
+- test_ux (test_062) checks them.

@@ -373,6 +373,7 @@ typedef struct {
     double emit_ph;
     ec_chop_t ch;
     int    lt_open;        /* loop_trig gate */
+    int    live_gate;      /* 0.6.62 (owner): a live key (loop key / KEYBOARD) held while playing: TRIG sounds */
     int32_t lt_left;
 
     /* smoothed controls (kr) */

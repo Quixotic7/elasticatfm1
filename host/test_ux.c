@@ -752,8 +752,11 @@ static void test_sources(void)
         key(1, bkey(1), 0);
         run(20);
         ec_app_page(A, &pg);
-        CHECK(pg.pic == EC_PIC_FILTER && ec_app_params(A)[EC_P_FILTER_TYPE] == t0 + 1,
-              "B1 held + K1: the filter type (%g -> %g)", t0, ec_app_params(A)[EC_P_FILTER_TYPE]);
+        CHECK(pg.pic == EC_PIC_FENV && ec_app_params(A)[EC_P_FILTER_TYPE] == t0 + 1,
+              "B1 held + K1: the filter type (%g -> %g), the page stays (0.6.62)", t0, ec_app_params(A)[EC_P_FILTER_TYPE]);
+        tapkey(1, bkey(1), 40);
+        ec_app_page(A, &pg);
+        CHECK(pg.pic == EC_PIC_FILTER, "B1 clicked: its page (FILTER)");
     }
     {
         const float m0 = ec_app_params(A)[EC_P_FENV_MODE];
@@ -1383,6 +1386,81 @@ static void test_algo_preview(void)
     clear_steps();
 }
 
+/* 0.6.62 (owner): TRIG sounds while a live key is held (playing), and a held key overrides the sequence; KEYBOARD's
+ * pages, scales and the IN SCALE layout */
+static void test_062(void)
+{
+    ec_track_status_t st;
+    float *v;
+    int i, f0, k;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_LOOP_TRIG;
+    v[EC_P_PATTERN_STEPS] = 16;
+    clear_steps();
+    ec_seq_touch(&A->seq, A->track);
+    ec_seq_timing_changed(&A->seq);
+    ec_lp_target_to(0);
+    press(FM1P_B_PLAY, 40);
+    run_audio(300);
+    key(0, wkey(5), 1);
+    run_audio(200);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(st.reader_on, "TRIG, playing, an empty pattern: a KEYBOARD note held sounds");
+    key(0, wkey(5), 0);
+    run_audio(400);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(!st.reader_on, "let go: silent again (its gate closed)");
+    for (i = 0; i < 16; i++)                       /* a pattern: every step */
+        ec_project_track(&A->proj, A->track)->steps[i].trig = 1;
+    ec_seq_touch(&A->seq, A->track);
+    run_audio(300);
+    key(0, wkey(5), 1);
+    run_audio(20);
+    f0 = A->seq.tr[A->track].fired;
+    run_audio(700);
+    CHECK(A->seq.tr[A->track].fired == f0, "a key held overrides the sequence (%d -> %d fired)", f0,
+          A->seq.tr[A->track].fired);
+    key(0, wkey(5), 0);
+    run_audio(400);
+    CHECK(A->seq.tr[A->track].fired > f0, "let go: the sequence again");
+    press(FM1P_B_PLAY, 40);
+    clear_steps();
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    ec_seq_touch(&A->seq, A->track);
+    /* pages and scales */
+    turn(FM1P_E_SELECT, 1);
+    run(20);
+    CHECK(A->pn.kb_page == 1 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "SCALE"), "SEL: KEYBOARD's SCALE page (%s)",
+          L(FM1CORE_LBL_KNOB0 + FM1P_E_K1));
+    v[EC_P_KB_SCALE] = 3;                          /* MINOR */
+    v[EC_P_KB_ROOT] = 10;                          /* A */
+    v[EC_P_KB_LAYOUT] = 2;                         /* IN SCALE */
+    A->pn.oct = 0;
+    run(20);
+    CHECK(ec_kb_semis(ec_key_of_lower(0)) == 9 && ec_kb_semis(ec_key_of_lower(2)) == 12 &&
+              ec_kb_semis(ec_key_of_lower(7)) == 21 && ec_kb_semis(ec_key_of_upper(0)) == EC_KB_NONE,
+          "A MINOR, IN SCALE: W1 A, W3 C, W8 the next A; the black keys play nothing (%d %d %d)",
+          ec_kb_semis(ec_key_of_lower(0)), ec_kb_semis(ec_key_of_lower(2)), ec_kb_semis(ec_key_of_lower(7)));
+    CHECK(lbl(FM1CORE_LBL_BLACK0 + 0, "NOTES") && lbl(FM1CORE_LBL_BLACK0 + 5, "LFO 1"),
+          "IN SCALE: B1 NOTES, B6 LFO 1 (%s, %s)", L(FM1CORE_LBL_BLACK0), L(FM1CORE_LBL_BLACK0 + 5));
+    tapkey(1, 2, 40);                              /* B3: SOUND */
+    CHECK(A->pn.kb_page == 2 && lbl(FM1CORE_LBL_KNOB0 + FM1P_E_K1, "CUTOFF"), "B3: the SOUND page");
+    key(1, 5, 1);                                  /* B6 held: LFO 1 */
+    run(20);
+    CHECK(A->mk.held == EC_MK_LFO1, "B6 held: LFO 1 (a mod source)");
+    key(1, 5, 0);
+    run(20);
+    v[EC_P_KB_LAYOUT] = 1;
+    k = ec_key_of_upper(0);
+    CHECK(ec_kb_semis(k) != EC_KB_NONE && !ec_kb_scale_layout(), "CHROMATIC: the black keys play again (%d)",
+          ec_kb_semis(k));
+    v[EC_P_KB_SCALE] = 1;
+    v[EC_P_KB_ROOT] = 1;
+    ec_kb_page(0, 1);
+}
+
 static void test_bank16(void)
 {
     float *v;
@@ -1596,6 +1674,7 @@ int main(int argc, char **argv)
     test_056();
     test_kb_rec();
     test_bank16();
+    test_062();
     test_algo_preview();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);

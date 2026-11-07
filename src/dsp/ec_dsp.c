@@ -364,6 +364,19 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
                 t->audition = 0;
                 if (!track_playing(d, t)) note_off(d, t);
             }
+            if (t->live_gate && !t->keys) {     /* 0.6.62: the live note's gate closes */
+                t->live_gate = 0;
+                note_off(d, t);
+            }
+            return;
+        }
+        if (track_playing(d, t) && t->p.machine == EC_MACH_LOOP_TRIG && !t->keys) {
+            resolve(t, &s, &e);                  /* 0.6.62 (owner): playing, TRIG: a KEYBOARD note sounds from its
+                                                  * region's start while held, as a trig does */
+            set_region_phase(t, s, e, 0.0);
+            ec_env_trigger(&t->amp_env, &t->amp_spec, -1, 0, d->fs);
+            ec_env_trigger(&t->fenv, &t->fenv_spec, -1, 0, d->fs);
+            t->live_gate = 1;
             return;
         }
         if (track_playing(d, t) || t->keys || !(ev->flags & EC_TF_AUDITION)) return;
@@ -389,7 +402,13 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
             t->keys = with;
         }
         resolve(t, &s, &e);
-        if (playing) {
+        if (playing && t->p.machine == EC_MACH_LOOP_TRIG) {   /* 0.6.62 (owner): TRIG, playing: the key's region
+                                                  * sounds from its start while held (a step's gate otherwise) */
+            set_region_phase(t, s, e, 0.0);
+            if (!t->live_gate) { ec_env_trigger(&t->amp_env, &t->amp_spec, -1, 0, d->fs);
+                                 ec_env_trigger(&t->fenv, &t->fenv_spec, -1, 0, d->fs); }
+            t->live_gate = 1;
+        } else if (playing) {
             within_or_warp(t, s, e);
         } else {
             set_region_phase(t, s, e, 0.0);
@@ -410,6 +429,7 @@ static void ev_loop_key(ec_dsp_t *d, ec_track_t *t, const ec_event_t *ev)
             else set_region(t, s, e);
             t->keys_anchor.valid = 0;
             if (t->audition) { t->audition = 0; note_off(d, t); }
+            if (t->live_gate) { t->live_gate = 0; note_off(d, t); }   /* 0.6.62 */
         }
     }
 }
@@ -836,7 +856,7 @@ static void track_chunk(ec_dsp_t *d, int ti, float *L, float *R, int n)
     }
     int loopm = is_loop_machine(p->machine);
     int run = t->has_smp && loopm &&
-              ((track_playing(d, t) && (p->machine == EC_MACH_LOOP || t->lt_open)) || t->audition);
+              ((track_playing(d, t) && (p->machine == EC_MACH_LOOP || t->lt_open || t->live_gate)) || t->audition);
 
     /* kr smoothers */
     float pg0 = t->play_gate;

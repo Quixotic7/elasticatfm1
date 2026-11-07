@@ -38,13 +38,29 @@ int ec_pn_page(void *vout)
         o->pic = EC_PIC_STEPS;
         if (A->bus)
             return 1;
-        if (ec_kb_slice_track())
-            add(o, EC_IT_PARAM, EC_P_SLICE_INDEX, "SLICE");
-        else
-            add(o, EC_IT_UX, EC_UX_OCT, "OCTAVE");
-        add(o, EC_IT_PARAM, EC_P_PITCH, "PITCH");
-        add(o, EC_IT_PARAM, EC_P_VELOCITY, "VEL");
-        add(o, EC_IT_UX, EC_UX_TARGET, "STEP");
+        switch (P->kb_page) {                      /* 0.6.62 (owner): SEL (IN SCALE: B1..B3) turns the pages */
+        case 1:
+            add(o, EC_IT_PARAM, EC_P_KB_SCALE, "SCALE");
+            add(o, EC_IT_PARAM, EC_P_KB_ROOT, "ROOT");
+            add(o, EC_IT_PARAM, EC_P_KB_LAYOUT, "LAYOUT");
+            add(o, EC_IT_PARAM, EC_P_LENGTH, "LEN");
+            break;
+        case 2:
+            add(o, EC_IT_PARAM, EC_P_FILTER_CUTOFF, "CUTOFF");
+            add(o, EC_IT_PARAM, EC_P_FILTER_RES, "RESO");
+            add(o, EC_IT_PARAM, EC_P_ENV_ATTACK, "ATTACK");
+            add(o, EC_IT_PARAM, EC_P_ENV_RELEASE, "RELEASE");
+            break;
+        default:
+            if (ec_kb_slice_track())
+                add(o, EC_IT_PARAM, EC_P_SLICE_INDEX, "SLICE");
+            else
+                add(o, EC_IT_UX, EC_UX_OCT, "OCTAVE");
+            add(o, EC_IT_PARAM, EC_P_PITCH, "PITCH");
+            add(o, EC_IT_PARAM, EC_P_VELOCITY, "VEL");
+            add(o, EC_IT_UX, EC_UX_TARGET, "STEP");
+            break;
+        }
         return 1;
     case EC_MODE_PAGES:
         memset(o, 0, sizeof *o);

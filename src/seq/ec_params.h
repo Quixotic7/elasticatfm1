@@ -99,7 +99,11 @@ enum {
      * the grid (sequencer domain; F1 + the knob applies it: the steps keep the timing it gives, the knob back to 0) */
     EC_P_QUANT = EC_P_V64_END,
     EC_P_V659_END,
-    EC_NP = EC_P_V659_END
+    /* 0.6.62 (owner): KEYBOARD's scale, its root and the layout (CHROMATIC: the keybed as it is, the scale's notes lit;
+     * IN SCALE: the white keys play the scale's notes up from the root, the black keys are page / mod shortcuts) */
+    EC_P_KB_SCALE = EC_P_V659_END, EC_P_KB_ROOT, EC_P_KB_LAYOUT,
+    EC_P_V662_END,
+    EC_NP = EC_P_V662_END
 };
 #define EC_INS2_NP 8            /* INS 2's generic params (the most any machine has: DESTROY's eight) */
 #define EC_MICRO_DIV 24         /* micro timing units per step (as Elektron's 1/384 note on a 16th): +-12 = half a step */

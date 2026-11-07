@@ -241,9 +241,11 @@ static void leds_keyboard(void)
     if (leds_step_layer())
         return;
     for (i = 0; i < EC_NLOWER; i++) {
-        const int k = ec_key_of_lower(i);
-        const int c = ((ec_kb_semis(k) % 12) + 12) % 12 == 0;
-        uint8_t l = ec_kb_key_led(k, c ? EC_LED_DIM : EC_LED_FAINT);
+        const int k = ec_key_of_lower(i), sm = ec_kb_semis(k);
+        /* 0.6.62 (owner): the root mid, the scale's notes dim, the others faint (CHROM: every note dim, C mid) */
+        const int root = sm != EC_KB_NONE && ((sm - ec_kb_root()) % 12 + 12) % 12 == 0;
+        uint8_t l = ec_kb_key_led(k, root ? EC_LED_MID : sm != EC_KB_NONE && ec_kb_in_scale(sm) ? EC_LED_DIM
+                                                                                                : EC_LED_FAINT);
         if (ec_lp_is_sel(A->step_page * 16 + i))   /* 0.6.60 (owner): the selected step blinks on its key (its place
                                                     * on the step page), as LOOP ENGINE's; over a lit note, lit / mid */
             l = blink(200) ? EC_LED_LIT : l == EC_LED_LIT ? EC_LED_MID : EC_LED_OFF;
@@ -456,9 +458,17 @@ static void leds_black(void)
                 for (i = 0; i < EC_NBKEY; i++) {   /* 0.6.57: the sharps light the step's note too */
                     int k;
                     l[i] = EC_LED_FAINT;
+                    if (ec_kb_scale_layout()) {    /* 0.6.62: IN SCALE: B1..B3 the pages, B6..B10 the mod sources */
+                        l[i] = i < EC_KB_PAGES ? (i == P->kb_page ? EC_LED_LIT : EC_LED_DIM)
+                               : i >= 5 && i <= 9 ? (A->mk.held == EC_MK_LFO1 + i - 5 ? EC_LED_LIT : EC_LED_MID)
+                                                  : EC_LED_OFF;
+                        continue;
+                    }
                     for (k = 0; k < EC_NKEY; k++)
-                        if (ec_key_upper(k) == i)
-                            l[i] = ec_kb_key_led(k, EC_LED_FAINT);
+                        if (ec_key_upper(k) == i) {
+                            const int sm = ec_kb_semis(k);
+                            l[i] = ec_kb_key_led(k, ec_kb_in_scale(sm) ? EC_LED_DIM : EC_LED_FAINT);
+                        }
                 }
             break;
         case EC_CAT_XFD: {
@@ -937,6 +947,9 @@ static void black_labels(void)
                         s = "BANK";
                     else
                         snprintf(b, sizeof b, "SL%d", P->kb_bank * 10 + i + 1), s = b;
+                } else if (ec_kb_scale_layout()) {   /* 0.6.62: IN SCALE: the shortcuts */
+                    static const char *const PGN[EC_KB_PAGES] = {"NOTES", "SCALE", "SOUND"};
+                    s = i < EC_KB_PAGES ? PGN[i] : i >= 5 && i <= 9 ? ec_mk_key_name(EC_MK_LFO1 + i - 5) : "";
                 } else {
                     const int sm = ec_kb_semis(ec_key_of_upper(i));
                     snprintf(b, sizeof b, "%s%d", NN[(sm % 12 + 12) % 12], 4 + (int)floorf((float)sm / 12.0f));

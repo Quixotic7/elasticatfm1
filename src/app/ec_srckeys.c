@@ -71,6 +71,7 @@ static int quick_param(int mode, int key)
  * edited through A->bus (S1 = slot 2, S2 = 3, MST = 4: the bus's record), the inserts with A->bus 0 and pn.ins_slot.
  * Every slot's knobs: K1-K3 its params in threes (the layout's FX/EFFECTS order for its machine), K4 its MIX. */
 static int nav_turn;                           /* 0.6.2: the page key went down inside its group: its tap steps it */
+static int nav_defer;                          /* 0.6.62: a key with a hold: its page on a quick release */
 static int swap_key;                           /* 0.6.3: SENDS: a held B1-B4 swaps (the tap navigates on release) */
 
 static int fx_pic_page(int pic)
@@ -475,10 +476,17 @@ void ec_src_down(int key)
         A->redraw = 1;
         return;
     }
-    nav_turn = ec_nav_key_down(mode, key) == 2 ? key : 0;
     arm_menu(mode, key);                           /* 0.6.1: FX's insert / bus keys, LOOP ENGINE's B1..B5 */
-    if (quick_param(mode, key))
-        P->slot_key = key;
+    {
+        const int qp = quick_param(mode, key);
+        if (qp)
+            P->slot_key = key;
+        if (qp || ec_hm_armed() == key)            /* 0.6.62 (owner): a key with a hold (its menu, its quick
+                                                    * setting): the page only on a quick click, on release */
+            nav_defer = key;
+        else
+            nav_turn = ec_nav_key_down(mode, key) == 2 ? key : 0;
+    }
     A->redraw = 1;
 }
 
@@ -496,6 +504,11 @@ void ec_src_up(int key)
         swap_key = 0;
         if (!held)
             ec_nav_key(ec_app_mode(), key);
+    }
+    if (nav_defer == key) {                        /* 0.6.62: a quick click (no menu, no knob): the page */
+        if (!held && !(P->bk_used >> (key - 1) & 1u))
+            ec_nav_key(ec_app_mode(), key);
+        nav_defer = 0;
     }
     if (nav_turn == key) {                         /* 0.6.2: tapped inside its group: the group's next page */
         if (!held && !(P->bk_used >> (key - 1) & 1u))

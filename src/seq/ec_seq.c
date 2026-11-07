@@ -366,6 +366,9 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
             start_slides(s, t, rec, pos);
     }
     fires = active && evaluate_trig(s, t, rec);
+    if (fires && (st->kb_down || st->live_keys) && !is_slice(m))
+        fires = 0;                            /* 0.6.62 (owner): a live key / KEYBOARD note held overrides the
+                                               * sequence on its track until it comes up */
     ghost = fires && ec_step_is_ghost(rec, v);
     if (fires)
         st->rat_left = 0;                     /* (a new trig supersedes the last one's ratchets) */
@@ -1255,7 +1258,8 @@ void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
         st->kb_down++;
         e.length = 0;
         emit(s, &e);
-        if (!s->playing) {                         /* 0.6.1: stopped: the loop itself, from its start, while held */
+        if (!s->playing || iv(v, EC_P_MACHINE) == EC_MACH_LOOP_TRIG) {   /* 0.6.1: stopped: the loop itself, from
+                                                    * its start, while held; 0.6.62: TRIG playing too (its gate) */
             e = ev0(EC_EV_LOOP_KEY, t);
             e.slice = 0;
             e.value = 1.0f;

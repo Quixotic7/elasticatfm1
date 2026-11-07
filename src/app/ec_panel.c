@@ -1096,7 +1096,7 @@ static void select_knob(int d)
         return;
     }
     switch (mode) {
-    case EC_MODE_KEYBOARD:
+    case EC_MODE_KEYBOARD: ec_kb_page(d > 0 ? 1 : -1, 0); return;   /* 0.6.62 (owner): its knob pages */
     case EC_MODE_PAGES:
     case EC_MODE_SAMPLER:
     case EC_CAT_XFD: return;

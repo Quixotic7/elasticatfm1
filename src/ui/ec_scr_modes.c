@@ -135,12 +135,27 @@ static void keyboard_screen(const ec_app_t *a)
         static const int GAP[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
         const int lit = ec_kb_lit_key();
         int k;
-        T(EC_C_L15, a->bus ? "TRACKS ONLY" : "KEYS", 2, 13, EC_AL_LEFT);
+        const int sl = a == &ec_app && ec_kb_scale_layout();   /* 0.6.62 (owner): IN SCALE: 16 keys, no sharps */
+        {
+            char nm[24];
+            const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f);
+            if (a->bus)
+                snprintf(nm, sizeof nm, "TRACKS ONLY");
+            else if (scl <= 1)
+                snprintf(nm, sizeof nm, "KEYS");
+            else {
+                char sc[12], rt[8];
+                ec_param_format(EC_P_KB_SCALE, v[EC_P_KB_SCALE], 0, sc, sizeof sc);
+                ec_param_format(EC_P_KB_ROOT, v[EC_P_KB_ROOT], 0, rt, sizeof rt);
+                snprintf(nm, sizeof nm, "%s %s", rt, sc);
+            }
+            T(EC_C_L15, nm, 2, 13, EC_AL_LEFT);
+        }
         for (i = 0; i < 16; i++) {
             const int x = 3 + i * 7;
             R(EC_C_L12, x, 20, 5, 30);              /* 0.6.1: 2-unit gaps */
         }
-        for (i = 0; i < 11; i++)                   /* the sharps between the naturals (F# G# A# C# D#) */
+        for (i = 0; i < 11 && !sl; i++)            /* the sharps between the naturals (F# G# A# C# D#) */
             R(EC_C_BLACK, 3 + GAP[i] * 7 + 4, 20, 4, 18);
         for (k = 0; k < EC_NKEY; k++) {            /* each key: sounding = the mode's colour; a selected step's note =
                                                     * white (its PITCH lock) */
@@ -164,7 +179,7 @@ static void keyboard_screen(const ec_app_t *a)
         }
         for (i = 0; i < 16; i++) {                 /* the Cs */
             const int x = 3 + i * 7;
-            if (((ec_kb_semis(ec_key_of_lower(i)) % 12) + 12) % 12 == 0)
+            if ((((ec_kb_semis(ec_key_of_lower(i)) - (a == &ec_app ? ec_kb_root() : 0)) % 12) + 12) % 12 == 0)
                 R(EC_C_L5, x + 1, 46, 3, 2);
         }
     }

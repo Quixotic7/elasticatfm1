@@ -250,16 +250,20 @@ static void test_capture_over_old(void)
     A->proj.rec.mode = EC_REC_CAPTURE;
     press(FM1P_B_PLAY, 40);
     run_to_step(5.5);
-    press(FM1P_B_REC, 40);                         /* armed: the old take still plays */
-    run_to_step(7.5);
-    key(0, 4, 1);                                  /* the first key: the take starts */
+    press(FM1P_B_REC, 40);                         /* 0.6.85 (owner): playing: an overdub at once */
+    run_to_step(8.0);
+    expect_hit(&f0, &f1);
+    key(0, 4, 1);                                  /* a key: written where it lands, nothing cleared */
     run(5);
     key(0, 4, 0);
     run(5);
     f0 = A->seq.tr[0].fired;
     run_to_step(12.5);
     f1 = A->seq.tr[0].fired;
-    CHECK(A->pn.lr_cap && f1 == f0, "CAPTURE while playing: the old notes no longer fire (%d -> %d fired)", f0, f1);
+    CHECK(!A->pn.lr_cap && A->seq.playing && f1 > f0 && tstep(0, 1)->trig && tstep(0, 11)->trig && tstep(0, 8)->trig &&
+              trk(0)->v[EC_P_PATTERN_STEPS] == 16,
+          "CAPTURE while playing: an overdub (the old notes play on, %d -> %d fired; step 9 written; length 16)", f0, f1);
+    press(FM1P_B_REC, 40);
     stop();
     for (i = 1; i < 16; i += 2) {                  /* again, stopped */
         tstep(0, i)->trig = 1;

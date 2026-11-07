@@ -90,9 +90,13 @@ void ec_liverec_toggle(void)
     P->lr_wait = P->lr_ci = 0;
     P->lr_writes = 0;
     P->lr_end = -1;
-    if (RS->mode == EC_REC_CAPTURE) {             /* 0.6.59: armed, stopped or playing: the first key takes */
+    if (RS->mode == EC_REC_CAPTURE && !A->seq.playing) {   /* 0.6.59: armed, stopped: the first key takes (clears the
+                                                    * track, from step 1) */
         P->lr_wait = 1;
         ec_app_message("REC: PLAY A KEY");
+    } else if (RS->mode == EC_REC_CAPTURE) {       /* 0.6.85 (owner): CAPTURE while playing: an overdub, the keys
+                                                    * write into the steps where they land (nothing cleared) */
+        ec_app_message("REC ON");
     } else if (!A->seq.playing) {
         {
             if (RS->countin) {

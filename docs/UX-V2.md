@@ -1637,3 +1637,11 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   each other); keys held together join the chord's first step even when they fall nearer the next step (within
   80 ms of the chord's first key). TRIG chords record as chords (0.6.82); LOOP ENGINE's pads already stacked.
 - test_liverec test_capture_poly (a TRIG chord at the start and mid-pass, SLICE keys 1 + 3).
+
+## 81. 0.6.85: CAPTURE while playing is an overdub (owner, 2026-11-07)
+
+- REC in CAPTURE mode while playback is rolling: recording starts at once and the keys write into the steps where
+  they land (a note replaces the step's note); nothing is cleared, the length stays. REC again ends it. Stopped:
+  unchanged (armed; the first key clears the track and the take grows from step 1). (0.6.61 cleared the track at
+  the first key while playing too.)
+- test_liverec test_capture_over_old.

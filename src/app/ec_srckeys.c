@@ -411,7 +411,8 @@ static void zoom(int det)
         const int m = iv(v, EC_P_MACHINE);
         if (m >= EC_MACH_GRID_SLICE && m <= EC_MACH_RAZOR_POLY) {   /* 0.6.40 (owner): slice tracks: the pads' bank,
                                                     * 1-16 / 17-32 (LOOP DIV is the loop keys', not touched) */
-            P->zoom_half = det > 0;
+            P->zoom_half = det > 0 && iv(v, EC_P_SLICE_COUNT) > 16;   /* 0.6.58 (owner): 16 slices or fewer: only
+                                                    * the first bank */
             ec_app_message(P->zoom_half ? "SLICES 17-32" : "SLICES 1-16");
             return;
         }

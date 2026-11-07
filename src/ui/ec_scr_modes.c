@@ -116,6 +116,14 @@ static void keyboard_screen(const ec_app_t *a)
         R(EC_C_L3, sx, 20, ex - sx, 30);
         if (smp)
             ec_kit_wave(smp->overview, EC_SS_OVERVIEW, 2, 114, 20, 50, EC_C_L15, EC_C_L8, sx, ex);
+        if (a == &ec_app && ec_lp_b11_held() && !a->bus) {   /* 0.6.58 (owner): B11 held: the pads' bank (1-16 /
+                                                    * 17-32), a bar under its slices, as LOOP ENGINE shows it */
+            const int lo = a->pn.zoom_half ? 16 : 0, hi = cnt < lo + 16 ? cnt : lo + 16;
+            if (hi > lo) {
+                const int bx = (2 + 112 * lo / cnt) & ~1, be = ((2 + 112 * hi / cnt) + 1) & ~1;
+                R(ec_lp_step_layer() ? EC_C_SPECIAL : ec_lp_first() >= 0 ? EC_C_ALERT : EC_C_SRC, bx, 52, be - bx, 2);
+            }
+        }
         for (i = 0; i <= cnt; i++) {               /* the slices (an even grid; RAZOR's own points on FILE): */
             const int x = 2 + 112 * i / cnt, edge = i == sel - 1 || i == sel;   /* 2 units; too many: the selected's */
             if (edge || cnt <= 112 / 6)

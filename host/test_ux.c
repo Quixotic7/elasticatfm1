@@ -1355,6 +1355,37 @@ static void test_056(void)
 
 /* 0.6.57 (owner): KEYBOARD: live REC writes where a note is played (a target step or not); the selected step's note
  * blinks on its key */
+/* 0.6.58 (owner): the pads' second bank (17-32) only with more than 16 slices; COUNT down to 16 brings bank 1 back */
+static void test_bank16(void)
+{
+    float *v;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;
+    v[EC_P_SLICE_COUNT] = 16;
+    ec_seq_touch(&A->seq, A->track);
+    A->pn.zoom_half = 0;
+    key(1, 10, 1);                                 /* B11 held */
+    run(400);
+    turn(FM1P_E_K3, 1);
+    run(20);
+    CHECK(!A->pn.zoom_half && !strcmp(A->msg, "SLICES 1-16"), "16 slices: B11 + K3 stays on 1-16 (%s)", A->msg);
+    v[EC_P_SLICE_COUNT] = 32;
+    turn(FM1P_E_K3, 1);
+    run(20);
+    CHECK(A->pn.zoom_half && !strcmp(A->msg, "SLICES 17-32"), "32 slices: 17-32 (%s)", A->msg);
+    key(1, 10, 0);
+    run(50);
+    v[EC_P_SLICE_COUNT] = 12;
+    run(20);
+    CHECK(!A->pn.zoom_half, "COUNT 12: back on 1-16");
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    v[EC_P_SLICE_COUNT] = 16;
+    ec_seq_touch(&A->seq, A->track);
+    run(50);
+}
+
 static void test_kb_rec(void)
 {
     ec_ptrack_t *tr;
@@ -1528,6 +1559,7 @@ int main(int argc, char **argv)
     test_qa_quick();
     test_056();
     test_kb_rec();
+    test_bank16();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

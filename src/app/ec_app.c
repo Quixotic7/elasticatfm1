@@ -1476,6 +1476,13 @@ void ec_app_tick(const ec_input_t *in)
     {   /* 0.6.54 (QA C4): the step page shown stays inside the track's length (a LEN edit, an undo, a recall, another
          * track): never a page past the end, where a key would write a trig no one sees */
         const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
+        const float *tv1 = ec_project_track(&A->proj, A->track)->v;
+        const int mach = (int)floorf(tv1[EC_P_MACHINE] + 0.5f);
+        if (A->pn.zoom_half && mach >= EC_MACH_GRID_SLICE && mach <= EC_MACH_RAZOR_POLY &&
+            tv1[EC_P_SLICE_COUNT] < 16.5f) {      /* 0.6.58 (owner): no second bank of 16 slices or fewer */
+            A->pn.zoom_half = 0;
+            A->redraw = 1;
+        }
         if (pages > 0 && A->step_page >= pages) {
             A->step_page = pages - 1;
             A->step_held = 0;

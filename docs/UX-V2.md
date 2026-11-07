@@ -1400,3 +1400,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - KEYBOARD's keys show a step's note: the selected step's (ALGO) blinks on its key, as LOOP's selected step does;
   playing LIVE, the note of the step playing now lights. The black keys too.
 - test_ux (test_kb_rec) checks the recording and the blink.
+
+## 54. 0.6.58: the pads' bank in KEYBOARD, and only with more than 16 slices (owner, 2026-11-06)
+
+- KEYBOARD, B11 held on a slice track: the bar under the slices of the pads' bank (1-16 / 17-32), as LOOP ENGINE's.
+- The second bank (17-32, B11 + K3 / PRESETS) only with more than 16 slices; with 16 or fewer it stays 1-16 (it says
+  SLICES 1-16), and COUNT lowered to 16 or fewer brings bank 1 back. test_ux (test_bank16) checks it.

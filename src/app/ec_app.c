@@ -1001,6 +1001,39 @@ void ec_app_undo_track(const char *label, uint32_t key)
         ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_TRACK, A->proj.current, A->track, label, key, A->ms);
 }
 
+/* 0.6.59 (owner): QUANTIZE applied: every step's micro timing becomes what the knob makes of it (the steps keep their
+ * present positions), and the knob goes back to 0 %; one undo */
+void ec_app_quant_apply(void)
+{
+    ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+    const float q = 1.0f - (tr->v[EC_P_QUANT] < 0 ? 0 : tr->v[EC_P_QUANT] > 100 ? 100 : tr->v[EC_P_QUANT]) / 100.0f;
+    int i, n = 0;
+    if (A->bus)
+        return;
+    if (tr->v[EC_P_QUANT] <= 0) {
+        message("QUANTIZE AT 0");
+        return;
+    }
+    ec_app_undo_track("QUANTIZE", 0);
+    for (i = 0; i < EC_MAXSTEPS; i++) {
+        ec_step_t *s = &tr->steps[i];
+        float x;
+        if (!ec_step_lock_get(s, EC_P_MICRO, &x))
+            continue;
+        x = floorf(x * q + 0.5f);
+        if (x == 0)
+            ec_step_lock_clear(s, EC_P_MICRO);
+        else
+            ec_step_lock_set(s, EC_P_MICRO, x);
+        n++;
+    }
+    tr->v[EC_P_QUANT] = 0;
+    ec_seq_touch(&A->seq, A->track);
+    mark_dirty();
+    message(n ? "QUANTIZE APPLIED" : "NOTHING TO QUANTIZE");
+    A->redraw = 1;
+}
+
 void ec_app_clear_lock(int id)
 {
     ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
@@ -1282,7 +1315,9 @@ static void turn_cell(const ec_page_t *pg, int cell, int role, int det)
     }
     if (!UX->f3 && !A->settings && it->kind == EC_IT_PARAM && (ec_pn_f(1) || ec_pn_f(2))) {
         A->pn.f_used = 3;                            /* (F1 / F2 held: no sticky toggle on release) */
-        if (ec_pn_f(1))
+        if (ec_pn_f(1) && it->id == EC_P_QUANT)
+            ec_app_quant_apply();                  /* 0.6.59 (owner): F1 + QUANT: applied */
+        else if (ec_pn_f(1))
             ec_app_clear_lock(it->id);
         else
             clear_mod(it->id);

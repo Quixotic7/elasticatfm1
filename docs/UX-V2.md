@@ -1406,3 +1406,21 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - KEYBOARD, B11 held on a slice track: the bar under the slices of the pads' bank (1-16 / 17-32), as LOOP ENGINE's.
 - The second bank (17-32, B11 + K3 / PRESETS) only with more than 16 slices; with 16 or fewer it stays 1-16 (it says
   SLICES 1-16), and COUNT lowered to 16 or fewer brings bank 1 back. test_ux (test_bank16) checks it.
+
+## 55. 0.6.59: CAPTURE for quick takes, QUANTIZE, notes as long as played, ALGO's preview (owner, 2026-11-06)
+
+- CAPTURE: REC arms it (stopped or playing; the header says REC: PLAY A KEY). The first key (a loop key, a pad or a
+  KEYBOARD note) clears the track's pattern (every page back in the loop; one undo for the whole take) and starts
+  playback from step 1 (restarting it when playing), and that key is step 1. The track's length grows with the
+  playhead (one step ahead, so it never loops mid-take) up to 128 steps, where recording ends and the take loops.
+  REC again: the length is where the playhead got to (the nearest step), and the take loops from step 1 at once
+  (CAPTURED n); PLAY: the same length, playback stops. Press REC, play, REC: a new take each time.
+- Every take keeps its micro timing (unless the REC setup's QUANTIZE is HARD) and each note's held length (a LENGTH
+  lock, in quarter steps, 0.25 .. 16). A KEYBOARD note playing live ends as its key comes up (it held on), as a
+  recorded one ends after its length.
+- QUANTIZE (QUANT, K3 on TRIG's last lane and TRIG mode's PLAYHEAD page): 0 % as played .. 100 % on the grid, a morph
+  of every step's micro timing. F1 + the knob (its label APPLY QUANT) applies it: the steps keep the timing it gives,
+  the knob goes back to 0 % (one undo).
+- Stopped, ALGO onto a step plays that step once for its length (a note at its pitch in its region, a slice step its
+  slices); an empty step is silent.
+- test_liverec (the CAPTURE take, CAPTURED 16, the loop, QUANT 100, APPLY) and test_ux (test_algo_preview) check them.

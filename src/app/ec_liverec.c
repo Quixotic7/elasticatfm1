@@ -9,7 +9,10 @@
  * Each hit goes to the nearest step of the track's own clock (ec_seq_rec_quantize) and keeps its offset as an
  * EC_P_MICRO lock, unless QUANTIZE is HARD; an early hit's step does not fire again this pass (ec_seq_rec_consume).
  * The modes (the record settings: hold REC / SHIFT + REC, saved in the project, ec_recset_t):
- *   CAPTURE   stopped: the first key / loop key starts playback (no count-in); then as OVERDUB
+ *   CAPTURE   0.6.59 (owner): REC arms it; the first key / loop key clears the track's pattern and starts playback
+ *             from step 1 (restarting it when playing); the track's length grows with the playhead (up to 128 steps,
+ *             where recording ends and the take loops). REC again: the length is where it got to (the nearest
+ *             step) and the take loops from step 1 at once; PLAY: the same length, playback stops. Quick takes.
  *   FIXED     REC starts playback (after the count-in) when stopped; recording ends after LENGTH bars (playback goes on)
  *   OVERDUB   REC starts playback (after the count-in) when stopped; writes add to and replace steps
  * No mode clears anything: a recorded step replaces only what it writes (its trig, its locks); undo takes it back.
@@ -42,14 +45,42 @@ static void rec_off(const char *msg)
     if (P->lr_ci && !A->seq.playing && ec_seq_counting_in(&A->seq))
         ec_seq_stop(&A->seq);                      /* (the count-in REC started is cancelled) */
     P->lr_on = P->lr_wait = P->lr_ci = 0;
+    P->lr_cap = 0;
     P->lr_end = -1;
     if (msg)
         ec_app_message(msg);
     A->redraw = 1;
 }
 
+#define CAP_MAX 128                              /* (pattern_steps' range) */
+
+/* 0.6.59: CAPTURE's take ends: the track's length where the playhead got to (the nearest step boundary, 1 .. 128) */
+static int cap_end(void)
+{
+    const int t = P->lr_cap_track;
+    const double b = ec_seq_step_beats(&A->seq, t);
+    float *v = ec_project_track(&A->proj, t)->v;
+    int n = b > 0 ? (int)floor(ec_seq_beats(&A->seq) / b + 0.5) : 1;
+    n = clampi(n, 1, CAP_MAX);
+    v[EC_P_PATTERN_STEPS] = (float)n;
+    P->lr_cap = 0;
+    ec_seq_timing_changed(&A->seq);
+    ec_seq_touch(&A->seq, t);
+    ec_app_mark_dirty();
+    return n;
+}
+
 void ec_liverec_toggle(void)
 {
+    if (P->lr_on && P->lr_cap) {                   /* 0.6.59: CAPTURE: the take's length, and it loops from step 1 */
+        char b[20];
+        const int n = cap_end();
+        snprintf(b, sizeof b, "CAPTURED %d", n);
+        rec_off(b);
+        ec_seq_stop(&A->seq);
+        ec_seq_start(&A->seq);
+        return;
+    }
     if (P->lr_on) {
         rec_off("REC OFF");
         return;
@@ -59,11 +90,11 @@ void ec_liverec_toggle(void)
     P->lr_wait = P->lr_ci = 0;
     P->lr_writes = 0;
     P->lr_end = -1;
-    if (!A->seq.playing) {
-        if (RS->mode == EC_REC_CAPTURE) {
-            P->lr_wait = 1;                        /* the first key starts it */
-            ec_app_message("REC: PLAY TO START");
-        } else {
+    if (RS->mode == EC_REC_CAPTURE) {             /* 0.6.59: armed, stopped or playing: the first key takes */
+        P->lr_wait = 1;
+        ec_app_message("REC: PLAY A KEY");
+    } else if (!A->seq.playing) {
+        {
             if (RS->countin) {
                 ec_seq_count_in(&A->seq, RS->countin * 4);
                 P->lr_ci = 1;
@@ -86,6 +117,12 @@ void ec_liverec_toggle(void)
 
 void ec_liverec_stop(void)
 {
+    if (P->lr_on && P->lr_cap) {                   /* 0.6.59: PLAY in a CAPTURE take: its length, then the stop */
+        char b[20];
+        snprintf(b, sizeof b, "CAPTURED %d", cap_end());
+        rec_off(b);
+        return;
+    }
     if (P->lr_on)
         rec_off("REC OFF");
 }
@@ -94,6 +131,23 @@ void ec_liverec_tick(void)
 {
     if (!P->lr_on)
         return;
+    if (A->seq.playing && P->lr_cap) {             /* 0.6.59: the take's length one step ahead of the playhead */
+        const int t = P->lr_cap_track;
+        float *v = ec_project_track(&A->proj, t)->v;
+        const int64_t p = ec_seq_position_at(&A->seq, t, ec_seq_beats(&A->seq));
+        if (p >= CAP_MAX) {                        /* the most: the take ends there and loops */
+            v[EC_P_PATTERN_STEPS] = CAP_MAX;
+            P->lr_cap = 0;
+            ec_seq_timing_changed(&A->seq);
+            rec_off("CAPTURED 128");
+            return;
+        }
+        if (p + 2 > (int64_t)v[EC_P_PATTERN_STEPS]) {
+            v[EC_P_PATTERN_STEPS] = (float)(p + 2 > CAP_MAX ? CAP_MAX : p + 2);
+            ec_seq_timing_changed(&A->seq);
+            A->redraw = 1;
+        }
+    }
     if (A->seq.playing) {
         P->lr_ci = 0;
         P->lr_wait = 0;
@@ -111,11 +165,28 @@ void ec_liverec_tick(void)
 /* ------------------------------------------------------------------------------------------- writing --- */
 void ec_liverec_capture(void)
 {
-    if (P->lr_on && P->lr_wait && !A->seq.playing && !A->bus) {
-        ec_seq_start(&A->seq);                     /* CAPTURE: the first key starts playback */
+    if (P->lr_on && P->lr_wait && !A->bus) {       /* CAPTURE's first key (0.6.59: also while playing) */
+        ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
+        int i;
+        ec_app_undo_track("CAPTURE", 0);           /* the track as it was: one undo for the whole take */
+        g_snap_pass = g_pass;
+        g_snap_track = A->track;
+        g_snap_pat = A->proj.current;
+        for (i = 0; i < EC_MAXSTEPS; i++)          /* its pattern cleared, every page in the loop */
+            ec_step_clear(&tr->steps[i]);
+        A->proj.pe5[A->proj.current].page_loop[A->track] = 0;
+        tr->v[EC_P_PATTERN_STEPS] = 2;
+        ec_seq_timing_changed(&A->seq);
+        ec_seq_touch(&A->seq, A->track);
+        if (A->seq.playing)
+            ec_seq_stop(&A->seq);                  /* (from step 1: the take's first step is this key) */
+        ec_seq_start(&A->seq);
         P->lr_wait = 0;
+        P->lr_cap = 1;
+        P->lr_cap_track = A->track;
         P->lr_was_playing = 1;
-        ec_app_message("REC");
+        A->step_page = 0;
+        ec_app_message("CAPTURE");
     }
 }
 
@@ -169,8 +240,38 @@ static ec_step_t *trig_at(int step, int mu, int vel)
     return s;
 }
 
+/* 0.6.59 (owner): a take plays back as played: each key's note keeps how long it was held (a LENGTH lock on its step,
+ * in quarter steps, 0.25 .. 16) */
+static int g_last_step = -1;                       /* the step the last note / loop key wrote, this call (-1 none) */
+static int g_key_step[64];                        /* (the step + 1; 0: none) */
+static double g_key_beats[64];
+
+void ec_liverec_key(int k, int down)
+{
+    if (k < 0 || k >= 64)
+        return;
+    if (down) {
+        g_key_step[k] = g_last_step + 1;
+        g_key_beats[k] = ec_seq_beats(&A->seq);
+        g_last_step = -1;
+        return;
+    }
+    if (g_key_step[k] > 0 && P->lr_on && A->seq.playing) {
+        const double b = ec_seq_step_beats(&A->seq, A->track);
+        double len = b > 0 ? (ec_seq_beats(&A->seq) - g_key_beats[k]) / b : 1.0;
+        ec_step_t *s = &ec_project_track(&A->proj, A->track)->steps[g_key_step[k] - 1];
+        len = floor(len * 4.0 + 0.5) / 4.0;
+        len = len < 0.25 ? 0.25 : len > 16.0 ? 16.0 : len;
+        if (s->trig)
+            locked(s, EC_P_LENGTH, (float)len);
+        ec_seq_touch(&A->seq, A->track);
+    }
+    g_key_step[k] = 0;
+}
+
 static void written(int step, int trig)
 {
+    g_last_step = trig ? step : -1;
     if (trig)
         ec_seq_rec_consume(&A->seq, A->track, step);   /* (heard live: an early hit's step does not fire again) */
     ec_seq_touch(&A->seq, A->track);

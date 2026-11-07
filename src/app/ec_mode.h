@@ -171,6 +171,8 @@ typedef struct {
     double lr_end;             /* FIXED: the song beat it ends on (ec_seq_song_beats) */
     int lr_writes;             /* hits / locks written since REC went on (ui_info, tests) */
     int lr_was_playing;
+    int lr_cap;                /* 0.6.59: CAPTURE taking: the track cleared, its length growing with the playhead */
+    int lr_cap_track;
     ec_click_t click;          /* the metronome (mixed after the master bus) */
     int rs_open, rs_row;       /* the record settings list (hold REC / SHIFT + REC) */
     ec_recset_t rs_undo;
@@ -341,6 +343,7 @@ int ec_liverec_armed(void);                   /* waiting for CAPTURE's first key
 void ec_liverec_capture(void);                /* a key / loop key goes down: CAPTURE's first one starts playback */
 void ec_liverec_note(int semis, int slice, int vel);   /* KEYBOARD played a note (slice > 0: that slice) */
 void ec_liverec_loop(int key, int slice_track, int vel);   /* LOOP ENGINE: loop key 1..32 (a pad on slice tracks) */
+void ec_liverec_key(int k, int down);         /* 0.6.59: a played key down (after its note) / up: its held length */
 void ec_liverec_param(int id, float value);   /* a knob moved a track param (AUTOMATION: a lock on the step) */
 void ec_liverec_tick(void);
 void ec_liverec_stop(void);                   /* the transport stopped by PLAY: recording ends */

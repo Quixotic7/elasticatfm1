@@ -34,7 +34,7 @@
           "key": 3,
           "picture": "steps",
           "lanes": [
-            [{"item": "trig_jump", "label": "SNAP START"}, {"item": "trig_release", "label": "RET MODE"}]
+            [{"item": "trig_jump", "label": "SNAP START"}, {"item": "trig_release", "label": "RET MODE"}, {"item": "rec_quantize", "label": "QUANT"}]
           ],
           "variants": [
             {
@@ -66,7 +66,7 @@
             [{"item": "pitch", "label": "NOTE"}, "default_length", "default_velocity", {"item": "micro_timing", "label": "MICRO"}],
             [{"item": "trig_slide", "label": "SLIDE"}, {"item": "env_reset", "label": "ENV RESET"}, {"item": "lfo_reset", "label": "LFO RESET"}, {"item": "filter_reset", "label": "FILT RESET"}],
             [{"item": "trig_chance", "label": "CHANCE"}, "trig_condition", {"item": "trig_ratchet", "label": "RATCHET"}],
-            [{"item": "trig_jump", "label": "SNAP START"}, {"item": "trig_release", "label": "RET MODE"}]
+            [{"item": "trig_jump", "label": "SNAP START"}, {"item": "trig_release", "label": "RET MODE"}, {"item": "rec_quantize", "label": "QUANT"}]
           ],
           "variants": [
             {

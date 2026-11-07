@@ -563,8 +563,8 @@ static void button_down(int b)
         if (ec_app_mode() == EC_CAT_FILE && !A->seq.playing && ec_file_play_leave())
             break;                                 /* 0.6.11: the EDITOR / RAZOR can't play: it goes to BROWSE first */
         if (A->seq.playing) {
+            ec_liverec_stop();                     /* (0.6.59: first: a CAPTURE take's length needs the clock) */
             ec_seq_stop(&A->seq);
-            ec_liverec_stop();
         } else
             ec_seq_start(&A->seq);
         if (A->dirty)
@@ -702,6 +702,7 @@ static void loop_down(int k, int i, int vel)
         A->key_role[k] = R_LOOP_LIVE;
     }
     ec_liverec_loop(lk, is_slice_m(iv(v, EC_P_MACHINE)), vel);   /* (recording: a trig + the loop position) */
+    ec_liverec_key(k, 1);                          /* 0.6.59: its held length on release */
 }
 
 static void white_down(int k, int i, int vel, int lean)
@@ -850,10 +851,12 @@ static void white_up(int k, int i, int vel)
         if (A->seq.tr[A->track].live_keys >> (ec_e5_loop_key(k, i, 0) - 1) & 1u)   /* (not a RANGE key) */
             ec_seq_loop_key(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0);
         ec_lp_loop_note(i, 0);
+        ec_liverec_key(k, 0);
         break;
     case R_PAD:
         ec_seq_slice_pad(&A->seq, A->track, ec_e5_loop_key(k, i, 0), 0, 0);
         ec_lp_loop_note(i, 0);
+        ec_liverec_key(k, 0);
         break;
     case R_KB: ec_kb_key(k, 0, 0); break;
     case R_RAZOR: ec_rzui_key(A, i, 0, 0); break;

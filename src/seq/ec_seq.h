@@ -190,6 +190,7 @@ int ec_seq_pattern_steps(const ec_seq_t *s, int track);
 double ec_seq_step_samples(const ec_seq_t *s, int track);   /* one step at the track's rate */
 /* 0-based clock position at `beats` for the track (swing aware); boundary of position n in beats */
 int64_t ec_seq_position_at(const ec_seq_t *s, int track, double beats);
+double ec_seq_step_beats(const ec_seq_t *s, int track);   /* 0.6.59: one step of the track, in beats */
 double ec_seq_boundary_beats(const ec_seq_t *s, int track, int64_t n);
 
 #endif

@@ -449,7 +449,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 | TRIG · otherwise |  | 1 | NOTE | LEN | VEL | MICRO |
 |  |  | 2 | SLIDE | ENV RESET | LFO RESET | FILT RESET |
 |  |  | 3 | CHANCE | COND | RATCHET | - |
-|  |  | 4 | SNAP START | RET MODE |  |  |
+|  |  | 4 | SNAP START | RET MODE | QUANT |  |
 | LOOP · NEIGHBOR/INPUT | B2 | - | | | | |
 | LOOP · SLICE/RAZOR |  | 1 | P/T | SLOT | SLIC | PLAY |
 |  |  | 2 | CNT | CHOK | SMUT | SREV |
@@ -490,7 +490,7 @@ Each mode button opens its mode; tapping the lit button again goes to the mode's
 |  |  | 2 | SLIDE | ENV RESET | LFO RESET | FILT RESET |
 | COND | B2 | 1 | CHANCE | COND | RATCHET |  |
 | PLAYHEAD (as SLICE) · SLICE/RAZOR | B3 | 1 | SLIC | PLAY | RTCH | SREV |
-| PLAYHEAD · otherwise |  | 1 | SNAP START | RET MODE |  |  |
+| PLAYHEAD · otherwise |  | 1 | SNAP START | RET MODE | QUANT |  |
 | SETUP | hold | 1 | BPM | SWING |  |  |
 
 ### FILE (FILE, 1st · FILE)

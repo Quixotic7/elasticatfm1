@@ -92,6 +92,8 @@ void ec_e5_tick(void)
 {
     if (E->preview && A->seq.playing)
         preview_stop();                          /* the transport owns playback now */
+    if (E->preview && E->preview_until && (int32_t)(A->ms - E->preview_until) >= 0)
+        preview_stop();                          /* 0.6.59: ALGO's preview ends after its length */
     if (E->naming && ((E->name_key >= 0 && A->ms - E->name_key_ms < 400u) ||
                       (E->name_rolled && A->ms - E->name_roll_ms < 700u)))
         A->redraw = 1;                           /* 0.6.47: the typed key's glow fades; 0.6.48: the die tumbles */
@@ -555,6 +557,8 @@ int ec_e5_lower_up(int k, int i)
 static void preview_stop(void)
 {
     int k;
+    if (E->preview == 3)
+        ec_seq_keyboard(&A->seq, E->preview_track, (float)E->preview_semis, 0, 0);
     for (k = 1; k <= 32; k++)
         if (E->preview_bits >> (k - 1) & 1u) {
             if (E->preview == 1)
@@ -564,6 +568,47 @@ static void preview_stop(void)
         }
     E->preview = 0;
     E->preview_bits = 0;
+    E->preview_until = 0;
+}
+
+/* 0.6.59 (owner): stopped, ALGO onto a step: that step heard once, for its length (its LENGTH lock, else the track's;
+ * 0.12 .. 1.5 s): a slice step its slices, a loop step its note (its pitch) in its region (the selected step's region
+ * locks are what an audition hears, ec_seq_audition_step) */
+void ec_e5_step_preview(int idx)
+{
+    const float *v = tv();
+    const ec_step_t *s;
+    float x, len, vel;
+    double ms;
+    if (E->preview)
+        preview_stop();
+    if (A->seq.playing || A->bus || idx < 0 || idx >= EC_MAXSTEPS)
+        return;
+    s = &tr()->steps[idx];
+    if (!s->trig || ec_step_is_ghost(s, v))
+        return;
+    len = ec_step_lock_get(s, EC_P_LENGTH, &x) ? x : v[EC_P_LENGTH];
+    vel = ec_step_lock_get(s, EC_P_VELOCITY, &x) ? x : v[EC_P_VELOCITY];
+    ms = (double)len * ec_seq_step_beats(&A->seq, A->track) * 60000.0 / (A->seq.bpm > 1 ? A->seq.bpm : 120);
+    E->preview_track = A->track;
+    if (is_slice_m(iv(v, EC_P_MACHINE))) {
+        const int cnt = clampi(iv(v, EC_P_SLICE_COUNT), 1, 32);
+        const uint32_t bits = s->slices ? s->slices : 1u << (clampi(iv(v, EC_P_SLICE_INDEX), 1, cnt) - 1);
+        int k;
+        for (k = 1; k <= cnt; k++)
+            if (bits >> (k - 1) & 1u) {
+                ec_seq_slice_pad(&A->seq, A->track, k, 1, vel);
+                E->preview_bits |= 1u << (k - 1);
+            }
+        E->preview = 1;
+    } else {
+        E->preview_semis = ec_step_lock_get(s, EC_P_PITCH, &x) ? (int)floorf(x + 0.5f) : 0;
+        ec_seq_keyboard(&A->seq, A->track, (float)E->preview_semis, 1, vel);
+        E->preview = 3;
+    }
+    E->preview_until = A->ms + (uint32_t)(ms < 120 ? 120 : ms > 1500 ? 1500 : ms);
+    if (!E->preview_until)
+        E->preview_until = 1;
 }
 
 void ec_e5_step_down(int i)

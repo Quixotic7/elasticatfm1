@@ -95,7 +95,11 @@ enum {
      * param it locks to the value the next step that sets that param locks, arriving as that step plays */
     EC_P_SLIDE = EC_P_V61_END,
     EC_P_V64_END,
-    EC_NP = EC_P_V64_END
+    /* 0.6.59 (owner): QUANTIZE, the track's recorded micro timing morphed onto the grid: 0 % as played .. 100 % on
+     * the grid (sequencer domain; F1 + the knob applies it: the steps keep the timing it gives, the knob back to 0) */
+    EC_P_QUANT = EC_P_V64_END,
+    EC_P_V659_END,
+    EC_NP = EC_P_V659_END
 };
 #define EC_INS2_NP 8            /* INS 2's generic params (the most any machine has: DESTROY's eight) */
 #define EC_MICRO_DIV 24         /* micro timing units per step (as Elektron's 1/384 note on a 16th): +-12 = half a step */

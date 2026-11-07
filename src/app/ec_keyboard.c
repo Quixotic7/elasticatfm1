@@ -96,6 +96,7 @@ void ec_kb_key(int k, int down, int vel)
         if (P->kb_held >> k & 1u) {
             P->kb_held &= ~(1u << k);
             ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
+            ec_liverec_key(k, 0);                  /* 0.6.59: live REC: the note's length */
         }
         A->redraw = 1;
         return;
@@ -125,8 +126,10 @@ void ec_kb_key(int k, int down, int vel)
             ec_seq_keyboard(&A->seq, A->track, 0, 1, (float)vel / 127.0f);   /* heard */
             if (entry)
                 enter_step(0, s, vel);
-            else
+            else {
                 ec_liverec_note(0, s, vel);        /* live REC: the slice */
+                ec_liverec_key(k, 1);
+            }
             A->redraw = 1;
             return;
         }
@@ -137,8 +140,10 @@ void ec_kb_key(int k, int down, int vel)
         ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
         if (entry)
             enter_step(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
-        else                                       /* live REC: the note (pitch, velocity, slice) */
+        else {                                     /* live REC: the note (pitch, velocity, slice) */
             ec_liverec_note(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);
+            ec_liverec_key(k, 1);
+        }
     }
     A->redraw = 1;
 }

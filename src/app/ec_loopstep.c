@@ -141,6 +141,8 @@ void ec_lp_algo(int det)
     const int max = clampi(len_now() - base, 0, 16);
     const int to = clampi(on_page + det, 0, max);
     ec_lp_target_to(to ? base + to : 0);
+    if (to && !A->seq.playing)
+        ec_e5_step_preview(base + to - 1);         /* 0.6.59 (owner): stopped: each step ALGO lands on is heard */
 }
 
 /* 0.6.54 (QA C5): one step (1..) the target and the selection, 0 LIVE: KEYBOARD's advance moves both, so ALGO counts on

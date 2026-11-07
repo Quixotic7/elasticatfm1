@@ -166,21 +166,42 @@ static void test_capture_notes(void)
     run_to_step(9.5);
     CHECK(A->seq.tr[0].fired == f0, "  heard live: step 9 does not fire again this pass (%d -> %d)", f0,
           A->seq.tr[0].fired);
-    /* the next pass: both play at their offsets */
+    CHECK(lock(tstep(0, 4), EC_P_LENGTH, &x) && x == 0.25f, "0.6.59: the note's held length kept (%g steps)", x);
+    /* 0.6.59 (owner): the take's length grows with the playhead; REC near step 16: 16 steps, looping from step 1 */
+    run_to_step(15.8);
+    CHECK(trk(0)->v[EC_P_PATTERN_STEPS] >= 16, "the take grows with the playhead (LEN %g)", trk(0)->v[EC_P_PATTERN_STEPS]);
+    press(FM1P_B_REC, 40);
+    CHECK(trk(0)->v[EC_P_PATTERN_STEPS] == 16 && A->seq.playing && !ec_liverec_on() && !strcmp(A->msg, "CAPTURED 16"),
+          "REC again: CAPTURED 16, looping (LEN %g, %s)", trk(0)->v[EC_P_PATTERN_STEPS], A->msg);
+    /* the loop: both play at their offsets */
+    run_to_step(4.5);
+    {
+        const double want = (double)A->seq.sample_base + (4 + 5.0 / 24.0) * STEP;
+        CHECK(fabs((double)A->seq.tr[0].last_fire - want) <= 1.0, "the loop: step 5 fires +5/24 late (%llu, want %.1f)",
+              (unsigned long long)A->seq.tr[0].last_fire, want);
+    }
+    run_to_step(8.2);
+    {
+        const double want = (double)A->seq.sample_base + (8 - 7.0 / 24.0) * STEP;
+        CHECK(fabs((double)A->seq.tr[0].last_fire - want) <= 1.0, "the loop: step 9 fires 7/24 early (%llu, want %.1f)",
+              (unsigned long long)A->seq.tr[0].last_fire, want);
+    }
+    /* 0.6.59: QUANTIZE 100 %: on the grid; F1 + the knob at 50 %: the timing kept, the knob back to 0 */
+    trk(0)->v[EC_P_QUANT] = 100;
     run_to_step(16 + 4.5);
     {
-        const double want = (double)A->seq.sample_base + (16 + 4 + 5.0 / 24.0) * STEP;
-        CHECK(fabs((double)A->seq.tr[0].last_fire - want) <= 1.0, "pass 2: step 5 fires +5/24 late (%llu, want %.1f)",
+        const double want = (double)A->seq.sample_base + (16 + 4) * STEP;
+        CHECK(fabs((double)A->seq.tr[0].last_fire - want) <= 1.0, "QUANT 100: step 5 on its boundary (%llu, want %.1f)",
               (unsigned long long)A->seq.tr[0].last_fire, want);
     }
-    run_to_step(16 + 8.2);
-    {
-        const double want = (double)A->seq.sample_base + (16 + 8 - 7.0 / 24.0) * STEP;
-        CHECK(fabs((double)A->seq.tr[0].last_fire - want) <= 1.0, "pass 2: step 9 fires 7/24 early (%llu, want %.1f)",
-              (unsigned long long)A->seq.tr[0].last_fire, want);
-    }
-    /* QUANTIZE HARD: no offset */
+    trk(0)->v[EC_P_QUANT] = 50;
+    ec_app_quant_apply();
+    CHECK(lock(tstep(0, 4), EC_P_MICRO, &x) && x == 3 && trk(0)->v[EC_P_QUANT] == 0,
+          "QUANTIZE applied at 50 %%: step 5 +3/24, the knob 0 (%g)", x);
+    /* QUANTIZE HARD (OVERDUB): no offset */
+    A->proj.rec.mode = EC_REC_OVERDUB;
     A->proj.rec.hard = 1;
+    press(FM1P_B_REC, 40);
     run_to_step(32 + 10.3);
     key(0, 4, 1);
     run(1);
@@ -188,6 +209,7 @@ static void test_capture_notes(void)
     run(20);
     CHECK(tstep(0, 10)->trig && !lock(tstep(0, 10), EC_P_MICRO, 0), "QUANTIZE HARD: step 11, no micro lock");
     A->proj.rec.hard = 0;
+    A->proj.rec.mode = EC_REC_CAPTURE;
     press(FM1P_B_PLAY, 40);
     CHECK(!A->seq.playing && !ec_liverec_on(), "PLAY stops: recording ends");
     CHECK(A->e5.undo.n > 0, "the writes are undoable (%d)", A->e5.undo.n);
@@ -252,6 +274,8 @@ static void test_automation(void)
     ec_app_set_page(EC_CAT_FILT, 0);
     A->track = 0;
     clear_steps(0);
+    trk(0)->v[EC_P_PATTERN_STEPS] = 16;            /* (0.6.59: the CAPTURE takes before set their own lengths) */
+    ec_seq_timing_changed(&A->seq);
     tstep(0, 6)->trig = 1;                         /* OVERDUB keeps this one */
     ec_step_lock_set(tstep(0, 6), EC_P_PITCH, 5);
     A->proj.rec.mode = EC_REC_OVERDUB;

@@ -48,7 +48,9 @@ typedef struct {
     uint32_t name_roll_ms;       /* 0.6.48 (owner): the die's tumble (from this roll) */
     int name_face;               /* the face it lands on (1..6) */
     /* step preview (stopped) */
-    int preview;                 /* 0 none, 1 slices, 2 loop keys */
+    int preview;                 /* 0 none, 1 slices, 2 loop keys, 3 a note (0.6.59: ALGO's step, its pitch) */
+    int preview_semis;
+    uint32_t preview_until;      /* 0.6.59: a timed preview's end (ALGO), 0 held */
     uint32_t preview_bits;
     int preview_track;
     uint32_t key_hi;             /* lower keys (bit k) pressed as loop keys / pads 17-32 */
@@ -75,6 +77,7 @@ int ec_e5_knob(int role, int det);                       /* SELECT / ALGO / PRES
 int ec_e5_knob_cell(const ec_item_t *it, int det, int mult);   /* a cell turn: scene / slice edits, E5 items */
 void ec_e5_step_down(int i);                             /* a step key went down (preview while stopped) */
 void ec_e5_step_up(void);
+void ec_e5_step_preview(int idx);                       /* 0.6.59: ALGO, stopped: step idx heard once */
 void ec_e5_edit_param(int track, int id, int plock);    /* before an edit: undo, the knob takes over */
 void ec_e5_edit_params(int track, const uint8_t *ids, int n, const char *label);   /* 0.6.1: several as one undo */
 void ec_e5_edit_global(int id, float old);

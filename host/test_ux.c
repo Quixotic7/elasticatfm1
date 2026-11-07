@@ -1356,6 +1356,33 @@ static void test_056(void)
 /* 0.6.57 (owner): KEYBOARD: live REC writes where a note is played (a target step or not); the selected step's note
  * blinks on its key */
 /* 0.6.58 (owner): the pads' second bank (17-32) only with more than 16 slices; COUNT down to 16 brings bank 1 back */
+/* 0.6.59 (owner): stopped, ALGO onto a step: that step heard once (its pitch), for its length */
+static void test_algo_preview(void)
+{
+    ec_ptrack_t *tr;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    ec_app_params(A)[EC_P_MACHINE] = EC_MACH_LOOP;
+    clear_steps();
+    tr = ec_project_track(&A->proj, A->track);
+    tr->steps[1].trig = 1;
+    ec_step_lock_set(&tr->steps[1], EC_P_PITCH, 7);
+    ec_seq_touch(&A->seq, A->track);
+    ec_lp_target_to(0);
+    run_audio(50);
+    turn(FM1P_E_ALGO, 1);                          /* step 1: empty, nothing */
+    run_audio(20);
+    CHECK(!A->e5.preview, "ALGO onto an empty step: nothing heard");
+    turn(FM1P_E_ALGO, 1);                          /* step 2: its note */
+    run_audio(20);
+    CHECK(A->e5.preview == 3 && A->e5.preview_semis == 7 && A->seq.tr[A->track].live_pitch_on,
+          "ALGO onto step 2 (stopped): its note heard (+%d)", A->e5.preview_semis);
+    run_audio(1600);
+    CHECK(!A->e5.preview && !A->seq.tr[A->track].live_pitch_on, "its length over: silent again");
+    ec_lp_target_to(0);
+    clear_steps();
+}
+
 static void test_bank16(void)
 {
     float *v;
@@ -1560,6 +1587,7 @@ int main(int argc, char **argv)
     test_056();
     test_kb_rec();
     test_bank16();
+    test_algo_preview();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

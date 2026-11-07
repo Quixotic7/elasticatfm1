@@ -36,6 +36,8 @@ static double swing_ratio(const ec_seq_t *s)
 
 int ec_seq_pattern_steps(const ec_seq_t *s, int t) { return clampi(iv(ptr(s, t)->v, EC_P_PATTERN_STEPS), 1, EC_MAXSTEPS); }
 
+double ec_seq_step_beats(const ec_seq_t *s, int t) { return t >= 0 && t < EC_NTRACK ? bps(s, t) : 0.25; }   /* 0.6.59 */
+
 int64_t ec_seq_position_at(const ec_seq_t *s, int t, double beats)
 {
     const double b = bps(s, t), sw = swing_ratio(s);
@@ -537,7 +539,9 @@ static int micro_of(const ec_seq_t *s, int t, int idx)
 {
     const ec_ptrack_t *tr = ptr(s, t);
     const ec_step_t *rec = idx >= 0 && idx < EC_MAXSTEPS ? &tr->steps[idx] : 0;
-    return clampi((int)floorf(field(rec, tr->v, EC_P_MICRO) + 0.5f), -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2);
+    const float q = 1.0f - (tr->v[EC_P_QUANT] < 0 ? 0 : tr->v[EC_P_QUANT] > 100 ? 100 : tr->v[EC_P_QUANT]) / 100.0f;
+    /* 0.6.59 (owner): QUANTIZE morphs the micro timing onto the grid (100 %: every step on its boundary) */
+    return clampi((int)floorf(field(rec, tr->v, EC_P_MICRO) * q + 0.5f), -EC_MICRO_DIV / 2, EC_MICRO_DIV / 2);
 }
 
 static int switch_pending(const ec_seq_t *s) { return s->pending >= 0 || s->temp_return >= 0; }
@@ -1261,6 +1265,11 @@ void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
     } else {
         st->live_pitch_on = 0;
         st->kb_down = st->kb_down > 0 ? st->kb_down - 1 : 0;
+        if (!st->kb_down && s->playing) {          /* 0.6.59 (owner): playing, the note ends as the key comes up (it
+                                                    * held on; a recorded step ends after its length the same way) */
+            ec_event_t e = ev0(EC_EV_NOTE_OFF, t);
+            emit(s, &e);
+        }
         if (!st->kb_down) {                        /* the last key up: the audition ends (a no-op when none) */
             ec_event_t e = ev0(EC_EV_LOOP_KEY, t);
             e.slice = 0;

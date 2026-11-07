@@ -714,7 +714,7 @@ static void knob_labels(void)
             continue;
         }
         if (s[0] && it->kind == EC_IT_PARAM && !UX->f3 && !A->settings && (ec_pn_f(1) || ec_pn_f(2))) {
-            snprintf(b, sizeof b, "%s %s", ec_pn_f(1) ? "CLR" : "UNMOD", s);
+            snprintf(b, sizeof b, "%s %s", ec_pn_f(1) && it->id == EC_P_QUANT ? "APPLY" : ec_pn_f(1) ? "CLR" : "UNMOD", s);
             s = b;
         } else if (s[0] && A->fn) {
             snprintf(b, sizeof b, "SNAP %s", s);

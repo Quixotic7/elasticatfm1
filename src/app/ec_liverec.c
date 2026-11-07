@@ -150,7 +150,8 @@ void ec_liverec_tick(void)
     }
     if (A->seq.playing) {
         P->lr_ci = 0;
-        P->lr_wait = 0;
+        if (RS->mode != EC_REC_CAPTURE)            /* 0.6.61: CAPTURE armed while playing waits for its first key */
+            P->lr_wait = 0;
         if (RS->mode == EC_REC_FIXED && P->lr_end >= 0 && ec_seq_song_beats(&A->seq) >= P->lr_end - 1e-9) {
             rec_off("REC DONE");
             return;

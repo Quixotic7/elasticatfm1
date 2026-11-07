@@ -1430,3 +1430,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The selected step's note: its key lit, steady (0.6.57 blinked it). The selected step itself blinks on its own white
   key (its place on the step page, as LOOP ENGINE's); a key that is both blinks lit / mid. Playing LIVE, the note of
   the step playing now stays lit.
+
+## 57. 0.6.61: CAPTURE armed while playing (owner, 2026-11-06)
+
+- REC in CAPTURE while the transport runs stays armed until the first key (the tick ended the wait at once while
+  playing, so the first key recorded over the old take: the old notes went on playing). test_liverec
+  (test_capture_over_old) checks it armed while playing and while stopped.

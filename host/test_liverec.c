@@ -231,6 +231,60 @@ static void test_capture_notes(void)
     clear_steps(0);
 }
 
+/* 0.6.61 (owner): CAPTURE while playing an older pattern: from the first key, the old notes are gone (heard too) */
+static void test_capture_over_old(void)
+{
+    int i, f0, f1;
+    to(EC_MODE_KEYBOARD);
+    A->track = 0;
+    A->bus = 0;
+    clear_steps(0);
+    trk(0)->v[EC_P_MACHINE] = EC_MACH_LOOP;
+    trk(0)->v[EC_P_PATTERN_STEPS] = 16;
+    for (i = 1; i < 16; i += 2) {                  /* the old take: every odd step */
+        tstep(0, i)->trig = 1;
+        ec_step_lock_set(tstep(0, i), EC_P_PITCH, 7);
+    }
+    ec_seq_touch(&A->seq, 0);
+    ec_seq_timing_changed(&A->seq);
+    A->proj.rec.mode = EC_REC_CAPTURE;
+    press(FM1P_B_PLAY, 40);
+    run_to_step(5.5);
+    press(FM1P_B_REC, 40);                         /* armed: the old take still plays */
+    run_to_step(7.5);
+    key(0, 4, 1);                                  /* the first key: the take starts */
+    run(5);
+    key(0, 4, 0);
+    run(5);
+    f0 = A->seq.tr[0].fired;
+    run_to_step(12.5);
+    f1 = A->seq.tr[0].fired;
+    CHECK(A->pn.lr_cap && f1 == f0, "CAPTURE while playing: the old notes no longer fire (%d -> %d fired)", f0, f1);
+    stop();
+    for (i = 1; i < 16; i += 2) {                  /* again, stopped */
+        tstep(0, i)->trig = 1;
+        ec_step_lock_set(tstep(0, i), EC_P_PITCH, 7);
+    }
+    trk(0)->v[EC_P_PATTERN_STEPS] = 16;
+    ec_seq_touch(&A->seq, 0);
+    ec_seq_timing_changed(&A->seq);
+    press(FM1P_B_REC, 40);
+    run(100);
+    key(0, 4, 1);
+    run(5);
+    key(0, 4, 0);
+    run(5);
+    f0 = A->seq.tr[0].fired;
+    run_to_step(12.5);
+    f1 = A->seq.tr[0].fired;
+    CHECK(A->pn.lr_cap && f1 == f0 && tstep(0, 0)->trig && !tstep(0, 1)->trig,
+          "CAPTURE stopped: cleared, the old notes silent (%d -> %d fired)", f0, f1);
+    stop();
+    clear_steps(0);
+    trk(0)->v[EC_P_PATTERN_STEPS] = 16;
+    ec_seq_timing_changed(&A->seq);
+}
+
 /* ------------------------------------------------------------------------------------------- loop keys --- */
 static void test_loop_keys(void)
 {
@@ -449,6 +503,7 @@ int main(int argc, char **argv)
     boot(NULL, 0);
     test_settings();
     test_capture_notes();
+    test_capture_over_old();
     test_loop_keys();
     test_automation();
     test_fixed();

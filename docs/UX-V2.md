@@ -1573,3 +1573,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
     ignored while a range key is held);
   - KEYBOARD notes: the pitch (the held note wins over the steps' PITCH locks); the steps still trigger.
 - test_ux test_062: each of the three, with a CUTOFF lock still applying.
+
+## 74. 0.6.78: F1 / F2 in KEYBOARD; B11 clears a sticky F1 / F2 (owner, 2026-11-06)
+
+- KEYBOARD: F1 / F2 held are F1 / F2 as in the other modes (a held step + F1 clears the last knob's lock, F1 + F2
+  = F3 ..); a quick click is still the octave (now on release). No sticky F1 / F2 in KEYBOARD. (ec_pn_f returned off
+  in KEYBOARD before.)
+- HOME's modes (LOOP ENGINE, TRIG, KEYBOARD): B11 pressed turns a sticky F1 / F2 off (the copy buffer empties with
+  it, as when F1 / F2 is tapped off).
+- test_ux test_kb_more checks both.

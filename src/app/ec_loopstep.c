@@ -169,6 +169,12 @@ void ec_lp_live(void)
 int ec_lp_b11(int down)
 {
     if (down) {
+        const int m = ec_app_mode();
+        if (P->f_sticky && (m == EC_CAT_SRC || m == EC_CAT_TRIG || m == EC_MODE_KEYBOARD)) {
+            P->f_sticky = 0;                       /* 0.6.78 (owner): HOME's modes: B11 clears a sticky F1 / F2 */
+            if (!P->f_held)
+                ec_clip_reset();
+        }
         g.b11 = 1;
         g.b11_ms = A->ms;
         g.b11_used = 0;

@@ -54,7 +54,7 @@ static int mb_of(int b)
 
 int ec_pn_f(int which)
 {
-    if (ec_app_mode() == EC_MODE_KEYBOARD || ec_app_popup(A))
+    if (ec_app_popup(A))                           /* 0.6.78 (owner): KEYBOARD has F1 / F2 too (held) */
         return 0;
     return ((P->f_held | P->f_sticky) & which) != 0;
 }
@@ -554,9 +554,8 @@ static void button_down(int b)
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
             ec_e5_undo(b == EC_B_OCTUP);
-        } else if (ec_app_mode() == EC_MODE_KEYBOARD) {   /* KEYBOARD: the octave */
-            ec_kb_oct(b == EC_B_OCTUP ? 1 : -1);
-        } else {
+        } else {                                   /* 0.6.78 (owner): KEYBOARD too: held F1 / F2, a quick click the
+                                                    * octave (on release) */
             P->f_held |= bit;
             P->f_used &= ~bit;
             P->f_ms[bit - 1] = A->ms;
@@ -634,8 +633,12 @@ static void button_up(int b)
         const int bit = b == EC_B_OCTDN ? 1 : 2;
         if (P->f_held & bit) {
             P->f_held &= ~bit;
-            if (!(P->f_used & bit) && A->ms - P->f_ms[bit - 1] < EC_HOLD_MS)
-                P->f_sticky = P->f_sticky & bit ? 0 : bit;   /* a tap: sticky (F1 and F2 one at a time) */
+            if (!(P->f_used & bit) && A->ms - P->f_ms[bit - 1] < EC_HOLD_MS) {
+                if (ec_app_mode() == EC_MODE_KEYBOARD)   /* 0.6.78 (owner): KEYBOARD: a quick click = the octave */
+                    ec_kb_oct(bit == 2 ? 1 : -1);
+                else
+                    P->f_sticky = P->f_sticky & bit ? 0 : bit;   /* a tap: sticky (F1 and F2 one at a time) */
+            }
             P->f_used &= ~bit;
             if (!(P->f_held | P->f_sticky))
                 ec_clip_reset();                   /* the buffer empties when F1 / F2 turns off */

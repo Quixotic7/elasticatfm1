@@ -1684,6 +1684,25 @@ static void test_kb_more(void)
     CHECK(mode() == EC_MODE_KEYBOARD && A->pn.kb_page == trig, "FX, then HOME: KEYBOARD on the same page (%d)",
           A->pn.kb_page);
     ec_kb_page(0, 1);
+    {                                              /* 0.6.78 (owner): KEYBOARD: F1 held = F1, a quick click = OCT */
+        const int o = A->pn.oct;
+        btn(FM1P_B_OCTDN, 1);
+        run(EC_HOLD_MS + 100);
+        CHECK(ec_pn_f(1) && A->pn.oct == o, "KEYBOARD: F1 held is F1 (the octave stays %d)", A->pn.oct);
+        btn(FM1P_B_OCTDN, 0);
+        run(20);
+        CHECK(!ec_pn_f(1) && !A->pn.f_sticky && A->pn.oct == o, "let go after a hold: off, not sticky, no octave");
+        press(FM1P_B_OCTDN, 40);
+        CHECK(A->pn.oct == o - 1 && !A->pn.f_sticky, "a quick click: OCT -1 (%d)", A->pn.oct);
+        press(FM1P_B_OCTUP, 40);
+    }
+    to(EC_CAT_SRC);                                /* 0.6.78 (owner): HOME's modes: B11 clears a sticky F1 / F2 */
+    press(FM1P_B_OCTUP, 40);
+    CHECK(A->pn.f_sticky == 2, "LOOP ENGINE: F2 tapped: sticky");
+    tapkey(1, 10, 40);
+    CHECK(!A->pn.f_sticky, "B11: the sticky F2 is off");
+    tapkey(1, 10, 40);                             /* (B11's click latched the STEP layer: back) */
+    to(EC_MODE_KEYBOARD);
 }
 
 static void test_bank16(void)

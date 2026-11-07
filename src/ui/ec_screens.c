@@ -711,12 +711,13 @@ static void loop_steps(const ec_app_t *a, int range, int tint)
             continue;
         }
         const int sel = a == &ec_app && ec_lp_is_sel(idx);   /* 0.6.9: every selected step */
-        if (st->trig || st->slices)
-            R(sel ? bright : mid, x, 64, 5, 6);
+        if (st->trig || st->slices)                  /* 0.6.75 (owner): drawn as it is, selected or not (a cleared
+                                                      * selected step shows as empty at once) */
+            R(mid, x, 64, 5, 6);
         else
-            R(sel ? bright : i % 4 == 0 ? floor_a : floor_b, x, 68, 5, 2);
-        if (sel)                                     /* selected: its cap joins its cell (a full column) */
-            R(bright, x, 61, 5, sel && !(st->trig || st->slices) ? 9 : 3);
+            R(i % 4 == 0 ? floor_a : floor_b, x, 68, 5, 2);
+        if (sel)                                     /* selected: a white cap above it, apart from the step */
+            R(bright, x, 61, 5, 2);
         if (idx == play && (a->seq.playing || a->seq.paused))
             R(head, x, 61, 5, 2);
         if (lock_pair(st, range, &lo, &hi)) {        /* its lock, placed in the cell as in the loop */

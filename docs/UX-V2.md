@@ -1549,3 +1549,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   B5 SCALE (hold: VOICE MODE). A click on the key of the page shown steps through that key's pages (TRIG's lanes,
   MACHINE's). KEYBOARD's knob pages gain LOOP ENGINE's MACHINE page. B6..B10 stay the mod sources.
 - KEYBOARD's LEDs: the root at 70 %, the scale's other notes at 30 % (were 38 % / 16 %), out of the scale off.
+
+## 71. 0.6.75: a selected step keeps its own look (owner, 2026-11-06)
+
+- LOOP ENGINE's step strip (TRIG and KEYBOARD draw the same one): a selected step is marked only by a white cap
+  above it, apart from the step; the step itself is drawn as it is (a trig block or an empty floor), so clearing a
+  selected step shows at once. (0.6.14 filled a selected trig white and drew an empty selected step as a white
+  column, which hid what the step held.)

@@ -160,18 +160,11 @@ static void keyboard_screen(const ec_app_t *a)
             }
             T(EC_C_L15, nm, 2, 13, EC_AL_LEFT);
         }
-        for (i = 0; i < 16; i++) {                 /* 0.6.65 (owner): a scale: its notes bright, the others dim */
-            const int x = 3 + i * 7, sm = a == &ec_app ? disp_semis(a, ec_key_of_lower(i)) : 0;
-            R(a != &ec_app || sm == EC_KB_NONE || ec_kb_in_scale(sm) ? EC_C_L12 : EC_C_L5, x, 20, 5, 30);   /* 0.6.1:
-                                                    * 2-unit gaps */
-        }
-        for (i = 0; i < 11 && !sl; i++) {          /* the sharps between the naturals (F# G# A# C# D#); 0.6.65: a scale's
-                                                    * sharps grey, the others black */
-            const int sm = a == &ec_app ? disp_semis(a, ec_key_of_upper(i)) : 0;
-            const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f);
-            R(a == &ec_app && scl > 1 && sm != EC_KB_NONE && ec_kb_in_scale(sm) ? EC_C_L8 : EC_C_BLACK,
-              3 + GAP[i] * 7 + 4, 20, 4, 18);
-        }
+        for (i = 0; i < 16; i++)                   /* the naturals (0.6.1: 2-unit gaps); 0.6.68: plain, the scale is
+                                                    * the boxes below */
+            R(EC_C_L12, 3 + i * 7, 20, 5, 30);
+        for (i = 0; i < 11 && !sl; i++)            /* the sharps between the naturals (F# G# A# C# D#) */
+            R(EC_C_BLACK, 3 + GAP[i] * 7 + 4, 20, 4, 18);
         for (k = 0; k < EC_NKEY; k++) {            /* each key: sounding = the mode's colour; a selected step's note =
                                                     * white (its PITCH lock) */
             const int lo = ec_key_lower(k), up = ec_key_upper(k);
@@ -192,10 +185,25 @@ static void keyboard_screen(const ec_app_t *a)
             else if (up >= 0 && up < 11)
                 R(c, 3 + GAP[up] * 7 + 4, 20, 4, 18);
         }
-        for (i = 0; i < 16; i++) {                 /* the Cs */
-            const int x = 3 + i * 7;
-            if ((((disp_semis(a, ec_key_of_lower(i)) - (a == &ec_app ? ec_kb_root() : 0)) % 12) + 12) % 12 == 0)
-                R(EC_C_L5, x + 1, 46, 3, 2);
+        {                                          /* 0.6.68 (owner): a box at the foot of each key in the scale:
+                                                    * red, the root blue (no scale: the root only) */
+            const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f), root = a == &ec_app ? ec_kb_root() : 0;
+            for (k = 0; k < EC_NKEY; k++) {
+                const int lo = ec_key_lower(k), up = ec_key_upper(k), sm = disp_semis(a, k);
+                int c;
+                if (sm == EC_KB_NONE || (lo < 0 && (sl || up < 0 || up >= 11)))
+                    continue;
+                if (((sm - root) % 12 + 12) % 12 == 0)
+                    c = EC_C_SRC;
+                else if (a == &ec_app && scl > 1 && ec_kb_in_scale(sm))
+                    c = EC_C_ALERT;
+                else
+                    continue;
+                if (lo >= 0)
+                    R(c, 3 + lo * 7, 45, 5, 5);
+                else
+                    R(c, 3 + GAP[up] * 7 + 4, 34, 4, 4);
+            }
         }
     }
     ec_scr_step_strip(a, 56, 68, 0);              /* 0.6.57 (owner): LOOP ENGINE's strip, the playhead moving */

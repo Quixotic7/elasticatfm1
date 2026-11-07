@@ -1502,3 +1502,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   ended the live note, so the key still held was no longer lit and the track played its plain PITCH. Now only the
   last key up ends the note; the newest key still held takes it back, legato (ec_seq_keyboard_retune).
 - test_ux (test_keyboard: overlapping keys, the header), test_v61ux check them.
+
+## 64. 0.6.68: KEYBOARD's on-screen keys mark the scale with boxes (owner, 2026-11-06)
+
+- The keys are drawn plain again (white naturals, black sharps); a box at the foot of each key in the scale marks it:
+  red, the root blue. No scale (CHROMATIC): only the root's box. (0.6.65 dimmed the keys out of the scale and greyed
+  the sharps in it: hard to read.) The key sounding still fills in the layer's colour.

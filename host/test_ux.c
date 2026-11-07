@@ -1902,6 +1902,62 @@ static void test_restart(void)
           "a reset: KEYBOARD on T3, its SCALE page again (mode %d, T%d, page %d)", mode(), A->track + 1, A->pn.kb_page);
 }
 
+/* 0.6.81 (owner): POLY slice tracks play several slices at once (LOOP ENGINE's pads, KEYBOARD's slice keys) */
+static void test_slice_poly(void)
+{
+    ec_track_status_t st;
+    float *v;
+    ec_pn_goto(EC_CAT_SRC, ec_src_loop_page());
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;          /* 0.6.81: SLICE + VOICE MODE POLY (S.POLY is gone) */
+    v[EC_P_TRIG_POLY] = 2;
+    v[EC_P_SLICE_COUNT] = 8;
+    v[EC_P_SLICE_PLAY_MODE] = 2;                  /* HOLD */
+    ec_seq_touch(&A->seq, A->track);
+    run_audio(50);
+    key(0, 0, 1);
+    run_audio(30);
+    key(0, 2, 1);
+    run_audio(60);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(st.voices == 2, "SLICE, POLY: two pads held, two slices sound (%d)", st.voices);
+    key(0, 0, 0);
+    key(0, 2, 0);
+    run_audio(400);
+    v[EC_P_TRIG_POLY] = 1;
+    ec_seq_touch(&A->seq, A->track);
+    run_audio(20);
+    key(0, 0, 1);
+    run_audio(30);
+    key(0, 2, 1);
+    run_audio(400);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(st.voices == 1, "SLICE, MONO: the second pad takes over (%d)", st.voices);
+    key(0, 0, 0);
+    key(0, 2, 0);
+    run_audio(400);
+    v[EC_P_TRIG_POLY] = 2;
+    ec_seq_touch(&A->seq, A->track);
+    to(EC_MODE_KEYBOARD);
+    key(1, 0, 1);
+    run_audio(30);
+    key(1, 2, 1);
+    run_audio(60);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(st.voices == 2, "KEYBOARD, POLY: two slice keys, two slices (%d)", st.voices);
+    key(1, 0, 0);
+    run_audio(400);
+    ec_dsp_track_status(A->dsp, A->track, &st);
+    CHECK(st.voices == 1 && st.voice_slice[0] == 3, "the first key up ends its own slice (slice %d left)",
+          st.voice_slice[0]);
+    key(1, 2, 0);
+    run_audio(400);
+    v[EC_P_TRIG_POLY] = 1;
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    ec_seq_touch(&A->seq, A->track);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -1951,6 +2007,7 @@ int main(int argc, char **argv)
     test_062();
     test_algo_preview();
     test_restart();
+    test_slice_poly();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

@@ -129,6 +129,7 @@ typedef struct {
     int kb_bank;               /* the slice bank (10 a bank) */
     int kb_page;               /* 0.6.62: KEYBOARD's knob page (EC_KB_PAGES) */
     int8_t kb_semis[32];       /* the note a key started (its release) */
+    int8_t kb_slice[32];       /* 0.6.81: slice tracks: the slice a key started (its release ends that one), 0 none */
     uint32_t kb_held;          /* 0.6.1: the keys held (bit k), the last one pressed (the header) */
     int kb_last;
     uint32_t kb_stamp[32];     /* 0.6.67: press order (the newest key still held takes the note back) */

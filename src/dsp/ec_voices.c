@@ -144,8 +144,8 @@ void ec_voice_slice_on(ec_dsp_t *d, int track, const ec_event_t *ev)
     else dur = ((F * fabs(ee - es) / 128.0) / (double)t->smp.rate) / pr;
     dur = ec_clampd(dur, 0.005, 60.0);
 
-    if (p->machine == EC_MACH_GRID_SLICE || p->machine == EC_MACH_RAZOR_SLICE)
-        ec_voice_steal_all(d, track);
+    if ((p->machine == EC_MACH_GRID_SLICE || p->machine == EC_MACH_RAZOR_SLICE) && !p->poly)
+        ec_voice_steal_all(d, track);              /* 0.6.81: mono unless VOICE MODE is POLY */
     if (t->slot_voice[idx] >= 0) voice_steal(d, t->slot_voice[idx]);
     if (chk > 0)
         for (int i = 0; i < EC_VOICE_POOL; ++i)

@@ -189,11 +189,11 @@ static void test_input_machine(void)
     press(FM1P_B_HOME, 40);
     btn(FM1P_B_GLO, 0);
     CHECK(A->settings && A->cat == EC_CAT_SRC, "SHIFT + HOME: LOOP ENGINE's settings");
-    turn(FM1P_E_K1, 5);
-    CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_RAZOR_POLY, "K1 +5: R.POLY (%g)", tvp(0)[EC_P_MACHINE]);
+    turn(FM1P_E_K1, 3);
+    CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_RAZOR_SLICE, "K1 +3: RAZOR (%g)", tvp(0)[EC_P_MACHINE]);
     turn(FM1P_E_K1, 1);
-    CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_INPUT, "T1: +1 past R.POLY = INPUT (no NEIGH on T1) (%g)",
-          tvp(0)[EC_P_MACHINE]);
+    CHECK((int)tvp(0)[EC_P_MACHINE] == EC_MACH_INPUT,
+          "T1: +1 past RAZOR = INPUT (0.6.81: no S.POLY / R.POLY; no NEIGH on T1) (%g)", tvp(0)[EC_P_MACHINE]);
     press(FM1P_B_OCTDN, 40);
     run(3200 - (int)ms > 0 ? 3200 - (int)ms : 0);
     run(300);

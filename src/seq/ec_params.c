@@ -582,6 +582,7 @@ void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_re
     p->play = 1;
     p->mute = opt(v, EC_P_MUTE);
     p->machine = opt(v, EC_P_MACHINE);
+    p->poly = opt(v, EC_P_TRIG_POLY) == 2;        /* 0.6.81 */
     p->pitch = v[EC_P_PITCH] + v[EC_P_NOTE];      /* 0.6.80: the note on top of PITCH */
     p->loop_start = v[EC_P_LOOP_START];
     p->loop_end = v[EC_P_LOOP_END];

@@ -215,6 +215,7 @@ typedef struct ec_track_params {
     int   mute;
     /* source */
     int   machine;            /* EC_MACH_* */
+    int   poly;               /* 0.6.81: VOICE MODE POLY (slice machines: voices don't steal each other) */
     float pitch;              /* semitones */
     float loop_start, loop_end;    /* track space 0..128 */
     float range_start, range_end;  /* 0..128 window inside the trim */

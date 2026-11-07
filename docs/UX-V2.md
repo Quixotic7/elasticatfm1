@@ -1599,3 +1599,15 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - Old projects: their step PITCH locks stay PITCH locks (the owner's choice); new notes are NOTEs.
 - NOTE2..NOTE8 exist (ids reserved) for the chords of 0.6.81.
 - Tests: test_ux (a note is a NOTE lock, clearing PITCH keeps it, "C#4"), test_v61ux, test_liverec.
+
+## 77. 0.6.81: VOICE MODE decides slice polyphony; S.POLY / R.POLY gone (owner, 2026-11-06)
+
+- The machines are LOOP, TRIG, SLICE, RAZOR (+ NEIGH, INPUT): S.POLY and R.POLY are gone from the knob and the
+  MACHINE menu; VOICE MODE (MONO / POLY) decides. A saved S.POLY / R.POLY track loads as SLICE / RAZOR with VOICE
+  MODE POLY.
+- SLICE / RAZOR with POLY: several slices sound at once (LOOP ENGINE's pads, KEYBOARD's slice keys); one pitch per
+  slice (a slice played again takes over its own voice). MONO: a new slice takes over.
+- Bug: KEYBOARD on a slice track: letting go of a key ended the slice picked last, not the key's own; each key now
+  ends the slice it started.
+- Tests: test_ux test_slice_poly (POLY two voices, MONO one, KEYBOARD's release), test_proj test_poly_machines;
+  test_e6 / test_v020 / test_rec moved off the retired machines.

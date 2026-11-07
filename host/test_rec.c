@@ -68,6 +68,8 @@ static void dense(ec_project_t *p, int autom)
                                                                        (float)(rnd() % 1000) / 1000.0f);
             }
             tr->v[EC_P_PATTERN_STEPS] = 64;
+            if (tr->v[EC_P_MACHINE] == EC_MACH_SLICE_POLY || tr->v[EC_P_MACHINE] == EC_MACH_RAZOR_POLY)
+                tr->v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;   /* (0.6.81: those load as SLICE / RAZOR + POLY) */
             for (k = 0; k < 32; k++) {
                 ec_step_t *st = &tr->steps[k * 2];
                 st->trig = 1;

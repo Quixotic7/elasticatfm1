@@ -721,8 +721,10 @@ static float nudge_machine(float m, int det)
 {
     /* every machine (E6: INPUT, the live input, last); NEIGHBOR from track 2 on (track 1 has no left neighbour) */
     int x = clampi((int)(m + 0.5f) + det, EC_MACH_LOOP, EC_MACH_INPUT);
+    if (x == EC_MACH_SLICE_POLY || x == EC_MACH_RAZOR_POLY)   /* 0.6.81: gone (VOICE MODE POLY instead) */
+        x = det > 0 ? EC_MACH_NEIGHBOR : EC_MACH_RAZOR_SLICE;
     if (x == EC_MACH_NEIGHBOR && A->track == 0)
-        x = det > 0 ? EC_MACH_INPUT : EC_MACH_RAZOR_POLY;
+        x = det > 0 ? EC_MACH_INPUT : EC_MACH_RAZOR_SLICE;
     return (float)x;
 }
 

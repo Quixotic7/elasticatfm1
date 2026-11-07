@@ -303,7 +303,7 @@ void ec_liverec_loop(int key, int slice_track, int vel)
     s = trig_at(step, mu, vel);
     key = clampi(key, 1, 32);
     if (slice_track) {                             /* a pad: its slice (poly machines stack) */
-        const int poly = iv(v, EC_P_MACHINE) == EC_MACH_SLICE_POLY || iv(v, EC_P_MACHINE) == EC_MACH_RAZOR_POLY;
+        const int poly = iv(v, EC_P_TRIG_POLY) == 2;   /* 0.6.81: VOICE MODE */
         s->slices = (poly ? s->slices : 0u) | 1u << (key - 1);
     } else {                                       /* the loop key's span (the loop keys' division, as E5's preview) */
         const int div = clampi((iv(v, EC_P_LOOP_DIVISION) + 1) / 2 * 2, 2, 32);

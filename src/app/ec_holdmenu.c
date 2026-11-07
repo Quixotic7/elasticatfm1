@@ -39,7 +39,9 @@ static float *values(void)
 
 static int skip(int i)                    /* NEIGHBOR needs a left neighbour: never on T1 */
 {
-    return g.kind == EC_HM_PARAM && g.id == EC_P_MACHINE && A->track == 0 && i + 1 == EC_MACH_NEIGHBOR;
+    return g.kind == EC_HM_PARAM && g.id == EC_P_MACHINE &&
+           ((A->track == 0 && i + 1 == EC_MACH_NEIGHBOR) || i + 1 == EC_MACH_SLICE_POLY ||
+            i + 1 == EC_MACH_RAZOR_POLY);           /* 0.6.81: S.POLY / R.POLY gone (VOICE MODE POLY) */
 }
 
 /* the header while its key is held (ec_hdr_provider): what the hold does, from EC_HDR_MS on or once the menu shows */
@@ -113,6 +115,7 @@ float ec_hm_slide(void)
 const char *ec_hm_head(void) { return ec_hm_shown() ? g.head : 0; }
 int ec_hm_count(void) { return g.n; }
 int ec_hm_cursor(void) { return g.cur; }
+int ec_hm_hidden(int i) { return skip(i); }   /* 0.6.81: not listed (S.POLY / R.POLY, NEIGHBOR on T1) */
 int ec_hm_current(void) { return g.now; }
 
 const char *ec_hm_label(int i)

@@ -189,8 +189,9 @@ static void build(ec_project_t *p)
     v[EC_P_LFO1_WAVE] = 5;                                          /* SQR */
     v[EC_P_LFO1_SPEED] = 1;                                         /* 8 bars */
     v[EC_P_LFO1_DEPTH] = 64;                                        /* 0 (the run turns it up) */
-    v = p->pat[0].tr[3].v;                                          /* T4: R.POLY, 8 razor slices */
-    v[EC_P_MACHINE] = 6;
+    v = p->pat[0].tr[3].v;                                          /* T4: RAZOR + POLY (0.6.81), 8 razor slices */
+    v[EC_P_MACHINE] = EC_MACH_RAZOR_SLICE;
+    v[EC_P_TRIG_POLY] = 2;
     v[EC_P_SLICE_COUNT] = 8;
     ec_razor_redistribute(&p->razor[3], 8);
     ec_razor_set_point(&p->razor[3], 2, 0, 20.0f, 0, 8);            /* slice 2 starts later than the grid */

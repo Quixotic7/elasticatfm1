@@ -819,6 +819,23 @@ static void test_slot_default(void)
           back.pat[0].tr[2].v[EC_P_SLOT]);
 }
 
+/* 0.6.81 (owner): S.POLY / R.POLY load as SLICE / RAZOR with VOICE MODE POLY */
+static void test_poly_machines(void)
+{
+    static ec_project_t pr, back;
+    static uint8_t b[1u << 20];
+    int32_t n;
+    ec_project_init(&pr);
+    pr.pat[0].tr[0].v[EC_P_MACHINE] = EC_MACH_SLICE_POLY;
+    pr.pat[0].tr[1].v[EC_P_MACHINE] = EC_MACH_RAZOR_POLY;
+    n = ec_project_save(&pr, b, sizeof b);
+    CHECK(n > 16 && ec_project_load(&back, b, (uint32_t)n) == 0 &&
+              back.pat[0].tr[0].v[EC_P_MACHINE] == EC_MACH_GRID_SLICE && back.pat[0].tr[0].v[EC_P_TRIG_POLY] == 2 &&
+              back.pat[0].tr[1].v[EC_P_MACHINE] == EC_MACH_RAZOR_SLICE && back.pat[0].tr[1].v[EC_P_TRIG_POLY] == 2,
+          "S.POLY -> SLICE + POLY, R.POLY -> RAZOR + POLY (%g/%g, %g/%g)", back.pat[0].tr[0].v[EC_P_MACHINE],
+          back.pat[0].tr[0].v[EC_P_TRIG_POLY], back.pat[0].tr[1].v[EC_P_MACHINE], back.pat[0].tr[1].v[EC_P_TRIG_POLY]);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -845,6 +862,7 @@ int main(int argc, char **argv)
     test_projects_mode();
     test_projects_sort();
     test_keybed();
+    test_poly_machines();
     C->shutdown();
     printf("test_proj: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

@@ -105,9 +105,16 @@ void ec_scr_header_page(const ec_app_t *a, const char *title, int page, const ch
  * cursor's row bright on a band, the value set now marked, the list scrolled to keep the cursor in view */
 static void hold_menu(const ec_app_t *a)
 {
-    const int n = ec_hm_count(), cur = ec_hm_cursor(), now = ec_hm_current(), rows = 8, rh = 13;
-    int top = cur - rows / 2, i;
+    const int all = ec_hm_count(), rows = 8, rh = 13;
+    int vis[64], n = 0, cur = 0, top, i;          /* 0.6.81: the values offered (hidden ones left out) */
     char r[16];
+    for (i = 0; i < all && n < 64; i++)
+        if (!ec_hm_hidden(i)) {
+            if (i == ec_hm_cursor())
+                cur = n;
+            vis[n++] = i;
+        }
+    top = cur - rows / 2;
     if (top > n - rows)
         top = n - rows;
     if (top < 0)
@@ -115,7 +122,7 @@ static void hold_menu(const ec_app_t *a)
     snprintf(r, sizeof r, "%d/%d", cur + 1, n);
     ec_scr_header_s(a, "", "", r);
     for (i = 0; i < rows && top + i < n; i++) {
-        const int k = top + i, y = 12 + i * rh, on = k == cur;
+        const int k = vis[top + i], y = 12 + i * rh, on = k == ec_hm_cursor(), now = ec_hm_current();
         if (on)                                    /* 0.6.1: 2 units round the name (over the gaps) */
             R(EC_C_L3, 0, y - 1, W, rh + 1);
         if (k == now)

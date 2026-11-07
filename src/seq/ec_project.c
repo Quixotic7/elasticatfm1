@@ -828,6 +828,14 @@ int ec_project_load(ec_project_t *p, const uint8_t *buf, uint32_t n)
                     tr->v[id] = ec_param_clamp((int)id, v);
                 has_mtx |= id >= EC_P_MTX1_SRC && id < EC_P_MTX_END;
             }
+            if (tr) {                              /* 0.6.81 (owner): S.POLY / R.POLY are gone: SLICE / RAZOR with
+                                                    * VOICE MODE POLY */
+                const int m = (int)(tr->v[EC_P_MACHINE] + 0.5f);
+                if (m == EC_MACH_SLICE_POLY || m == EC_MACH_RAZOR_POLY) {
+                    tr->v[EC_P_MACHINE] = (float)(m == EC_MACH_SLICE_POLY ? EC_MACH_GRID_SLICE : EC_MACH_RAZOR_SLICE);
+                    tr->v[EC_P_TRIG_POLY] = 2.0f;
+                }
+            }
             /* 0.5.0: a 0.4 track (a version 1 record without the matrix ids): its fixed mod routes into the
              * matrix. (Version 2 leaves default params out, so a missing id means nothing there.) */
             if (ver == 1 && tr && !has_mtx && !o.bad) {

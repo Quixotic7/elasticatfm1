@@ -214,7 +214,11 @@ void ec_kb_key(int k, int down, int vel)
         }
         if (P->kb_held >> k & 1u) {
             P->kb_held &= ~(1u << k);
-            ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
+            if (slice && P->kb_slice[k] > 0)       /* 0.6.81: the slice this key started (not the one picked now) */
+                ec_seq_slice_pad(&A->seq, A->track, P->kb_slice[k], 0, 0);
+            else if (!slice)
+                ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
+            P->kb_slice[k] = 0;
             ec_liverec_key(k, 0);                  /* 0.6.59: live REC: the note's length */
             if (!slice && P->kb_held) {            /* 0.6.67: keys overlapping: the newest still held sounds */
                 int j, best = -1;
@@ -258,6 +262,7 @@ void ec_kb_key(int k, int down, int vel)
             v[EC_P_SLICE_INDEX] = (float)s;        /* (a pick, not an edit: no undo) */
             ec_seq_touch(&A->seq, A->track);
             P->kb_semis[k] = 0;
+            P->kb_slice[k] = (int8_t)s;
             ec_seq_keyboard(&A->seq, A->track, 0, 1, (float)vel / 127.0f);   /* heard */
             if (entry)
                 enter_step(0, s, vel);
@@ -272,6 +277,7 @@ void ec_kb_key(int k, int down, int vel)
     {
         const int semis = ec_kb_snap(ec_kb_semis(k));   /* 0.6.69: outside the scale: its nearest note */
         P->kb_semis[k] = (int8_t)clampi(semis, -60, 60);
+        P->kb_slice[k] = (int8_t)(slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0);
         ec_seq_keyboard(&A->seq, A->track, (float)semis, 1, (float)vel / 127.0f);
         if (entry)
             enter_step(semis, slice ? clampi(iv(v, EC_P_SLICE_INDEX), 1, 32) : 0, vel);

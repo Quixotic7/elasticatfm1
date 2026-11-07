@@ -31,6 +31,7 @@ float ec_hm_slide(void);                  /* FX SENDS: where it is drawn, 0 left
 const char *ec_hm_head(void);             /* the header text while it shows, NULL otherwise */
 int ec_hm_count(void);                    /* its values */
 int ec_hm_cursor(void);                   /* 0..count-1 */
+int ec_hm_hidden(int i);                  /* 0.6.81: value i is not offered (the list leaves it out) */
 int ec_hm_current(void);                  /* the value set now (0..count-1) */
 const char *ec_hm_label(int i);           /* value i's name */
 

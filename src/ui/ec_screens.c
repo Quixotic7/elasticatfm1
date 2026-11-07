@@ -773,6 +773,8 @@ void ec_scr_pages_panel(const ec_app_t *a)
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y);
 /* 0.6.57 (owner): KEYBOARD draws LOOP ENGINE's own strip (the playhead, ghosts, locks, the selection) */
 void ec_scr_step_strip(const ec_app_t *a, int top, int bot, int pages_y) { step_strip(a, top, bot, pages_y); }
+/* 0.6.73 (owner): KEYBOARD shows LOOP ENGINE's strip as LOOP ENGINE does (the layer's colour) */
+void ec_scr_loop_steps(const ec_app_t *a, int tint) { loop_steps(a, 0, tint); }
 
 static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
 {

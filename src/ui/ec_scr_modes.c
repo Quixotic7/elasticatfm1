@@ -207,13 +207,10 @@ static void keyboard_screen(const ec_app_t *a)
                 R(c, 3 + GAP[up] * 7 + 4, 20, 4, 18);
         }
     }
-    ec_scr_step_strip(a, 56, 68, 0);              /* 0.6.57 (owner): LOOP ENGINE's strip, the playhead moving */
-    for (i = 0; i < 16 && !a->bus; i++) {          /* 0.6.65 (owner): the empty steps in the layer's colour, as LOOP
-                                                    * ENGINE's ruler: blue LIVE, red steps selected, yellow STEP layer */
-        const int idx = a->step_page * 16 + i;
-        if (idx < len && !(tr->steps[idx].trig || tr->steps[idx].slices))
-            R(tint, 3 + i * 7, 66, 5, 2);
-    }
+    if (!a->bus)                                   /* 0.6.73 (owner): LOOP ENGINE's own strip, every step in the
+                                                    * layer's colour: blue LIVE, red steps selected, yellow STEP
+                                                    * layer (the selected steps white) */
+        ec_scr_loop_steps(a, tint);
     (void)tpage;
     ec_app_page(a, &pg);
     if (a == &ec_app && ec_lp_b11_held() && !a->bus)   /* 0.6.14: B11 held: the pages panel */

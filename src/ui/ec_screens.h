@@ -20,6 +20,7 @@ void ec_scr_header_s(const ec_app_t *a, const char *title, const char *page, con
 void ec_scr_header_page(const ec_app_t *a, const char *title, int page, const char *right);
 void ec_scr_cells(const ec_app_t *a, const ec_page_t *pg);
 void ec_scr_pages_panel(const ec_app_t *a);
+void ec_scr_loop_steps(const ec_app_t *a, int tint);   /* 0.6.73: LOOP ENGINE's strip in the layer colour */
 void ec_scr_step_strip(const ec_app_t *a, int top, int bot, int pages_y);   /* 0.6.57: LOOP ENGINE's strip */   /* 0.6.14: B11 held: the pages, LEN, RATE in the cells area */
 /* 0.6.1: MIX's pan tracks: track t's pan now (-1..1: the resolved value incl. a playing lock, plus the modulation),
  * and the marker's x (2 wide) on the track of the strip at x (strip i: x = 2 + 13 i) */

@@ -1534,3 +1534,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   Power-on with no ui.bin still opens LOOP ENGINE.
 - Checked with two ec_run passes on one folder (set T3, KEYBOARD's SCALE page, FILTER; restart: FILTER on T3, HOME
   opens KEYBOARD on SCALE).
+
+## 69. 0.6.73: KEYBOARD's step strip as LOOP ENGINE's (owner, 2026-11-06)
+
+- KEYBOARD draws LOOP ENGINE's own step strip: every step (the trigs, the empty steps' floors, the playhead) in the
+  layer's colour, blue LIVE, red with steps selected, yellow on the STEP layer, the selected steps white. (It drew
+  the trigs white with the floors in the colour.)

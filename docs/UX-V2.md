@@ -1661,3 +1661,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   too). Keys held together always land together on one step (0.6.84), REPLACE or ADD. MONO is always REPLACE.
 - (0.6.81-0.6.86 stacked LOOP ENGINE's pads on POLY tracks always: that is now ADD's.)
 - Tests: test_liverec test_rec_notes, test_proj (saved), test_v61list (the last row is NOTES).
+
+## 84. 0.6.88: a RATE change while playing keeps the playhead (owner, 2026-11-07)
+
+- A track's step was song beats / the step length, so a new RATE mapped the same moment to another step (a jump
+  forward, back, or to the start). Each track now keeps an origin (the beats and the step position where its rate
+  took over): a RATE change moves the origin to the playhead, and the new rate counts on from the step reached.
+  Start and pattern restarts reset it (as before). Swing and micro timing work from the origin.
+- Tests: test_ux test_rate_change (fails without the fix). The ux_demo test now has its own folder: it shared
+  ux_folder with the ux test, and both save /data/ui.bin (the "power-on: LOOP ENGINE" flake of 0.6.81-0.6.87).

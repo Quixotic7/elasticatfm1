@@ -5,8 +5,9 @@
 set -e
 B=${1:-build}
 OUT=${2:-results/ux}
-python3 "$(dirname "$0")/make_demo_folder.py" "$B/ux_folder" >/dev/null
+# 0.6.88: its own folder (the ux test runs alongside on ux_folder: both save /data/ui.bin)
+python3 "$(dirname "$0")/make_demo_folder.py" "$B/ux_demo_folder" >/dev/null
 mkdir -p "$OUT"
-"$B/ec_run" --layout test --folder "$B/ux_folder" --out "$OUT" --script "$(dirname "$0")/demo_ux.txt" --wav "$OUT/ux_demo.wav" \
+"$B/ec_run" --layout test --folder "$B/ux_demo_folder" --out "$OUT" --script "$(dirname "$0")/demo_ux.txt" --wav "$OUT/ux_demo.wav" \
     --rms-from 1300 --min-rms 0.01 --expect-ui pool:2 --expect-ui file:a_drums_bpm120.wav --expect-ui solo:00 --expect-ui mutes:00 \
     --expect-ui redo:0 --expect-ui popup:0 --expect-ui ready:2

@@ -44,7 +44,7 @@ int64_t ec_seq_position_at(const ec_seq_t *s, int t, double beats)
     double u, pair, frac;
     if (b <= 0)
         return 0;
-    u = beats / b + BEAT_EPS;
+    u = (beats - s->tr[t].org_beats) / b + s->tr[t].org_pos + BEAT_EPS;   /* 0.6.88: from the rate's origin */
     if (sw <= 0.5)
         return (int64_t)floor(u);
     pair = floor(u / 2);
@@ -55,12 +55,13 @@ int64_t ec_seq_position_at(const ec_seq_t *s, int t, double beats)
 double ec_seq_boundary_beats(const ec_seq_t *s, int t, int64_t n)
 {
     const double b = bps(s, t), sw = swing_ratio(s);
+    const double o = s->tr[t].org_beats - s->tr[t].org_pos * b;   /* 0.6.88: the rate's origin */
     int64_t pair, odd;
     if (sw <= 0.5)
-        return (double)n * b;
+        return o + (double)n * b;
     pair = n >= 0 ? n / 2 : (n - 1) / 2;
     odd = n - pair * 2;
-    return (double)pair * 2 * b + (odd == 1 ? 2 * b * sw : 0);
+    return o + (double)pair * 2 * b + (odd == 1 ? 2 * b * sw : 0);
 }
 
 double ec_seq_beats(const ec_seq_t *s)
@@ -707,6 +708,8 @@ static void restart_clock(ec_seq_t *s)
     emit(s, &e);
     for (t = 0; t < EC_NTRACK; t++) {
         reset_track(s, t);
+        s->tr[t].org_beats = s->tr[t].org_pos = 0;   /* 0.6.88: the clock from 0 at its rate */
+        s->tr[t].org_bps = bps(s, t);
         anchor(s, t, 0);
         s->tr[t].fpos = 0;
         s->tr[t].fire_reset = 1;
@@ -1229,6 +1232,16 @@ void ec_seq_timing_changed(ec_seq_t *s)
     int t;
     if (!s->playing && !s->paused)
         return;
+    for (t = 0; t < EC_NTRACK; t++) {               /* 0.6.88 (owner): a RATE change keeps the playhead where it is:
+                                                    * the new rate counts on from the position reached */
+        ec_seq_track_t *st = &s->tr[t];
+        const double b = bps(s, t), beats = ec_seq_beats(s);
+        if (st->org_bps > 0 && b > 0 && fabs(b - st->org_bps) > 1e-12) {
+            st->org_pos += (beats - st->org_beats) / st->org_bps;
+            st->org_beats = beats;
+        }
+        st->org_bps = b;
+    }
     for (t = 0; t < EC_NTRACK; t++)
         if (s->tr[t].position >= 0) {
             anchor(s, t, ec_seq_position_at(s, t, ec_seq_beats(s)));

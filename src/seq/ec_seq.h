@@ -37,6 +37,8 @@ typedef struct {
 
 typedef struct {
     int64_t position;              /* last fired 0-based clock step position; -1 = not primed */
+    double org_beats, org_pos, org_bps;   /* 0.6.88: where its rate took over (song beats, the step position there,
+                                     * the step length since): a RATE change keeps the playhead where it is */
     int play_index;                /* 0-based step index in the pattern */
     int pass;                      /* pattern pass (A:B, 1ST) */
     int8_t last_cond;              /* PRE / !PRE: -1 none, 0 / 1 */

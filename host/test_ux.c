@@ -164,7 +164,7 @@ static int wkey(int w) { return w - 1; }      /* W1..W16 -> lower index */
 static void test_boot(void)
 {
     CHECK(A->pn.intro, "power-on: the intro plays");
-    CHECK(mode() == EC_CAT_SRC && !A->scr, "power-on: LOOP ENGINE");
+    CHECK(mode() == EC_CAT_SRC && !A->scr, "power-on: LOOP ENGINE (mode %d, T%d)", mode(), A->track + 1);
     turn(FM1P_E_K1, 1);                                       /* any knob skips it (and still acts) */
     run(20);
     CHECK(!A->pn.intro, "a knob skips the intro");
@@ -2058,6 +2058,41 @@ static void test_chords(void)
     ec_seq_touch(&A->seq, A->track);
 }
 
+/* 0.6.88 (owner): a RATE change while playing keeps the playhead where it is (no jump, no reset) */
+static void test_rate_change(void)
+{
+    float *v;
+    int64_t p0, p1;
+    int i, ok = 1;
+    to(EC_CAT_SRC);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    v[EC_P_PATTERN_STEPS] = 16;
+    clear_steps();
+    ec_seq_touch(&A->seq, A->track);
+    press(FM1P_B_PLAY, 40);
+    run_audio(900);
+    for (i = 0; i < 6; i++) {                      /* slower, faster, back: each time the step stays */
+        static const int RT[6] = {-3, 2, -1, 4, -4, 0};   /* (around 1/16) */
+        p0 = A->seq.tr[A->track].position;
+        v[EC_P_RATE] = (float)(EC_RATE_UNITY + RT[i]);
+        ec_seq_timing_changed(&A->seq);
+        p1 = A->seq.tr[A->track].position;
+        if (p1 != p0)
+            ok = 0;
+        run_audio(170);
+    }
+    p0 = A->seq.tr[A->track].position;
+    run_audio(600);
+    p1 = A->seq.tr[A->track].position;
+    CHECK(ok && p1 > p0, "RATE changes while playing: the step stays where it was each time, then moves on (%d -> %d)",
+          (int)p0, (int)p1);
+    press(FM1P_B_PLAY, 40);
+    v[EC_P_RATE] = EC_RATE_UNITY;
+    ec_seq_touch(&A->seq, A->track);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -2109,6 +2144,7 @@ int main(int argc, char **argv)
     test_restart();
     test_slice_poly();
     test_chords();
+    test_rate_change();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

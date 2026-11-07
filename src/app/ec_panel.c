@@ -1376,6 +1376,20 @@ void ec_pn_tick(const void *vin)
     const ec_input_t *in = (const ec_input_t *)vin;
     int b, k, r;
     f_gate();                                      /* 0.6.79: KEYBOARD's F1 / F2 held */
+    {                                              /* 0.6.83 (owner): any mode change (a button, a settings page,
+                                                    * the picker) unsticks SHIFT, F1 and F2 */
+        static int last = -1;
+        const int m = ec_app_mode();
+        if (last >= 0 && m != last && (P->f_sticky || P->shift_sticky)) {
+            P->f_sticky = 0;
+            P->shift_sticky = 0;
+            fn_update();
+            if (!P->f_held)
+                ec_clip_reset();
+            A->redraw = 1;
+        }
+        last = m;
+    }
     if (in->btn_down || in->key_down) {
         ec_ui_touched();
         dismiss();

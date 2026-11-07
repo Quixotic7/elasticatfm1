@@ -1624,3 +1624,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - LOOP stays one playhead (no chords); slice tracks: several slices, one pitch each (0.6.81).
 - test_ux test_chords.
 - Open: ux failed twice in a parallel run right after a build and could not be reproduced (watch for it).
+
+## 79. 0.6.83: a mode change unsticks SHIFT, F1 and F2 (owner, 2026-11-06)
+
+- Any change of mode (a mode button, the picker, a settings page opened with SHIFT) turns a sticky SHIFT, F1 or F2
+  off (the copy buffer empties with F1 / F2, as when they are tapped off). Checked in ec_pn_tick, so every path
+  counts. test_ux test_kb_more.

@@ -1712,6 +1712,19 @@ static void test_kb_more(void)
     tapkey(1, 10, 40);
     CHECK(!A->pn.f_sticky, "B11: the sticky F2 is off");
     tapkey(1, 10, 40);                             /* (B11's click latched the STEP layer: back) */
+    press(FM1P_B_OCTDN, 40);                       /* 0.6.83 (owner): a mode change unsticks F1 / F2 and SHIFT */
+    press(FM1P_B_GLO, 40);
+    CHECK(A->pn.f_sticky == 1 && A->pn.shift_sticky && A->fn, "F1 and SHIFT tapped: both sticky");
+    press(FM1P_B_SEL, 40);
+    CHECK(!A->pn.f_sticky && !A->pn.shift_sticky && !A->fn && mode() == EC_CAT_FILT,
+          "SHIFT + SEL (FILTER's settings): F1 and SHIFT are off again (mode %d)", mode());
+    press(FM1P_B_OCTDN, 40);                       /* (F1 sticky, SHIFT + SEL closes the settings) */
+    btn(FM1P_B_GLO, 1);
+    press(FM1P_B_SEL, 40);
+    btn(FM1P_B_GLO, 0);
+    run(20);
+    press(FM1P_B_HOME, 40);
+    CHECK(!A->pn.f_sticky, "a mode button: F1 off (mode %d)", mode());
     to(EC_MODE_KEYBOARD);
 }
 

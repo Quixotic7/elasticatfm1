@@ -18,6 +18,7 @@
 
 #include "ec_harness.h"
 #include "ec_projfile.h"
+#include "ec_rec.h"
 
 static const char *root;
 static char g_first[64] = "PROJ-001";   /* 0.6.47: the first project's file (a rolled name since 0.6.47) */
@@ -497,6 +498,17 @@ static void test_changed_elsewhere(void)
     d = read_file(name, 0, &n);
     CHECK(!strcmp(A->msg, "NOT SAVED: FILE CHANGED") && d && n == on && !memcmp(d, ob, on),
           "autosave: the other tab's file kept, FILE CHANGED (%s)", A->msg);
+    {   /* 0.6.53 (QA A1 / A2): the edits are in no file: still EDITED, no autosave loop, and NEW waits for them */
+        const uint32_t saves = A->saves;
+        run(3000);
+        CHECK(A->dirty && A->save_failed && A->saves == saves && !ec_pf_saving(),
+              "refused: still EDITED, autosave waits for an edit (dirty %d)", A->dirty);
+        ec_pf_new();
+        until_saved();
+        run(200);
+        CHECK((int)A->proj.bpm == 102 && !strcmp(ec_pf_name(), name) && A->dirty,
+              "NEW after a refused save: nothing replaced (bpm %g, %s)", A->proj.bpm, ec_pf_name());
+    }
     ec_pf_save(1);
     until_saved();
     d = read_file(name, 0, &n);
@@ -566,6 +578,18 @@ static void test_keybed(void)
               "K2: a rolled name, 14 at most (%s)", A->e5.name);
         press(FM1P_B_HOME, 40);
         CHECK(!A->e5.naming && file_exists("LA", 0), "HOME: cancelled, LA kept");
+    }
+    {   /* 0.6.53 (QA A3): a leading "." is dropped (".X" would be X's hidden copy) */
+        B(2, 40);
+        shift_down(1);
+        W(1, 40);                                  /* SHIFT + W1: "." */
+        shift_down(0);
+        B(4, 40);                                  /* D */
+        CHECK(!strcmp(A->e5.name, ".D"), "typed .D (%s)", A->e5.name);
+        press(FM1P_B_OCTUP, 40);
+        wait_files();
+        CHECK(file_exists("D", 0) && ec_pf_list_find("D") >= 0 && !file_exists("LA", 0) && ec_pf_list_find(".D") < 0,
+              "OK: renamed D, no dot file");
     }
 }
 
@@ -660,6 +684,83 @@ static void test_projects_mode(void)
 
 /* 0.6.35: SLOT's default was 1 until 0.6.32 (OFF since); a version 2 record left a slot-1 track's SLOT out, so a
  * missing SLOT there is slot 1; a version 3 record keeps OFF */
+/* 0.6.53 (QA A4): a record whose checksum is right but whose body is cut doesn't load (DAMAGED FILE, the project kept);
+ * with a whole hidden copy, the copy loads */
+static void resum(uint8_t *b, uint32_t n)
+{
+    uint32_t h = 2166136261u, i, len = n - 16u;
+    for (i = 16; i < n; i++)
+        h = (h ^ b[i]) * 16777619u;
+    memcpy(b + 8, &len, 4);
+    memcpy(b + 12, &h, 4);
+}
+static void test_cut_record(void)
+{
+    static uint8_t good[EC_PF_PACK_MAX], cut[EC_PF_PACK_MAX];
+    uint32_t gn, m, n;
+    uint8_t *d;
+    float bpm;
+    int i;
+    wait_files();
+    edit(111, 2);
+    shift_save();
+    until_saved();
+    d = read_file(ec_pf_name(), 0, &gn);
+    CHECK(d && gn > 64, "a project to cut (%u bytes)", gn);
+    if (!d)
+        return;
+    memcpy(good, d, gn);
+    m = 16u + (gn - 16u) * 2u / 3u;
+    memcpy(cut, good, m);
+    resum(cut, m);
+    CHECK(ec_project_check(cut, m) > 0, "the cut record passes its checksum");
+    write_file("CUTREC", cut, m);
+    bpm = A->proj.bpm = 112;
+    ec_app_mark_dirty();
+    shift_save();
+    until_saved();
+    ec_pf_open("CUTREC");
+    for (i = 0; i < 400 && ec_pf_loading(); i++)
+        run(5);
+    run(50);
+    CHECK(A->proj.bpm == bpm && strcmp(ec_pf_name(), "CUTREC") && !strcmp(A->msg, "DAMAGED FILE"),
+          "a cut record: DAMAGED FILE, the project kept (bpm %g, %s, %s)", A->proj.bpm, ec_pf_name(), A->msg);
+    {   /* a whole hidden copy beside it: the copy loads */
+        char p[1024];
+        FILE *f;
+        snprintf(p, sizeof p, "%s/data/elasticat/projects/.CUTREC.ecp", root);
+        f = fopen(p, "wb");
+        if (f) {
+            fwrite(good, 1, gn, f);
+            fclose(f);
+        }
+        ec_pf_open("CUTREC");
+        for (i = 0; i < 400 && ec_pf_loading(); i++)
+            run(5);
+        run(50);
+        n = 0;
+        CHECK(!strcmp(ec_pf_name(), "CUTREC") && (int)A->proj.bpm == 111 && strstr(A->msg, "(COPY)"),
+              "with a whole hidden copy: the copy loads (%s, bpm %g)", A->msg, A->proj.bpm);
+        (void)n;
+        remove(p);
+    }
+    remove_project("CUTREC");
+}
+
+/* 0.6.53 (QA A5): the recorder's setup on a SLOT OFF track takes the next free slot, never slot 1 */
+static void test_rec_slot_off(void)
+{
+    const int t0 = A->track;
+    A->track = 1;
+    ec_app_params(A)[EC_P_SLOT] = 0;
+    A->rec.slot_set = 0;
+    ec_rec_open();
+    CHECK(A->rec.slot == ec_file_next_free() && A->rec.slot > 0, "T2 on SLOT OFF: the recorder's slot %d (next free %d)",
+          A->rec.slot + 1, ec_file_next_free() + 1);
+    ec_rec_close();
+    A->track = t0;
+}
+
 static void test_slot_default(void)
 {
     static ec_project_t pr, back;
@@ -699,6 +800,8 @@ int main(int argc, char **argv)
     test_next_free();
     test_largest();
     test_slot_default();
+    test_cut_record();
+    test_rec_slot_off();
     test_changed_elsewhere();
     test_projects_mode();
     test_projects_sort();

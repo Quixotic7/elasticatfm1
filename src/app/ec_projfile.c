@@ -340,11 +340,14 @@ void ec_pf_name_plus(const char *base, char *out)
 }
 
 /* ------------------------------------------------------------------------------------------- the save --- */
+static void save_failed(void);
+
 static void save_start(void)
 {
     const int32_t n = ec_project_save(&A->proj, g_pack, sizeof g_pack);
     if (n <= 0) {                                   /* (cannot happen: EC_PF_PACK_MAX holds the largest project) */
         ec_app_alert("TOO BIG: NOT SAVED");
+        save_failed();
         return;
     }
     g.len = (uint32_t)n;
@@ -378,11 +381,25 @@ void ec_pf_save(int quiet)
     save_start();
 }
 
+/* 0.6.53 (QA A1 / A2): a save that failed or was refused leaves the project EDITED (its edits are in no file), the
+ * load or NEW waiting on it cancelled; autosave tries again after the next edit (no retry loop) */
+static void save_failed(void)
+{
+    A->dirty = 1;
+    A->save_failed = 1;
+    A->save_fail_ms = A->dirty_ms;
+    g.again = 0;
+    g.open_after = 0;
+    g.new_after = 0;
+    A->redraw = 1;
+}
+
 static void save_done(int ok, const char *err_what, int32_t err)
 {
     g.sv = SV_IDLE;
     if (ok) {
         A->saves++;
+        A->save_failed = 0;
         disk_set(g_pack, g.len);                    /* 0.6.36: NAME.ecp is this save */
         g.conflict = 0;
         if (g.del_after[0]) {                       /* 0.6.47: renamed: the old file goes, quietly */
@@ -400,8 +417,7 @@ static void save_done(int ok, const char *err_what, int32_t err)
     } else {
         say_error(err_what, err);
         g.del_after[0] = 0;                         /* (0.6.47: a failed rename keeps the old file) */
-        g.again = 0;                                /* (no retry loop: the next edit or SHIFT + SAVE tries again) */
-        g.open_after = 0;
+        save_failed();                              /* (no retry loop: the next edit or SHIFT + SAVE tries again) */
     }
     if (g.again) {
         g.again = 0;
@@ -499,8 +515,7 @@ static void save_tick(void)
         }
         if (g.req.result == 0 && (g.ck_at != g.disk_len || g.ck_sum != g.disk_sum)) {
             g.conflict = 1;                         /* another instance wrote it: keep its file */
-            g.again = 0;
-            g.open_after = 0;
+            save_failed();
             g.sv = SV_IDLE;
             ec_app_alert("NOT SAVED: FILE CHANGED");
             return;
@@ -631,6 +646,10 @@ void ec_pf_rename(const char *old, const char *nw)
 /* 0.6.47: a name for a new file: base when no project has it, else base with the next free number */
 void ec_pf_unique(const char *base, char *out)
 {
+    while (base && (*base == '.' || *base == ' '))  /* 0.6.53 (QA A3): ".X" is X's hidden copy: never a file's name */
+        base++;
+    if (base && !base[0])
+        base = "PROJ";
     if (base && base[0] && ec_pf_list_find(base) < 0)
         snprintf(out, EC_PF_NAME, "%s", base);
     else
@@ -669,7 +688,7 @@ static void replace(uint32_t n)
     }
     A->repack = 0;
     if (ec_project_load(&A->proj, g_pack, n) != 0)
-        ec_project_init(&A->proj);                  /* (cannot happen: the checksum was checked) */
+        ec_project_init(&A->proj);                  /* (cannot happen: load_tick parsed it first, 0.6.53) */
     for (s = 0; s < EC_NSLOT; s++)
         if (A->proj.slot[s].path[0])
             A->slot[s].state = EC_SL_QUEUED;
@@ -681,6 +700,15 @@ static void replace(uint32_t n)
     ec_dsp_set_tempo(A->dsp, A->proj.bpm);
     ec_app_assign_samples();
     A->redraw = 1;
+}
+
+/* 0.6.53 (QA A4): a record whose checksum is right but whose body doesn't parse (a file cut and re-summed, a writer's
+ * bug) is broken too: tried on a scratch project first, so the live one is never replaced by an empty one, and the
+ * hidden copy gets its turn */
+static int parses(uint32_t n)
+{
+    static ec_project_t trial;
+    return ec_project_load(&trial, g_pack, n) == 0;
 }
 
 static void load_done(uint32_t n)
@@ -701,9 +729,13 @@ static void load_done(uint32_t n)
     ec_app_message(m);                              /* 0.6.46 (owner): no mode change (the user drives them) */
 }
 
+static int g_ld_found;                              /* 0.6.53: NAME.ecp was read whole (broken): "DAMAGED", not "NOT FOUND" */
+
 static void load_fail(int32_t err)
 {
     const int boot = g.boot;
+    if (g_ld_found && err == FS_ENOENT)
+        err = FS_EIO;
     g.ld = LD_IDLE;
     if (boot) {                                     /* power-on: a new project instead (a new name at its first save) */
         g.name[0] = 0;
@@ -747,11 +779,12 @@ static void load_tick(void)
             g.ld_at += (uint32_t)r;
             return;                                 /* (the rest; 0 = the end) */
         }
-        if (r == 0 && ec_project_check(g_pack, g.ld_at) > 0) {
+        if (r == 0 && ec_project_check(g_pack, g.ld_at) > 0 && parses(g.ld_at)) {
             load_done(g.ld_at);
             return;
         }
         if (!g.ld_tmp) {                            /* NAME.ecp missing or broken: the hidden copy */
+            g_ld_found = r == 0;
             g.ld_tmp = 1;
             g.ld_at = 0;
             return;

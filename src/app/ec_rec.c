@@ -65,7 +65,14 @@ void ec_rec_init(void)
 }
 
 /* ------------------------------------------------------------------------------------------- the take --- */
-static int target_slot(void) { return R->slot_set ? R->slot : ec_app_track_slot(A, A->track); }   /* (E6: the track's slot: a resample) */
+/* E6: the track's slot (a resample); 0.6.53 (QA A5): a track on SLOT OFF has none: the next free slot (never slot 1
+ * over another track's sample), -1 when the pool is full */
+static int target_slot(void)
+{
+    if (R->slot_set)
+        return R->slot;
+    return ec_app_track_off(A, A->track) ? ec_file_next_free() : ec_app_track_slot(A, A->track);
+}
 
 static void drop(void)
 {
@@ -89,6 +96,10 @@ static int arm(void)
     int h;
     if (R->w) {
         ec_app_message("SAVING THE LAST TAKE");
+        return -1;
+    }
+    if (target_slot() < 0) {                       /* 0.6.53: SLOT OFF and no free slot */
+        ec_app_alert("NO FREE SLOT");
         return -1;
     }
     cap = ec_rec_reserve();
@@ -440,8 +451,8 @@ void ec_rec_open(void)
 {
     R->open = 1;
     R->row = 0;
-    if (!R->slot_set && R->state == EC_RS_IDLE)
-        R->slot = ec_app_track_slot(A, A->track);
+    if (!R->slot_set && R->state == EC_RS_IDLE && target_slot() >= 0)
+        R->slot = target_slot();
     A->redraw = 1;
 }
 
@@ -496,7 +507,10 @@ void ec_rec_row_value(int row, char *out, int cap)
     static const char *const LEN[] = {"FREE", "1 BAR", "2 BARS", "4 BARS", "8 BARS", "16 BARS"};
     switch (row) {
     case EC_REC_ROW_SLOT:
-        snprintf(out, (size_t)cap, "POOL %02d", (R->state == EC_RS_IDLE ? target_slot() : R->slot) + 1);
+        if (R->state == EC_RS_IDLE && target_slot() < 0)
+            snprintf(out, (size_t)cap, "FULL");
+        else
+            snprintf(out, (size_t)cap, "POOL %02d", (R->state == EC_RS_IDLE ? target_slot() : R->slot) + 1);
         break;
     case EC_REC_ROW_SRC: snprintf(out, (size_t)cap, "%s", SRC[clampi(R->src, 0, EC_NRSRC - 1)]); break;
     case EC_REC_ROW_LEN: snprintf(out, (size_t)cap, "%s", LEN[clampi(R->len, 0, EC_REC_NLEN - 1)]); break;
@@ -529,7 +543,7 @@ int ec_rec_knob(int role, int det)
         switch (R->row) {
         case EC_REC_ROW_SLOT:                      /* the target slot (not while a take is armed or running) */
             if (idle) {
-                R->slot = clampi(target_slot() + det, 0, EC_NSLOT - 1);
+                R->slot = clampi((target_slot() < 0 ? 0 : target_slot()) + det, 0, EC_NSLOT - 1);
                 R->slot_set = 1;
             }
             break;

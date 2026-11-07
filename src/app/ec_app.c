@@ -1456,7 +1456,8 @@ void ec_app_tick(const ec_input_t *in)
     ec_pf_tick();                                  /* 0.6.1: the project file's save / load */
     ec_prj_tick();                                 /* 0.6.42: PROJECTS follows the list, wants the card */
     /* autosave: stopped, dirty, quiet for a moment */
-    if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0)
+    if (A->dirty && !A->seq.playing && A->ms - A->dirty_ms > AUTOSAVE_MS && A->load_slot < 0 &&
+        !(A->save_failed && A->dirty_ms == A->save_fail_ms))   /* 0.6.53: a failed save: again after the next edit */
         ec_app_save(1);
 }
 

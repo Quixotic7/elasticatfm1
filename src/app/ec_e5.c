@@ -310,7 +310,7 @@ void ec_e5_name_close(int accept)
         char b[EC_NAME];
         int n, st = 0;
         snprintf(b, sizeof b, "%s", E->name);
-        while (b[st] == ' ')
+        while (b[st] == ' ' || b[st] == '.')     /* 0.6.53 (QA A3): no leading dot (a hidden file, another's copy) */
             st++;
         memmove(b, b + st, strlen(b + st) + 1);
         n = (int)strlen(b);

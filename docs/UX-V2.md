@@ -1316,3 +1316,16 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - The LFO / MOD ENV / VEL header shows the route without its number (the 2/2 is gone).
 - On FILTER, AMP, FX, MOD (the track pages outside LOOP) ALGO does nothing (no label): PRESETS turns the step page.
   On the LFO / MOD ENV / VEL pages it stays the route's DEPTH.
+
+## 49. 0.6.53: the QA pass's data-loss fixes (results/qa-0.6.52/REPORT.md A1-A5, 2026-11-06)
+
+- A1: a save that fails or is refused (a write error, NOT SAVED: FILE CHANGED, TOO BIG) leaves the project EDITED:
+  PROJECTS shows it, LOAD X? asks, and autosave tries again after the next edit (no retry loop).
+- A2: a LOAD or NEW waiting on that save is cancelled: nothing replaces the unsaved project.
+- A3: a name never starts with "." (the keybed drops leading dots and spaces, as do new file names): ".X" would be the
+  hidden copy of X.
+- A4: a record whose checksum is right but whose body doesn't parse is broken: the hidden copy is tried, else DAMAGED
+  FILE, and the open project stays (it was replaced by an empty one, which the next autosave wrote over the file).
+- A5: the recorder's setup on a track with SLOT OFF records into the next free slot (NO FREE SLOT when the pool is
+  full), never over slot 1.
+- test_proj checks each.

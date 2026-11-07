@@ -62,6 +62,8 @@ typedef struct {
     /* save */
     int dirty;
     uint32_t dirty_ms;
+    int save_failed;             /* 0.6.53: the last save failed: still edited; autosave waits for an edit */
+    uint32_t save_fail_ms;       /* (dirty_ms then) */
     int saves;
     /* the screen */
     char msg[32];

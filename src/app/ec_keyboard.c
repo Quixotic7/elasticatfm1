@@ -40,6 +40,12 @@ static int scale_of(int *n, const int8_t **st)
     return sc;
 }
 int ec_kb_root(void) { return A->bus ? 0 : clampi(iv(ec_app_params(A), EC_P_KB_ROOT), 1, 12) - 1; }
+/* 0.6.64: KEYBOARD on the STEP layer (B11) on a loop track: the black keys play the scale (grouped) */
+int ec_kb_step_notes(void)
+{
+    return !A->bus && !ec_kb_slice_track() && ec_app_mode() == EC_MODE_KEYBOARD && ec_lp_step_layer();
+}
+
 int ec_kb_scale_layout(void)
 {
     return !A->bus && !ec_kb_slice_track() && iv(ec_app_params(A), EC_P_KB_LAYOUT) == 2;
@@ -60,6 +66,14 @@ int ec_kb_in_scale(int semis)
  * from the root (W1 = the root at the octave shown), the black keys none (EC_KB_NONE: they are shortcuts) */
 int ec_kb_semis(int k)
 {
+    const int up0 = ec_key_upper(k);
+    if (up0 >= 0 && up0 < 10 && ec_kb_step_notes()) {   /* 0.6.64 (owner, FIZZ): the STEP layer: B1..B10 the scale's
+                                                    * notes up from the root (the white keys select steps) */
+        const int8_t *st;
+        int n;
+        scale_of(&n, &st);
+        return ec_kb_root() + 12 * (up0 / n) + st[up0 % n] + 12 * P->oct;
+    }
     if (ec_kb_scale_layout()) {
         const int8_t *st;
         int n;
@@ -167,7 +181,7 @@ void ec_kb_key(int k, int down, int vel)
     if (A->bus)
         return;
     if (!down) {
-        if (ec_kb_scale_layout() && up >= 0 && !(P->kb_held >> k & 1u)) {
+        if (ec_kb_scale_layout() && up >= 0 && !(P->kb_held >> k & 1u) && !ec_kb_step_notes()) {
             scale_black(up, 0);                    /* 0.6.62: a shortcut key up */
             return;
         }
@@ -179,7 +193,8 @@ void ec_kb_key(int k, int down, int vel)
         A->redraw = 1;
         return;
     }
-    if (ec_kb_scale_layout() && up >= 0) {         /* 0.6.62: IN SCALE: the black keys are shortcuts */
+    if (ec_kb_scale_layout() && up >= 0 && !ec_kb_step_notes()) {   /* 0.6.62: IN SCALE: the black keys are
+                                                    * shortcuts (not on the STEP layer: there they are the notes) */
         scale_black(up, 1);
         return;
     }

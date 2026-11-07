@@ -458,6 +458,13 @@ static void leds_black(void)
                 for (i = 0; i < EC_NBKEY; i++) {   /* 0.6.57: the sharps light the step's note too */
                     int k;
                     l[i] = EC_LED_FAINT;
+                    if (ec_kb_step_notes()) {      /* 0.6.64: the STEP layer: B1..B10 the scale (the root mid) */
+                        const int sm = i < 10 ? ec_kb_semis(ec_key_of_upper(i)) : EC_KB_NONE;
+                        if (i < 10)
+                            l[i] = ec_kb_key_led(ec_key_of_upper(i),
+                                                 ((sm - ec_kb_root()) % 12 + 12) % 12 == 0 ? EC_LED_MID : EC_LED_DIM);
+                        continue;
+                    }
                     if (ec_kb_scale_layout()) {    /* 0.6.62: IN SCALE: B1..B3 the pages, B6..B10 the mod sources */
                         l[i] = i < EC_KB_PAGES ? (i == P->kb_page ? EC_LED_LIT : EC_LED_DIM)
                                : i >= 5 && i <= 9 ? (A->mk.held == EC_MK_LFO1 + i - 5 ? EC_LED_LIT : EC_LED_MID)
@@ -947,6 +954,10 @@ static void black_labels(void)
                         s = "BANK";
                     else
                         snprintf(b, sizeof b, "SL%d", P->kb_bank * 10 + i + 1), s = b;
+                } else if (ec_kb_step_notes() && i < 10) {   /* 0.6.64: the STEP layer: the scale's notes */
+                    const int sm = ec_kb_semis(ec_key_of_upper(i));
+                    snprintf(b, sizeof b, "%s%d", NN[(sm % 12 + 12) % 12], 4 + (int)floorf((float)sm / 12.0f));
+                    s = b;
                 } else if (ec_kb_scale_layout()) {   /* 0.6.62: IN SCALE: the shortcuts */
                     static const char *const PGN[EC_KB_PAGES] = {"NOTES", "SCALE", "SOUND"};
                     s = i < EC_KB_PAGES ? PGN[i] : i >= 5 && i <= 9 ? ec_mk_key_name(EC_MK_LFO1 + i - 5) : "";

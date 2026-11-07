@@ -1460,3 +1460,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - LOOP ENGINE's white keys are the loop keys, so with F1 / F2 on (held or sticky) they never reached the steps:
   copy / cut / paste of steps did nothing there. With F1 / F2 on they are the steps now, as on every other step
   page. test_ux (test_clip_modes) copies and moves a step on FILTER, TRIG, LOOP ENGINE and AMP.
+
+## 60. 0.6.64: KEYBOARD's STEP layer as FIZZ's (owner, 2026-11-06)
+
+- B11 (held or latched) on a loop track: the white keys select steps (as before) and the black keys B1..B10 play the
+  track's scale up from its root (grouped, whatever the layout; CHROM: semitones), at the octave shown; a note
+  enters the selected step as before. Their LEDs: the root mid, the others dim, the selected step's note lit; their
+  labels the notes. (The black keys played the chromatic sharps there.) test_ux (test_kb_step_layer) checks it.

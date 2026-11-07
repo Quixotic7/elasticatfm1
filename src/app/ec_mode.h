@@ -309,6 +309,7 @@ int ec_kb_slice_track(void);
 int ec_kb_semis(int k);                       /* key k's note in semitones from C4, the octave applied */
 #define EC_KB_NONE (-1000)                    /* 0.6.62: no note (IN SCALE's black keys) */
 #define EC_KB_PAGES 3                         /* 0.6.62: NOTES, SCALE, SOUND */
+int ec_kb_step_notes(void);                   /* 0.6.64: STEP layer: B1..B10 play the scale */
 int ec_kb_scale_layout(void);                 /* 0.6.62: IN SCALE (a loop track) */
 int ec_kb_in_scale(int semis);                /* 0.6.62: the note is in the track's scale */
 int ec_kb_root(void);                         /* 0.6.62: the scale's root, 0 = C */

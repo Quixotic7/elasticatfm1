@@ -1495,6 +1495,43 @@ static void test_clip_modes(void)
     }
 }
 
+/* 0.6.64 (owner, FIZZ): KEYBOARD's STEP layer: the black keys play the scale (grouped), the white keys the steps */
+static void test_kb_step_layer(void)
+{
+    ec_ptrack_t *tr;
+    float *v, x = 0;
+    to(EC_MODE_KEYBOARD);
+    ec_pn_select_target(0);
+    v = ec_app_params(A);
+    v[EC_P_MACHINE] = EC_MACH_LOOP;
+    v[EC_P_KB_SCALE] = 3;                          /* A MINOR */
+    v[EC_P_KB_ROOT] = 10;
+    v[EC_P_KB_LAYOUT] = 1;                         /* (CHROMATIC: the layer does it anyway) */
+    A->pn.oct = 0;
+    clear_steps();
+    tr = ec_project_track(&A->proj, A->track);
+    tapkey(1, 10, 40);                             /* B11 clicked: the STEP layer latched */
+    run(20);
+    CHECK(ec_lp_step_layer() && ec_kb_step_notes(), "B11: the STEP layer");
+    CHECK(ec_kb_semis(ec_key_of_upper(0)) == 9 && ec_kb_semis(ec_key_of_upper(2)) == 12 &&
+              ec_kb_semis(ec_key_of_upper(7)) == 21 && lbl(FM1CORE_LBL_BLACK0 + 0, "A4"),
+          "the black keys: A MINOR up from A (B1 %d, B3 %d, B8 %d; %s)", ec_kb_semis(ec_key_of_upper(0)),
+          ec_kb_semis(ec_key_of_upper(2)), ec_kb_semis(ec_key_of_upper(7)), L(FM1CORE_LBL_BLACK0));
+    tapkey(0, wkey(4), 40);                        /* W4: step 4 selected */
+    run(20);
+    CHECK(ec_lp_first() == 3, "W4 selects step 4 (%d)", ec_lp_first() + 1);
+    tapkey(1, 2, 40);                              /* B3 = C: into step 4 */
+    run(20);
+    CHECK(tr->steps[3].trig && ec_step_lock_get(&tr->steps[3], EC_P_PITCH, &x) && x == 12,
+          "B3 (C) into the selected step 4 (+%g)", x);
+    tapkey(1, 10, 40);                             /* B11 again: back */
+    run(20);
+    v[EC_P_KB_SCALE] = 1;
+    v[EC_P_KB_ROOT] = 1;
+    ec_lp_target_to(0);
+    clear_steps();
+}
+
 static void test_bank16(void)
 {
     float *v;
@@ -1708,6 +1745,7 @@ int main(int argc, char **argv)
     test_056();
     test_kb_rec();
     test_bank16();
+    test_kb_step_layer();
     test_clip_modes();
     test_062();
     test_algo_preview();

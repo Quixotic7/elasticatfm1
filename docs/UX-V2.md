@@ -1630,3 +1630,10 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - Any change of mode (a mode button, the picker, a settings page opened with SHIFT) turns a sticky SHIFT, F1 or F2
   off (the copy buffer empties with F1 / F2, as when they are tapped off). Checked in ec_pn_tick, so every path
   counts. test_ux test_kb_more.
+
+## 80. 0.6.84: POLY recording keeps chords and slices together (owner, 2026-11-06)
+
+- CAPTURE with VOICE MODE POLY: KEYBOARD's slice keys held together stack their slices on one step (they replaced
+  each other); keys held together join the chord's first step even when they fall nearer the next step (within
+  80 ms of the chord's first key). TRIG chords record as chords (0.6.82); LOOP ENGINE's pads already stacked.
+- test_liverec test_capture_poly (a TRIG chord at the start and mid-pass, SLICE keys 1 + 3).

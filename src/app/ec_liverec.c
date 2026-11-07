@@ -282,22 +282,34 @@ static void written(int step, int trig)
 
 void ec_liverec_note(int semis, int slice, int vel)
 {
-    int step, mu;
+    static int last = -1;                          /* 0.6.84: the step a chord being played writes into */
+    static uint32_t last_ms;
+    const int poly = iv(ec_app_params(A), EC_P_TRIG_POLY) == 2;
+    int step, mu, chord;
     ec_step_t *s;
     if (!hit(&step, &mu))
         return;
-    s = trig_at(step, mu, vel);
-    {                                              /* 0.6.80: the NOTE; 0.6.82: POLY, keys held together on one step:
-                                                    * a chord */
-        static int last = -1;
-        const int chord = !slice && ec_kb_chords() && __builtin_popcount(P->kb_held) > 1 && step == last;
-        if ((chord ? ec_step_note_add(s, (float)clampi(semis, -36, 36))
-                   : ec_step_note_set(s, (float)clampi(semis, -36, 36))) < 0)
-            ec_app_message("LOCKS FULL");
+    /* 0.6.82 / 0.6.84 (owner): POLY, keys held together: one step (a key within 80 ms of the chord's first joins its
+     * step even when it falls nearer the next one) */
+    chord = poly && (slice > 0 || ec_kb_chords()) && __builtin_popcount(P->kb_held) > 1 && last >= 0 &&
+            (step == last || A->ms - last_ms < 80);
+    if (chord)
+        step = last;
+    else {
         last = step;
+        last_ms = A->ms;
     }
-    if (slice > 0)
-        s->slices = 1u << (clampi(slice, 1, 32) - 1);   /* (one note per step, as step entry) */
+    s = chord ? step_rec(step) : trig_at(step, mu, vel);
+    if (!slice) {
+        if ((chord ? ec_step_note_add(s, (float)clampi(semis, -36, 36))
+                   : ec_step_note_set(s, (float)clampi(semis, -36, 36))) < 0)   /* 0.6.80: the NOTE */
+            ec_app_message("LOCKS FULL");
+    } else {                                       /* a slice: its pitch (one a step) and the slice; 0.6.84: POLY,
+                                                    * the slices held together stack */
+        if (!chord && ec_step_note_set(s, (float)clampi(semis, -36, 36)) < 0)
+            ec_app_message("LOCKS FULL");
+        s->slices = (chord ? s->slices : 0u) | 1u << (clampi(slice, 1, 32) - 1);
+    }
     written(step, 1);
 }
 

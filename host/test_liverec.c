@@ -493,6 +493,71 @@ static void test_click(void)
         trk(i)->v[EC_P_MUTE] = 0;
 }
 
+/* 0.6.84 (owner): POLY recording: keys held together land on one step together (TRIG: a chord; SLICE: the slices) */
+static void test_capture_poly(void)
+{
+    float nt[EC_STEP_NOTES];
+    int n, st;
+    stop();
+    if (ec_liverec_on())
+        press(FM1P_B_REC, 40);
+    to(EC_MODE_KEYBOARD);
+    A->track = 0;
+    A->bus = 0;
+    clear_steps(0);
+    trk(0)->v[EC_P_MACHINE] = EC_MACH_LOOP_TRIG;
+    trk(0)->v[EC_P_TRIG_POLY] = 2;
+    trk(0)->v[EC_P_PATTERN_STEPS] = 16;
+    trk(0)->v[EC_P_KB_LAYOUT] = 1;
+    A->pn.oct = 0;
+    ec_seq_touch(&A->seq, 0);
+    press(FM1P_B_REC, 40);
+    key(0, 4, 1);                                  /* C4 starts it */
+    run(3);
+    key(0, 6, 1);                                  /* E4 with it */
+    run(3);
+    key(0, 8, 1);                                  /* G4 */
+    run(30);
+    key(0, 4, 0);
+    key(0, 6, 0);
+    key(0, 8, 0);
+    run(20);
+    n = ec_step_notes(tstep(0, 0), nt);
+    CHECK(n == 3, "TRIG, POLY, CAPTURE: three keys together = a chord on step 1 (%d notes)", n);
+    run_to_step(4.1);
+    expect_hit(&st, &n);
+    key(0, 5, 1);                                  /* D4 + F4, later in the pass */
+    run(2);
+    key(0, 7, 1);
+    run(20);
+    key(0, 5, 0);
+    key(0, 7, 0);
+    run(20);
+    n = ec_step_notes(tstep(0, st), nt);
+    CHECK(n == 2, "a second chord on step %d (%d notes)", st + 1, n);
+    press(FM1P_B_REC, 40);
+    stop();
+    clear_steps(0);
+    trk(0)->v[EC_P_MACHINE] = EC_MACH_GRID_SLICE;  /* SLICE, POLY: the slice keys together */
+    trk(0)->v[EC_P_SLICE_COUNT] = 8;
+    ec_seq_touch(&A->seq, 0);
+    press(FM1P_B_REC, 40);
+    key(1, 0, 1);                                  /* B1 = slice 1 starts it */
+    run(3);
+    key(1, 2, 1);                                  /* B3 = slice 3 with it */
+    run(30);
+    key(1, 0, 0);
+    key(1, 2, 0);
+    run(20);
+    CHECK(tstep(0, 0)->slices == 0x5u, "SLICE, POLY, CAPTURE: slices 1 and 3 on step 1 (%x)", tstep(0, 0)->slices);
+    press(FM1P_B_REC, 40);
+    stop();
+    clear_steps(0);
+    trk(0)->v[EC_P_TRIG_POLY] = 1;
+    trk(0)->v[EC_P_MACHINE] = EC_MACH_LOOP;
+    ec_seq_touch(&A->seq, 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -508,6 +573,7 @@ int main(int argc, char **argv)
     test_automation();
     test_fixed();
     test_click();
+    test_capture_poly();
     C->shutdown();
     printf("test_liverec: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

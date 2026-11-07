@@ -1519,3 +1519,8 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 
 - KEYBOARD's on-screen keys: the boxes under the scale's notes use the parameter locks' colour (EC_C_LOCK), not red;
   the root's stays blue.
+
+## 67. 0.6.71: the key sounding fills over the scale's box (owner, 2026-11-06)
+
+- KEYBOARD's on-screen keys: the scale's boxes are drawn first; the key played (and a selected step's note) fills the
+  whole key over its box.

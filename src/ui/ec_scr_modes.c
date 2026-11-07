@@ -165,6 +165,27 @@ static void keyboard_screen(const ec_app_t *a)
             R(EC_C_L12, 3 + i * 7, 20, 5, 30);
         for (i = 0; i < 11 && !sl; i++)            /* the sharps between the naturals (F# G# A# C# D#) */
             R(EC_C_BLACK, 3 + GAP[i] * 7 + 4, 20, 4, 18);
+        {                                          /* 0.6.68 (owner): a box at the foot of each key in the scale:
+                                                    * the lock colour, the root blue (no scale: the root only); 0.6.71: drawn first, a
+                                                    * key sounding fills over it */
+            const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f), root = a == &ec_app ? ec_kb_root() : 0;
+            for (k = 0; k < EC_NKEY; k++) {
+                const int lo = ec_key_lower(k), up = ec_key_upper(k), sm = disp_semis(a, k);
+                int c;
+                if (sm == EC_KB_NONE || (lo < 0 && (sl || up < 0 || up >= 11)))
+                    continue;
+                if (((sm - root) % 12 + 12) % 12 == 0)
+                    c = EC_C_SRC;
+                else if (a == &ec_app && scl > 1 && ec_kb_in_scale(sm))
+                    c = EC_C_LOCK;                 /* 0.6.70 (owner): the parameter locks' colour */
+                else
+                    continue;
+                if (lo >= 0)
+                    R(c, 3 + lo * 7, 45, 5, 5);
+                else
+                    R(c, 3 + GAP[up] * 7 + 4, 34, 4, 4);
+            }
+        }
         for (k = 0; k < EC_NKEY; k++) {            /* each key: sounding = the mode's colour; a selected step's note =
                                                     * white (its PITCH lock) */
             const int lo = ec_key_lower(k), up = ec_key_upper(k);
@@ -184,26 +205,6 @@ static void keyboard_screen(const ec_app_t *a)
                 R(c, 3 + lo * 7, 20, 5, 30);
             else if (up >= 0 && up < 11)
                 R(c, 3 + GAP[up] * 7 + 4, 20, 4, 18);
-        }
-        {                                          /* 0.6.68 (owner): a box at the foot of each key in the scale:
-                                                    * the lock colour, the root blue (no scale: the root only) */
-            const int scl = (int)floorf(v[EC_P_KB_SCALE] + 0.5f), root = a == &ec_app ? ec_kb_root() : 0;
-            for (k = 0; k < EC_NKEY; k++) {
-                const int lo = ec_key_lower(k), up = ec_key_upper(k), sm = disp_semis(a, k);
-                int c;
-                if (sm == EC_KB_NONE || (lo < 0 && (sl || up < 0 || up >= 11)))
-                    continue;
-                if (((sm - root) % 12 + 12) % 12 == 0)
-                    c = EC_C_SRC;
-                else if (a == &ec_app && scl > 1 && ec_kb_in_scale(sm))
-                    c = EC_C_LOCK;                 /* 0.6.70 (owner): the parameter locks' colour */
-                else
-                    continue;
-                if (lo >= 0)
-                    R(c, 3 + lo * 7, 45, 5, 5);
-                else
-                    R(c, 3 + GAP[up] * 7 + 4, 34, 4, 4);
-            }
         }
     }
     ec_scr_step_strip(a, 56, 68, 0);              /* 0.6.57 (owner): LOOP ENGINE's strip, the playhead moving */

@@ -140,10 +140,17 @@ void ec_lp_algo(int det)
     const int on_page = f >= base && f < base + 16 ? f - base + 1 : 0;   /* 0 = none on this page (LIVE) */
     const int max = clampi(len_now() - base, 0, 16);
     const int to = clampi(on_page + det, 0, max);
+    ec_lp_target_to(to ? base + to : 0);
+}
+
+/* 0.6.54 (QA C5): one step (1..) the target and the selection, 0 LIVE: KEYBOARD's advance moves both, so ALGO counts on
+ * from the step shown */
+void ec_lp_target_to(int t)
+{
     memset(SEL, 0, sizeof SEL);
-    P->target = to ? base + to : 0;
-    if (to)
-        sel_set(base + to - 1, 1);
+    P->target = t;
+    if (t > 0)
+        sel_set(t - 1, 1);
     A->redraw = 1;
 }
 

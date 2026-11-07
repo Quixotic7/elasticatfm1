@@ -1013,6 +1013,13 @@ static void presets(int d)
     char lb[16], sub[16];
     const ec_ss_sample_t *x;
     const int mode = ec_app_mode();
+    if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track, no pop-up (the
+                                                    * header's target box says it); 0.6.54 (QA C2): before the bus
+                                                    * return, so it walks on from S1 / S2 too */
+        const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
+        ec_pn_select_target(cur + (d > 0 ? 1 : -1));
+        return;
+    }
     if (A->bus)
         return;
     if ((ec_lp_active() || mode == EC_MODE_PAGES) && !A->step_held) {   /* 0.6.14: every track page, PAGES */
@@ -1022,12 +1029,6 @@ static void presets(int d)
     if (mode == EC_CAT_FILE && !A->settings && (ec_file_page() == EC_PIC_FILE || ec_file_page() == EC_PIC_POOL)) {
         ec_file_preview_toggle();                  /* 0.6.15 (owner): BROWSE / POOL: PRESETS = the preview on / off;
                                                     * the editors: the track's slot (below, the pool list pop-up) */
-        return;
-    }
-    if (mode == EC_CAT_MASTER && !A->settings) {   /* 0.6.14 (owner): MIX: PRESETS selects the track, no pop-up (the
-                                                    * header's target box says it) */
-        const int cur = A->bus ? EC_NTRACK - 1 + A->bus : A->track;
-        ec_pn_select_target(cur + (d > 0 ? 1 : -1));
         return;
     }
     {   /* the slot the knob starts from: the held step's lock, else the track's */

@@ -956,7 +956,10 @@ int ec_app_randomize_page(uint32_t *rng)
         return 0;
     ec_e5_edit_params(A->track, ids, n, "RANDOM");
     for (i = 0; i < n; i++) {
-        const ec_param_def_t *d = &EC_PARAMS[ids[i]];
+        /* 0.6.54 (QA C7): INS 2's P1..P8 roll in the FX param they stand for (its range, its options); every number
+         * lands on its own step (PITCH whole semitones, not +5.4) */
+        const int did = def_id(A, ids[i]);
+        const ec_param_def_t *d = &EC_PARAMS[did];
         float x;
         *rng ^= *rng << 13, *rng ^= *rng >> 17, *rng ^= *rng << 5;
         if (d->kind == EC_PK_OPT)
@@ -967,8 +970,10 @@ int ec_app_randomize_page(uint32_t *rng)
             x = d->min + (d->max - d->min) * ((float)(*rng >> 8) / 16777216.0f);
             if (d->flags & EC_PF_INT)
                 x = floorf(x + 0.5f);
+            else if (d->step > 0 && !(d->flags & EC_PF_EXPSTEP))
+                x = d->min + floorf((x - d->min) / d->step + 0.5f) * d->step;
         }
-        v[ids[i]] = ec_param_clamp(ids[i], x);
+        v[ids[i]] = ec_param_clamp(did, x);
         ec_seq_param_edited(&A->seq, A->track, ids[i]);
     }
     ec_seq_touch(&A->seq, A->track);
@@ -1428,6 +1433,15 @@ void ec_app_tick(const ec_input_t *in)
 {
     int t;
     A->ms = in->ms;
+    {   /* 0.6.54 (QA C4): the step page shown stays inside the track's length (a LEN edit, an undo, a recall, another
+         * track): never a page past the end, where a key would write a trig no one sees */
+        const int pages = (ec_seq_pattern_steps(&A->seq, A->track) + 15) / 16;
+        if (pages > 0 && A->step_page >= pages) {
+            A->step_page = pages - 1;
+            A->step_held = 0;
+            A->redraw = 1;
+        }
+    }
     {   /* 0.6.50: a live matrix route on the track shown: its bars and pictures move, so the screen follows */
         const float *tv0 = ec_project_track(&A->proj, A->track)->v;
         int k;

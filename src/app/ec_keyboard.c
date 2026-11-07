@@ -77,7 +77,7 @@ static void enter_step(int semis, int slice, int vel)
     if (A->fn)                                     /* SHIFT + the key: the other */
         adv = !adv;
     if (adv) {
-        P->target = P->target % len + 1;
+        ec_lp_target_to(P->target % len + 1);     /* 0.6.54 (QA C5): the selection moves with it (ALGO's start) */
         A->step_page = (P->target - 1) / 16;
     }
 }

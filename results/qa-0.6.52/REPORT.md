@@ -1,6 +1,6 @@
 # QA pass, Elasticat 0.6.52 (2026-11-06)
 
-**Outcome:** A1-A5 fixed in 0.6.53 (docs/UX-V2.md §49, test_proj). The rest is open.
+**Outcome:** A1-A5 fixed in 0.6.53 (docs/UX-V2.md §49, test_proj); C1, C2, C4, C5, C7 in 0.6.54 (§50). The rest is open.
 
 main at fc47945. Five parallel sweeps, about 140 scripted harness runs plus sanitizer builds and loader fuzzing:
 

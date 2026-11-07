@@ -515,6 +515,12 @@ static void test_loop_menus(void)
     turn(FM1P_E_K1, 1);
     let_b(4);
     CHECK(v[EC_P_MODE] == 1 && A->msg_ms && !strcmp(A->msg, "STOP FIRST"), "playing: the warp menu refuses (%s)", A->msg);
+    hold_b(3);                                       /* 0.6.54 (QA C1): the machine menu too */
+    run(450);
+    turn(FM1P_E_K1, 1);
+    let_b(3);
+    CHECK(v[EC_P_MACHINE] == EC_MACH_LOOP && !strcmp(A->msg, "STOP FIRST"), "playing: the machine menu refuses (%g, %s)",
+          v[EC_P_MACHINE], A->msg);
     press(FM1P_B_PLAY, 40);
     A->track = 0;
 }

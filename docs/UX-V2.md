@@ -1329,3 +1329,14 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - A5: the recorder's setup on a track with SLOT OFF records into the next free slot (NO FREE SLOT when the pool is
   full), never over slot 1.
 - test_proj checks each.
+
+## 50. 0.6.54: the QA pass's quick fixes (results/qa-0.6.52/REPORT.md C1, C2, C4, C5, C7, 2026-11-06)
+
+- C1: LOOP ENGINE's B3 hold menu (MACHINE) says STOP FIRST while playing, as the warp menu and LOOP SETUP do.
+- C2: MIX: PRESETS walks the targets on from S1 / S2 (it stopped at S1).
+- C4: the step page shown stays inside the track's length: a shorter LEN (PAGES, B11 + ALGO, an undo, a recall,
+  another track) brings it back, so a white key never writes a trig past the end.
+- C5: KEYBOARD: a note's advance moves the selected step with the target, so ALGO counts on from the step shown.
+- C7: the dice land every number on its own step (PITCH whole semitones) and roll INSERT 2's P1..P8 in the FX param
+  each stands for (its range, its options).
+- test_ux (test_qa_quick) and test_fx2 check each.

@@ -1225,6 +1225,86 @@ static void run_audio(int n)                       /* run, with the engine (its 
         C->audio(out, FM1P_BLOCK);
 }
 
+/* 0.6.54: the QA pass's quick fixes (results/qa-0.6.52/REPORT.md C2, C4, C5, C7; C1 is test_fx2's) */
+static void test_qa_quick(void)
+{
+    float *v;
+    int c, p, i, bad = 0, rolled = 0;
+    uint32_t rng = 12345;
+    /* C2: MIX's PRESETS walks T6 -> S1 -> S2 and back */
+    to(EC_CAT_MASTER);
+    ec_pn_select_target(5);
+    turn(FM1P_E_PRESETS, 1);
+    run(20);
+    CHECK(A->bus == 1, "MIX: PRESETS T6 -> S1 (bus %d)", A->bus);
+    turn(FM1P_E_PRESETS, 1);
+    run(20);
+    CHECK(A->bus == 2, "S1 -> S2 (bus %d)", A->bus);
+    turn(FM1P_E_PRESETS, -1);
+    run(20);
+    turn(FM1P_E_PRESETS, -1);
+    run(20);
+    CHECK(A->bus == 0 && A->track == 5, "back: S1, then T6 (bus %d, track %d)", A->bus, A->track);
+    ec_pn_select_target(0);
+    /* C4: the step page follows a shorter length */
+    to(EC_CAT_FILT);
+    v = ec_app_params(A);
+    v[EC_P_PATTERN_STEPS] = 32;
+    ec_seq_timing_changed(&A->seq);
+    turn(FM1P_E_PRESETS, 1);
+    run(20);
+    CHECK(A->step_page == 1, "LEN 32: PRESETS to page 2 (%d)", A->step_page);
+    v[EC_P_PATTERN_STEPS] = 16;
+    ec_seq_timing_changed(&A->seq);
+    run(20);
+    CHECK(A->step_page == 0, "LEN 16: back on page 1 (%d)", A->step_page);
+    /* C5: KEYBOARD: a note advances the target; ALGO counts on from the target shown */
+    to(EC_MODE_KEYBOARD);
+    ec_lp_target_to(0);
+    turn(FM1P_E_ALGO, 1);
+    run(20);
+    CHECK(A->pn.target == 1, "ALGO: step 1 (%d)", A->pn.target);
+    if (!ec_as->advance)
+        ec_pn_item_edit(EC_UX_ADVANCE, 1);
+    tapkey(0, wkey(5), 40);
+    run(20);
+    CHECK(A->pn.target == 2 && ec_lp_first() == 1, "a note: the target advanced to 2, selected too (%d, %d)",
+          A->pn.target, ec_lp_first() + 1);
+    turn(FM1P_E_ALGO, 1);
+    run(20);
+    CHECK(A->pn.target == 3, "ALGO +1: step 3, not back to 2 (%d)", A->pn.target);
+    ec_lp_target_to(0);
+    clear_steps();
+    /* C7: the dice land every number on its own step and inside its range */
+    for (c = 0; c < 4; c++) {
+        static const int CATS[4] = {EC_CAT_SRC, EC_CAT_FILT, EC_CAT_AMP, EC_CAT_FX};
+        to(CATS[c]);
+        v = ec_app_params(A);
+        for (p = 0; p < ec_cat_pages(CATS[c], v); p++) {
+            ec_page_t pg;
+            ec_app_set_page(CATS[c], p);
+            ec_app_page(A, &pg);
+            rolled += ec_app_randomize_page(&rng);
+            for (i = 0; i < pg.n; i++) {
+                const int id = pg.it[i].id, d = ec_param_def_id(v, id) >= 0 ? ec_param_def_id(v, id) : id;
+                const ec_param_def_t *e = &EC_PARAMS[d];
+                float q;
+                if (pg.it[i].kind != EC_IT_PARAM || e->kind != EC_PK_NUM || e->step <= 0 || (e->flags & EC_PF_EXPSTEP))
+                    continue;
+                q = (v[id] - e->min) / e->step;
+                if (fabsf(q - floorf(q + 0.5f)) > 0.01f || v[id] < e->min - 1e-3f || v[id] > e->max + 1e-3f) {
+                    if (!bad)
+                        printf("  off its step: %s = %g (step %g, %g..%g)\n", e->name, v[id], e->step, e->min, e->max);
+                    bad++;
+                }
+            }
+            ec_e5_undo(0);
+        }
+        ec_app_set_page(CATS[c], 0);
+    }
+    CHECK(rolled > 0 && !bad, "the dice: %d params rolled, %d off their step or range", rolled, bad);
+}
+
 static void test_mod_display(void)
 {
     float *v, mv[EC_NP], base, lo = 1e9f, hi = -1e9f;
@@ -1343,6 +1423,7 @@ int main(int argc, char **argv)
     test_labels();
     test_dice();
     test_mod_display();
+    test_qa_quick();
     C->shutdown();
     printf("test_ux: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

@@ -214,7 +214,8 @@ static void apply(void)
         ec_app_mark_dirty();
         return;
     }
-    if (g.id == EC_P_MODE && A->seq.playing) {   /* the warp mode changes only while stopped (EC_IF_STOPPED) */
+    if ((g.id == EC_P_MODE || g.id == EC_P_MACHINE) && A->seq.playing) {   /* the warp mode and (0.6.54, QA C1) the
+                                                    * machine change only while stopped (EC_IF_STOPPED) */
         ec_app_alert("STOP FIRST");
         return;
     }

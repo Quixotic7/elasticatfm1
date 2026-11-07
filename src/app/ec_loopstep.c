@@ -380,6 +380,10 @@ void ec_lp_loop_note(int i, int down)
         else
             g.span = with;
         g.keys = with;
+        if (g.range && ec_lp_first() < 0) {        /* 0.6.77 (owner): LIVE range keys override the steps' range */
+            A->seq.tr[A->track].live_range = 1;
+            A->seq.tr[A->track].dirty = 1;
+        }
         span_of(&lo, &hi);                         /* the region / range follows at once (the cells, the markers and
                                                     * LEDs too), not only on the last release: LIVE the track's,
                                                     * 0.6.24: with steps selected theirs (the entry), the same way */
@@ -395,6 +399,8 @@ void ec_lp_loop_note(int i, int down)
     g.keys &= ~(1u << i);
     if (g.keys)
         return;
+    A->seq.tr[A->track].live_range = 0;            /* 0.6.77: the steps' range locks again */
+    A->seq.tr[A->track].dirty = 1;
     span_of(&lo, &hi);
     if (ec_lp_first() >= 0)
         write_entry(lo, hi, 1);                    /* (the same values again, with the message) */

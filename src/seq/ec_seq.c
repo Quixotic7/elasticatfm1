@@ -366,9 +366,9 @@ static void enter_step(ec_seq_t *s, int t, int reset, int idx, int pass, int64_t
             start_slides(s, t, rec, pos);
     }
     fires = active && evaluate_trig(s, t, rec);
-    if (fires && (st->kb_down || st->live_keys) && !is_slice(m))
-        fires = 0;                            /* 0.6.62 (owner): a live key / KEYBOARD note held overrides the
-                                               * sequence on its track until it comes up */
+    /* 0.6.77 (owner): live play overrides only its own part; the steps keep firing with every other lock: the loop
+     * keys the loop points (the DSP resolves the region from the keys held), the range keys the range (live_range,
+     * ec_seq_value), the KEYBOARD the notes (live_pitch, ec_seq_value). (0.6.62 muted the whole sequence.) */
     ghost = fires && ec_step_is_ghost(rec, v);
     if (fires)
         st->rat_left = 0;                     /* (a new trig supersedes the last one's ratchets) */
@@ -1328,6 +1328,8 @@ float ec_seq_value(const ec_seq_t *s, int t, int id)
         if (st->aud_step < EC_MAXSTEPS && ec_step_lock_get(&tr->steps[st->aud_step], id, &x))
             return x;
     }
+    if (st->live_range && (id == EC_P_RANGE_START || id == EC_P_RANGE_END))
+        return ptr(s, t)->v[id];                   /* 0.6.77: the range keys held: the range they set, no step lock */
     if (id == EC_P_PITCH && st->live_pitch_on)   /* 0.6.1: the track's PITCH now + the key (PITCH turned while held) */
         return ptr(s, t)->v[EC_P_PITCH] + st->live_semis;
     if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END) {

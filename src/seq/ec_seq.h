@@ -64,6 +64,7 @@ typedef struct {
     int live_pitch_on;
     float live_semis;              /* 0.6.1: the key's semitones (the pitch follows PITCH while held) */
     int kb_down;                   /* 0.6.1: keyboard keys held (stopped: the loop auditioned until the last) */
+    int live_range;                /* 0.6.77: the range keys held: the range ignores the steps' range locks */
     uint32_t live_keys;            /* held live loop keys (bit k-1), for the UI */
     int aud_step;                  /* 0.6.30: the selected step (-1 none): stopped, the region / range values heard
                                     * are its locks (the pads and keys audition in its range) */

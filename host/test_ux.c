@@ -1450,15 +1450,73 @@ static void test_062(void)
         ec_project_track(&A->proj, A->track)->steps[i].trig = 1;
     ec_seq_touch(&A->seq, A->track);
     run_audio(300);
-    key(0, wkey(5), 1);
-    run_audio(20);
-    f0 = A->seq.tr[A->track].fired;
-    run_audio(700);
-    CHECK(A->seq.tr[A->track].fired == f0, "a key held overrides the sequence (%d -> %d fired)", f0,
-          A->seq.tr[A->track].fired);
-    key(0, wkey(5), 0);
-    run_audio(400);
-    CHECK(A->seq.tr[A->track].fired > f0, "let go: the sequence again");
+    {                                              /* 0.6.77 (owner): a note held overrides the notes only */
+        float x = 0;
+        ec_step_lock_set(&ec_project_track(&A->proj, A->track)->steps[0], EC_P_PITCH, 7.0f);
+        ec_step_lock_set(&ec_project_track(&A->proj, A->track)->steps[0], EC_P_FILTER_CUTOFF, 0.25f);
+        ec_seq_touch(&A->seq, A->track);
+        key(0, wkey(7), 1);                        /* E4: +4 */
+        run_audio(20);
+        f0 = A->seq.tr[A->track].fired;
+        for (i = 0; i < 200 && !(A->seq.tr[A->track].hold_on[EC_P_FILTER_CUTOFF]); i++)
+            run_audio(5);
+        x = ec_seq_value(&A->seq, A->track, EC_P_FILTER_CUTOFF);
+        CHECK(A->seq.tr[A->track].fired > f0 && x == 0.25f &&
+                  ec_seq_value(&A->seq, A->track, EC_P_PITCH) == v[EC_P_PITCH] + 4,
+              "a note held: the steps still fire (%d -> %d) with their CUTOFF lock (%g), the pitch is the key's (%g)",
+              f0, A->seq.tr[A->track].fired, x, ec_seq_value(&A->seq, A->track, EC_P_PITCH));
+        key(0, wkey(7), 0);
+        run_audio(400);
+        for (i = 0; i < 400 && ec_seq_value(&A->seq, A->track, EC_P_PITCH) != 7.0f; i++)
+            run_audio(5);
+        CHECK(ec_seq_value(&A->seq, A->track, EC_P_PITCH) == 7.0f, "let go: the step's own pitch lock again (%g, base %g)",
+              ec_seq_value(&A->seq, A->track, EC_P_PITCH), v[EC_P_PITCH]);
+        ec_step_clear(&ec_project_track(&A->proj, A->track)->steps[0]);
+        ec_project_track(&A->proj, A->track)->steps[0].trig = 1;
+    }
+    {                                              /* 0.6.77: LOOP ENGINE: loop keys = the loop points, range keys = the
+                                                    * range; the steps keep firing with their other locks */
+        ec_step_t *s0 = &ec_project_track(&A->proj, A->track)->steps[0];
+        const int rp = ec_cat_key_page(EC_CAT_SRC, 5);
+        v[EC_P_MACHINE] = EC_MACH_LOOP;
+        ec_step_lock_set(s0, EC_P_FILTER_CUTOFF, 0.25f);
+        ec_step_lock_set(s0, EC_P_RANGE_START, 96.0f);
+        ec_seq_touch(&A->seq, A->track);
+        ec_pn_goto(EC_CAT_SRC, ec_src_loop_page());
+        key(0, 2, 1);                              /* W3: a loop key */
+        run_audio(20);
+        f0 = A->seq.tr[A->track].fired;
+        run_audio(600);
+        for (i = 0; i < 400 && ec_seq_value(&A->seq, A->track, EC_P_FILTER_CUTOFF) != 0.25f; i++)
+            run_audio(5);
+        CHECK(A->seq.tr[A->track].fired > f0 && ec_seq_value(&A->seq, A->track, EC_P_FILTER_CUTOFF) == 0.25f,
+              "a loop key held: the steps still fire with their CUTOFF lock (%d -> %d)", f0, A->seq.tr[A->track].fired);
+        key(0, 2, 0);
+        run_audio(50);
+        CHECK(rp >= 0, "LOOP ENGINE's RANGE page (%d)", rp);
+        ec_pn_goto(EC_CAT_SRC, rp);
+        key(0, 0, 1);                              /* W1: the range 0..8 */
+        run_audio(10);
+        for (i = 0; i < 400 && !(A->seq.tr[A->track].hold_on[EC_P_RANGE_START] &&
+                                 ec_seq_value(&A->seq, A->track, EC_P_FILTER_CUTOFF) == 0.25f); i++)
+            run_audio(5);
+        CHECK(A->seq.tr[A->track].hold_on[EC_P_RANGE_START] &&
+                  ec_seq_value(&A->seq, A->track, EC_P_RANGE_START) == 0.0f &&
+                  ec_seq_value(&A->seq, A->track, EC_P_FILTER_CUTOFF) == 0.25f,
+              "a range key held: its range wins over the step's (%g), the CUTOFF lock still plays",
+              ec_seq_value(&A->seq, A->track, EC_P_RANGE_START));
+        key(0, 0, 0);
+        for (i = 0; i < 400 && ec_seq_value(&A->seq, A->track, EC_P_RANGE_START) != 96.0f; i++)
+            run_audio(5);
+        CHECK(!A->seq.tr[A->track].live_range && ec_seq_value(&A->seq, A->track, EC_P_RANGE_START) == 96.0f,
+              "let go: the step's range lock again (%g)", ec_seq_value(&A->seq, A->track, EC_P_RANGE_START));
+        ec_step_clear(s0);
+        v[EC_P_RANGE_START] = 0;
+        v[EC_P_RANGE_END] = 128;
+        v[EC_P_LOOP_START] = 0;
+        v[EC_P_LOOP_END] = 128;
+        to(EC_MODE_KEYBOARD);
+    }
     press(FM1P_B_PLAY, 40);
     clear_steps();
     v[EC_P_MACHINE] = EC_MACH_LOOP;

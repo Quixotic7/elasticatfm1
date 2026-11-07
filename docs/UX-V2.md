@@ -1563,3 +1563,13 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   state (and its save timer, from the old clock) in statics, so after a reset nothing was restored (LOOP ENGINE on
   T1) and nothing was saved for a while. `ec_ui_init` (from ec_pn_init) starts it over at every init.
 - test_ux test_restart: KEYBOARD on T3's SCALE page, shutdown + init: back there (fails without the fix).
+
+## 73. 0.6.77: live play overrides only its own part (owner, 2026-11-06)
+
+- 0.6.62 muted the whole sequence while a live key or KEYBOARD note was held. Now the steps keep firing with every
+  lock (CUTOFF, the trig's conditions, ratchets ..) and each kind of live play overrides only its own part:
+  - loop keys (LOOP ENGINE's LOOP layer): the loop start and end (the DSP resolves the region from the keys held);
+  - range keys (the RANGE page): the range start and end (`live_range`: the steps' R-START / R-END locks are
+    ignored while a range key is held);
+  - KEYBOARD notes: the pitch (the held note wins over the steps' PITCH locks); the steps still trigger.
+- test_ux test_062: each of the three, with a CUTOFF lock still applying.

@@ -131,6 +131,8 @@ typedef struct {
     int8_t kb_semis[32];       /* the note a key started (its release) */
     uint32_t kb_held;          /* 0.6.1: the keys held (bit k), the last one pressed (the header) */
     int kb_last;
+    uint32_t kb_stamp[32];     /* 0.6.67: press order (the newest key still held takes the note back) */
+    uint32_t kb_clock;
     /* CROSSFADER */
     int xf_key;                /* the W key held gliding (0..11), -1 none */
     float xf_target;
@@ -318,7 +320,7 @@ int ec_kb_in_scale(int semis);                /* 0.6.62: the note is in the trac
 int ec_kb_root(void);                         /* 0.6.62: the scale's root, 0 = C */
 void ec_kb_page(int d, int absolute);         /* 0.6.62: KEYBOARD's knob page (SEL by d; absolute: page d) */
 int ec_kb_lit_key(void);                      /* the key lit as sounding (the note + PITCH), -1 none */
-const char *ec_kb_held_text(void);            /* the header's text for the last key held ("NOTE C#4", "SLICE 3"), 0 */
+const char *ec_kb_held_text(void);            /* the header's text: the notes held ("C4 E4"), "SLICE 3", 0 */
 /* ---- ec_xfd.c ---- */
 void ec_xfd_white(int i, int down, int lean);
 void ec_xfd_black(int key, int down);

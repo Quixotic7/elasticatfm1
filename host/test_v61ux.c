@@ -344,8 +344,8 @@ static void test_held(void)
         {EC_CAT_FILT, K_BTN, FM1P_B_REC, 450, "REC SETUP", EC_C_L12},
         {EC_CAT_MASTER, K_WK, 2, 300, "MUTE T2", EC_C_L12},
         {EC_MODE_PAGES, K_BK, 1, 300, "LOOP PAGE 1", EC_C_L12},
-        {EC_MODE_KEYBOARD, K_WK, 5, 450, "NOTE C4", EC_C_L12},
-        {EC_MODE_KEYBOARD, K_WK, 1, 450, "NOTE F3", EC_C_L12},
+        {EC_MODE_KEYBOARD, K_WK, 5, 450, "C4", EC_C_L12},
+        {EC_MODE_KEYBOARD, K_WK, 1, 450, "F3", EC_C_L12},
         {EC_CAT_SRC, K_WK, 3, 450, "LOOP KEY 3", EC_C_L12},
     };
     int i, bar, bx;
@@ -355,8 +355,10 @@ static void test_held(void)
         to(h->mode);
         held_down(h, 1);
         run(60);
-        CHECK(!ec_hdr_custom() || h->kind == K_SHIFTBK || (h->want[0] == 'F' && h->want[2] == ' '),
-              "[%s] a tap (60 ms): no held text yet (%s)", h->want, hdr(0));   /* (0.6.12: F1 / F2 at once) */
+        CHECK(!ec_hdr_custom() || h->kind == K_SHIFTBK || (h->want[0] == 'F' && h->want[2] == ' ') ||
+                  h->mode == EC_MODE_KEYBOARD,
+              "[%s] a tap (60 ms): no held text yet (%s)", h->want, hdr(0));   /* (0.6.12: F1 / F2 at once; 0.6.67:
+                                                                 * KEYBOARD's notes at once) */
         run(290);                                              /* (0.6.14: past the 300 ms quick click) */
         bx = ec_lp_active() && !A->bus ? 14 + EC_KIT_STEPOFF : 14;   /* 0.6.40: after the step page box */
         CHECK(!strcmp(hdr(&bar), h->want) && bar == h->bar && px(bx, 0) == h->bar,

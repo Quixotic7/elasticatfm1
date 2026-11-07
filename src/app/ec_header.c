@@ -129,7 +129,7 @@ static int builtin(char *out, int cap)
         return say(out, cap, EC_C_L12, "FILL", 0);
     if (late && plain && P->slot_key && quick_text(mode, P->slot_key))   /* the quick setting (K1 / SEL) */
         return say(out, cap, EC_C_L12, quick_text(mode, P->slot_key), 0);
-    if (late && plain && mode == EC_MODE_KEYBOARD && ec_kb_held_text())
+    if (plain && mode == EC_MODE_KEYBOARD && ec_kb_held_text())   /* 0.6.67: at once, the notes held */
         return say(out, cap, EC_C_L12, ec_kb_held_text(), 0);
     if (late && A->step_held && !A->bus && !A->settings && !A->ux.f3) {   /* steps: their locks */
         const int n = __builtin_popcount(A->step_held);

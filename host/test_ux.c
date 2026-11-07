@@ -957,6 +957,32 @@ static void test_keyboard(void)
     key(0, wkey(5), 1);                                       /* C4: the sample's pitch */
     run(20);
     CHECK(A->seq.tr[A->track].live_pitch_on && A->seq.tr[A->track].live_pitch == v[EC_P_PITCH], "C4 plays at pitch 0");
+    CHECK(ec_kb_held_text() && !strcmp(ec_kb_held_text(), "C4"), "0.6.67: the header names the note, no label (%s)",
+          ec_kb_held_text() ? ec_kb_held_text() : "-");
+    {                                                         /* 0.6.67: alternating keys that overlap */
+        int i;
+        for (i = 0; i < 6; i++) {
+            const int nk = wkey(i & 1 ? 5 : 7), ok = wkey(i & 1 ? 7 : 5);   /* C4 / E4 */
+            key(0, nk, 1);
+            run(10);
+            key(0, ok, 0);
+            run(10);
+            CHECK(A->seq.tr[A->track].live_pitch_on && A->seq.tr[A->track].live_semis == (i & 1 ? 0 : 4) &&
+                      ec_kb_lit_key() >= 0,
+                  "overlap %d: the key still held sounds and is lit (%g)", i, A->seq.tr[A->track].live_semis);
+        }
+        key(0, wkey(7), 1);                                   /* C4 held, E4 too */
+        run(10);
+        CHECK(ec_kb_held_text() && !strcmp(ec_kb_held_text(), "C4 E4"), "both notes held: both named (%s)",
+              ec_kb_held_text() ? ec_kb_held_text() : "-");
+        key(0, wkey(5), 0);                                   /* C4 up: E4 sounds */
+        run(10);
+        CHECK(A->seq.tr[A->track].live_pitch_on && A->seq.tr[A->track].live_semis == 4, "C4 up: E4 takes the note");
+        key(0, wkey(7), 0);
+        run(10);
+        CHECK(!A->seq.tr[A->track].live_pitch_on && !ec_kb_held_text(), "all up: silent, no header note");
+    }
+    key(0, wkey(5), 1);
     key(0, wkey(5), 0);
     run(20);
     press(FM1P_B_OCTUP, 40);

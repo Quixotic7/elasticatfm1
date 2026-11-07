@@ -9,6 +9,7 @@
  * higher key); ALGO shows nothing but the step; the header names the key held. */
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "ec_app.h"
 
@@ -189,6 +190,16 @@ void ec_kb_key(int k, int down, int vel)
             P->kb_held &= ~(1u << k);
             ec_seq_keyboard(&A->seq, A->track, (float)P->kb_semis[k], 0, 0);
             ec_liverec_key(k, 0);                  /* 0.6.59: live REC: the note's length */
+            if (!slice && P->kb_held) {            /* 0.6.67: keys overlapping: the newest still held sounds */
+                int j, best = -1;
+                for (j = 0; j < EC_NKEY && j < 32; j++)
+                    if ((P->kb_held >> j & 1u) && (best < 0 || P->kb_stamp[j] > P->kb_stamp[best]))
+                        best = j;
+                if (best >= 0) {
+                    P->kb_last = best;
+                    ec_seq_keyboard_retune(&A->seq, A->track, (float)P->kb_semis[best]);
+                }
+            }
         }
         A->redraw = 1;
         return;
@@ -200,6 +211,7 @@ void ec_kb_key(int k, int down, int vel)
     }
     P->kb_held |= 1u << k;                         /* 0.6.1: the header's key */
     P->kb_last = k;
+    P->kb_stamp[k] = ++P->kb_clock;
     entry = P->target && !ec_liverec_on();         /* 0.6.57 (owner): live REC records what is played where it is
                                                     * played, a target step or not (it wrote the target and advanced) */
     if (!entry && !(slice && up == 10))
@@ -265,18 +277,32 @@ int ec_kb_lit_key(void)
 const char *ec_kb_held_text(void)
 {
     static const char *const N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    static char b[16];
+    static char b[24];
     const int k = P->kb_last;
-    int s;
-    if (A->bus || ec_app_mode() != EC_MODE_KEYBOARD || k < 0 || k >= EC_NKEY || !(P->kb_held >> k & 1u))
+    int j, n = 0, used[32] = {0};
+    if (A->bus || ec_app_mode() != EC_MODE_KEYBOARD || !P->kb_held)
         return 0;
-    if (ec_kb_slice_track() && ec_key_upper(k) >= 0) {   /* a slice pick (B11: the bank) */
-        if (ec_key_upper(k) == 10)
+    if (ec_kb_slice_track()) {                     /* a slice pick (B11: the bank) */
+        if (k < 0 || k >= EC_NKEY || !(P->kb_held >> k & 1u) || ec_key_upper(k) < 0 || ec_key_upper(k) == 10)
             return 0;
         snprintf(b, sizeof b, "SLICE %d", P->kb_bank * 10 + ec_key_upper(k) + 1);
         return b;
     }
-    s = ec_kb_semis(k);
-    snprintf(b, sizeof b, "NOTE %s%d", N[(s % 12 + 12) % 12], 4 + (s >= 0 ? s / 12 : -((11 - s) / 12)));
-    return b;
+    b[0] = 0;                                      /* 0.6.67 (owner): the notes held, in the order pressed, no label */
+    for (;;) {
+        int best = -1, s, len;
+        for (j = 0; j < EC_NKEY && j < 32; j++)
+            if ((P->kb_held >> j & 1u) && !used[j] && (best < 0 || P->kb_stamp[j] < P->kb_stamp[best]))
+                best = j;
+        if (best < 0)
+            break;
+        used[best] = 1;
+        s = P->kb_semis[best];
+        len = (int)strlen(b);
+        if (len + 6 >= (int)sizeof b)
+            break;
+        snprintf(b + len, sizeof b - (size_t)len, "%s%s%d", n++ ? " " : "", N[(s % 12 + 12) % 12],
+                 4 + (s >= 0 ? s / 12 : -((11 - s) / 12)));
+    }
+    return n ? b : 0;
 }

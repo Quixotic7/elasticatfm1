@@ -1267,8 +1267,10 @@ void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
             emit(s, &e);
         }
     } else {
-        st->live_pitch_on = 0;
         st->kb_down = st->kb_down > 0 ? st->kb_down - 1 : 0;
+        if (!st->kb_down)                          /* 0.6.67: only the last key up ends the live note (overlapping
+                                                    * keys: the one still held keeps it, ec_seq_keyboard_retune) */
+            st->live_pitch_on = 0;
         if (!st->kb_down && s->playing) {          /* 0.6.59 (owner): playing, the note ends as the key comes up (it
                                                     * held on; a recorded step ends after its length the same way) */
             ec_event_t e = ev0(EC_EV_NOTE_OFF, t);
@@ -1281,6 +1283,22 @@ void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
             emit(s, &e);
         }
     }
+    st->dirty = 1;
+}
+
+/* 0.6.67: a key released while another is held: the newest key still held takes the note back, legato (no new
+ * note-on: the voice glides on at its pitch) */
+void ec_seq_keyboard_retune(ec_seq_t *s, int t, float semis)
+{
+    ec_seq_track_t *st;
+    if (t < 0 || t >= EC_NTRACK)
+        return;
+    st = &s->tr[t];
+    if (!st->kb_down)
+        return;
+    st->live_pitch = ptr(s, t)->v[EC_P_PITCH] + semis;
+    st->live_semis = semis;
+    st->live_pitch_on = 1;
     st->dirty = 1;
 }
 

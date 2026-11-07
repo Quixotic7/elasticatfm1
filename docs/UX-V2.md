@@ -1493,3 +1493,12 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   and ratchets, the playhead) and of LOOP ENGINE's WARP page (the track's warp mode); the header names each. IN
   SCALE: B4 TRIG, B5 WARP beside B1..B3.
 - test_ux (test_kb_more, the HOME / FILE checks), test_file check them.
+
+## 63. 0.6.67: KEYBOARD's header names the notes held; overlapping keys keep their note (owner, 2026-11-06)
+
+- The header names the notes held at once (no hold delay) and without a label: "C4", "C4 E4" (in the order
+  pressed). Slice tracks still show "SLICE 3".
+- Bug: alternating two keys fast (the next pressed before the last is up) lost the note: the first key's release
+  ended the live note, so the key still held was no longer lit and the track played its plain PITCH. Now only the
+  last key up ends the note; the newest key still held takes it back, legato (ec_seq_keyboard_retune).
+- test_ux (test_keyboard: overlapping keys, the header), test_v61ux check them.

@@ -1461,6 +1461,40 @@ static void test_062(void)
     ec_kb_page(0, 1);
 }
 
+/* 0.6.63 (owner): F1 / F2 + the white keys copy / cut / paste steps */
+static void test_clip_modes(void)
+{
+    static const int M[4] = {EC_CAT_FILT, EC_CAT_TRIG, EC_CAT_SRC, EC_CAT_AMP};
+    int m;
+    for (m = 0; m < 4; m++) {
+        ec_ptrack_t *tr;
+        to(M[m]);
+        ec_pn_select_target(0);
+        ec_lp_target_to(0);
+        clear_steps();
+        tr = ec_project_track(&A->proj, A->track);
+        tr->steps[0].trig = 1;
+        ec_step_lock_set(&tr->steps[0], EC_P_PITCH, 5);
+        ec_seq_touch(&A->seq, A->track);
+        run(1200);
+        btn(FM1P_B_OCTDN, 1);                      /* F1 held */
+        run(30);
+        tapkey(0, wkey(1), 40);                    /* copy step 1 */
+        tapkey(0, wkey(3), 40);                    /* paste on step 3 */
+        btn(FM1P_B_OCTDN, 0);
+        run(30);
+        CHECK(tr->steps[2].trig, "mode %d: F1 + W1, W3: step 1 pasted on step 3 (%s)", M[m], A->msg);
+        btn(FM1P_B_OCTUP, 1);                      /* F2 held: cut step 3, paste on step 5 (a move) */
+        run(30);
+        tapkey(0, wkey(3), 40);
+        tapkey(0, wkey(5), 40);
+        btn(FM1P_B_OCTUP, 0);
+        run(30);
+        CHECK(!tr->steps[2].trig && tr->steps[4].trig, "mode %d: F2 + W3, W5: step 3 moved to step 5 (%s)", M[m], A->msg);
+        clear_steps();
+    }
+}
+
 static void test_bank16(void)
 {
     float *v;
@@ -1674,6 +1708,7 @@ int main(int argc, char **argv)
     test_056();
     test_kb_rec();
     test_bank16();
+    test_clip_modes();
     test_062();
     test_algo_preview();
     C->shutdown();

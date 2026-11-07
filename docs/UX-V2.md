@@ -1454,3 +1454,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   the knob pages, B6..B10 the mod sources (LFO 1, LFO 2, ENV, VEL, AT: held + a knob maps it), B11 as before. The
   header names the scale (A MINOR).
 - test_ux (test_062) checks them.
+
+## 59. 0.6.63: F1 / F2 copy / cut on LOOP ENGINE's keys (owner, 2026-11-06)
+
+- LOOP ENGINE's white keys are the loop keys, so with F1 / F2 on (held or sticky) they never reached the steps:
+  copy / cut / paste of steps did nothing there. With F1 / F2 on they are the steps now, as on every other step
+  page. test_ux (test_clip_modes) copies and moves a step on FILTER, TRIG, LOOP ENGINE and AMP.

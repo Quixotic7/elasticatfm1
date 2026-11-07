@@ -773,6 +773,14 @@ static void white_down(int k, int i, int vel, int lean)
             ec_pn_select_target(i);                /* W1..W9: T1..T6 S1 S2 MST */
         return;
     }
+    if (!A->settings && mode == EC_CAT_SRC && !A->bus && (ec_pn_f(1) || ec_pn_f(2))) {   /* 0.6.63 (owner): LOOP
+                                                    * ENGINE's keys are the loop keys, so F1 / F2 on (copy / cut) never
+                                                    * reached the steps: with F1 / F2 on, the keys are the steps */
+        P->f_used = 3;
+        ec_clip_tap(EC_CK_STEP, A->step_page * 16 + i);
+        A->key_role[k] = R_SWALLOW;
+        return;
+    }
     if (!A->settings && ec_lp_sel_mode() && ec_lp_white(k, i, 1, vel)) {   /* 0.6.9 / 0.6.14: B11's STEP layer selects
                                                     * steps in LOOP ENGINE, TRIG and KEYBOARD */
         A->key_role[k] = R_LP;

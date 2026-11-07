@@ -23,6 +23,10 @@
 
 #include "ec_app.h"
 
+static uint32_t g_pass;                 /* 0.6.55: live recording passes (REC on), for their undo entries */
+static uint32_t g_snap_pass = 0xFFFFFFFFu;
+static int g_snap_track = -1, g_snap_pat = -1;
+
 #define A (&ec_app)
 #define P (&ec_app.pn)
 #define RS (&ec_app.proj.rec)
@@ -51,6 +55,7 @@ void ec_liverec_toggle(void)
         return;
     }
     P->lr_on = 1;
+    g_pass++;                                      /* 0.6.55: a new pass (its own undo entry) */
     P->lr_wait = P->lr_ci = 0;
     P->lr_writes = 0;
     P->lr_end = -1;
@@ -128,11 +133,18 @@ static int hit(int *step, int *mu)
     return 1;
 }
 
+/* 0.6.55 (QA B9): one undo entry a pass and track (the track as it was before its first recorded step), not one a
+ * step: a bar of automation no longer pushes the rest of the history out */
 static ec_step_t *step_rec(int step)
 {
     ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
-    ec_undo_steps(&A->e5.undo, &A->proj, A->track, step / 16, (uint16_t)(1u << (step % 16)), "REC",
-                  0xE000u + (uint32_t)step, A->ms);
+    if (g_snap_pass != g_pass || g_snap_track != A->track || g_snap_pat != A->proj.current) {
+        g_snap_pass = g_pass;
+        g_snap_track = A->track;
+        g_snap_pat = A->proj.current;
+        ec_app_undo_track("REC", 0);
+    }
+    (void)step;
     return &tr->steps[step];
 }
 

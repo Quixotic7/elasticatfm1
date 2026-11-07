@@ -19,6 +19,9 @@ typedef struct {
     int used;                    /* a knob turned during the hold (no tap) */
     uint16_t created;            /* slots this hold created (bit k) */
     int hot_id;                  /* the param the hold turned last (-1) */
+    int trk;                     /* 0.6.55: the track the hold works on (a track change mid-hold: still that one) */
+    int lvl_id;                  /* 0.6.55: the source's level param the hold raised from silent (-1), its value then */
+    float lvl_old;
     int row;                     /* the MATRIX page's selected row 0..7 */
     uint32_t bad_ms;             /* "NOT MODDABLE" / "MATRIX FULL" shown since */
     /* the live controls (0..1): aftertouch on the selected track, CC 1, CC 11 */

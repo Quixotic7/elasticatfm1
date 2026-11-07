@@ -88,8 +88,14 @@ enum { EC_U_PARAM = 1, EC_U_GLOBAL, EC_U_XFADE, EC_U_STEPS, EC_U_PARAMS /* 0.6.1
        EC_U_TRIM /* 0.6.1: a pool slot's trim (start, end, steps) */,
        EC_U_SLOTS /* 0.6.1: two pool slots swapped (FILE / POOL MOVE) with every reference */,
        EC_U_FXSWAP /* 0.6.3: INSERT 1 / 2 of a track, or SEND 1 / 2, swapped (FX SENDS: a held key) */,
-       EC_U_RAZOR /* 0.6.16: a track's slice table with its COUNT (the SLICE editor, the CNT knob) */ };
-#define EC_U_NV 16              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8; 0.6.49: a whole page) */
+       EC_U_RAZOR /* 0.6.16: a track's slice table with its COUNT (the SLICE editor, the CNT knob) */,
+       EC_U_BLOB /* 0.6.55: a big part (a pattern, the scenes, a track) kept in the shared snapshot ring */,
+       EC_U_SLOT /* 0.6.55: a pool slot as it was before FREE (its file, trim, BPM, steps, gain) */ };
+/* 0.6.55 (QA B4-B9): what an EC_U_BLOB entry holds (its id) */
+enum { EC_UB_PATTERN = 1 /* pat[pat] and pe5[pat] */, EC_UB_SCENES /* e5.sc */,
+       EC_UB_TRACK /* pat[pat].tr[track], its slice map and page loop */ };
+#define EC_UNDO_BLOBS 8         /* the ring's snapshots (each holds the largest part, a pattern: ~150 KB) */
+#define EC_U_NV 24              /* EC_U_PARAMS: params in one entry (INS 2's machine, MIX and P1..P8; 0.6.49: a whole page) */
 typedef struct {
     uint8_t kind;
     int8_t track, pat;
@@ -100,6 +106,10 @@ typedef struct {
     uint16_t mask;                 /* EC_U_STEPS: the steps of page `id` saved in st[] */
     ec_step_t st[16];
     ec_razor_t rz;                 /* EC_U_RAZOR: the table (val: the COUNT param) */
+    ec_slot_t sl;                  /* EC_U_SLOT: the slot (id: its index) */
+    int8_t blob;                   /* EC_U_BLOB: its ring snapshot, and that snapshot's generation then (an older
+                                    * entry whose snapshot the ring reused is too old: nothing happens) */
+    uint32_t gen;
     uint32_t key, ms;
     char label[12];
 } ec_undo_entry_t;
@@ -133,7 +143,12 @@ void ec_undo_slots(ec_undo_t *u, int a, int b, uint32_t ms);
 /* 0.6.16: track t's slice table and COUNT before an edit; key: the gesture (the same key inside the window coalesces,
  * 0: a gesture of its own) */
 void ec_undo_razor(ec_undo_t *u, const ec_project_t *p, int t, const char *label, uint32_t key, uint32_t ms);
-void ec_undo_fxswap(ec_undo_t *u, int track, uint32_t ms);   /* 0.6.3: track >= 0 its inserts, -1 the sends */
+void ec_undo_fxswap(ec_undo_t *u, int track, uint32_t ms);
+/* 0.6.55: pool slot s was freed; before: what it held (undo puts it back and loads it again) */
+void ec_undo_slot(ec_undo_t *u, int s, const ec_slot_t *before, uint32_t ms);
+/* 0.6.55: a big part before an edit (EC_UB_*; track for EC_UB_TRACK); key 0 = a gesture of its own */
+void ec_undo_blob(ec_undo_t *u, const ec_project_t *p, int what, int pat, int track, const char *label, uint32_t key,
+                  uint32_t ms);   /* 0.6.3: track >= 0 its inserts, -1 the sends */
 /* pop the last entry into the project; returns its kind (0: nothing to undo). EC_U_GLOBAL: *gid / *gval are the
  * global's id and value for the caller to apply (the project globals belong to the app) */
 int ec_undo_pop(ec_undo_t *u, ec_project_t *p, int *track, int *gid, float *gval, char *label, int cap);

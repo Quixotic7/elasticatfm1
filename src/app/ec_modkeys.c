@@ -151,21 +151,52 @@ static void bad(const char *why, int alert)
 }
 
 /* ------------------------------------------------------------------------------------------- the source keys --- */
-/* a hold ends: free the slots it made and left at 0 (no locks on their depth) */
+/* a hold ends: free the slots it made and left at 0 (no locks on their depth). 0.6.55 (QA B3 / C9): the routes it
+ * made and kept are one undo entry (with the source's level, when the hold raised it); a hold that kept none puts the
+ * level back as it was */
 static void release(void)
 {
-    float *v = tv();
-    int k;
+    const int t = MK->trk >= 0 && MK->trk < EC_NTRACK ? MK->trk : A->track;
+    float *v = ec_project_track(&A->proj, t)->v;
+    uint8_t ids[EC_U_NV];
+    float after[EC_U_NV];
+    int k, i, m = 0, kept = 0;
     for (k = 0; k < EC_MTX_SLOTS; k++)
         if ((MK->created >> k & 1u) && v[ec_mtx_depth_id(k)] == 0.0f && !ec_ux_locked_somewhere(ec_mtx_depth_id(k)))
             slot_clear(v, k);
+    for (k = 0; k < EC_MTX_SLOTS && m + 3 <= EC_U_NV - 1; k++)
+        if ((MK->created >> k & 1u) && ec_mtx_src(v, k) != EC_MS_OFF) {
+            ids[m++] = (uint8_t)ec_mtx_src_id(k);
+            ids[m++] = (uint8_t)ec_mtx_dst_id(k);
+            ids[m++] = (uint8_t)ec_mtx_depth_id(k);
+            kept++;
+        }
+    if (kept) {                                           /* the entry holds the values from before the hold */
+        if (MK->lvl_id >= 0)
+            ids[m++] = (uint8_t)MK->lvl_id;
+        for (i = 0; i < m; i++) {
+            after[i] = v[ids[i]];
+            v[ids[i]] = ids[i] == MK->lvl_id ? MK->lvl_old : EC_PARAMS[ids[i]].def;
+        }
+        ec_e5_edit_params(t, ids, m, "MOD");
+        for (i = 0; i < m; i++)
+            v[ids[i]] = after[i];
+    } else if (MK->lvl_id >= 0) {                         /* nothing kept: the source's level as it was */
+        const int src = ec_mk_src_of_key(MK->held);
+        int live = 0;
+        for (k = 0; k < EC_MTX_SLOTS; k++)
+            live |= ec_mtx_src(v, k) == src && ec_mtx_dst(v, k) >= 0;
+        if (!live)
+            v[MK->lvl_id] = MK->lvl_old;
+    }
     if (MK->created) {
-        ec_seq_touch(&A->seq, A->track);
+        ec_seq_touch(&A->seq, t);
         ec_app_mark_dirty();
     }
     MK->held = -1;
     MK->created = 0;
     MK->hot_id = -1;
+    MK->lvl_id = -1;
     A->redraw = 1;
 }
 
@@ -177,6 +208,8 @@ void ec_mk_hold(int i)
     MK->used = 0;
     MK->created = 0;
     MK->hot_id = -1;
+    MK->trk = A->track;
+    MK->lvl_id = -1;
     A->redraw = 1;
 }
 
@@ -234,7 +267,17 @@ int ec_mk_turn(const ec_item_t *it, int role, int det)
         v[ec_mtx_src_id(k)] = (float)(src + 1);
         v[ec_mtx_dst_id(k)] = (float)(id + 1);
         MK->created |= (uint16_t)(1u << k);
+        if (MK->lvl_id < 0 && ec_mtx_level_id(src) >= 0) {   /* 0.6.55: the level before ec_mk_slot_edited raises it */
+            MK->lvl_id = ec_mtx_level_id(src);
+            MK->lvl_old = v[MK->lvl_id];
+        }
         ec_mk_slot_edited(k);
+        ec_seq_touch(&A->seq, A->track);
+        ec_app_mark_dirty();
+    } else if ((MK->created >> k & 1u) && ec_app_held_step(A) < 0) {   /* 0.6.55: a route this hold made: its depth
+                                                    * moves without entries of its own (the release records the route) */
+        const int did = ec_mtx_depth_id(k);
+        v[did] = ec_app_move_param(did, v[did], det, ec_ux_accel(role, ec_app_param_steps(did), det));
         ec_seq_touch(&A->seq, A->track);
         ec_app_mark_dirty();
     } else                                                /* later detents (or a route there before): DEPTH */

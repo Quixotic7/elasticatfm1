@@ -742,8 +742,8 @@ static void button_labels(void)
         L(EC_LBL_BTN0 + EC_B_OCTDN, "BACK");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "OK");
     } else if (A->fn) {
-        L(EC_LBL_BTN0 + EC_B_OCTDN, ec_rzui_active(A) ? "EVEN" : "UNDO");
-        L(EC_LBL_BTN0 + EC_B_OCTUP, ec_rzui_active(A) ? "AUTO-CHOP" : "REDO");
+        L(EC_LBL_BTN0 + EC_B_OCTDN, "UNDO");      /* 0.6.55 (owner): undo / redo in the SLICE editor too */
+        L(EC_LBL_BTN0 + EC_B_OCTUP, "REDO");
     } else if (ec_rzui_active(A)) {
         L(EC_LBL_BTN0 + EC_B_OCTDN, "DELETE");
         L(EC_LBL_BTN0 + EC_B_OCTUP, "SPLIT");

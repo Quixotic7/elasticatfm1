@@ -69,8 +69,10 @@ static void take(int kind, int i, int cut)
         break;
     default:
         ec_clip_copy_pattern(&E->clip_pat, &A->proj, i);
-        if (cut)
+        if (cut) {
+            ec_undo_blob(&E->undo, &A->proj, EC_UB_PATTERN, i, -1, "CUT PAT", 0, A->ms);   /* 0.6.55 (QA B6) */
             ec_clip_clear_pattern(&A->proj, i);
+        }
         snprintf(b, sizeof b, "%s %c%d", cut ? "CUT" : "COPY", 'A' + i / EC_BANK_PATS, i % EC_BANK_PATS + 1);
         break;
     }
@@ -92,6 +94,7 @@ static void put(int kind, int i)
         snprintf(b, sizeof b, "PASTE PAGE %d", i + 1);
         break;
     default:
+        ec_undo_blob(&E->undo, &A->proj, EC_UB_PATTERN, i, -1, "PST PAT", 0, A->ms);   /* 0.6.55 (QA B6) */
         ec_clip_paste_pattern(&E->clip_pat, &A->proj, i);
         if (i == A->proj.current) {
             ec_e5_pattern_loaded(&A->seq);       /* its BPM, the scenes against its values */

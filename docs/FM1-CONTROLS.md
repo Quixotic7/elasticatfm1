@@ -154,7 +154,7 @@ These hold in every mode unless the mode says otherwise.
 | PRESETS | the target: T1..T6, S1, S2, MST (prev / next) |
 | a value knob | **snap** that param on the page to its next useful value (the norns script's snap lists) |
 | W1-W9 | select the target: T1-T6, S1, S2, MST (MIX, CROSSFADER, KEYBOARD: see there) |
-| F1 / F2 | **undo / redo** (per gesture; the LEDs light when there is something to undo / redo) |
+| F1 / F2 | **undo / redo** (per gesture, on every page: 0.6.55 the SLICE editor too, whose EVEN / AUTO-CHOP are B9 / B10; the LEDs light when there is something to undo / redo) |
 | B1 | **tap tempo** (the average of the last four taps) |
 | B2 | **latch** fill on / off |
 | B4 | **recall** the memorized project (lit once something is memorized) |

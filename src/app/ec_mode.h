@@ -392,6 +392,7 @@ int ec_file_b11_previewing(void);              /* 0.6.44: SAMPLES' B11 held: pre
 void ec_file_up(void);                        /* 0.6.42: OCT-: up (AUDIO/ is the top) */
 const char *ec_file_entry(int i, int *is_dir, int *file);   /* row i's name, a folder?, its file (ec_browse index) */
 int ec_file_pooled(const char *path);         /* the pool slot (0-based) holding that file, -1 */
+void ec_file_slot_undone(int s);              /* 0.6.55: FREE undone / redone */
 int ec_file_next_free(void);                  /* the next free pool slot, -1 full */
 int ec_file_slots_used(void);
 int ec_file_purge(void);                      /* frees every slot no pattern uses, compacts: the slots freed (-1 busy) */

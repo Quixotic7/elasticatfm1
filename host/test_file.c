@@ -13,6 +13,9 @@
  *   MIX's B8 = the 4X rate.
  *   ec_test_file <folder> */
 #include "ec_harness.h"
+#include <math.h>
+#include "ec_scene.h"
+#include "ec_mtx.h"
 #include "ec_loader.h"
 #include "ec_projfile.h"
 #include "ec_razor_ui.h"
@@ -280,6 +283,18 @@ static void test_free_purge(void)
     CHECK(ec_file_pooled("/audio/d_perc16_bpm120.wav") < 0 && A->slot[2].state == EC_SL_EMPTY &&
               !strcmp(A->msg, "SLOT 3 FREED") && !A->pn.f_sticky,
           "B9 on a pool file: its slot freed (%s)", A->msg);
+    shift_down(1);                                 /* 0.6.55 (QA B10): FREE undone: the slot and its file back */
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    settle(300);
+    CHECK(ec_file_pooled("/audio/d_perc16_bpm120.wav") == 2 && A->slot[2].state == EC_SL_READY,
+          "SHIFT + F1: slot 3 back, loaded (state %d)", A->slot[2].state);
+    shift_down(1);
+    press(FM1P_B_OCTUP, 40);
+    shift_down(0);
+    settle(100);
+    CHECK(ec_file_pooled("/audio/d_perc16_bpm120.wav") < 0 && A->slot[2].state == EC_SL_EMPTY,
+          "SHIFT + F2: freed again (state %d)", A->slot[2].state);
     B(9, 40);
     CHECK(!strcmp(A->msg, "NOT IN THE POOL"), "B9 again: not in the pool (%s)", A->msg);
     /* purge: T1 on slot 2 (chords), slot 1 (drums) locked on a step of pattern A3, slot 4 (bass) used by nothing */
@@ -819,6 +834,147 @@ static void test_razor_keys(void)
     B(7, 40);
 }
 
+/* 0.6.55 (QA B1-B10): the undo pass */
+static void undo_k(int redo)
+{
+    shift_down(1);
+    press(redo ? FM1P_B_OCTUP : FM1P_B_OCTDN, 40);
+    shift_down(0);
+    run(20);
+}
+static void test_undo_pass(void)
+{
+    const int t = A->track;
+    ec_razor_t *rz = &A->proj.razor[t], before;
+    float *v;
+    int k;
+    /* B1: the SLICE editor: SHIFT + F1 / F2 are undo / redo (EVEN is B9) */
+    to(EC_CAT_SRC);
+    to(EC_CAT_FILE);
+    press(FM1P_B_SAVE, 40);
+    press(FM1P_B_SAVE, 40);
+    press(FM1P_B_SAVE, 40);
+    CHECK(ec_rzui_active(A), "undo pass: the slice editor");
+    ec_razor_redistribute(rz, 16);
+    trk(t)->v[EC_P_SLICE_COUNT] = 4;
+    before = *rz;
+    B(9, 40);                                      /* EVEN: 4 */
+    CHECK(memcmp(rz, &before, sizeof before) != 0, "B9 EVEN changed the table");
+    shift_down(1);
+    run(400);
+    CHECK(lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN, "UNDO") && lbl(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP, "REDO"),
+          "SHIFT in the slice editor: UNDO / REDO (%s / %s)", L(FM1CORE_LBL_BTN0 + FM1P_B_OCTDN),
+          L(FM1CORE_LBL_BTN0 + FM1P_B_OCTUP));
+    press(FM1P_B_OCTDN, 40);
+    shift_down(0);
+    CHECK(!memcmp(rz, &before, sizeof before) && ec_rzui_active(A), "SHIFT + F1: the table back (%s)", A->msg);
+    undo_k(1);
+    CHECK(memcmp(rz, &before, sizeof before) != 0, "SHIFT + F2: EVEN again (%s)", A->msg);
+    /* B2: F2 + a knob (no source key) clears the routes: undoable */
+    to(EC_CAT_FILT);
+    ec_app_set_page(EC_CAT_FILT, 0);
+    v = ec_app_params(A);
+    for (k = 0; k < EC_MTX_SLOTS; k++)
+        v[ec_mtx_src_id(k)] = 0, v[ec_mtx_dst_id(k)] = 0, v[ec_mtx_depth_id(k)] = 0;
+    v[EC_P_LFO1_DEPTH] = 64;
+    v[ec_mtx_src_id(0)] = (float)(EC_MS_LFO1 + 1);
+    v[ec_mtx_dst_id(0)] = (float)(EC_P_FILTER_CUTOFF + 1);
+    v[ec_mtx_depth_id(0)] = 50;
+    ec_seq_touch(&A->seq, t);
+    run(1200);
+    btn(FM1P_B_OCTUP, 1);
+    run(20);
+    turn(FM1P_E_K1, 1);
+    btn(FM1P_B_OCTUP, 0);
+    run(20);
+    CHECK(ec_mtx_find(v, EC_MS_LFO1, EC_P_FILTER_CUTOFF) < 0, "F2 + K1: the route cleared (%s)", A->msg);
+    undo_k(0);
+    CHECK(ec_mtx_find(v, EC_MS_LFO1, EC_P_FILTER_CUTOFF) == 0 && v[ec_mtx_depth_id(0)] == 50, "undo: the route back (%s)",
+          A->msg);
+    v[ec_mtx_src_id(0)] = 0, v[ec_mtx_dst_id(0)] = 0, v[ec_mtx_depth_id(0)] = 0;
+    run(1200);
+    /* B3: a route a source key made: one undo entry (with the level it raised) */
+    key(1, 5, 1);                                  /* B6 held: LFO 1 */
+    run(50);
+    turn(FM1P_E_K1, 1);
+    run(150);
+    turn(FM1P_E_K1, 1);
+    run(150);
+    turn(FM1P_E_K1, 1);
+    run(150);
+    key(1, 5, 0);
+    run(50);
+    k = ec_mtx_find(v, EC_MS_LFO1, EC_P_FILTER_CUTOFF);
+    CHECK(k >= 0 && fabsf(v[ec_mtx_depth_id(k)] - 0.2f) < 0.01f && v[EC_P_LFO1_DEPTH] == 128,
+          "B6 + K1 x3: LFO1 > CUTOFF 0.2, LFO 1 up to full (%d, %g, %g)", k, k >= 0 ? v[ec_mtx_depth_id(k)] : -1,
+          v[EC_P_LFO1_DEPTH]);
+    undo_k(0);
+    CHECK(ec_mtx_find(v, EC_MS_LFO1, EC_P_FILTER_CUTOFF) < 0 && v[EC_P_LFO1_DEPTH] == 64,
+          "one undo: the route and the level gone (%s, level %g)", A->msg, v[EC_P_LFO1_DEPTH]);
+    undo_k(1);
+    k = ec_mtx_find(v, EC_MS_LFO1, EC_P_FILTER_CUTOFF);
+    CHECK(k >= 0 && fabsf(v[ec_mtx_depth_id(k)] - 0.2f) < 0.01f && v[EC_P_LFO1_DEPTH] == 128, "redo: back (%s)", A->msg);
+    for (k = 0; k < EC_MTX_SLOTS; k++)
+        v[ec_mtx_src_id(k)] = 0, v[ec_mtx_dst_id(k)] = 0, v[ec_mtx_depth_id(k)] = 0;
+    v[EC_P_LFO1_DEPTH] = 64;
+    run(1200);
+    /* C9: a hold that keeps no route leaves the level as it was, and no entry */
+    {
+        const int n0 = A->e5.undo.n;
+        key(1, 5, 1);
+        run(50);
+        turn(FM1P_E_K1, 1);
+        run(50);
+        key(1, 5, 0);
+        run(50);
+        CHECK(ec_mtx_find(v, EC_MS_LFO1, EC_P_FILTER_CUTOFF) < 0 && v[EC_P_LFO1_DEPTH] == 64 && A->e5.undo.n == n0,
+              "B6 + K1 once, let go: no route, LFO 1 level as it was (%g), no entry", v[EC_P_LFO1_DEPTH]);
+    }
+    /* B10: mutes */
+    trk(2)->v[EC_P_MUTE] = 0;
+    ec_app_toggle_mute(2);
+    run(1200);
+    ec_e5_undo(0);
+    CHECK(trk(2)->v[EC_P_MUTE] == 0, "T3 mute undone");
+    trk(1)->v[EC_P_MUTE] = 1;
+    trk(3)->v[EC_P_MUTE] = 1;
+    run(1200);
+    ec_app_clear_mutes();
+    ec_e5_undo(0);
+    CHECK(trk(1)->v[EC_P_MUTE] == 1 && trk(3)->v[EC_P_MUTE] == 1, "ALL TRACKS ON undone");
+    trk(1)->v[EC_P_MUTE] = 0;
+    trk(3)->v[EC_P_MUTE] = 0;
+    /* the snapshot ring: a pattern and the scenes come back, redo goes forward; an entry older than the ring says so */
+    {
+        ec_pattern_t *pt = &A->proj.pat[5];
+        const uint8_t tr0 = pt->tr[0].steps[3].trig;
+        int i, n;
+        run(1200);
+        ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_PATTERN, 5, -1, "PST PAT", 0, A->ms);
+        pt->tr[0].steps[3].trig = (uint8_t)!tr0;
+        ec_e5_undo(0);
+        CHECK(pt->tr[0].steps[3].trig == tr0, "a pattern snapshot: undone (%s)", A->msg);
+        ec_e5_undo(1);
+        CHECK(pt->tr[0].steps[3].trig == !tr0, "redone (%s)", A->msg);
+        pt->tr[0].steps[3].trig = tr0;
+        A->proj.e5.sc.has[0][0][EC_P_PITCH] = 1;
+        A->proj.e5.sc.val[0][0][EC_P_PITCH] = 7;
+        run(1200);
+        ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_SCENES, A->proj.current, -1, "SCN CLEAR", 0, A->ms);
+        ec_scene_clear(&A->proj, 0);
+        ec_e5_undo(0);
+        CHECK(A->proj.e5.sc.has[0][0][EC_P_PITCH] && A->proj.e5.sc.val[0][0][EC_P_PITCH] == 7, "the scenes undone (%s)",
+              A->msg);
+        for (n = 0; n < EC_UNDO_BLOBS + 1; n++)
+            ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_TRACK, A->proj.current, n % EC_NTRACK, "T", 0, A->ms + (uint32_t)n);
+        for (i = 0; i < EC_UNDO_BLOBS; i++)
+            ec_e5_undo(0);
+        ec_e5_undo(0);
+        CHECK(strstr(A->msg, "TOO OLD") != NULL, "the ring's oldest: TOO OLD (%s)", A->msg);
+    }
+    B(7, 40);
+}
+
 /* 0.6.16 (QA): the slice table is on the undo stack, with the COUNT knob; the trim editor's START and END are gestures
  * of their own; a held menu button let go with no key changes nothing */
 static void test_qa616(void)
@@ -917,6 +1073,7 @@ int main(int argc, char **argv)
     test_pool();
     test_razor_keys();
     test_qa616();
+    test_undo_pass();
     test_sampler();
     test_slot_locks();
     test_rate4x();

@@ -124,6 +124,7 @@ static void pages_set(uint16_t mask, const char *fmt, int n)
 {
     char b[24];
     const int pages = ec_pages_count();
+    ec_app_undo_track("PAGES", 0x9A6E5u);          /* 0.6.55 (QA B8): the loop (and a length a span grew) undoable */
     ec_e5_set_page_loop(&A->proj, A->track, mask, pages);
     ec_seq_timing_changed(&A->seq);
     ec_app_mark_dirty();
@@ -162,7 +163,7 @@ void ec_pages_black_down(int key)
             }
         if (hi >= pages) {                         /* 0.6.14 (owner): a span past the end grows the track */
             float *v = ec_app_params(A);
-            ec_e5_edit_param(A->track, EC_P_PATTERN_STEPS, 0);
+            ec_app_undo_track("PAGES", 0x9A6E5u);  /* 0.6.55: the length and the loop in one entry (pages_set's) */
             v[EC_P_PATTERN_STEPS] = (float)((hi + 1) * 16);
             ec_seq_timing_changed(&A->seq);
             ec_seq_touch(&A->seq, A->track);
@@ -230,6 +231,7 @@ void ec_pages_hold_tick(void)
             if (i < pages) {
                 const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
                 const int in = (m >> i) & 1u;
+                ec_app_undo_track("PAGE MUTE", 0);  /* 0.6.55 (QA B8) */
                 ec_e5_toggle_page_loop(&A->proj, A->track, i, pages);
                 ec_seq_timing_changed(&A->seq);
                 ec_app_mark_dirty();

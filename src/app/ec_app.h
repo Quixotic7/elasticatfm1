@@ -125,6 +125,8 @@ void ec_app_mark_dirty(void);
 void ec_app_edit_param_f(int id, int det, int mult, int flags);   /* flags: the item's (EC_IF_STOPPED) */
 void ec_app_clear_lock(int id);
 void ec_app_mod_values(const ec_app_t *a, float *v);
+void ec_app_requeue_slot(int s);                    /* 0.6.55: a slot loads its file again (FREE undone) */
+void ec_app_undo_track(const char *label, uint32_t key);   /* 0.6.55: the track before a wide edit, one undo */
 int ec_app_clear_held_lock(void);   /* 0.6.51: step held + F1: the last knob's lock (if on the page) */
 void ec_app_shown_values(const ec_app_t *a, float *v); /* 0.6.51: the bars / pictures: held step, mod key, playing, set */   /* 0.6.50: the params as heard (EC_NP, modulated) */
 int ec_app_page_randomizable(void);          /* 0.6.49: the page shown has params the dice may set */

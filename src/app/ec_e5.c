@@ -164,8 +164,16 @@ void ec_e5_undo(int redo)
         ec_seq_touch_all(&A->seq);
         break;
     case EC_U_XFADE: ec_seq_touch_all(&A->seq); break;
+    case EC_U_BLOB:                                /* 0.6.55: a pattern, the scenes or a track came back */
+        if (gid == EC_UB_PATTERN && (int)gv == A->proj.current)
+            ec_e5_pattern_loaded(&A->seq);         /* (its BPM, the scenes against its values) */
+        ec_seq_timing_changed(&A->seq);
+        ec_seq_touch_all(&A->seq);
+        xf_apply(A->proj.e5.sc.pos);
+        break;
     case EC_U_TRIM: ec_seq_touch_all(&A->seq); break;      /* 0.6.1: a slot's trim */
     case EC_U_SLOTS: ec_file_slots_swapped(gid, (int)gv); break;   /* 0.6.1: POOL's MOVE */
+    case EC_U_SLOT: ec_file_slot_undone(gid); break;           /* 0.6.55: FREE undone (or redone) */
     case EC_U_FXSWAP:                              /* 0.6.3: the inserts / sends swapped back */
         ec_seq_touch_all(&A->seq);
         xf_apply(A->proj.e5.sc.pos);
@@ -491,6 +499,7 @@ void ec_e5_page_key(int i, int mode)
         break;
     case EC_PM_LOOP:
         if (i < pages) {
+            ec_app_undo_track("PAGE LOOP", 0);     /* 0.6.55 (QA B8) */
             ec_e5_toggle_page_loop(&A->proj, A->track, i, pages);
             ec_seq_timing_changed(&A->seq);
             dirty();
@@ -681,6 +690,8 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
             msg("NO MORPH");
             return 1;                           /* swallowed: the live value never moves mid-gesture */
         }
+        ec_undo_blob(&E->undo, &A->proj, EC_UB_SCENES, A->proj.current, -1, sc ? "SCENE B" : "SCENE A",
+                     0x5CE00u + ((uint32_t)sc << 8) + (uint32_t)id, A->ms);   /* 0.6.55 (QA B7): one entry a gesture */
         if (!ec_scene_get(&A->proj, sc, A->track, id, &x))
             x = tv()[id];
         x = ec_app_move_param(id, x, det, mult);
@@ -701,6 +712,7 @@ int ec_e5_knob_cell(const ec_item_t *it, int det, int mult)
             ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
             const int id = it->id;
             int s;
+            ec_app_undo_track("SLICE LOCK", 0x51C00u + (uint32_t)id + (pads << 8));   /* 0.6.55 (QA B4) */
             for (s = 1; s <= 32; s++)
                 if (pads >> (s - 1) & 1u) {
                     float x;

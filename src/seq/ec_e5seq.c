@@ -796,6 +796,120 @@ void ec_undo_razor(ec_undo_t *u, const ec_project_t *p, int t, const char *label
     e->rz = p->razor[t];
     snprintf(e->label, sizeof e->label, "%s", label);
 }
+/* 0.6.55: the snapshot ring for EC_U_BLOB: a part is swapped with its snapshot byte by byte (undo and redo alike) */
+#define BLOB_BYTES (sizeof(ec_pattern_t) + sizeof(ec_pat_e5_t))
+static uint8_t g_blob[EC_UNDO_BLOBS][BLOB_BYTES];
+static uint32_t g_blob_gen[EC_UNDO_BLOBS];
+static int g_blob_next;
+
+typedef struct { void *a; size_t n; } part_t;
+static int blob_parts(ec_project_t *p, const ec_undo_entry_t *e, part_t *pt)
+{
+    const int pat = e->pat, t = e->track;
+    if (pat < 0 || pat >= EC_NPAT)
+        return 0;
+    switch (e->id) {
+    case EC_UB_PATTERN:
+        pt[0].a = &p->pat[pat], pt[0].n = sizeof p->pat[pat];
+        pt[1].a = &p->pe5[pat], pt[1].n = sizeof p->pe5[pat];
+        return 2;
+    case EC_UB_SCENES:
+        pt[0].a = &p->e5.sc, pt[0].n = sizeof p->e5.sc;
+        return 1;
+    case EC_UB_TRACK:
+        if (t < 0 || t >= EC_NTRACK)
+            return 0;
+        pt[0].a = &p->pat[pat].tr[t], pt[0].n = sizeof p->pat[pat].tr[t];
+        pt[1].a = &p->pe5[pat].slices[t], pt[1].n = sizeof p->pe5[pat].slices[t];
+        pt[2].a = &p->pe5[pat].page_loop[t], pt[2].n = sizeof p->pe5[pat].page_loop[t];
+        return 3;
+    default: return 0;
+    }
+}
+
+void ec_undo_blob(ec_undo_t *u, const ec_project_t *p, int what, int pat, int track, const char *label, uint32_t key,
+                  uint32_t ms)
+{
+    ec_undo_entry_t *e;
+    part_t pt[3];
+    int n, i;
+    size_t at = 0;
+    if (!key)
+        u->last_ok = 0;
+    e = ec_undo_record(u, mix(mix(mix(mix(EC_U_BLOB, (uint32_t)what), (uint32_t)pat), (uint32_t)(track + 1)),
+                              key ? key : ms), ms);
+    if (!e)
+        return;
+    e->kind = EC_U_BLOB;
+    e->id = (uint8_t)what;
+    e->pat = (int8_t)pat;
+    e->track = (int8_t)track;
+    n = blob_parts((ec_project_t *)p, e, pt);
+    if (!n) {
+        e->kind = 0;
+        return;
+    }
+    e->blob = (int8_t)g_blob_next;
+    g_blob_next = (g_blob_next + 1) % EC_UNDO_BLOBS;
+    e->gen = ++g_blob_gen[(int)e->blob];
+    for (i = 0; i < n; i++) {
+        memcpy(g_blob[(int)e->blob] + at, pt[i].a, pt[i].n);
+        at += pt[i].n;
+    }
+    snprintf(e->label, sizeof e->label, "%s", label);
+}
+
+void ec_undo_slot(ec_undo_t *u, int s, const ec_slot_t *before, uint32_t ms)
+{
+    ec_undo_entry_t *e;
+    if (s < 0 || s >= EC_NSLOT)
+        return;
+    u->last_ok = 0;
+    e = ec_undo_record(u, mix(mix(EC_U_SLOT, (uint32_t)s), ms), ms);
+    if (!e)
+        return;
+    e->kind = EC_U_SLOT;
+    e->id = (uint8_t)s;
+    e->track = -1;
+    e->sl = *before;
+    snprintf(e->label, sizeof e->label, "FREE");
+}
+
+static void blob_swap(ec_project_t *p, ec_undo_entry_t *e)
+{
+    part_t pt[3];
+    const int n = blob_parts(p, e, pt);
+    uint8_t *b;
+    size_t at = 0, k;
+    int i;
+    if (e->blob < 0 || e->blob >= EC_UNDO_BLOBS || g_blob_gen[(int)e->blob] != e->gen) {
+        snprintf(e->label, sizeof e->label, "TOO OLD");   /* (the ring reused its snapshot) */
+        return;
+    }
+    b = g_blob[(int)e->blob];
+    for (i = 0; i < n; i++) {
+        uint8_t *a = (uint8_t *)pt[i].a;
+        for (k = 0; k < pt[i].n; k++) {
+            const uint8_t x = a[k];
+            a[k] = b[at + k];
+            b[at + k] = x;
+        }
+        at += pt[i].n;
+    }
+    if (e->id == EC_UB_SCENES)
+        ec_scene_apply(p, p->e5.sc.pos);
+}
+
+static void blob_swap_keep_pos(ec_project_t *p, ec_undo_entry_t *e)
+{
+    const float pos = p->e5.sc.pos;                /* (the crossfader stays where it is: only the scenes come back) */
+    blob_swap(p, e);
+    if (e->id == EC_UB_SCENES) {
+        p->e5.sc.pos = pos;
+        ec_scene_apply(p, pos);
+    }
+}
+
 /* apply entry e to the project, leaving in e what it replaced (so applying it again undoes the apply) */
 static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *track, int *gid, float *gval, char *label,
                      int cap)
@@ -859,6 +973,24 @@ static int undo_swap(ec_undo_t *u, ec_undo_entry_t *e, ec_project_t *p, int *tra
             e->rz = old;
             e->val = oldc;
         }
+        break;
+    case EC_U_BLOB:                                /* 0.6.55: the part and its snapshot change places */
+        blob_swap_keep_pos(p, e);
+        if (gid)
+            *gid = e->id;
+        if (gval)
+            *gval = (float)e->pat;
+        if (label)
+            snprintf(label, (size_t)cap, "%s", e->label);
+        break;
+    case EC_U_SLOT:                                /* 0.6.55: the freed slot back (or freed again) */
+        if (e->id < EC_NSLOT) {
+            const ec_slot_t old = p->slot[e->id];
+            p->slot[e->id] = e->sl;
+            e->sl = old;
+        }
+        if (gid)
+            *gid = e->id;
         break;
     case EC_U_FXSWAP:                              /* 0.6.3: the swap again */
         if (e->track >= 0)

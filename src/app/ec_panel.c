@@ -536,7 +536,8 @@ static void button_down(int b)
             ec_lp_live();
         } else if (b == EC_B_OCTDN && !A->fn && A->step_held && ec_app_clear_held_lock()) {
             ;                                      /* 0.6.51 (owner): a step held + F1: the last knob's lock */
-        } else if (ec_rzui_active(A)) {                   /* E3, page-local: F2 split / F1 delete (SHIFT: auto-chop / even) */
+        } else if (ec_rzui_active(A) && !A->fn) {  /* E3, page-local: F2 split / F1 delete (0.6.55 (owner, QA B1): SHIFT
+                                                    * is undo / redo here too; EVEN / AUTO-CHOP are B9 / B10) */
             ec_rzui_oct(A, b == EC_B_OCTUP);
         } else if (A->fn) {                        /* SHIFT + F1 / F2: undo / redo */
             ec_e5_undo(b == EC_B_OCTUP);

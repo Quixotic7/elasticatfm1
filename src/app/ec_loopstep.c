@@ -195,7 +195,7 @@ int ec_lp_b11(int down)
     return 0;
 }
 
-/* B11 held + OCT-: the selected steps cleared (trig and every lock), one undo a step page */
+/* B11 held + OCT-: the selected steps cleared (trig and every lock), one undo (0.6.55, QA B5: for every page) */
 void ec_lp_clear(void)
 {
     ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
@@ -203,12 +203,11 @@ void ec_lp_clear(void)
     int pg, i, n = 0;
     char b[20];
     g.b11_used = 1;
+    ec_app_undo_track("CLEAR", 0);
     for (pg = 0; pg < pages; pg++) {
         const uint16_t m = ec_lp_page_mask(pg);
         if (!m)
             continue;
-        ec_undo_steps(&E->undo, &A->proj, A->track, pg, m, "CLEAR", 0xE80u + (uint32_t)pg, A->ms);
-        E->undo.last_key = 0;
         for (i = 0; i < 16; i++)
             if (m >> i & 1u) {
                 ec_step_clear(&tr->steps[pg * 16 + i]);
@@ -232,13 +231,13 @@ static void write_entry(int lo, int hi, int say)
     const int k0 = clampi(lo + 1 + (div > 16 ? half : 0), 1, div), k1 = clampi(hi + 1 + (div > 16 ? half : 0), 1, div);
     int pg, i, k, n = 0;
     char b[24];
+    if (!g.undo)                                   /* 0.6.38: the steps as they were before the entry's first press;
+                                                    * 0.6.55 (QA B5): one entry for every page */
+        ec_app_undo_track(g.range ? "RANGE" : "REGION", 0);
     for (pg = 0; pg < pages; pg++) {
         const uint16_t m = ec_lp_page_mask(pg);
         if (!m)
             continue;
-        if (!g.undo)                               /* 0.6.38: the steps as they were before the entry's first press */
-            ec_undo_steps(&E->undo, &A->proj, A->track, pg, m, g.range ? "RANGE" : "REGION", 0xE00u + (uint32_t)pg,
-                          A->ms);
         for (i = 0; i < 16; i++) {
             ec_step_t *s;
             if (!(m >> i & 1u))

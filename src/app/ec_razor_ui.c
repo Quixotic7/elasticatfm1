@@ -291,7 +291,7 @@ void ec_rzui_key(ec_app_t *a, int i, int down, int vel)
     a->redraw = 1;
 }
 
-/* 0.6.15 (owner): B10 (and FN + OCT+): Auto-Chop at the transients; B9 (FN + OCT-): COUNT even slices */
+/* 0.6.15 (owner): B10: Auto-Chop at the transients; B9: COUNT even slices (0.6.55: SHIFT + OCT is undo / redo) */
 void ec_rzui_autochop(ec_app_t *a)
 {
     ec_razor_t *rz = &a->proj.razor[a->track];
@@ -351,13 +351,7 @@ void ec_rzui_oct(ec_app_t *a, int up)
     ec_razor_t *rz = &a->proj.razor[a->track];
     const int s = sel(a), count = ec_rzui_count(a);
     char m[32];
-    if (a->fn && up) {                                /* FN + OCT+: Auto-Chop */
-        ec_rzui_autochop(a);
-        return;
-    } else if (a->fn) {                               /* FN + OCT-: Redistribute */
-        ec_rzui_even(a);
-        return;
-    } else if (up) {                                  /* OCT+: split the slice at the focus (else its middle) */
+    if (up) {                                  /* OCT+: split the slice at the focus (else its middle) */
         const float x = U->focus_slice == s ? U->focus : -1;
         if (count >= EC_RZ_SLICES) {
             say(a, "32 SLICES");

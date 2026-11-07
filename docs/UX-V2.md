@@ -1340,3 +1340,26 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - C7: the dice land every number on its own step (PITCH whole semitones) and roll INSERT 2's P1..P8 in the FX param
   each stands for (its range, its options).
 - test_ux (test_qa_quick) and test_fx2 check each.
+
+## 51. 0.6.55: the undo pass (results/qa-0.6.52/REPORT.md B1-B10, owner 2026-11-06)
+
+- B1 (owner): in the SLICE editor SHIFT + F1 / F2 are undo / redo, as everywhere (their labels say so); EVEN and
+  AUTO-CHOP are B9 / B10 only.
+- B2: F2 + a knob (no source key) clearing a param's routes is one undo entry.
+- B3 / C9: a source key held + knobs: the routes it made and kept are one undo entry, recorded as the key is let go
+  (with the source's level, when the hold raised it from silent); the depth detents of a route the hold made add no
+  entries of their own. A hold that keeps no route puts the level back. A track change mid-hold: the release still
+  works on the hold's track.
+- B4: slice locks (a pad held + a knob, F1 + a knob clearing them) are undoable.
+- B5: an entry into selected steps on several step pages, B11 + OCT- clear, and F1 + a knob clearing every lock of
+  a param are one undo entry each (not one a page).
+- B6: pattern CUT and PASTE are undoable (the pattern as it was, with its name, BPM, page loops, slice programs).
+- B7: scene clear (SHIFT + B1 / B2), capture (B11 + B1 / B2) and a scene's knob edits (B1 / B2 held) are undoable;
+  the crossfader stays where it is.
+- B8: page loops (a hold, a solo, a span that grows the track, F3's held page) are undoable, the length with them.
+- B9: live REC: one undo entry a pass and track (the track before its first recorded step), not one a step.
+- B10: MIX's hold-mute and ALL TRACKS ON; FREE of a pool slot (undo loads its file again, its trim and BPM kept).
+- Under it: a new entry kind keeps a big part (a pattern, the scenes, a track) in a ring of 8 snapshots; undo and
+  redo swap it with the project. An entry whose snapshot the ring has reused says TOO OLD and changes nothing.
+- The e6_demo test has its own folder (it raced test_e6 over e6_folder's recordings).
+- test_file (test_undo_pass, test_free_purge) checks them.

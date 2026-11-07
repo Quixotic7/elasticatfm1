@@ -79,14 +79,16 @@ void ec_xfd_black(int key, int down)
             E->anchor = 0;
         return;
     }
-    if (A->fn) {                                   /* SHIFT + A / B: clear that scene */
+    if (A->fn) {                                   /* SHIFT + A / B: clear that scene (0.6.55, QA B7: undoable) */
+        ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_SCENES, A->proj.current, -1, "SCN CLEAR", 0, A->ms);
         ec_scene_clear(&A->proj, key - 1);
         ec_e5_xf_apply(A->proj.e5.sc.pos);
         toast(key == 1 ? "SCENE A CLEARED" : "SCENE B CLEARED");
         ec_app_mark_dirty();
         return;
     }
-    if (P->xf_b11) {                               /* B11 held + A / B: capture */
+    if (P->xf_b11) {                               /* B11 held + A / B: capture (0.6.55: undoable) */
+        ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_SCENES, A->proj.current, -1, "CAPTURE", 0, A->ms);
         ec_scene_capture(&A->proj, key - 1);
         toast(key == 1 ? "SCENE A CAPTURED" : "SCENE B CAPTURED");
         ec_app_mark_dirty();

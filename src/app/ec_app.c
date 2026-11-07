@@ -983,6 +983,14 @@ int ec_app_randomize_page(uint32_t *rng)
 }
 
 /* 0.6.0: F1 + a knob: clear that param's lock on the held steps (nothing held: on every step of the track) */
+/* 0.6.55 (QA B4 / B5 / B9): the selected track (its steps, params, slice map, page loop) before an edit that spans pages
+ * or slices, as one undo entry; key 0 = a gesture of its own, else the same key within a second adds nothing */
+void ec_app_undo_track(const char *label, uint32_t key)
+{
+    if (!A->bus)
+        ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_TRACK, A->proj.current, A->track, label, key, A->ms);
+}
+
 void ec_app_clear_lock(int id)
 {
     ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
@@ -993,6 +1001,7 @@ void ec_app_clear_lock(int id)
     if (A->seq.tr[A->track].pads && !A->step_held) {   /* 0.6.39: pads held: their slices' locks of id */
         ec_slicemap_t *m = ec_e5_slices(&A->proj, A->track);
         const uint32_t pads = A->seq.tr[A->track].pads;
+        ec_app_undo_track("UNLOCK", 0);            /* 0.6.55 (QA B4) */
         for (i = 1; i <= 32; i++)
             if (pads >> (i - 1) & 1u)
                 n += ec_slice_lock_clear(m, i, id);
@@ -1009,18 +1018,18 @@ void ec_app_clear_lock(int id)
         A->step_edited |= A->step_held;
     } else if (ec_app_target_step(A) >= 0) {       /* 0.6.6: LOOP ENGINE's selected steps: only their locks */
         int pg;
+        ec_app_undo_track("UNLOCK", 0);            /* 0.6.55 (QA B5): one entry for every page */
         for (pg = 0; pg * 16 < len; pg++) {
             const uint16_t m = ec_lp_page_mask(pg);
             if (!m)
                 continue;
-            ec_undo_steps(&A->e5.undo, &A->proj, A->track, pg, m, "UNLOCK", 0xA00u + (uint32_t)id + ((uint32_t)pg << 12),
-                          A->ms);
             for (i = 0; i < 16; i++)
                 if (m >> i & 1u)
                     n += ec_step_lock_clear(&tr->steps[pg * 16 + i], id);
         }
     } else {
         int pg;
+        ec_app_undo_track("UNLOCK", 0xB0000u + (uint32_t)id);   /* 0.6.55: one entry for every page and slice */
         for (pg = 0; pg * 16 < len; pg++) {
             uint16_t mask = 0;
             for (i = 0; i < 16; i++) {
@@ -1030,8 +1039,6 @@ void ec_app_clear_lock(int id)
             }
             if (!mask)
                 continue;
-            ec_undo_steps(&A->e5.undo, &A->proj, A->track, pg, mask, "UNLOCK", 0xB0000u + ((uint32_t)pg << 8) + (uint32_t)id,
-                          A->ms);
             for (i = 0; i < 16; i++)
                 if (mask >> i & 1u)
                     n += ec_step_lock_clear(&tr->steps[pg * 16 + i], id);
@@ -1198,6 +1205,18 @@ static void clear_mod(int id)
         message("NOT MODDABLE");
         return;
     }
+    {   /* 0.6.55 (QA B2): one undo entry for every route it clears */
+        uint8_t ids[EC_U_NV];
+        int m = 0;
+        for (k = 0; k < EC_MTX_SLOTS && m + 3 <= EC_U_NV; k++)
+            if (ec_mtx_src(v, k) != EC_MS_OFF && ec_mtx_dst(v, k) == id) {
+                ids[m++] = (uint8_t)ec_mtx_src_id(k);
+                ids[m++] = (uint8_t)ec_mtx_dst_id(k);
+                ids[m++] = (uint8_t)ec_mtx_depth_id(k);
+            }
+        if (m)
+            ec_e5_edit_params(A->track, ids, m, "MOD CLEAR");
+    }
     for (k = 0; k < EC_MTX_SLOTS; k++)
         if (ec_mtx_src(v, k) != EC_MS_OFF && ec_mtx_dst(v, k) == id) {
             v[ec_mtx_src_id(k)] = EC_PARAMS[ec_mtx_src_id(k)].def;
@@ -1311,6 +1330,15 @@ int ec_app_has_settings(int cat)
 }
 
 /* a file of the folder into pool slot s (the loader; the track keeps its slot) */
+/* 0.6.55: slot s loads its file again, its record (trim, BPM, steps) kept (FREE undone) */
+void ec_app_requeue_slot(int s)
+{
+    if (s >= 0 && s < EC_NSLOT && A->proj.slot[s].path[0]) {
+        queue_slot(s, 0, 0);
+        mark_dirty();
+    }
+}
+
 void ec_app_load_file(int s, const char *path)
 {
     queue_slot(s, path, 1);
@@ -1344,6 +1372,7 @@ void ec_app_toggle_mute(int t)
 {
     float *v = ec_project_track(&A->proj, t)->v;
     char b[16];
+    ec_e5_edit_param(t, EC_P_MUTE, 0);             /* 0.6.55 (QA B10): undoable */
     v[EC_P_MUTE] = v[EC_P_MUTE] > 0.5f ? 0.0f : 1.0f;
     ec_seq_touch(&A->seq, t);
     snprintf(b, sizeof b, "T%d %s", t + 1, v[EC_P_MUTE] > 0.5f ? "MUTED" : "ON");
@@ -1363,6 +1392,7 @@ void ec_app_toggle_solo(int t)
 void ec_app_clear_mutes(void)
 {
     int t;
+    ec_undo_blob(&A->e5.undo, &A->proj, EC_UB_PATTERN, A->proj.current, -1, "ALL ON", 0, A->ms);   /* 0.6.55 */
     for (t = 0; t < EC_NTRACK; t++)
         ec_project_track(&A->proj, t)->v[EC_P_MUTE] = 0;
     UX->solo = 0;

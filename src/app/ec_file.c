@@ -111,6 +111,28 @@ static int free_slot(int s)
     return 0;
 }
 
+/* 0.6.55 (QA B10): FREE undone: the slot's record is back, so its file loads again (its trim and BPM kept); redone:
+ * the slot is empty again, its sample let go */
+void ec_file_slot_undone(int s)
+{
+    if (s < 0 || s >= EC_NSLOT)
+        return;
+    if (A->proj.slot[s].path[0])
+        ec_app_requeue_slot(s);
+    else
+        free_slot(s);
+}
+
+/* FREE with an undo entry */
+static int free_slot_undoable(int s)
+{
+    const ec_slot_t before = A->proj.slot[s];
+    if (free_slot(s) < 0)
+        return -1;
+    ec_undo_slot(&A->e5.undo, s, &before, A->ms);
+    return 0;
+}
+
 int ec_file_free_slot(int s)
 {
     if (s < 0 || s >= EC_NSLOT)
@@ -746,7 +768,7 @@ int ec_file_f2(void)
         ec_app_message("NOT IN THE POOL");
         return 0;
     }
-    if (free_slot(s) < 0) {
+    if (free_slot_undoable(s) < 0) {
         ec_app_alert("BUSY: TRY AGAIN");
         return 0;
     }
@@ -1108,7 +1130,7 @@ void ec_file_pool_f2(void)
     }
     if (P->pool_carry == s)
         P->pool_carry = -1;
-    if (free_slot(s) < 0) {
+    if (free_slot_undoable(s) < 0) {
         ec_app_alert("BUSY: TRY AGAIN");
         return;
     }

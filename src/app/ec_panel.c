@@ -960,8 +960,9 @@ static void black_down(int k, int key, int vel)
                                                     * note, B6 (F#) = 0, B1 -5 .. B11 +5 */
         char b[16];
         const int st = key - 6;
-        ec_app_lock_held_set(EC_P_PITCH, (float)st);
-        snprintf(b, sizeof b, "PITCH %+d", st);
+        ec_app_lock_held_set(EC_P_NOTE, (float)st);   /* 0.6.80: the NOTE */
+        ec_param_format(EC_P_NOTE, (float)st, 3, b + 5, sizeof b - 5);
+        memcpy(b, "NOTE ", 5);
         ec_app_message(b);
         A->redraw = 1;
         return;

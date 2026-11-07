@@ -998,17 +998,25 @@ static void test_keyboard(void)
     run(20);
     CHECK(A->pn.target == 1, "ALGO: target step 1");
     tapkey(0, wkey(6), 40);                                   /* D4 */
-    CHECK(step(0)->trig && ec_step_lock_get(step(0), EC_P_PITCH, &x) && x == 2 && A->pn.target == 2,
+    CHECK(step(0)->trig && ec_step_lock_get(step(0), EC_P_NOTE, &x) && x == 2 && A->pn.target == 2,
           "a key writes the note on step 1 and advances");
     btn(FM1P_B_GLO, 1);
     run(20);
     tapkey(0, wkey(7), 40);                                   /* SHIFT + E4: stays */
     btn(FM1P_B_GLO, 0);
     run(20);
-    CHECK(step(1)->trig && ec_step_lock_get(step(1), EC_P_PITCH, &x) && x == 4 && A->pn.target == 2,
+    CHECK(step(1)->trig && ec_step_lock_get(step(1), EC_P_NOTE, &x) && x == 4 && A->pn.target == 2,
           "SHIFT + a key: written, the target stays");
     tapkey(0, wkey(8), 40);
-    CHECK(ec_step_lock_get(step(1), EC_P_PITCH, &x) && x == 5 && A->pn.target == 3, "one note per step: replaced");
+    CHECK(ec_step_lock_get(step(1), EC_P_NOTE, &x) && x == 5 && A->pn.target == 3, "one note per step: replaced");
+    {                                              /* 0.6.80 (owner): the notes are NOTE, apart from PITCH */
+        char nm[8];
+        ec_param_format(EC_P_NOTE, 1.0f, 3, nm, sizeof nm);
+        CHECK(!ec_step_lock_get(step(1), EC_P_PITCH, 0) && !strcmp(nm, "C#4"),
+              "0.6.80: a note is a NOTE lock, no PITCH lock (NOTE 1 reads %s)", nm);
+        ec_step_lock_clear(step(1), EC_P_PITCH);
+        CHECK(ec_step_lock_get(step(1), EC_P_NOTE, &x) && x == 5, "clearing PITCH keeps the note");
+    }
     turn(FM1P_E_ALGO, -5);
     run(20);
     CHECK(A->pn.target == 0, "ALGO below 1: live");
@@ -1403,7 +1411,7 @@ static void test_algo_preview(void)
     clear_steps();
     tr = ec_project_track(&A->proj, A->track);
     tr->steps[1].trig = 1;
-    ec_step_lock_set(&tr->steps[1], EC_P_PITCH, 7);
+    ec_step_lock_set(&tr->steps[1], EC_P_NOTE, 7);
     ec_seq_touch(&A->seq, A->track);
     ec_lp_target_to(0);
     run_audio(50);
@@ -1452,7 +1460,7 @@ static void test_062(void)
     run_audio(300);
     {                                              /* 0.6.77 (owner): a note held overrides the notes only */
         float x = 0;
-        ec_step_lock_set(&ec_project_track(&A->proj, A->track)->steps[0], EC_P_PITCH, 7.0f);
+        ec_step_lock_set(&ec_project_track(&A->proj, A->track)->steps[0], EC_P_NOTE, 7.0f);
         ec_step_lock_set(&ec_project_track(&A->proj, A->track)->steps[0], EC_P_FILTER_CUTOFF, 0.25f);
         ec_seq_touch(&A->seq, A->track);
         key(0, wkey(7), 1);                        /* E4: +4 */
@@ -1462,15 +1470,15 @@ static void test_062(void)
             run_audio(5);
         x = ec_seq_value(&A->seq, A->track, EC_P_FILTER_CUTOFF);
         CHECK(A->seq.tr[A->track].fired > f0 && x == 0.25f &&
-                  ec_seq_value(&A->seq, A->track, EC_P_PITCH) == v[EC_P_PITCH] + 4,
-              "a note held: the steps still fire (%d -> %d) with their CUTOFF lock (%g), the pitch is the key's (%g)",
-              f0, A->seq.tr[A->track].fired, x, ec_seq_value(&A->seq, A->track, EC_P_PITCH));
+                  ec_seq_value(&A->seq, A->track, EC_P_NOTE) == 4,
+              "a note held: the steps still fire (%d -> %d) with their CUTOFF lock (%g), the note is the key's (%g)",
+              f0, A->seq.tr[A->track].fired, x, ec_seq_value(&A->seq, A->track, EC_P_NOTE));
         key(0, wkey(7), 0);
         run_audio(400);
-        for (i = 0; i < 400 && ec_seq_value(&A->seq, A->track, EC_P_PITCH) != 7.0f; i++)
+        for (i = 0; i < 400 && ec_seq_value(&A->seq, A->track, EC_P_NOTE) != 7.0f; i++)
             run_audio(5);
-        CHECK(ec_seq_value(&A->seq, A->track, EC_P_PITCH) == 7.0f, "let go: the step's own pitch lock again (%g, base %g)",
-              ec_seq_value(&A->seq, A->track, EC_P_PITCH), v[EC_P_PITCH]);
+        CHECK(ec_seq_value(&A->seq, A->track, EC_P_NOTE) == 7.0f, "let go: the step's own note again (%g)",
+              ec_seq_value(&A->seq, A->track, EC_P_NOTE));
         ec_step_clear(&ec_project_track(&A->proj, A->track)->steps[0]);
         ec_project_track(&A->proj, A->track)->steps[0].trig = 1;
     }
@@ -1598,7 +1606,7 @@ static void test_clip_modes(void)
         clear_steps();
         tr = ec_project_track(&A->proj, A->track);
         tr->steps[0].trig = 1;
-        ec_step_lock_set(&tr->steps[0], EC_P_PITCH, 5);
+        ec_step_lock_set(&tr->steps[0], EC_P_NOTE, 5);
         ec_seq_touch(&A->seq, A->track);
         run(1200);
         btn(FM1P_B_OCTDN, 1);                      /* F1 held */
@@ -1646,7 +1654,7 @@ static void test_kb_step_layer(void)
     CHECK(ec_lp_first() == 3, "W4 selects step 4 (%d)", ec_lp_first() + 1);
     tapkey(1, 2, 40);                              /* B3 = C: into step 4 */
     run(20);
-    CHECK(tr->steps[3].trig && ec_step_lock_get(&tr->steps[3], EC_P_PITCH, &x) && x == 12,
+    CHECK(tr->steps[3].trig && ec_step_lock_get(&tr->steps[3], EC_P_NOTE, &x) && x == 12,
           "B3 (C) into the selected step 4 (+%g)", x);
     tapkey(1, 10, 40);                             /* B11 again: back */
     run(20);
@@ -1771,7 +1779,7 @@ static void test_kb_rec(void)
     ec_lp_target_to(i + 1);                        /* the first recorded step selected */
     {
         float x = 0;
-        ec_step_lock_get(&tr->steps[i], EC_P_PITCH, &x);
+        ec_step_lock_get(&tr->steps[i], EC_P_NOTE, &x);
         for (k = 0; k < EC_NKEY && kc < 0; k++)
             if (ec_key_lower(k) >= 0 && ec_kb_semis(k) == (int)floorf(x + 0.5f))
                 kc = k;

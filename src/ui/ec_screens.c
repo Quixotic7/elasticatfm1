@@ -822,8 +822,8 @@ static void step_strip(const ec_app_t *a, int top, int bot, int pages_y)
                     if (h > 0)
                         R(EC_C_BG, x, top, 5, h);
                 }
-                if (ec_step_lock_get(s, EC_P_PITCH, &x1))
-                    R(EC_C_SRC, x + 1, x1 >= tr->v[EC_P_PITCH] ? top + 2 : bot - 4, 3, 2);
+                if (ec_step_lock_get(s, EC_P_NOTE, &x1))   /* 0.6.80: the note */
+                    R(EC_C_SRC, x + 1, x1 >= tr->v[EC_P_NOTE] ? top + 2 : bot - 4, 3, 2);
             }
             if (ec_lp_is_sel(idx)) {
                 R(EC_C_L15, x, top - 4, 5, 2);

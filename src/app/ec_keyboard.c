@@ -181,7 +181,7 @@ static void enter_step(int semis, int slice, int vel)
                   A->ms);
     E->undo.last_key = 0;
     s->trig = 1;
-    if (ec_step_lock_set(s, EC_P_PITCH, (float)clampi(semis, -24, 24)) < 0)
+    if (ec_step_lock_set(s, EC_P_NOTE, (float)clampi(semis, -36, 36)) < 0)   /* 0.6.80: the NOTE, not PITCH */
         ec_app_message("LOCKS FULL");
     if (slice > 0)
         s->slices = 1u << (slice - 1);             /* one note per step: the slice replaces the step's */
@@ -296,7 +296,7 @@ int ec_kb_lit_key(void)
                 return k;
         return -1;
     }
-    k = (int)floorf(ec_seq_value(&A->seq, A->track, EC_P_PITCH) + 0.5f) + 7 - 12 * P->oct;
+    k = (int)floorf(ec_seq_value(&A->seq, A->track, EC_P_NOTE) + 0.5f) + 7 - 12 * P->oct;   /* 0.6.80: the note */
     return k >= 0 && k < EC_NKEY ? k : -1;
 }
 

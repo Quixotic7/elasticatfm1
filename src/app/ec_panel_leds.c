@@ -221,7 +221,7 @@ static int step_note(int idx)
     s = &tr->steps[idx];
     if (!s->trig || ec_step_is_ghost(s, tr->v))
         return -1000;
-    return ec_step_lock_get(s, EC_P_PITCH, &x) ? (int)floorf(x + 0.5f) : 0;
+    return ec_step_lock_get(s, EC_P_NOTE, &x) ? (int)floorf(x + 0.5f) : 0;   /* 0.6.80 */
 }
 
 uint8_t ec_kb_key_led(int k, uint8_t base)
@@ -540,7 +540,7 @@ static void leds_black(void)
         default:
             if (mode == EC_CAT_TRIG && A->step_held && !A->bus) {   /* 0.6.14: a step held: the note keys */
                 float x;
-                const int has = ec_app_held_lock(A, EC_P_PITCH, &x);
+                const int has = ec_app_held_lock(A, EC_P_NOTE, &x);   /* 0.6.80 */
                 const int at = has ? clampi((int)floorf(x + 0.5f), -5, 5) + 5 : -1;
                 for (i = 0; i < EC_NBKEY; i++)
                     l[i] = i == at ? EC_LED_LIT : i == 5 ? EC_LED_MID : EC_LED_DIM;

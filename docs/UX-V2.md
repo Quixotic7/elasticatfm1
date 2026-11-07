@@ -1588,3 +1588,14 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
 - KEYBOARD: pressing F1 / F2 does nothing at first; held EC_HOLD_MS (400 ms) F1 / F2 come on (the header shows
   COPY / CUT then); let go before that: the octave (OCT -1 / +1 in the header, on release). Both held: F3.
 - test_ux test_kb_more: nothing 60 ms after the press, F1 on after the hold, the octave on a quick click.
+
+## 76. 0.6.80: NOTE, apart from PITCH (owner, 2026-11-06)
+
+- A new per-step param NOTE (semitones from C4, shown as a name with its octave: "C4", "C#3"): the melody. PITCH
+  transposes the sample; the sound plays at PITCH + NOTE. KEYBOARD (live, target entry), CAPTURE and TRIG's held
+  step + black keys write NOTE locks; a held KEYBOARD key overrides the steps' notes (not PITCH). The lit key and
+  the KEYBOARD LEDs follow the note only (PITCH no longer moves the lit key). Clearing a PITCH lock keeps the notes.
+- B1's TRIG page (LOOP ENGINE, TRIG): the first cell is NOTE (it edited PITCH, labelled NOTE).
+- Old projects: their step PITCH locks stay PITCH locks (the owner's choice); new notes are NOTEs.
+- NOTE2..NOTE8 exist (ids reserved) for the chords of 0.6.81.
+- Tests: test_ux (a note is a NOTE lock, clearing PITCH keeps it, "C#4"), test_v61ux, test_liverec.

@@ -303,6 +303,14 @@ const ec_param_def_t EC_PARAMS[EC_NP] = {
     [EC_P_KB_SCALE] = OPT("kb_scale", "SCALE", 1, EC_PF_SEQ, O_SCALE),                     /* 0.6.62 */
     [EC_P_KB_ROOT] = OPT("kb_root", "ROOT", 1, EC_PF_SEQ, O_ROOT),
     [EC_P_KB_LAYOUT] = OPT("kb_layout", "LAYOUT", 1, EC_PF_SEQ, O_KLAY),
+    [EC_P_NOTE] = NUM("note", "NOTE", -36, 36, 1, 0, EC_PF_NOTE, L),                       /* 0.6.80 */
+    [EC_P_NOTE2] = NUM("note2", "NOTE2", -36, 36, 1, 0, EC_PF_NOTE, L),
+    [EC_P_NOTE3] = NUM("note3", "NOTE3", -36, 36, 1, 0, EC_PF_NOTE, L),
+    [EC_P_NOTE4] = NUM("note4", "NOTE4", -36, 36, 1, 0, EC_PF_NOTE, L),
+    [EC_P_NOTE5] = NUM("note5", "NOTE5", -36, 36, 1, 0, EC_PF_NOTE, L),
+    [EC_P_NOTE6] = NUM("note6", "NOTE6", -36, 36, 1, 0, EC_PF_NOTE, L),
+    [EC_P_NOTE7] = NUM("note7", "NOTE7", -36, 36, 1, 0, EC_PF_NOTE, L),
+    [EC_P_NOTE8] = NUM("note8", "NOTE8", -36, 36, 1, 0, EC_PF_NOTE, L),
 };
 
 const uint8_t EC_RATE_FRAC[EC_RATES][2] = {
@@ -479,6 +487,11 @@ void ec_param_format(int id, float x, int env_range, char *out, int cap)
         snprintf(out, (size_t)cap, "%s", i >= 0 && i < d->nopt ? d->opts[i] : "?");
     } break;
     case EC_PF_BIN: snprintf(out, (size_t)cap, "%s", x > 0.5f ? "ON" : "OFF"); break;
+    case EC_PF_NOTE: {                             /* 0.6.80: "C4" = 0 */
+        static const char *const NN[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+        const int n = (int)floorf(x + 0.5f);
+        snprintf(out, (size_t)cap, "%s%d", NN[(n % 12 + 12) % 12], 4 + (int)floorf((float)n / 12.0f));
+    } break;
     case EC_PF_PITCH:
         snprintf(b, sizeof b, "%+.1f", (double)x);
         trim0(b);
@@ -569,7 +582,7 @@ void ec_params_engine(const float *v, const ec_slotmeta_t *slot, int playhead_re
     p->play = 1;
     p->mute = opt(v, EC_P_MUTE);
     p->machine = opt(v, EC_P_MACHINE);
-    p->pitch = v[EC_P_PITCH];
+    p->pitch = v[EC_P_PITCH] + v[EC_P_NOTE];      /* 0.6.80: the note on top of PITCH */
     p->loop_start = v[EC_P_LOOP_START];
     p->loop_end = v[EC_P_LOOP_END];
     p->range_start = v[EC_P_RANGE_START];

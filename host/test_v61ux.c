@@ -552,13 +552,13 @@ static void test_keyboard(void)
     ec_seq_touch(&A->seq, A->track);
     run(50);
     lit = ec_kb_lit_key();
-    CHECK(lit == k + 2 && fabsf(ec_seq_value(&A->seq, A->track, EC_P_PITCH) - 2.0f) < 0.01f,
-          "PITCH +2: the lit key moves up the keyboard (%d)", lit);
+    CHECK(lit == k && fabsf(ec_seq_value(&A->seq, A->track, EC_P_PITCH) - 2.0f) < 0.01f,
+          "0.6.80: PITCH +2 transposes the sample: the lit key stays the note held (%d)", lit);
     v[EC_P_PITCH] = -3;
     ec_seq_touch(&A->seq, A->track);
     run(50);
     lit = ec_kb_lit_key();
-    CHECK(lit == k - 3, "PITCH -3: down (%d)", lit);
+    CHECK(lit == k, "PITCH -3: the lit key stays too (%d)", lit);
     wk(5, 0);
     run(30);
     v[EC_P_PITCH] = 0;

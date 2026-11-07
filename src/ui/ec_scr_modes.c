@@ -194,7 +194,7 @@ static void keyboard_screen(const ec_app_t *a)
                 for (j = 0; j < len && c < 0; j++)
                     if (ec_lp_is_sel(j)) {
                         float x1;
-                        if (ec_step_lock_get(&tr->steps[j], EC_P_PITCH, &x1) && (int)floorf(x1 + 0.5f) == disp_semis(a, k))
+                        if (ec_step_lock_get(&tr->steps[j], EC_P_NOTE, &x1) && (int)floorf(x1 + 0.5f) == disp_semis(a, k))
                             c = EC_C_L15;
                     }
             if (k == lit && c < 0)

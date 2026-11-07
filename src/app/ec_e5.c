@@ -602,7 +602,7 @@ void ec_e5_step_preview(int idx)
             }
         E->preview = 1;
     } else {
-        E->preview_semis = ec_step_lock_get(s, EC_P_PITCH, &x) ? (int)floorf(x + 0.5f) : 0;
+        E->preview_semis = ec_step_lock_get(s, EC_P_NOTE, &x) ? (int)floorf(x + 0.5f) : 0;   /* 0.6.80 */
         ec_seq_keyboard(&A->seq, A->track, (float)E->preview_semis, 1, vel);
         E->preview = 3;
     }

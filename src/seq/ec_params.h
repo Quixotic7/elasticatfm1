@@ -103,7 +103,12 @@ enum {
      * IN SCALE: the white keys play the scale's notes up from the root, the black keys are page / mod shortcuts) */
     EC_P_KB_SCALE = EC_P_V659_END, EC_P_KB_ROOT, EC_P_KB_LAYOUT,
     EC_P_V662_END,
-    EC_NP = EC_P_V662_END
+    /* 0.6.80 (owner): the NOTE, apart from PITCH: semitones from C4 (0 = the sample as it is) played on top of the
+     * track's PITCH (PITCH transposes the sample, the notes are the melody); a step's notes are NOTE locks, a chord
+     * (VOICE MODE POLY) adds NOTE2..NOTE8 */
+    EC_P_NOTE = EC_P_V662_END, EC_P_NOTE2, EC_P_NOTE3, EC_P_NOTE4, EC_P_NOTE5, EC_P_NOTE6, EC_P_NOTE7, EC_P_NOTE8,
+    EC_P_V680_END,
+    EC_NP = EC_P_V680_END
 };
 #define EC_INS2_NP 8            /* INS 2's generic params (the most any machine has: DESTROY's eight) */
 #define EC_MICRO_DIV 24         /* micro timing units per step (as Elektron's 1/384 note on a 16th): +-12 = half a step */
@@ -118,7 +123,8 @@ enum {
     EC_PF_UNIT,           /* E4: real units by id (dB, ms, :1, bits, Hz; ec_param_format_unit) */
     EC_PF_MDST,           /* 0.5.0: a matrix slot's DST (0 OFF, else param id + 1) */
     EC_PF_MDEP,           /* 0.5.0: a matrix slot's DEPTH, -100..100 % (fine steps near 0) */
-    EC_PF_MICRO           /* 0.6.0: micro timing in 1/EC_MICRO_DIV of a step: "0", "+3/24", "-12/24" */
+    EC_PF_MICRO,          /* 0.6.0: micro timing in 1/EC_MICRO_DIV of a step: "0", "+3/24", "-12/24" */
+    EC_PF_NOTE            /* 0.6.80: a note name, semitones from C4: "C4", "C#3" */
 };
 /* flags */
 #define EC_PF_LOCKABLE 1u      /* p-lockable per step */

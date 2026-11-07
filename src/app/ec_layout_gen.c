@@ -5,7 +5,7 @@
 #include "ec_params.h"
 
 static const ec_item_t ec_layout_shipped_item[663] = {
-    {EC_IT_PARAM, EC_P_PITCH, 0, "NOTE"},
+    {EC_IT_PARAM, EC_P_NOTE, 0, NULL},
     {EC_IT_PARAM, EC_P_LENGTH, 0, NULL},
     {EC_IT_PARAM, EC_P_VELOCITY, 0, NULL},
     {EC_IT_PARAM, EC_P_MICRO, 0, "MICRO"},
@@ -25,7 +25,7 @@ static const ec_item_t ec_layout_shipped_item[663] = {
     {EC_IT_PARAM, EC_P_QUANT, 0, "QUANT"},
     {EC_IT_GLOBAL, EC_G_BPM, 0, "BPM"},
     {EC_IT_GLOBAL, EC_G_SWING, 0, "SWING"},
-    {EC_IT_PARAM, EC_P_PITCH, 0, "NOTE"},
+    {EC_IT_PARAM, EC_P_NOTE, 0, NULL},
     {EC_IT_PARAM, EC_P_LENGTH, 0, NULL},
     {EC_IT_PARAM, EC_P_VELOCITY, 0, NULL},
     {EC_IT_PARAM, EC_P_MICRO, 0, "MICRO"},
@@ -41,7 +41,7 @@ static const ec_item_t ec_layout_shipped_item[663] = {
     {EC_IT_PARAM, EC_P_SLICE_PLAY_MODE, 0, NULL},
     {EC_IT_PARAM, EC_P_SLICE_RATCHET, 0, NULL},
     {EC_IT_PARAM, EC_P_SLICE_REVERSE, 0, NULL},
-    {EC_IT_PARAM, EC_P_PITCH, 0, "NOTE"},
+    {EC_IT_PARAM, EC_P_NOTE, 0, NULL},
     {EC_IT_PARAM, EC_P_LENGTH, 0, NULL},
     {EC_IT_PARAM, EC_P_VELOCITY, 0, NULL},
     {EC_IT_PARAM, EC_P_MICRO, 0, "MICRO"},

@@ -239,6 +239,14 @@ static void fire_slices(ec_seq_t *s, int t, const ec_step_t *rec, uint64_t note)
             if (!ec_step_lock_get(rec, EC_P_PITCH, &x) && !ec_slice_lock_get(sm, k, EC_P_PITCH, &x) &&
                 !ec_scene_value(s->proj, t, EC_P_PITCH, &x))
                 x = v[EC_P_PITCH];
+            {                                       /* 0.6.80: the step's note on top (a key held: the key's) */
+                float nt;
+                if (s->tr[t].live_pitch_on)
+                    nt = s->tr[t].live_semis;
+                else if (!ec_step_lock_get(rec, EC_P_NOTE, &nt))
+                    nt = v[EC_P_NOTE];
+                x += nt;
+            }
             e.pitch = x;
             e.choke = sm->choke[k - 1];
             e.length = mode == EC_SLICE_ONESHOT ? 0 : (int)(note > 0x7FFFFFFF ? 0x7FFFFFFF : note);
@@ -1234,7 +1242,7 @@ void ec_seq_slice_pad(ec_seq_t *s, int t, int slice, int pressed, float vel)
     if (pressed && ec_slice_lock_get(ec_e5_slices(s->proj, t), slice, EC_P_PITCH, &x))   /* E5 */
         pad(s, t, slice, pressed, vel, x);
     else
-        pad(s, t, slice, pressed, vel, ec_seq_value(s, t, EC_P_PITCH));
+        pad(s, t, slice, pressed, vel, ec_seq_value(s, t, EC_P_PITCH) + ec_seq_value(s, t, EC_P_NOTE));
 }
 
 void ec_seq_keyboard(ec_seq_t *s, int t, float semis, int pressed, float vel)
@@ -1330,8 +1338,8 @@ float ec_seq_value(const ec_seq_t *s, int t, int id)
     }
     if (st->live_range && (id == EC_P_RANGE_START || id == EC_P_RANGE_END))
         return ptr(s, t)->v[id];                   /* 0.6.77: the range keys held: the range they set, no step lock */
-    if (id == EC_P_PITCH && st->live_pitch_on)   /* 0.6.1: the track's PITCH now + the key (PITCH turned while held) */
-        return ptr(s, t)->v[EC_P_PITCH] + st->live_semis;
+    if (id == EC_P_NOTE && st->live_pitch_on)    /* 0.6.80: a key held: its note (PITCH stays the track's / locks') */
+        return st->live_semis;
     if (st->hold_on[id] && id != EC_P_LOOP_START && id != EC_P_LOOP_END) {
         if (st->slide_on[id]) {                    /* 0.6.4: a slide: the lock ramps to the next one */
             const uint64_t t0 = st->slide_t0[id], t1 = st->slide_t1[id];

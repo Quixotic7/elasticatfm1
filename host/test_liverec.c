@@ -138,7 +138,7 @@ static void test_capture_notes(void)
     key(0, 4, 1);                                  /* W5 = C4: the first note starts playback */
     run(5);
     CHECK(A->seq.playing && !ec_liverec_armed(), "the first key: playback starts");
-    CHECK(tstep(0, 0)->trig && lock(tstep(0, 0), EC_P_PITCH, &x) && x == 0 && !lock(tstep(0, 0), EC_P_MICRO, 0),
+    CHECK(tstep(0, 0)->trig && lock(tstep(0, 0), EC_P_NOTE, &x) && x == 0 && !lock(tstep(0, 0), EC_P_MICRO, 0),
           "step 1: the note, on time (no micro)");
     key(0, 4, 0);
     run(20);
@@ -151,7 +151,7 @@ static void test_capture_notes(void)
     keyv(0, 5, 0, 90);
     run(20);
     CHECK(s4 == 4 && mu4 == 5, "(the expectation: step 5, +5/24: %d %d)", s4 + 1, mu4);
-    CHECK(tstep(0, 4)->trig && lock(tstep(0, 4), EC_P_PITCH, &x) && x == 2.0f,
+    CHECK(tstep(0, 4)->trig && lock(tstep(0, 4), EC_P_NOTE, &x) && x == 2.0f,
           "a note: a trig on the nearest step (5) with its pitch (%g)", x);
     CHECK(lock(tstep(0, 4), EC_P_MICRO, &x) && (int)x == mu4, "  its offset as a micro lock (%g, want %d)", x, mu4);
     CHECK(lock(tstep(0, 4), EC_P_VELOCITY, &x) && fabsf(x - 90.0f / 127.0f) < 1e-4f, "  its velocity (%g)", x);
@@ -243,7 +243,7 @@ static void test_capture_over_old(void)
     trk(0)->v[EC_P_PATTERN_STEPS] = 16;
     for (i = 1; i < 16; i += 2) {                  /* the old take: every odd step */
         tstep(0, i)->trig = 1;
-        ec_step_lock_set(tstep(0, i), EC_P_PITCH, 7);
+        ec_step_lock_set(tstep(0, i), EC_P_NOTE, 7);
     }
     ec_seq_touch(&A->seq, 0);
     ec_seq_timing_changed(&A->seq);
@@ -263,7 +263,7 @@ static void test_capture_over_old(void)
     stop();
     for (i = 1; i < 16; i += 2) {                  /* again, stopped */
         tstep(0, i)->trig = 1;
-        ec_step_lock_set(tstep(0, i), EC_P_PITCH, 7);
+        ec_step_lock_set(tstep(0, i), EC_P_NOTE, 7);
     }
     trk(0)->v[EC_P_PATTERN_STEPS] = 16;
     ec_seq_touch(&A->seq, 0);
@@ -331,7 +331,7 @@ static void test_automation(void)
     trk(0)->v[EC_P_PATTERN_STEPS] = 16;            /* (0.6.59: the CAPTURE takes before set their own lengths) */
     ec_seq_timing_changed(&A->seq);
     tstep(0, 6)->trig = 1;                         /* OVERDUB keeps this one */
-    ec_step_lock_set(tstep(0, 6), EC_P_PITCH, 5);
+    ec_step_lock_set(tstep(0, 6), EC_P_NOTE, 5);
     A->proj.rec.mode = EC_REC_OVERDUB;
     press(FM1P_B_REC, 40);
     CHECK(A->seq.playing && ec_liverec_on() && !ec_liverec_armed(), "OVERDUB, stopped: REC starts playback at once");
@@ -342,7 +342,7 @@ static void test_automation(void)
               x == trk(0)->v[EC_P_FILTER_CUTOFF],
           "AUTOMATION: a knob move = a lock on step 4 without a trig (lock-only) (%g)", x);
     CHECK(!lock(tstep(0, 3), EC_P_MICRO, 0), "  (locks keep no offset)");
-    CHECK(tstep(0, 6)->trig && lock(tstep(0, 6), EC_P_PITCH, &x) && x == 5, "OVERDUB: step 7 untouched");
+    CHECK(tstep(0, 6)->trig && lock(tstep(0, 6), EC_P_NOTE, &x) && x == 5, "OVERDUB: step 7 untouched");
     /* a macro (MODULATION's MACROS page, B11) */
     to(EC_CAT_MOD);
     B(11, 40);

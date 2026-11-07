@@ -287,7 +287,7 @@ void ec_liverec_note(int semis, int slice, int vel)
     if (!hit(&step, &mu))
         return;
     s = trig_at(step, mu, vel);
-    locked(s, EC_P_PITCH, (float)clampi(semis, -24, 24));
+    locked(s, EC_P_NOTE, (float)clampi(semis, -36, 36));   /* 0.6.80: the NOTE */
     if (slice > 0)
         s->slices = 1u << (clampi(slice, 1, 32) - 1);   /* (one note per step, as step entry) */
     written(step, 1);

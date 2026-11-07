@@ -1681,3 +1681,9 @@ redistributes); CROSSFADER capture takes the values that differ from their defau
   mute says its own), "STEP 5" (a step key), "LOOP 0:16" (loop keys, in 0..128 loop units), "RANGE 0:32". Nothing
   pressed yet: as before.
 - test_ux test_b11_pages (LOOP ENGINE and KEYBOARD).
+
+## 86. 0.6.90: B11's page LEDs (owner, 2026-11-07)
+
+- B11 held (LOOP ENGINE, TRIG, KEYBOARD), B1..B8: a page past the track's length off (a click still adds it), a
+  muted page 10 %, a page in the loop 80 %, the page shown flashing at 100 % (muted: 30 %). One function for every
+  mode (b11_page_leds). test_ux test_b11_pages.

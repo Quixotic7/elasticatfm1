@@ -2115,10 +2115,18 @@ static void test_b11_pages(void)
         key(1, bkey(11), 1);
         run(450);
         CHECK(!ec_lp_b11_text(), "%s, B11 held: nothing said yet", m ? "KEYBOARD" : "LOOP ENGINE");
-        CHECK(led_key(1, bkey(1)) == FM1P_LED_LIT && led_key(1, bkey(2)) == FM1P_LED_DIM &&
-                  led_key(1, bkey(6)) == FM1P_LED_FAINT,
-              "%s, B11 held: the black keys show the pages (B1 %d, B2 %d, B6 past the end %d)", m ? "KEYBOARD" : "LOOP",
-              led_key(1, bkey(1)), led_key(1, bkey(2)), led_key(1, bkey(6)));
+        {                                          /* 0.6.90 (owner): shown page flashing 100 %, others 80 %, muted 10 %,
+                                                    * past the end off */
+            int on = 0, off = 0, t;
+            for (t = 0; t < 30; t++) {
+                run(20);
+                on += led_key(1, bkey(1)) == FM1P_LED_LIT;
+                off += led_key(1, bkey(1)) == FM1P_LED_OFF;
+            }
+            CHECK(on && off && led_key(1, bkey(2)) == 204 && led_key(1, bkey(6)) == FM1P_LED_OFF,
+                  "%s, B11 held: B1 (shown) flashes (%d/%d), B2 80 %% (%d), B6 past the end off (%d)",
+                  m ? "KEYBOARD" : "LOOP", on, off, led_key(1, bkey(2)), led_key(1, bkey(6)));
+        }
         for (k = 1, ok = 1; k <= 5; k++) {
             char want[16];
             tapkey(1, bkey(k), 40);

@@ -34,6 +34,24 @@ static int sel_target(void) { return A->bus ? EC_NTRACK - 1 + A->bus : A->track;
 
 /* ------------------------------------------------------------------------------------------- white keys --- */
 /* 0.6.14: B11's STEP layer in any step mode: the selected steps blink, trigs mid, empty steps off */
+/* 0.6.90 (owner): B11 held, B1..B10 = the pages (LOOP ENGINE, TRIG, KEYBOARD): past the length off, a muted page 10 %,
+ * one in the loop 80 %, the page shown flashing (100 %, muted 30 %) */
+static void b11_page_leds(uint8_t *l)
+{
+    const int pages = ec_pages_count();
+    const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
+    int i;
+    for (i = 0; i < 10; i++) {
+        const int in = (m >> i) & 1u;
+        if (i >= pages || i >= 8)
+            l[i] = EC_LED_OFF;
+        else if (i == A->step_page)
+            l[i] = blink(200) ? (in ? EC_LED_LIT : 77) : EC_LED_OFF;
+        else
+            l[i] = in ? 204 : EC_LED_10;
+    }
+}
+
 static int leds_step_layer(void)
 {
     const ec_ptrack_t *tr = ec_project_track(&A->proj, A->track);
@@ -450,13 +468,7 @@ static void leds_black(void)
         } break;
         case EC_MODE_KEYBOARD:
             if (ec_lp_b11_held() && !A->bus) {      /* 0.6.89 (owner): B11 held: the pages, as LOOP ENGINE's */
-                const int pages = ec_pages_count();
-                const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
-                for (i = 0; i < 10; i++) {
-                    const int in = (m >> i) & 1u;
-                    l[i] = i >= 8 ? EC_LED_OFF : i >= pages ? EC_LED_FAINT
-                           : i == A->step_page ? (in || blink(200) ? EC_LED_LIT : EC_LED_OFF) : in ? EC_LED_DIM : EC_LED_OFF;
-                }
+                b11_page_leds(l);
                 l[10] = EC_LED_LIT;
             } else if (ec_kb_slice_track()) {
                 const float *v = ec_app_params(A);
@@ -554,14 +566,7 @@ static void leds_black(void)
                 for (i = 0; i < EC_NBKEY; i++)
                     l[i] = i == at ? EC_LED_LIT : i == 5 ? EC_LED_MID : EC_LED_DIM;
             } else if (ec_lp_b11_held() && !A->bus) {     /* 0.6.13 / 0.6.14: B11 held: the pages on B1..B10 */
-                const int pages = ec_pages_count();
-                const uint16_t m = ec_e5_page_loop_mask(&A->proj, A->track, pages);
-                for (i = 0; i < 10; i++) {         /* 0.6.14 (owner): a muted page dark; the shown one muted blinks;
-                                                    * 0.6.89: the pages past the length faint (a click adds them) */
-                    const int in = (m >> i) & 1u;
-                    l[i] = i >= 8 ? EC_LED_OFF : i >= pages ? EC_LED_FAINT
-                           : i == A->step_page ? (in || blink(200) ? EC_LED_LIT : EC_LED_OFF) : in ? EC_LED_DIM : EC_LED_OFF;
-                }
+                b11_page_leds(l);
             } else if (ec_src_mode(mode)) {
                 int cur = -1;
                 ec_pn_roles(mode, &cur);
